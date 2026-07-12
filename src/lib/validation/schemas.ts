@@ -116,7 +116,7 @@ export const medicalProfileSchema = z.object({
 // ─── Case Schemas ───────────────────────────────────────────────────
 
 export const createCaseSchema = z.object({
-  patientId: z.string().cuid(),
+  patientId: z.string().min(1),
   notes: z.string().max(5000).optional(),
 });
 
@@ -135,10 +135,10 @@ export const updateCaseStatusSchema = z.object({
 // ─── Appointment Schemas ────────────────────────────────────────────
 
 export const bookAppointmentSchema = z.object({
-  caseId: z.string().cuid(),
-  patientId: z.string().cuid(),
-  hospitalId: z.string().cuid(),
-  doctorId: z.string().cuid(),
+  caseId: z.string().min(1),
+  patientId: z.string().min(1),
+  hospitalId: z.string().min(1),
+  doctorId: z.string().min(1),
   appointmentType: z.enum([
     'CONSULTATION',
     'PRE_OP_ASSESSMENT',
@@ -187,9 +187,9 @@ export const hospitalSchema = z.object({
 // ─── Doctor Schemas ─────────────────────────────────────────────────
 
 export const doctorSchema = z.object({
-  hospitalId: z.string().cuid(),
+  hospitalId: z.string().min(1),
   fullName: z.string().min(2).max(200),
-  specialisationId: z.string().cuid(),
+  specialisationId: z.string().min(1),
   qualification: z.string().optional(),
   languages: z.array(z.string()).optional(),
   consultationFee: z.number().min(0).optional(),
@@ -214,8 +214,8 @@ export const hostelSchema = z.object({
 // ─── Accommodation Booking Schemas ──────────────────────────────────
 
 export const accommodationBookingSchema = z.object({
-  caseId: z.string().cuid(),
-  hostelId: z.string().cuid(),
+  caseId: z.string().min(1),
+  hostelId: z.string().min(1),
   checkIn: z.string().refine((val) => !isNaN(Date.parse(val))),
   checkOut: z.string().refine((val) => !isNaN(Date.parse(val))),
   roomType: z.enum(['SINGLE', 'DOUBLE', 'SUITE', 'DORMITORY']),
@@ -234,7 +234,7 @@ export const paginationSchema = z.object({
 // ─── Message Schemas ────────────────────────────────────────────────
 
 export const sendMessageSchema = z.object({
-  receiverId: z.string().cuid(),
+  receiverId: z.string().min(1),
   subject: z.string().max(200).optional(),
   body: z.string().min(1).max(5000),
 });

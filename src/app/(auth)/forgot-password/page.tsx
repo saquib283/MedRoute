@@ -72,21 +72,11 @@ export default function ForgotPasswordPage() {
 
   return (
     <div>
-      {/* Mobile Logo */}
-      <div className="flex items-center gap-3 mb-8 lg:hidden">
-        <div className="w-10 h-10 bg-gradient-to-br from-primary-400 to-primary-600 rounded-xl flex items-center justify-center shadow-glow">
-          <svg className="w-6 h-6 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-            <path strokeLinecap="round" strokeLinejoin="round" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" />
-          </svg>
-        </div>
-        <span className="text-xl font-bold gradient-text">MediRoute India</span>
-      </div>
-
       {step === 'email' && (
         <>
-          <div className="mb-8">
-            <h2 className="text-2xl font-bold text-white">Reset your password</h2>
-            <p className="text-surface-400 mt-2">
+          <div className="mb-6 text-center">
+            <h2 className="text-xl font-bold text-surface-900">Reset your password</h2>
+            <p className="text-sm text-surface-500 mt-1.5">
               Enter your email and we&apos;ll send you a verification code
             </p>
           </div>
@@ -103,7 +93,7 @@ export default function ForgotPasswordPage() {
             />
 
             {error && (
-              <div className="bg-danger-700/20 border border-danger-700/30 rounded-xl px-4 py-3 text-sm text-danger-500 animate-slide-down">
+              <div className="bg-danger-50 border border-danger-200 rounded-lg px-4 py-3 text-sm text-danger-700 animate-slide-down">
                 {error}
               </div>
             )}
@@ -117,10 +107,10 @@ export default function ForgotPasswordPage() {
 
       {step === 'otp' && (
         <>
-          <div className="mb-8">
-            <h2 className="text-2xl font-bold text-white">Enter code & new password</h2>
-            <p className="text-surface-400 mt-2">
-              We sent a 6-digit code to <span className="text-surface-200">{email}</span>
+          <div className="mb-6 text-center">
+            <h2 className="text-xl font-bold text-surface-900">Enter code & new password</h2>
+            <p className="text-sm text-surface-500 mt-1.5">
+              We sent a 6-digit code to <span className="text-surface-700 font-medium">{email}</span>
             </p>
           </div>
 
@@ -148,7 +138,7 @@ export default function ForgotPasswordPage() {
             />
 
             {error && (
-              <div className="bg-danger-700/20 border border-danger-700/30 rounded-xl px-4 py-3 text-sm text-danger-500 animate-slide-down">
+              <div className="bg-danger-50 border border-danger-200 rounded-lg px-4 py-3 text-sm text-danger-700 animate-slide-down">
                 {error}
               </div>
             )}
@@ -162,13 +152,13 @@ export default function ForgotPasswordPage() {
 
       {step === 'success' && (
         <div className="text-center">
-          <div className="w-16 h-16 bg-success-700/20 rounded-2xl flex items-center justify-center mx-auto mb-6">
-            <svg className="w-8 h-8 text-success-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+          <div className="w-12 h-12 bg-success-50 border border-success-200 rounded-lg flex items-center justify-center mx-auto mb-4">
+            <svg className="w-6 h-6 text-success-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
               <path strokeLinecap="round" strokeLinejoin="round" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
             </svg>
           </div>
-          <h2 className="text-2xl font-bold text-white mb-2">Password Reset!</h2>
-          <p className="text-surface-400 mb-8">
+          <h2 className="text-xl font-bold text-surface-900 mb-1">Password Reset!</h2>
+          <p className="text-sm text-surface-500 mb-6">
             Your password has been successfully updated.
           </p>
           <Link href="/login">
@@ -179,10 +169,10 @@ export default function ForgotPasswordPage() {
         </div>
       )}
 
-      <div className="mt-8 text-center">
+      <div className="mt-6 text-center">
         <Link
           href="/login"
-          className="text-sm text-surface-400 hover:text-surface-200 transition-colors"
+          className="text-sm text-surface-500 hover:text-surface-700 transition-colors"
         >
           ← Back to sign in
         </Link>

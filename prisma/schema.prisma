@@ -6,7 +6,7 @@ generator client {
 }
 
 datasource db {
-  provider = "postgresql"
+  provider = "mysql"
   url      = env("DATABASE_URL")
 }
 
@@ -17,6 +17,7 @@ enum UserRole {
   MANAGER
   ADMIN
   SUPER_ADMIN
+  DOCTOR
 }
 
 enum UrgencyLevel {
@@ -105,6 +106,7 @@ model User {
   refreshTokens       RefreshToken[]
   sentMessages        Message[]        @relation("SentMessages")
   receivedMessages    Message[]        @relation("ReceivedMessages")
+  doctorProfile       Doctor?          @relation("DoctorProfile")
 
   @@map("users")
 }
@@ -142,7 +144,7 @@ model PatientMedicalProfile {
   medications             Json?    @default("[]") // JSONB array of medication objects
   surgeries               Json?    @default("[]") // JSONB array of surgery records
   chronicConditions       Json?    @default("[]") @map("chronic_conditions")
-  specialisationsRequired String[] @map("specialisations_required") // Postgres ARRAY
+  specialisationsRequired Json?    @default("[]") @map("specialisations_required")
   createdAt               DateTime @default(now()) @map("created_at")
   updatedAt               DateTime @updatedAt @map("updated_at")
 
@@ -197,7 +199,7 @@ model Hospital {
   contactPerson  String?  @map("contact_person")
   commissionRate Decimal? @map("commission_rate") @db.Decimal(5, 2)
   isActive       Boolean  @default(true) @map("is_active")
-  departments    String[] // Postgres ARRAY of department names
+  departments    Json?    @default("[]")
   createdAt      DateTime @default(now()) @map("created_at")
   updatedAt      DateTime @updatedAt @map("updated_at")
 
@@ -212,18 +214,20 @@ model Hospital {
 
 model Doctor {
   id               String   @id @default(cuid())
+  userId           String?  @unique @map("user_id")
   hospitalId       String   @map("hospital_id")
   fullName         String   @map("full_name")
   specialisationId String   @map("specialisation_id")
   qualification    String?
-  languages        String[] // Postgres ARRAY
+  languages        Json?    @default("[]")
   consultationFee  Decimal? @map("consultation_fee") @db.Decimal(10, 2)
-  availableDays    String[] @map("available_days") // e.g. ["MON","TUE","WED"]
+  availableDays    Json?    @default("[]") @map("available_days")
   isActive         Boolean  @default(true) @map("is_active")
   createdAt        DateTime @default(now()) @map("created_at")
   updatedAt        DateTime @updatedAt @map("updated_at")
 
   // Relations
+  user           User?          @relation("DoctorProfile", fields: [userId], references: [id], onDelete: Cascade)
   hospital       Hospital       @relation(fields: [hospitalId], references: [id])
   specialisation Specialisation @relation(fields: [specialisationId], references: [id])
   appointments   Appointment[]
@@ -240,7 +244,7 @@ model Hostel {
   address         String   @db.Text
   capacity        Int
   pricingPerNight Decimal  @map("pricing_per_night") @db.Decimal(10, 2)
-  roomTypes       String[] @map("room_types")
+  roomTypes       Json?    @default("[]") @map("room_types")
   isActive        Boolean  @default(true) @map("is_active")
   createdAt       DateTime @default(now()) @map("created_at")
   updatedAt       DateTime @updatedAt @map("updated_at")
@@ -262,6 +266,7 @@ model Appointment {
   scheduledAt        DateTime          @map("scheduled_at")
   status             AppointmentStatus @default(SCHEDULED)
   cancellationReason String?           @map("cancellation_reason")
+  clinicalNotes      String?           @map("clinical_notes") @db.Text
   createdBy          String            @map("created_by")
   createdAt          DateTime          @default(now()) @map("created_at")
   updatedAt          DateTime          @updatedAt @map("updated_at")

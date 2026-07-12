@@ -125,7 +125,22 @@ async function main() {
       specialisationsRequired: ['Cardiology'],
     },
   });
-  console.log(`  ✓ Patient: patient@mediroute.in / Patient@123\n`);
+  console.log(`  ✓ Patient: patient@mediroute.in / Patient@123`);
+
+  // Doctor
+  const doctorPasswordHash = await bcrypt.hash('Doctor@123', BCRYPT_ROUNDS);
+  const doctorUser = await prisma.user.upsert({
+    where: { email: 'doctor@mediroute.in' },
+    update: {},
+    create: {
+      email: 'doctor@mediroute.in',
+      passwordHash: doctorPasswordHash,
+      role: 'DOCTOR',
+      fullName: 'Dr. Ashok Seth',
+      phone: '+919876543212',
+    },
+  });
+  console.log(`  ✓ Doctor: doctor@mediroute.in / Doctor@123\n`);
 
   // ─── 3. Sample Case ──────────────────────────────────────────────
   console.log('Creating sample case...');
@@ -193,6 +208,7 @@ async function main() {
       update: {},
       create: {
         id: 'seed-doctor-001',
+        userId: doctorUser.id,
         hospitalId: hospital1.id,
         fullName: 'Dr. Ashok Seth',
         specialisationId: cardiologySpec.id,
@@ -260,6 +276,7 @@ async function main() {
   console.log('  Super Admin: admin@mediroute.in / Admin@123');
   console.log('  Manager:     manager@mediroute.in / Manager@123');
   console.log('  Patient:     patient@mediroute.in / Patient@123');
+  console.log('  Doctor:      doctor@mediroute.in / Doctor@123');
   
   // Suppress unused variable warnings
   void admin;

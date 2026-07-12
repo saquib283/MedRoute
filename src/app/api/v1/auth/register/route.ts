@@ -5,7 +5,7 @@
 
 import { NextRequest } from 'next/server';
 import prisma from '@/lib/prisma';
-import { hashPassword } from '@/lib/auth/password';
+import { hashPassword, encrypt } from '@/lib/auth';
 import { signAccessToken, signRefreshToken } from '@/lib/auth/jwt';
 import { registerSchema } from '@/lib/validation/schemas';
 import { apiSuccess, apiError, validationError } from '@/lib/api/response';
@@ -65,7 +65,7 @@ export async function POST(request: NextRequest) {
         data: {
           userId: newUser.id,
           nationality,
-          passportNo, // TODO: encrypt with AES-256 before storage in production
+          passportNo: encrypt(passportNo),
           dob: new Date(dob),
           primaryLanguage: primaryLanguage || null,
         },

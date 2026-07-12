@@ -23,3 +23,5 @@ export {
   type Permission,
 } from './rbac';
 export { generateTOTPSecret, verifyTOTP } from './totp';
+export { encrypt, decrypt } from './crypto';
+

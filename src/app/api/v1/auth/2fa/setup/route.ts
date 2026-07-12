@@ -5,7 +5,7 @@
 
 import { NextRequest } from 'next/server';
 import prisma from '@/lib/prisma';
-import { generateTOTPSecret } from '@/lib/auth/totp';
+import { generateTOTPSecret, encrypt } from '@/lib/auth';
 import { apiSuccess, apiError } from '@/lib/api/response';
 import { ERROR_CODES } from '@/lib/api/errors';
 
@@ -43,7 +43,7 @@ export async function POST(request: NextRequest) {
     // Store the secret (but don't enable yet — user must verify first)
     await prisma.user.update({
       where: { id: tempSession.userId },
-      data: { totpSecret: secret }, // TODO: Encrypt with AES-256 in production
+      data: { totpSecret: encrypt(secret) },
     });
 
     return apiSuccess({

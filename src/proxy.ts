@@ -1,5 +1,5 @@
 /**
- * MediRoute India — Next.js Middleware
+ * MediRoute India — Next.js Proxy
  * Route protection with JWT validation and role-based access control.
  * Runs on the Edge runtime, using `jose` for JWT verification.
  */
@@ -27,7 +27,7 @@ const PUBLIC_ROUTES = [
 // Static assets and internal routes to skip
 const SKIP_ROUTES = ['/_next', '/favicon.ico', '/api/docs'];
 
-export async function middleware(request: NextRequest) {
+export default async function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
   // Skip static assets and internal Next.js routes

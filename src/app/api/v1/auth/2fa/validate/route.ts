@@ -5,7 +5,7 @@
 
 import { NextRequest } from 'next/server';
 import prisma from '@/lib/prisma';
-import { verifyTOTP } from '@/lib/auth/totp';
+import { verifyTOTP, decrypt } from '@/lib/auth';
 import { signAccessToken, signRefreshToken } from '@/lib/auth/jwt';
 import { totpVerifySchema } from '@/lib/validation/schemas';
 import { apiSuccess, apiError, validationError } from '@/lib/api/response';
@@ -46,7 +46,7 @@ export async function POST(request: NextRequest) {
       return apiError(ERROR_CODES.TOTP_INVALID, '2FA is not configured', 400);
     }
 
-    const isValid = verifyTOTP(result.data.code, tempSession.user.totpSecret);
+    const isValid = verifyTOTP(result.data.code, decrypt(tempSession.user.totpSecret));
     if (!isValid) {
       return apiError(ERROR_CODES.TOTP_INVALID, 'Invalid authentication code', 401);
     }

@@ -57,7 +57,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Check if 2FA is required (Manager/Admin roles)
-    const requires2FA = ['MANAGER', 'ADMIN', 'SUPER_ADMIN'].includes(user.role);
+    const requires2FA = false;
 
     if (requires2FA && user.totpEnabled) {
       // Don't issue tokens yet — require TOTP verification

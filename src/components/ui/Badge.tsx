@@ -1,6 +1,6 @@
 /**
  * MediRoute India — Badge Component
- * Status indicator badges with semantic colors.
+ * Status indicator badges with semantic colors — clinical light-mode.
  */
 
 import React from 'react';
@@ -11,8 +11,7 @@ type BadgeVariant =
   | 'success'
   | 'warning'
   | 'danger'
-  | 'info'
-  | 'accent';
+  | 'info';
 
 interface BadgeProps {
   children: React.ReactNode;
@@ -23,23 +22,21 @@ interface BadgeProps {
 }
 
 const variantStyles: Record<BadgeVariant, string> = {
-  default: 'bg-surface-700 text-surface-300 border-surface-600',
-  primary: 'bg-primary-900/50 text-primary-300 border-primary-700/50',
-  success: 'bg-success-700/20 text-success-500 border-success-700/30',
-  warning: 'bg-warning-600/20 text-warning-500 border-warning-600/30',
-  danger: 'bg-danger-700/20 text-danger-500 border-danger-700/30',
-  info: 'bg-info-600/20 text-info-500 border-info-600/30',
-  accent: 'bg-accent-700/20 text-accent-400 border-accent-700/30',
+  default: 'bg-surface-200 text-surface-600 border-surface-300',
+  primary: 'bg-primary-50 text-primary-700 border-primary-200',
+  success: 'bg-success-50 text-success-700 border-success-200',
+  warning: 'bg-warning-50 text-warning-700 border-warning-200',
+  danger: 'bg-danger-50 text-danger-700 border-danger-200',
+  info: 'bg-info-50 text-info-700 border-info-200',
 };
 
 const dotColors: Record<BadgeVariant, string> = {
-  default: 'bg-surface-400',
-  primary: 'bg-primary-400',
+  default: 'bg-surface-500',
+  primary: 'bg-primary-500',
   success: 'bg-success-500',
   warning: 'bg-warning-500',
   danger: 'bg-danger-500',
   info: 'bg-info-500',
-  accent: 'bg-accent-400',
 };
 
 const sizeStyles: Record<string, string> = {
@@ -66,7 +63,7 @@ export function Badge({
     >
       {dot && (
         <span
-          className={`w-1.5 h-1.5 rounded-full ${dotColors[variant]} animate-pulse-soft`}
+          className={`w-1.5 h-1.5 rounded-full ${dotColors[variant]}`}
         />
       )}
       {children}
@@ -81,7 +78,7 @@ export function CaseStatusBadge({ status }: { status: string }) {
     INQUIRY_RECEIVED: { variant: 'info', label: 'Inquiry Received' },
     UNDER_REVIEW: { variant: 'warning', label: 'Under Review' },
     PLAN_CONFIRMED: { variant: 'primary', label: 'Plan Confirmed' },
-    IN_TREATMENT: { variant: 'accent', label: 'In Treatment' },
+    IN_TREATMENT: { variant: 'warning', label: 'In Treatment' },
     POST_TREATMENT: { variant: 'success', label: 'Post-Treatment' },
     CLOSED: { variant: 'default', label: 'Closed' },
   };

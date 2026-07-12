@@ -1,6 +1,6 @@
 /**
  * MediRoute India — Card Component
- * Glassmorphic card with hover effects.
+ * Clinical design system card — white background, subtle border, clean elevation.
  */
 
 import React from 'react';
@@ -27,12 +27,11 @@ export function Card({
   return (
     <div
       className={`
-        glass-card rounded-2xl
+        bg-white border border-surface-300 rounded-lg shadow-xs
         ${paddingStyles[padding]}
-        ${
-          hover
-            ? 'transition-all duration-300 hover:shadow-glow hover:border-primary-800/30 hover:-translate-y-0.5'
-            : ''
+        ${hover
+          ? 'transition-shadow duration-200 hover:shadow-md hover:border-surface-400'
+          : ''
         }
         ${className}
       `}
@@ -59,9 +58,9 @@ export function CardHeader({
   return (
     <div className={`flex items-start justify-between mb-4 ${className}`}>
       <div>
-        <h3 className="text-lg font-semibold text-surface-100">{title}</h3>
+        <h3 className="text-lg font-semibold text-surface-900">{title}</h3>
         {subtitle && (
-          <p className="text-sm text-surface-400 mt-0.5">{subtitle}</p>
+          <p className="text-sm text-surface-500 mt-0.5">{subtitle}</p>
         )}
       </div>
       {action && <div>{action}</div>}

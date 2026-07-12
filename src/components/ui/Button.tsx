@@ -1,12 +1,12 @@
 /**
  * MediRoute India — Button Component
- * Premium button with multiple variants, loading state, and 44px min touch target.
+ * Clinical design system button with consistent variants and 44px min touch target.
  */
 
 import React from 'react';
 
 interface ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
-  variant?: 'primary' | 'secondary' | 'ghost' | 'danger' | 'accent';
+  variant?: 'primary' | 'secondary' | 'ghost' | 'danger';
   size?: 'sm' | 'md' | 'lg';
   isLoading?: boolean;
   fullWidth?: boolean;
@@ -15,15 +15,13 @@ interface ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
 
 const variantStyles: Record<string, string> = {
   primary:
-    'bg-primary-600 hover:bg-primary-500 text-white shadow-lg shadow-primary-900/30 hover:shadow-primary-800/40',
+    'bg-primary-600 hover:bg-primary-700 text-white',
   secondary:
-    'bg-surface-700 hover:bg-surface-600 text-surface-100 border border-surface-600',
+    'bg-white hover:bg-surface-100 text-surface-700 border border-surface-300 hover:border-surface-400',
   ghost:
-    'bg-transparent hover:bg-surface-800 text-surface-300 hover:text-surface-100',
+    'bg-transparent hover:bg-surface-200 text-surface-600 hover:text-surface-800',
   danger:
-    'bg-danger-600 hover:bg-danger-500 text-white shadow-lg shadow-danger-900/30',
-  accent:
-    'bg-accent-600 hover:bg-accent-500 text-white shadow-lg shadow-accent-900/30',
+    'bg-danger-600 hover:bg-danger-700 text-white',
 };
 
 const sizeStyles: Record<string, string> = {
@@ -46,11 +44,10 @@ export function Button({
     <button
       className={`
         inline-flex items-center justify-center gap-2
-        font-medium rounded-xl
-        transition-all duration-200 ease-out
+        font-semibold rounded-lg
+        transition-colors duration-150 ease-out
         focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-500
-        disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:transform-none
-        active:scale-[0.98]
+        disabled:opacity-50 disabled:cursor-not-allowed
         ${variantStyles[variant]}
         ${sizeStyles[size]}
         ${fullWidth ? 'w-full' : ''}

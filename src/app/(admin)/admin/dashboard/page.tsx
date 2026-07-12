@@ -1,37 +1,126 @@
+'use client';
+
 /**
- * MediRoute India — Admin Dashboard (Placeholder)
- * Will be fully built in Phase 3.
+ * MediRoute India — Admin Dashboard
+ * Platform-wide KPI overview and recent activity feed.
  */
 
-export default function AdminDashboard() {
+import { useState, useEffect } from 'react';
+import { Card } from '@/components/ui/Card';
+import { Badge } from '@/components/ui/Badge';
+
+interface DashboardData {
+  metrics: {
+    totalUsers: number;
+    totalPatients: number;
+    totalManagers: number;
+    totalDoctors: number;
+    activeCases: number;
+    appointmentsThisWeek: number;
+    pendingEscalations: number;
+  };
+  recentActivity: {
+    id: string;
+    action: string;
+    entityType: string;
+    entityId: string;
+    createdAt: string;
+    actor: { fullName: string; role: string };
+  }[];
+}
+
+export default function AdminDashboardPage() {
+  const [data, setData] = useState<DashboardData | null>(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    async function fetchDashboard() {
+      try {
+        const res = await fetch('/api/v1/admin/dashboard');
+        const json = await res.json();
+        if (json.success) setData(json.data);
+      } catch (err) {
+        console.error('Dashboard fetch error:', err);
+      } finally {
+        setLoading(false);
+      }
+    }
+    fetchDashboard();
+  }, []);
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center min-h-[400px]">
+        <div className="w-8 h-8 border-4 border-primary-600 border-t-transparent rounded-full animate-spin" />
+      </div>
+    );
+  }
+
+  const m = data?.metrics;
+  const kpis = [
+    { label: 'Total Users', value: m?.totalUsers || 0, color: 'bg-primary-50 text-primary-600', icon: '👥' },
+    { label: 'Active Patients', value: m?.totalPatients || 0, color: 'bg-blue-50 text-blue-600', icon: '🏥' },
+    { label: 'Active Managers', value: m?.totalManagers || 0, color: 'bg-violet-50 text-violet-600', icon: '📋' },
+    { label: 'Active Doctors', value: m?.totalDoctors || 0, color: 'bg-emerald-50 text-emerald-600', icon: '⚕️' },
+    { label: 'Active Cases', value: m?.activeCases || 0, color: 'bg-amber-50 text-amber-600', icon: '📂' },
+    { label: 'Appointments (7d)', value: m?.appointmentsThisWeek || 0, color: 'bg-cyan-50 text-cyan-600', icon: '📅' },
+    { label: 'Pending Escalations', value: m?.pendingEscalations || 0, color: 'bg-red-50 text-red-600', icon: '🚨' },
+  ];
+
   return (
-    <div className="min-h-screen bg-surface-950 p-4 sm:p-6 lg:p-8">
-      <div className="animate-fade-in">
-        <div className="flex items-center gap-3 mb-6">
-          <div className="w-10 h-10 bg-gradient-to-br from-primary-400 to-primary-600 rounded-xl flex items-center justify-center shadow-glow">
-            <svg className="w-6 h-6 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-              <path strokeLinecap="round" strokeLinejoin="round" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" />
-            </svg>
-          </div>
-          <span className="text-xl font-bold gradient-text">MediRoute India</span>
-        </div>
-        <h1 className="text-3xl font-bold text-white">Admin Dashboard</h1>
-        <p className="text-surface-400 mt-1">Operations overview & configuration</p>
+    <div className="max-w-7xl mx-auto space-y-8 animate-fade-in">
+      <div>
+        <h1 className="text-2xl font-bold text-surface-900 tracking-tight">Admin Dashboard</h1>
+        <p className="text-sm text-surface-500 mt-1">Platform-wide operations overview and key performance indicators.</p>
       </div>
-      <div className="glass-card rounded-2xl p-8 mt-8 text-center animate-slide-up">
-        <div className="w-16 h-16 bg-surface-800 rounded-2xl flex items-center justify-center mx-auto mb-4">
-          <svg className="w-8 h-8 text-accent-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
-            <path strokeLinecap="round" strokeLinejoin="round" d="M3.75 3v11.25A2.25 2.25 0 006 16.5h2.25M3.75 3h-1.5m1.5 0h16.5m0 0h1.5m-1.5 0v11.25A2.25 2.25 0 0118 16.5h-2.25m-7.5 0h7.5m-7.5 0l-1 3m8.5-3l1 3m0 0l.5 1.5m-.5-1.5h-9.5m0 0l-.5 1.5M9 11.25v1.5M12 9v3.75m3-6v6" />
-          </svg>
-        </div>
-        <h3 className="text-lg font-semibold text-surface-300 mb-2">
-          Analytics & Management
-        </h3>
-        <p className="text-surface-500 max-w-md mx-auto">
-          KPI cards, charts, partner management, user management, and reporting 
-          will be available in Phase 3.
-        </p>
+
+      {/* KPI Grid */}
+      <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-4">
+        {kpis.map((kpi) => (
+          <Card key={kpi.label} className="p-5 bg-white border border-surface-200">
+            <div className="flex items-center gap-3">
+              <div className={`w-11 h-11 rounded-xl flex items-center justify-center text-lg ${kpi.color}`}>
+                {kpi.icon}
+              </div>
+              <div>
+                <p className="text-xs font-semibold text-surface-500">{kpi.label}</p>
+                <p className="text-2xl font-bold text-surface-900 mt-0.5">{kpi.value}</p>
+              </div>
+            </div>
+          </Card>
+        ))}
       </div>
+
+      {/* Recent Activity */}
+      <Card className="bg-white border border-surface-200 overflow-hidden">
+        <div className="px-6 py-4 border-b border-surface-100">
+          <h2 className="text-sm font-bold text-surface-900">Recent Activity</h2>
+        </div>
+        <div className="divide-y divide-surface-100">
+          {data?.recentActivity && data.recentActivity.length > 0 ? (
+            data.recentActivity.map((log) => (
+              <div key={log.id} className="px-6 py-3.5 flex items-center gap-4 hover:bg-surface-50 transition-colors">
+                <div className="w-8 h-8 rounded-full bg-surface-100 flex items-center justify-center text-surface-600 font-bold text-xs shrink-0">
+                  {log.actor.fullName.charAt(0)}
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm text-surface-800">
+                    <span className="font-semibold">{log.actor.fullName}</span>{' '}
+                    <span className="text-surface-500">{log.action}</span>{' '}
+                    <span className="font-medium">{log.entityType}</span>
+                  </p>
+                  <p className="text-[11px] text-surface-400 mt-0.5">{new Date(log.createdAt).toLocaleString()}</p>
+                </div>
+                <Badge variant="default" className="text-[10px]">{log.actor.role}</Badge>
+              </div>
+            ))
+          ) : (
+            <div className="px-6 py-8 text-center text-sm text-surface-500">
+              No audit log entries yet. Activity will appear here as users interact with the platform.
+            </div>
+          )}
+        </div>
+      </Card>
     </div>
   );
 }

@@ -38,6 +38,13 @@ export async function GET(request: NextRequest) {
             medicalProfile: true,
           },
         },
+        doctorProfile: {
+          select: {
+            id: true,
+            hospitalId: true,
+            specialisationId: true,
+          }
+        }
       },
     });
 

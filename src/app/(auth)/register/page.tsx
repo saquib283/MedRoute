@@ -89,19 +89,9 @@ export default function RegisterPage() {
 
   return (
     <div>
-      {/* Mobile Logo */}
-      <div className="flex items-center gap-3 mb-8 lg:hidden">
-        <div className="w-10 h-10 bg-gradient-to-br from-primary-400 to-primary-600 rounded-xl flex items-center justify-center shadow-glow">
-          <svg className="w-6 h-6 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-            <path strokeLinecap="round" strokeLinejoin="round" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" />
-          </svg>
-        </div>
-        <span className="text-xl font-bold gradient-text">MediRoute India</span>
-      </div>
-
-      <div className="mb-8">
-        <h2 className="text-2xl font-bold text-white">Create your account</h2>
-        <p className="text-surface-400 mt-2">
+      <div className="mb-6 text-center">
+        <h2 className="text-xl font-bold text-surface-900">Create your account</h2>
+        <p className="text-sm text-surface-500 mt-1.5">
           Start your medical tourism journey with us
         </p>
       </div>
@@ -195,11 +185,11 @@ export default function RegisterPage() {
         />
 
         {error && (
-          <div className="bg-danger-700/20 border border-danger-700/30 rounded-xl px-4 py-3 flex items-start gap-2 animate-slide-down">
-            <svg className="w-5 h-5 text-danger-500 shrink-0 mt-0.5" fill="currentColor" viewBox="0 0 20 20">
+          <div className="bg-danger-50 border border-danger-200 rounded-lg px-4 py-3 flex items-start gap-2 animate-slide-down">
+            <svg className="w-5 h-5 text-danger-600 shrink-0 mt-0.5" fill="currentColor" viewBox="0 0 20 20">
               <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
             </svg>
-            <span className="text-sm text-danger-500">{error}</span>
+            <span className="text-sm text-danger-700">{error}</span>
           </div>
         )}
 
@@ -211,22 +201,22 @@ export default function RegisterPage() {
 
         <p className="text-xs text-surface-500 text-center">
           By creating an account, you agree to our{' '}
-          <a href="#" className="text-primary-400 hover:text-primary-300">
+          <a href="#" className="text-primary-600 hover:text-primary-700 font-medium">
             Terms of Service
           </a>{' '}
           and{' '}
-          <a href="#" className="text-primary-400 hover:text-primary-300">
+          <a href="#" className="text-primary-600 hover:text-primary-700 font-medium">
             Privacy Policy
           </a>
         </p>
       </form>
 
       <div className="mt-6 text-center">
-        <p className="text-sm text-surface-400">
+        <p className="text-sm text-surface-500">
           Already have an account?{' '}
           <Link
             href="/login"
-            className="text-primary-400 hover:text-primary-300 font-medium transition-colors"
+            className="text-primary-600 hover:text-primary-700 font-medium transition-colors"
           >
             Sign in
           </Link>
