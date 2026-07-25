@@ -9,7 +9,6 @@ export const USER_ROLES = {
   PATIENT: 'PATIENT',
   MANAGER: 'MANAGER',
   ADMIN: 'ADMIN',
-  SUPER_ADMIN: 'SUPER_ADMIN',
   DOCTOR: 'DOCTOR',
 } as const;
 
@@ -70,6 +69,15 @@ export const APPOINTMENT_STATUSES = {
   CANCELLED: 'CANCELLED',
   RESCHEDULED: 'RESCHEDULED',
 } as const;
+
+export const APPOINTMENT_STATUS_LABELS: Record<string, string> = {
+  SCHEDULED: 'Scheduled',
+  CONFIRMED: 'Confirmed',
+  IN_PROGRESS: 'In Progress',
+  COMPLETED: 'Completed',
+  CANCELLED: 'Cancelled',
+  RESCHEDULED: 'Rescheduled',
+};
 
 // ─── Document Categories ────────────────────────────────────────────
 

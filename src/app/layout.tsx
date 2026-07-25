@@ -1,12 +1,6 @@
 import type { Metadata } from "next";
-import { Plus_Jakarta_Sans } from "next/font/google";
 import "./globals.css";
-
-const jakarta = Plus_Jakarta_Sans({
-  subsets: ["latin"],
-  variable: "--font-jakarta",
-  weight: ["400", "500", "600", "700"],
-});
+import { GlobalProviders } from "@/components/GlobalProviders";
 
 export const metadata: Metadata = {
   title: "MediRoute India — Medical Tourism Platform",
@@ -29,8 +23,8 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en">
-      <body className={`${jakarta.variable} font-sans antialiased`}>
-        {children}
+      <body className="font-sans antialiased">
+        <GlobalProviders>{children}</GlobalProviders>
       </body>
     </html>
   );

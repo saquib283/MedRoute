@@ -11,6 +11,13 @@ import Image from 'next/image';
 import logoImg from '../../../../public/assets/logo.png';
 import { usePathname, useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/Button';
+import {
+  LayoutDashboard,
+  User,
+  Calendar,
+  FolderLock,
+  MessageSquare,
+} from 'lucide-react';
 
 interface NavItem {
   label: string;
@@ -33,12 +40,7 @@ export default function PatientLayout({
     // Fetch profile details to populate layout header
     const fetchProfile = async () => {
       try {
-        const token = localStorage.getItem('accessToken');
-        const headers: HeadersInit = {};
-        if (token) {
-          headers['Authorization'] = `Bearer ${token}`;
-        }
-        const res = await fetch('/api/v1/auth/me', { headers });
+        const res = await fetch('/api/v1/auth/me');
         const data = await res.json();
         if (data.success && data.data?.user) {
           setUserName(data.data.user.fullName);
@@ -53,20 +55,14 @@ export default function PatientLayout({
 
   const handleLogout = async () => {
     try {
-      const refreshToken = localStorage.getItem('refreshToken');
-      await fetch('/api/v1/auth/logout', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ refreshToken }),
-      });
+      await fetch('/api/v1/auth/logout', { method: 'POST' });
     } catch (err) {
       console.error('Logout error', err);
     } finally {
-      localStorage.removeItem('accessToken');
-      localStorage.removeItem('refreshToken');
       router.push('/login');
     }
   };
+
 
   interface NavSection {
     title: string;
@@ -143,10 +139,8 @@ export default function PatientLayout({
       >
         <div>
           {/* Logo Brand Header */}
-          <div className="flex items-center gap-3 px-6 h-16 border-b border-surface-200/60 bg-white">
-            <Image src={logoImg} alt="Afzal Logo" width={48} height={24} className="object-contain shrink-0" />
-            <div className="h-5 w-px bg-surface-200" />
-            <span className="text-sm font-bold text-surface-900 tracking-tight">MediRoute India</span>
+          <div className="flex items-center px-6 h-16 border-b border-surface-200/60 bg-white">
+            <Image src={logoImg} alt="Afzal Logo" width={110} height={36} className="h-9 w-auto object-contain shrink-0" priority />
           </div>
 
           {/* Navigation Links */}
@@ -232,13 +226,67 @@ export default function PatientLayout({
             </svg>
           </button>
 
-          {/* Breadcrumb / Title placeholder */}
-          <div className="text-sm font-semibold text-surface-800">
-            {pathname === '/patient/dashboard' && 'Patient Dashboard'}
-            {pathname === '/patient/profile' && 'Medical Profile'}
-            {pathname === '/patient/appointments' && 'Consultations & Care Appointments'}
-            {pathname === '/patient/documents' && 'Document Vault'}
-            {pathname === '/patient/messages' && 'Coordination Chat'}
+          {/* Enhanced Breadcrumb & Page Title Header */}
+          <div className="flex items-center gap-3">
+            {pathname === '/patient/dashboard' && (
+              <div className="flex items-center gap-2.5">
+                <div className="w-8 h-8 rounded-xl bg-primary-50 text-primary-600 border border-primary-100 flex items-center justify-center font-bold">
+                  <LayoutDashboard className="w-4 h-4" />
+                </div>
+                <div>
+                  <span className="text-[10px] font-bold text-primary-600 uppercase tracking-widest block mb-0.5">Patient Portal</span>
+                  <h2 className="text-base font-bold text-surface-900 tracking-tight">Overview Dashboard</h2>
+                </div>
+              </div>
+            )}
+
+            {pathname === '/patient/profile' && (
+              <div className="flex items-center gap-2.5">
+                <div className="w-8 h-8 rounded-xl bg-primary-50 text-primary-600 border border-primary-100 flex items-center justify-center font-bold">
+                  <User className="w-4 h-4" />
+                </div>
+                <div>
+                  <span className="text-[10px] font-bold text-primary-600 uppercase tracking-widest block mb-0.5">Clinical File</span>
+                  <h2 className="text-base font-bold text-surface-900 tracking-tight">Medical Profile</h2>
+                </div>
+              </div>
+            )}
+
+            {pathname === '/patient/appointments' && (
+              <div className="flex items-center gap-2.5">
+                <div className="w-8 h-8 rounded-xl bg-primary-50 text-primary-600 border border-primary-100 flex items-center justify-center font-bold">
+                  <Calendar className="w-4 h-4" />
+                </div>
+                <div>
+                  <span className="text-[10px] font-bold text-primary-600 uppercase tracking-widest block mb-0.5">Clinical Schedule</span>
+                  <h2 className="text-base font-bold text-surface-900 tracking-tight">Consultations & Care Appointments</h2>
+                </div>
+              </div>
+            )}
+
+            {pathname === '/patient/documents' && (
+              <div className="flex items-center gap-2.5">
+                <div className="w-8 h-8 rounded-xl bg-primary-50 text-primary-600 border border-primary-100 flex items-center justify-center font-bold">
+                  <FolderLock className="w-4 h-4" />
+                </div>
+                <div>
+                  <span className="text-[10px] font-bold text-primary-600 uppercase tracking-widest block mb-0.5">ePHI Security</span>
+                  <h2 className="text-base font-bold text-surface-900 tracking-tight">Encrypted Document Vault</h2>
+                </div>
+              </div>
+            )}
+
+            {pathname === '/patient/messages' && (
+              <div className="flex items-center gap-2.5">
+                <div className="w-8 h-8 rounded-xl bg-primary-50 text-primary-600 border border-primary-100 flex items-center justify-center font-bold">
+                  <MessageSquare className="w-4 h-4" />
+                </div>
+                <div>
+                  <span className="text-[10px] font-bold text-primary-600 uppercase tracking-widest block mb-0.5">Real-Time Messaging</span>
+                  <h2 className="text-base font-bold text-surface-900 tracking-tight">Coordination Chat</h2>
+                </div>
+              </div>
+            )}
           </div>
 
           <div className="flex items-center gap-4">

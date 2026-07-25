@@ -1,97 +1,284 @@
 'use client';
 
+/**
+ * MediRoute India — Admin Appointments Management
+ * Paginated appointments list with search, filters, cancel, and reschedule actions.
+ */
+
 import { useState, useEffect, useCallback } from 'react';
 import { Card } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { Badge } from '@/components/ui/Badge';
-import { APPOINTMENT_TYPE_LABELS } from '@/lib/constants';
+import { DatePicker } from '@/components/ui/DatePicker';
+import { Select } from '@/components/ui/Select';
+import { toast } from '@/components/ui/Toast';
+import { APPOINTMENT_TYPE_LABELS, APPOINTMENT_STATUS_LABELS } from '@/lib/constants';
 
-interface AdminAppointment {
+interface Appointment {
   id: string;
   scheduledAt: string;
-  appointmentType: string;
   status: string;
+  appointmentType: string;
+  notes: string | null;
+  cancellationReason: string | null;
   patient: { user: { fullName: string } };
   doctor: { fullName: string };
   hospital: { name: string; city: string };
 }
 
+interface HospitalOption {
+  id: string;
+  name: string;
+}
+
 const STATUS_OPTIONS = ['SCHEDULED', 'CONFIRMED', 'IN_PROGRESS', 'COMPLETED', 'CANCELLED', 'RESCHEDULED'];
-const TYPE_OPTIONS = ['CONSULTATION', 'PRE_OP_ASSESSMENT', 'SURGERY', 'POST_OP_REVIEW'];
+const STATUS_BADGE: Record<string, 'primary' | 'success' | 'warning' | 'danger' | 'default'> = {
+  SCHEDULED: 'primary',
+  CONFIRMED: 'success',
+  IN_PROGRESS: 'warning',
+  COMPLETED: 'default',
+  CANCELLED: 'danger',
+  RESCHEDULED: 'warning',
+};
 
 export default function AdminAppointmentsPage() {
-  const [appointments, setAppointments] = useState<AdminAppointment[]>([]);
+  const [appointments, setAppointments] = useState<Appointment[]>([]);
+  const [hospitals, setHospitals] = useState<HospitalOption[]>([]);
   const [loading, setLoading] = useState(true);
+  const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState('');
   const [typeFilter, setTypeFilter] = useState('');
+  const [hospitalFilter, setHospitalFilter] = useState('');
   const [pagination, setPagination] = useState({ page: 1, total: 0, totalPages: 1 });
+
+  // Detail drawer
+  const [selectedAppt, setSelectedAppt] = useState<Appointment | null>(null);
+  const [actionLoading, setActionLoading] = useState(false);
+
+  // Cancel dialog
+  const [cancelModal, setCancelModal] = useState({ open: false, id: '', reason: '' });
+
+  // Reschedule dialog
+  const [rescheduleModal, setRescheduleModal] = useState({ open: false, id: '', dateStr: '' });
 
   const fetchAppointments = useCallback(async (page = 1) => {
     setLoading(true);
     try {
       const params = new URLSearchParams({ page: String(page), limit: '15' });
+      if (search) params.set('search', search);
       if (statusFilter) params.set('status', statusFilter);
       if (typeFilter) params.set('type', typeFilter);
+      if (hospitalFilter) params.set('hospitalId', hospitalFilter);
+
       const res = await fetch(`/api/v1/admin/appointments?${params}`);
       const data = await res.json();
-      if (data.success) { setAppointments(data.data.appointments); setPagination(data.data.pagination); }
-    } catch (err) { console.error(err); } finally { setLoading(false); }
-  }, [statusFilter, typeFilter]);
+      if (data.success) {
+        setAppointments(data.data.appointments);
+        setPagination(data.data.pagination);
+      }
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setLoading(false);
+    }
+  }, [search, statusFilter, typeFilter, hospitalFilter]);
 
-  useEffect(() => { fetchAppointments(); }, [fetchAppointments]);
+  useEffect(() => {
+    fetchAppointments();
+  }, [fetchAppointments]);
 
-  const statusColor = (s: string) => {
-    if (s === 'COMPLETED') return 'success';
-    if (s === 'CANCELLED') return 'danger';
-    if (s === 'IN_PROGRESS') return 'warning';
-    return 'primary';
+  useEffect(() => {
+    // Fetch hospitals for filter dropdown
+    fetch('/api/v1/admin/hospitals')
+      .then((r) => r.json())
+      .then((d) => {
+        if (d.success) {
+          setHospitals(d.data.hospitals.map((h: { id: string; name: string }) => ({ id: h.id, name: h.name })));
+        }
+      })
+      .catch(() => {});
+  }, []);
+
+  const handleCancel = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!cancelModal.reason.trim()) {
+      toast.error('Cancellation reason is required');
+      return;
+    }
+    setActionLoading(true);
+    try {
+      const res = await fetch('/api/v1/admin/appointments', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          id: cancelModal.id,
+          status: 'CANCELLED',
+          cancellationReason: cancelModal.reason,
+        }),
+      });
+      const data = await res.json();
+      if (!data.success) {
+        toast.error(data.error?.message || 'Failed to cancel appointment');
+        return;
+      }
+      toast.success('Appointment cancelled successfully');
+      setCancelModal({ open: false, id: '', reason: '' });
+      setSelectedAppt(null);
+      fetchAppointments(pagination.page);
+    } catch {
+      toast.error('An error occurred.');
+    } finally {
+      setActionLoading(false);
+    }
+  };
+
+  const handleReschedule = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!rescheduleModal.dateStr) {
+      toast.error('New date and time are required');
+      return;
+    }
+    setActionLoading(true);
+    try {
+      const res = await fetch('/api/v1/admin/appointments', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          id: rescheduleModal.id,
+          status: 'RESCHEDULED',
+          scheduledAt: new Date(rescheduleModal.dateStr).toISOString(),
+        }),
+      });
+      const data = await res.json();
+      if (!data.success) {
+        toast.error(data.error?.message || 'Failed to reschedule appointment');
+        return;
+      }
+      toast.success('Appointment rescheduled successfully');
+      setRescheduleModal({ open: false, id: '', dateStr: '' });
+      setSelectedAppt(null);
+      fetchAppointments(pagination.page);
+    } catch {
+      toast.error('An error occurred.');
+    } finally {
+      setActionLoading(false);
+    }
   };
 
   return (
     <div className="max-w-7xl mx-auto space-y-6 animate-fade-in">
-      <div>
-        <h1 className="text-2xl font-bold text-surface-900 tracking-tight">All Appointments</h1>
-        <p className="text-sm text-surface-500 mt-1">Platform-wide appointment register.</p>
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div>
+          <h1 className="text-2xl font-bold text-surface-900 tracking-tight">All Appointments</h1>
+          <p className="text-sm text-surface-500 mt-1">Platform-wide overview and scheduling control of doctor appointments.</p>
+        </div>
+        <Button
+          variant="secondary"
+          onClick={() => {
+            window.open(`/api/v1/admin/export/appointments?status=${statusFilter}`, '_blank');
+            toast.success('Export started — check your downloads.');
+          }}
+        >
+          ↓ Export CSV
+        </Button>
       </div>
+
+      {/* Filters */}
       <Card className="p-4 bg-white border border-surface-200 flex flex-col sm:flex-row gap-3">
-        <select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)} className="px-3 py-2 border border-surface-300 rounded-lg text-sm flex-1">
-          <option value="">All Statuses</option>
-          {STATUS_OPTIONS.map((s) => <option key={s} value={s}>{s}</option>)}
-        </select>
-        <select value={typeFilter} onChange={(e) => setTypeFilter(e.target.value)} className="px-3 py-2 border border-surface-300 rounded-lg text-sm flex-1">
-          <option value="">All Types</option>
-          {TYPE_OPTIONS.map((t) => <option key={t} value={t}>{APPOINTMENT_TYPE_LABELS[t]}</option>)}
-        </select>
+        <input
+          type="text"
+          placeholder="Search patient or doctor name..."
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+          className="flex-1 px-3 py-2 border border-surface-300 rounded-lg text-sm focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500"
+        />
+        <Select
+          value={statusFilter}
+          onChange={setStatusFilter}
+          options={[
+            { value: '', label: 'All Statuses' },
+            ...STATUS_OPTIONS.map((s) => ({ value: s, label: APPOINTMENT_STATUS_LABELS[s] || s }))
+          ]}
+          placeholder="All Statuses"
+          className="w-full sm:w-48"
+        />
+        <Select
+          value={typeFilter}
+          onChange={setTypeFilter}
+          options={[
+            { value: '', label: 'All Types' },
+            ...Object.entries(APPOINTMENT_TYPE_LABELS).map(([k, v]) => ({ value: k, label: v }))
+          ]}
+          placeholder="All Types"
+          className="w-full sm:w-48"
+        />
+        <Select
+          value={hospitalFilter}
+          onChange={setHospitalFilter}
+          options={[
+            { value: '', label: 'All Hospitals' },
+            ...hospitals.map((h) => ({ value: h.id, label: h.name }))
+          ]}
+          placeholder="All Hospitals"
+          className="w-full sm:w-48"
+        />
+        <Button variant="secondary" size="sm" onClick={() => fetchAppointments()}>
+          Search
+        </Button>
       </Card>
 
+      {/* Table */}
       <Card className="bg-white border border-surface-200 overflow-hidden">
         {loading ? (
-          <div className="flex items-center justify-center py-16"><div className="w-8 h-8 border-4 border-primary-600 border-t-transparent rounded-full animate-spin" /></div>
+          <div className="flex items-center justify-center py-16">
+            <div className="w-8 h-8 border-4 border-primary-600 border-t-transparent rounded-full animate-spin" />
+          </div>
         ) : (
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
               <thead>
                 <tr className="border-b border-surface-100 bg-surface-50">
                   <th className="px-5 py-3 text-left text-xs font-bold text-surface-500 uppercase tracking-wider">Patient</th>
-                  <th className="px-5 py-3 text-left text-xs font-bold text-surface-500 uppercase tracking-wider">Doctor</th>
-                  <th className="px-5 py-3 text-left text-xs font-bold text-surface-500 uppercase tracking-wider">Hospital</th>
+                  <th className="px-5 py-3 text-left text-xs font-bold text-surface-500 uppercase tracking-wider">Doctor & Hospital</th>
+                  <th className="px-5 py-3 text-left text-xs font-bold text-surface-500 uppercase tracking-wider">Date & Time</th>
                   <th className="px-5 py-3 text-left text-xs font-bold text-surface-500 uppercase tracking-wider">Type</th>
                   <th className="px-5 py-3 text-left text-xs font-bold text-surface-500 uppercase tracking-wider">Status</th>
-                  <th className="px-5 py-3 text-left text-xs font-bold text-surface-500 uppercase tracking-wider">Date</th>
+                  <th className="px-5 py-3 text-right text-xs font-bold text-surface-500 uppercase tracking-wider">Actions</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-surface-100">
                 {appointments.length === 0 ? (
-                  <tr><td colSpan={6} className="px-5 py-12 text-center text-surface-500">No appointments found.</td></tr>
+                  <tr>
+                    <td colSpan={6} className="px-5 py-12 text-center text-surface-500">
+                      No appointments found.
+                    </td>
+                  </tr>
                 ) : (
                   appointments.map((a) => (
                     <tr key={a.id} className="hover:bg-surface-50 transition-colors">
                       <td className="px-5 py-3.5 font-semibold text-surface-900">{a.patient.user.fullName}</td>
-                      <td className="px-5 py-3.5 text-surface-600">{a.doctor.fullName}</td>
-                      <td className="px-5 py-3.5 text-surface-600">{a.hospital.name}, {a.hospital.city}</td>
-                      <td className="px-5 py-3.5"><Badge variant="default">{APPOINTMENT_TYPE_LABELS[a.appointmentType] || a.appointmentType}</Badge></td>
-                      <td className="px-5 py-3.5"><Badge variant={statusColor(a.status)} dot>{a.status}</Badge></td>
-                      <td className="px-5 py-3.5 text-xs text-surface-500">{new Date(a.scheduledAt).toLocaleString()}</td>
+                      <td className="px-5 py-3.5">
+                        <p className="font-semibold text-surface-900">{a.doctor.fullName}</p>
+                        <p className="text-xs text-surface-400">
+                          {a.hospital.name}, {a.hospital.city}
+                        </p>
+                      </td>
+                      <td className="px-5 py-3.5 text-surface-600">
+                        {new Date(a.scheduledAt).toLocaleString()}
+                      </td>
+                      <td className="px-5 py-3.5 text-surface-600">
+                        {APPOINTMENT_TYPE_LABELS[a.appointmentType] || a.appointmentType}
+                      </td>
+                      <td className="px-5 py-3.5">
+                        <Badge variant={STATUS_BADGE[a.status] || 'default'}>
+                          {APPOINTMENT_STATUS_LABELS[a.status] || a.status}
+                        </Badge>
+                      </td>
+                      <td className="px-5 py-3.5 text-right">
+                        <Button variant="ghost" size="sm" onClick={() => setSelectedAppt(a)}>
+                          Manage
+                        </Button>
+                      </td>
                     </tr>
                   ))
                 )}
@@ -101,14 +288,178 @@ export default function AdminAppointmentsPage() {
         )}
         {pagination.totalPages > 1 && (
           <div className="px-5 py-3 border-t border-surface-100 flex items-center justify-between text-sm">
-            <span className="text-surface-500">Page {pagination.page} of {pagination.totalPages}</span>
+            <span className="text-surface-500">
+              Page {pagination.page} of {pagination.totalPages} ({pagination.total} total)
+            </span>
             <div className="flex gap-2">
-              <Button variant="secondary" size="sm" disabled={pagination.page <= 1} onClick={() => fetchAppointments(pagination.page - 1)}>Previous</Button>
-              <Button variant="secondary" size="sm" disabled={pagination.page >= pagination.totalPages} onClick={() => fetchAppointments(pagination.page + 1)}>Next</Button>
+              <Button
+                variant="secondary"
+                size="sm"
+                disabled={pagination.page <= 1}
+                onClick={() => fetchAppointments(pagination.page - 1)}
+              >
+                Previous
+              </Button>
+              <Button
+                variant="secondary"
+                size="sm"
+                disabled={pagination.page >= pagination.totalPages}
+                onClick={() => fetchAppointments(pagination.page + 1)}
+              >
+                Next
+              </Button>
             </div>
           </div>
         )}
       </Card>
+
+      {/* Appointment Detail Drawer */}
+      {selectedAppt && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-surface-900/40 backdrop-blur-xs">
+          <div className="bg-white rounded-lg shadow-xl w-full max-w-md animate-scale-up max-h-[90vh] overflow-y-auto">
+            <div className="px-6 py-4 border-b border-surface-100 flex items-center justify-between sticky top-0 bg-white z-10">
+              <h3 className="text-sm font-bold text-surface-900">Appointment Details</h3>
+              <button onClick={() => setSelectedAppt(null)} className="text-surface-400 hover:text-surface-600 font-bold text-lg">
+                ×
+              </button>
+            </div>
+            <div className="p-6 space-y-5">
+              <div className="space-y-3">
+                <div>
+                  <p className="text-[10px] font-bold text-surface-400 uppercase">Patient</p>
+                  <p className="text-sm font-semibold text-surface-900">{selectedAppt.patient.user.fullName}</p>
+                </div>
+                <div>
+                  <p className="text-[10px] font-bold text-surface-400 uppercase">Doctor</p>
+                  <p className="text-sm font-semibold text-surface-900">{selectedAppt.doctor.fullName}</p>
+                </div>
+                <div>
+                  <p className="text-[10px] font-bold text-surface-400 uppercase">Hospital</p>
+                  <p className="text-sm text-surface-600">
+                    {selectedAppt.hospital.name} ({selectedAppt.hospital.city})
+                  </p>
+                </div>
+                <div>
+                  <p className="text-[10px] font-bold text-surface-400 uppercase">Scheduled Time</p>
+                  <p className="text-sm text-surface-600">{new Date(selectedAppt.scheduledAt).toLocaleString()}</p>
+                </div>
+                <div>
+                  <p className="text-[10px] font-bold text-surface-400 uppercase">Type & Status</p>
+                  <div className="flex items-center gap-2 mt-1">
+                    <Badge variant="default">{APPOINTMENT_TYPE_LABELS[selectedAppt.appointmentType] || selectedAppt.appointmentType}</Badge>
+                    <Badge variant={STATUS_BADGE[selectedAppt.status] || 'default'}>
+                      {APPOINTMENT_STATUS_LABELS[selectedAppt.status] || selectedAppt.status}
+                    </Badge>
+                  </div>
+                </div>
+                {selectedAppt.notes && (
+                  <div>
+                    <p className="text-[10px] font-bold text-surface-400 uppercase">Notes</p>
+                    <p className="text-sm text-surface-600 bg-surface-50 p-2.5 rounded border border-surface-200">{selectedAppt.notes}</p>
+                  </div>
+                )}
+                {selectedAppt.cancellationReason && (
+                  <div>
+                    <p className="text-[10px] font-bold text-danger-500 uppercase">Cancellation Reason</p>
+                    <p className="text-sm text-danger-700 bg-danger-50 p-2.5 rounded border border-danger-200">{selectedAppt.cancellationReason}</p>
+                  </div>
+                )}
+              </div>
+
+              {selectedAppt.status !== 'CANCELLED' && selectedAppt.status !== 'COMPLETED' && (
+                <div className="pt-4 border-t border-surface-100 flex gap-3">
+                  <Button
+                    variant="secondary"
+                    className="flex-1 text-danger-600 hover:bg-danger-50 border-danger-200"
+                    onClick={() => setCancelModal({ open: true, id: selectedAppt.id, reason: '' })}
+                  >
+                    Cancel Appointment
+                  </Button>
+                  <Button
+                    variant="primary"
+                    className="flex-1"
+                    onClick={() =>
+                      setRescheduleModal({
+                        open: true,
+                        id: selectedAppt.id,
+                        dateStr: new Date(selectedAppt.scheduledAt).toISOString().slice(0, 16),
+                      })
+                    }
+                  >
+                    Reschedule
+                  </Button>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Cancel Dialog */}
+      {cancelModal.open && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-surface-900/40 backdrop-blur-xs">
+          <div className="bg-white rounded-lg shadow-xl w-full max-w-sm animate-scale-up p-6">
+            <h3 className="text-lg font-bold text-surface-900 mb-2">Cancel Appointment</h3>
+            <p className="text-sm text-surface-500 mb-4">Please provide a reason for cancelling this appointment.</p>
+            <form onSubmit={handleCancel} className="space-y-4">
+              <textarea
+                value={cancelModal.reason}
+                onChange={(e) => setCancelModal({ ...cancelModal, reason: e.target.value })}
+                required
+                rows={3}
+                placeholder="Reason for cancellation..."
+                className="w-full p-2.5 border border-surface-300 rounded text-sm focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500"
+              />
+              <div className="flex gap-3">
+                <Button
+                  type="button"
+                  variant="secondary"
+                  className="flex-1"
+                  onClick={() => setCancelModal({ open: false, id: '', reason: '' })}
+                >
+                  Go Back
+                </Button>
+                <Button type="submit" className="flex-1" variant="primary" isLoading={actionLoading}>
+                  Confirm Cancel
+                </Button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Reschedule Dialog */}
+      {rescheduleModal.open && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-surface-900/40 backdrop-blur-xs">
+          <div className="bg-white rounded-lg shadow-xl w-full max-w-sm animate-scale-up p-6">
+            <h3 className="text-lg font-bold text-surface-900 mb-2">Reschedule Appointment</h3>
+            <p className="text-sm text-surface-500 mb-4">Select the new date and time for this appointment.</p>
+            <form onSubmit={handleReschedule} className="space-y-4">
+              <DatePicker
+                label="New Date & Time"
+                value={rescheduleModal.dateStr}
+                onChange={(dateStr) => setRescheduleModal({ ...rescheduleModal, dateStr })}
+                showTimePicker={true}
+                placeholder="Select date & time"
+                required
+              />
+              <div className="flex gap-3">
+                <Button
+                  type="button"
+                  variant="secondary"
+                  className="flex-1"
+                  onClick={() => setRescheduleModal({ open: false, id: '', dateStr: '' })}
+                >
+                  Cancel
+                </Button>
+                <Button type="submit" className="flex-1" variant="primary" isLoading={actionLoading}>
+                  Reschedule
+                </Button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

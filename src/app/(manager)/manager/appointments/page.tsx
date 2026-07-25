@@ -8,6 +8,8 @@
 import { useState, useEffect } from 'react';
 import { Card } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
+import { DatePicker } from '@/components/ui/DatePicker';
+import { Select } from '@/components/ui/Select';
 
 enum AppointmentStatus {
   SCHEDULED = 'SCHEDULED',
@@ -414,89 +416,71 @@ export default function AppointmentsManager() {
             )}
 
             <form onSubmit={handleCreateAppointment} className="space-y-4 font-semibold text-surface-700">
-              {/* Select Patient */}
-              <div className="space-y-1">
-                <label htmlFor="patient" className="block">Patient Selection</label>
-                <select
-                  id="patient"
-                  className="w-full p-2.5 rounded border border-surface-300 bg-white font-medium text-surface-800"
-                  value={targetPatientId}
-                  onChange={(e) => setTargetPatientId(e.target.value)}
-                >
-                  <option value="">-- Choose patient --</option>
-                  {patients.map((p) => (
-                    <option key={p.id} value={p.id}>
-                      {p.user.fullName} {p.cases.length === 0 ? '(No active cases)' : ''}
-                    </option>
-                  ))}
-                </select>
-              </div>
+              <Select
+                label="Patient Selection"
+                value={targetPatientId}
+                onChange={setTargetPatientId}
+                options={[
+                  { value: '', label: '-- Choose patient --' },
+                  ...patients.map((p) => ({
+                    value: p.id,
+                    label: `${p.user.fullName} ${p.cases.length === 0 ? '(No active cases)' : ''}`
+                  }))
+                ]}
+                required
+              />
 
-              {/* Select Hospital */}
-              <div className="space-y-1">
-                <label htmlFor="hospital" className="block">Partner Hospital</label>
-                <select
-                  id="hospital"
-                  className="w-full p-2.5 rounded border border-surface-300 bg-white font-medium text-surface-800"
-                  value={targetHospitalId}
-                  onChange={(e) => setTargetHospitalId(e.target.value)}
-                >
-                  <option value="">-- Choose hospital --</option>
-                  {hospitals.map((h) => (
-                    <option key={h.id} value={h.id}>
-                      {h.name} ({h.city})
-                    </option>
-                  ))}
-                </select>
-              </div>
+              <Select
+                label="Partner Hospital"
+                value={targetHospitalId}
+                onChange={setTargetHospitalId}
+                options={[
+                  { value: '', label: '-- Choose hospital --' },
+                  ...hospitals.map((h) => ({
+                    value: h.id,
+                    label: `${h.name} (${h.city})`
+                  }))
+                ]}
+                required
+              />
 
-              {/* Select Doctor */}
-              <div className="space-y-1">
-                <label htmlFor="doctor" className="block">Assigned Doctor</label>
-                <select
-                  id="doctor"
-                  className="w-full p-2.5 rounded border border-surface-300 bg-white font-medium text-surface-800"
-                  value={targetDoctorId}
-                  onChange={(e) => setTargetDoctorId(e.target.value)}
-                >
-                  <option value="">-- Choose doctor --</option>
-                  {doctors
+              <Select
+                label="Assigned Doctor"
+                value={targetDoctorId}
+                onChange={setTargetDoctorId}
+                options={[
+                  { value: '', label: '-- Choose doctor --' },
+                  ...doctors
                     .filter((d) => !targetHospitalId || (d as any).hospitalId === targetHospitalId)
-                    .map((d) => (
-                      <option key={d.id} value={d.id}>
-                        Dr. {d.fullName} ({d.specialisation.name})
-                      </option>
-                    ))}
-                </select>
-              </div>
+                    .map((d) => ({
+                      value: d.id,
+                      label: `Dr. ${d.fullName} (${d.specialisation.name})`
+                    }))
+                ]}
+                required
+              />
 
-              {/* Appointment Type */}
-              <div className="space-y-1">
-                <label htmlFor="type" className="block">Appointment Type</label>
-                <select
-                  id="type"
-                  className="w-full p-2.5 rounded border border-surface-300 bg-white font-medium text-surface-800"
-                  value={targetApptType}
-                  onChange={(e) => setTargetApptType(e.target.value as AppointmentType)}
-                >
-                  <option value={AppointmentType.CONSULTATION}>Clinical Consultation</option>
-                  <option value={AppointmentType.PRE_OP_ASSESSMENT}>Pre-Op Assessment</option>
-                  <option value={AppointmentType.SURGERY}>Scheduled Surgery</option>
-                  <option value={AppointmentType.POST_OP_REVIEW}>Post-Op Review</option>
-                </select>
-              </div>
+              <Select
+                label="Appointment Type"
+                value={targetApptType}
+                onChange={(val) => setTargetApptType(val as AppointmentType)}
+                options={[
+                  { value: AppointmentType.CONSULTATION, label: 'Clinical Consultation' },
+                  { value: AppointmentType.PRE_OP_ASSESSMENT, label: 'Pre-Op Assessment' },
+                  { value: AppointmentType.SURGERY, label: 'Scheduled Surgery' },
+                  { value: AppointmentType.POST_OP_REVIEW, label: 'Post-Op Review' }
+                ]}
+                required
+              />
 
               {/* Time */}
-              <div className="space-y-1">
-                <label htmlFor="time" className="block">Scheduled Date & Time</label>
-                <input
-                  type="datetime-local"
-                  id="time"
-                  className="w-full p-2.5 rounded border border-surface-300 font-medium text-surface-800"
-                  value={scheduledAtStr}
-                  onChange={(e) => setScheduledAtStr(e.target.value)}
-                />
-              </div>
+              <DatePicker
+                label="Scheduled Date & Time"
+                value={scheduledAtStr}
+                onChange={setScheduledAtStr}
+                showTimePicker={true}
+                placeholder="Pick date & time"
+              />
 
               <div className="pt-3 border-t border-surface-100 flex gap-2">
                 <Button className="flex-1" type="submit" disabled={submitting}>
@@ -523,17 +507,14 @@ export default function AppointmentsManager() {
             </div>
 
             <form onSubmit={handleReschedule} className="space-y-4 font-semibold text-surface-700">
-              <div className="space-y-1">
-                <label htmlFor="newtime" className="block">New Date & Time</label>
-                <input
-                  type="datetime-local"
-                  id="newtime"
-                  className="w-full p-2.5 rounded border border-surface-300 font-medium text-surface-800"
-                  value={rescheduleDateStr}
-                  onChange={(e) => setRescheduleDateStr(e.target.value)}
-                  required
-                />
-              </div>
+              <DatePicker
+                label="New Date & Time"
+                value={rescheduleDateStr}
+                onChange={setRescheduleDateStr}
+                showTimePicker={true}
+                placeholder="Pick new date & time"
+                required
+              />
 
               <div className="flex gap-2 pt-2">
                 <Button className="flex-1" type="submit" disabled={submitting}>

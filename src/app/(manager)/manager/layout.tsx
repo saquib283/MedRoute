@@ -11,6 +11,14 @@ import Image from 'next/image';
 import logoImg from '../../../../public/assets/logo.png';
 import { usePathname, useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/Button';
+import {
+  LayoutDashboard,
+  Users,
+  Briefcase,
+  Home,
+  Calendar,
+  MessageSquare,
+} from 'lucide-react';
 
 interface NavItem {
   label: string;
@@ -43,7 +51,7 @@ export default function ManagerLayout({
           const data = await res.json();
           // Authenticate role
           const role = data.data?.user?.role;
-          if (role !== 'MANAGER' && role !== 'ADMIN' && role !== 'SUPER_ADMIN') {
+          if (role !== 'MANAGER' && role !== 'ADMIN' && role !== 'ADMIN') {
             router.push('/login');
             return;
           }
@@ -167,10 +175,8 @@ export default function ManagerLayout({
       >
         <div>
           {/* Logo Brand Header */}
-          <div className="flex items-center gap-3 px-6 h-16 border-b border-surface-200/60 bg-white">
-            <Image src={logoImg} alt="Afzal Logo" width={48} height={24} className="object-contain shrink-0" />
-            <div className="h-5 w-px bg-surface-200" />
-            <span className="text-sm font-bold text-surface-900 tracking-tight">MediRoute India</span>
+          <div className="flex items-center px-6 h-16 border-b border-surface-200/60 bg-white">
+            <Image src={logoImg} alt="Afzal Logo" width={110} height={36} className="h-9 w-auto object-contain shrink-0" priority />
           </div>
 
           {/* Navigation Links */}
@@ -256,14 +262,79 @@ export default function ManagerLayout({
             </svg>
           </button>
 
-          {/* Breadcrumb / Title placeholder */}
-          <div className="text-sm font-semibold text-surface-800">
-            {pathname === '/manager/dashboard' && 'Operations Overview'}
-            {pathname === '/manager/patients' && 'Patient Cohort'}
-            {pathname === '/manager/cases' && 'Case Pipeline Files'}
-            {pathname === '/manager/accommodations' && 'Hostel Accommodations'}
-            {pathname === '/manager/appointments' && 'Consultations & Surgery Schedule'}
-            {pathname === '/manager/chat' && 'Coordination Chat Center'}
+          {/* Enhanced Breadcrumb & Page Title Header */}
+          <div className="flex items-center gap-3">
+            {pathname === '/manager/dashboard' && (
+              <div className="flex items-center gap-2.5">
+                <div className="w-8 h-8 rounded-xl bg-primary-50 text-primary-600 border border-primary-100 flex items-center justify-center font-bold">
+                  <LayoutDashboard className="w-4 h-4" />
+                </div>
+                <div>
+                  <span className="text-[10px] font-bold text-primary-600 uppercase tracking-widest block mb-0.5">Coordinator Portal</span>
+                  <h2 className="text-base font-bold text-surface-900 tracking-tight">Operations Overview</h2>
+                </div>
+              </div>
+            )}
+
+            {pathname === '/manager/patients' && (
+              <div className="flex items-center gap-2.5">
+                <div className="w-8 h-8 rounded-xl bg-primary-50 text-primary-600 border border-primary-100 flex items-center justify-center font-bold">
+                  <Users className="w-4 h-4" />
+                </div>
+                <div>
+                  <span className="text-[10px] font-bold text-primary-600 uppercase tracking-widest block mb-0.5">Care Roster</span>
+                  <h2 className="text-base font-bold text-surface-900 tracking-tight">Patient Cohort</h2>
+                </div>
+              </div>
+            )}
+
+            {pathname === '/manager/cases' && (
+              <div className="flex items-center gap-2.5">
+                <div className="w-8 h-8 rounded-xl bg-primary-50 text-primary-600 border border-primary-100 flex items-center justify-center font-bold">
+                  <Briefcase className="w-4 h-4" />
+                </div>
+                <div>
+                  <span className="text-[10px] font-bold text-primary-600 uppercase tracking-widest block mb-0.5">Clinical Cases</span>
+                  <h2 className="text-base font-bold text-surface-900 tracking-tight">Case Pipeline Files</h2>
+                </div>
+              </div>
+            )}
+
+            {pathname === '/manager/accommodations' && (
+              <div className="flex items-center gap-2.5">
+                <div className="w-8 h-8 rounded-xl bg-primary-50 text-primary-600 border border-primary-100 flex items-center justify-center font-bold">
+                  <Home className="w-4 h-4" />
+                </div>
+                <div>
+                  <span className="text-[10px] font-bold text-primary-600 uppercase tracking-widest block mb-0.5">Logistics & Stay</span>
+                  <h2 className="text-base font-bold text-surface-900 tracking-tight">Hostel Accommodations</h2>
+                </div>
+              </div>
+            )}
+
+            {pathname === '/manager/appointments' && (
+              <div className="flex items-center gap-2.5">
+                <div className="w-8 h-8 rounded-xl bg-primary-50 text-primary-600 border border-primary-100 flex items-center justify-center font-bold">
+                  <Calendar className="w-4 h-4" />
+                </div>
+                <div>
+                  <span className="text-[10px] font-bold text-primary-600 uppercase tracking-widest block mb-0.5">Surgical Roster</span>
+                  <h2 className="text-base font-bold text-surface-900 tracking-tight">Consultations & Surgery Schedule</h2>
+                </div>
+              </div>
+            )}
+
+            {pathname === '/manager/chat' && (
+              <div className="flex items-center gap-2.5">
+                <div className="w-8 h-8 rounded-xl bg-primary-50 text-primary-600 border border-primary-100 flex items-center justify-center font-bold">
+                  <MessageSquare className="w-4 h-4" />
+                </div>
+                <div>
+                  <span className="text-[10px] font-bold text-primary-600 uppercase tracking-widest block mb-0.5">Patient Communication</span>
+                  <h2 className="text-base font-bold text-surface-900 tracking-tight">Coordination Chat Center</h2>
+                </div>
+              </div>
+            )}
           </div>
 
           <div className="flex items-center gap-4">

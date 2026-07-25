@@ -45,9 +45,9 @@ export const Input = React.forwardRef<HTMLInputElement, InputProps>(
               bg-white border rounded-lg
               text-surface-900 placeholder:text-surface-400
               transition-colors duration-150
-              focus:outline-none focus:ring-2 focus:ring-primary-500/30 focus:border-primary-500
+              focus:outline-none focus:border-primary-600
               ${error
-                ? 'border-danger-500 focus:ring-danger-500/30 focus:border-danger-500'
+                ? 'border-danger-500 focus:border-danger-600'
                 : 'border-surface-300 hover:border-surface-400'
               }
               ${className}

@@ -1,0 +1,6 @@
+{
+  "maxPatientsPerManager": 25,
+  "defaultCommissionRate": 10,
+  "maintenanceMode": false,
+  "sessionTimeoutMinutes": 60
+}

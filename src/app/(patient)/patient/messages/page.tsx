@@ -1,13 +1,25 @@
 'use client';
 
 /**
- * MediRoute India — Secure Messaging page
- * Chat-style secure communication with the assigned Case Coordinator.
+ * MediRoute India — Patient Secure Messaging Portal
+ * Real-time encrypted messaging interface with Lucide SVG icons and prompt chips.
  */
 
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useMemo } from 'react';
 import { Card } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
+import {
+  Calendar,
+  Plane,
+  Home,
+  FileSearch,
+  Lock,
+  RefreshCw,
+  Send,
+  CheckCheck,
+  MessageSquare,
+  AlertCircle,
+} from 'lucide-react';
 
 interface Message {
   id: string;
@@ -23,6 +35,13 @@ interface Manager {
   email: string;
 }
 
+const QUICK_PROMPTS = [
+  { label: 'Check Appointment Status', icon: Calendar, prompt: 'Hi, could you please provide an update on my scheduled doctor appointment status?' },
+  { label: 'Medical Visa Assistance', icon: Plane, prompt: 'Hi, I need assistance with my medical visa recommendation letter for India.' },
+  { label: 'Hostel & Stay Query', icon: Home, prompt: 'Hi, I have a question regarding my accommodation check-in details and airport transfer.' },
+  { label: 'Clinical Report Review', icon: FileSearch, prompt: 'Hi, I have uploaded new lab test reports to my vault. Could the doctor review them?' },
+];
+
 export default function SecureMessagesPage() {
   const [messages, setMessages] = useState<Message[]>([]);
   const [manager, setManager] = useState<Manager | null>(null);
@@ -32,36 +51,32 @@ export default function SecureMessagesPage() {
   const [isSending, setIsSending] = useState(false);
   const [inputMessage, setInputMessage] = useState('');
   const [errorMsg, setErrorMsg] = useState('');
+  const [isRefreshing, setIsRefreshing] = useState(false);
 
   const feedRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    // Determine the current patient's User ID to orient message bubbles (left vs. right)
     const fetchMe = async () => {
       try {
-        const token = localStorage.getItem('accessToken');
-        const res = await fetch('/api/v1/auth/me', {
-          headers: token ? { Authorization: `Bearer ${token}` } : {},
-        });
+        const res = await fetch('/api/v1/auth/me');
         const data = await res.json();
         if (data.success && data.data?.user) {
           setPatientUserId(data.data.user.id);
         }
       } catch (err) {
-        console.error('Failed to resolve current patient ID', err);
+        console.error('Failed to resolve patient identity', err);
       }
     };
-
     fetchMe();
-    fetchMessages();
+  }, []);
 
-    // Auto poll every 10 seconds for messaging convenience
-    const interval = setInterval(fetchMessages, 10000);
+  useEffect(() => {
+    fetchMessages();
+    const interval = setInterval(fetchMessages, 15000);
     return () => clearInterval(interval);
   }, []);
 
   useEffect(() => {
-    // Scroll to bottom on new messages
     if (feedRef.current) {
       feedRef.current.scrollTop = feedRef.current.scrollHeight;
     }
@@ -69,13 +84,7 @@ export default function SecureMessagesPage() {
 
   const fetchMessages = async () => {
     try {
-      const token = localStorage.getItem('accessToken');
-      const headers: HeadersInit = {};
-      if (token) {
-        headers['Authorization'] = `Bearer ${token}`;
-      }
-
-      const res = await fetch('/api/v1/patient/messages', { headers });
+      const res = await fetch('/api/v1/patient/messages');
       const data = await res.json();
       if (data.success && data.data) {
         setMessages(data.data.messages || []);
@@ -85,11 +94,17 @@ export default function SecureMessagesPage() {
       console.error('Failed to load message history', err);
     } finally {
       setIsLoading(false);
+      setIsRefreshing(false);
     }
   };
 
-  const handleSend = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const handleManualRefresh = () => {
+    setIsRefreshing(true);
+    fetchMessages();
+  };
+
+  const handleSend = async (e?: React.FormEvent) => {
+    if (e) e.preventDefault();
     setErrorMsg('');
 
     if (!inputMessage.trim()) return;
@@ -100,18 +115,10 @@ export default function SecureMessagesPage() {
 
     setIsSending(true);
     try {
-      const token = localStorage.getItem('accessToken');
-      const headers: HeadersInit = {
-        'Content-Type': 'application/json',
-      };
-      if (token) {
-        headers['Authorization'] = `Bearer ${token}`;
-      }
-
       const res = await fetch('/api/v1/patient/messages', {
         method: 'POST',
-        headers,
-        body: JSON.stringify({ message: inputMessage }),
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ message: inputMessage.trim() }),
       });
 
       const data = await res.json();
@@ -128,102 +135,209 @@ export default function SecureMessagesPage() {
     }
   };
 
+  const groupedMessages = useMemo(() => {
+    const groups: { date: string; msgs: Message[] }[] = [];
+    messages.forEach((msg) => {
+      const dateStr = new Date(msg.createdAt).toLocaleDateString(undefined, {
+        weekday: 'short',
+        month: 'short',
+        day: 'numeric',
+      });
+      const existing = groups.find((g) => g.date === dateStr);
+      if (existing) {
+        existing.msgs.push(msg);
+      } else {
+        groups.push({ date: dateStr, msgs: [msg] });
+      }
+    });
+    return groups;
+  }, [messages]);
+
   if (isLoading) {
     return (
-      <div className="flex items-center justify-center min-h-[300px]">
-        <div className="flex flex-col items-center gap-3">
-          <div className="w-8 h-8 border-4 border-primary-600 border-t-transparent rounded-full animate-spin" />
-          <p className="text-sm text-surface-500">Connecting to secure medical feed...</p>
-        </div>
+      <div className="flex flex-col items-center justify-center min-h-[400px] gap-4">
+        <div className="w-10 h-10 border-4 border-primary-600 border-t-transparent rounded-full animate-spin" />
+        <p className="text-sm font-medium text-surface-600">Connecting to secure medical feed...</p>
       </div>
     );
   }
 
   return (
-    <div className="max-w-4xl mx-auto h-[calc(100vh-140px)] flex flex-col">
-      {/* Messages layout wrapper */}
-      <Card className="flex-1 flex flex-col min-h-0 p-0 overflow-hidden relative">
-        {/* Manager Header Details */}
-        <div className="px-6 py-4 border-b border-surface-100 flex items-center gap-3 shrink-0 bg-white">
-          <div className="w-10 h-10 rounded-full bg-primary-100 text-primary-700 flex items-center justify-center font-bold text-sm">
-            {manager ? manager.fullName.charAt(0) : '?'}
+    <div className="max-w-5xl mx-auto h-[calc(100vh-120px)] flex flex-col px-4 py-2 animate-fade-in">
+      <Card className="flex-1 flex flex-col min-h-0 p-0 overflow-hidden relative rounded-2xl border border-surface-200 shadow-sm bg-white">
+        {/* Header */}
+        <div className="px-6 py-4 border-b border-surface-100 flex items-center justify-between gap-4 shrink-0 bg-white shadow-xs">
+          <div className="flex items-center gap-3.5 min-w-0">
+            <div className="relative shrink-0">
+              <div className="w-11 h-11 rounded-2xl bg-primary-100 text-primary-800 border border-primary-200 flex items-center justify-center font-bold text-base shadow-xs">
+                {manager ? manager.fullName.charAt(0) : '?'}
+              </div>
+              <span
+                className={`absolute -bottom-0.5 -right-0.5 w-3.5 h-3.5 rounded-full border-2 border-white ${
+                  manager ? 'bg-success-500' : 'bg-surface-300'
+                }`}
+              />
+            </div>
+
+            <div className="min-w-0">
+              <div className="flex items-center gap-2">
+                <h2 className="text-sm font-bold text-surface-900 truncate">
+                  {manager ? manager.fullName : 'Awaiting Case Coordinator'}
+                </h2>
+                {manager && (
+                  <span className="px-2 py-0.5 bg-primary-50 text-primary-700 text-[10px] font-bold rounded-md border border-primary-100">
+                    Assigned
+                  </span>
+                )}
+              </div>
+              <p className="text-xs text-surface-500 truncate mt-0.5">
+                {manager
+                  ? `Clinical Coordinator • ${manager.email}`
+                  : 'Messages will connect here once a coordinator is assigned to your case.'}
+              </p>
+            </div>
           </div>
-          <div>
-            <h2 className="text-sm font-bold text-surface-900">
-              {manager ? manager.fullName : 'Awaiting coordinator assignment'}
-            </h2>
-            <p className="text-[10px] text-surface-500 mt-0.5">
-              {manager ? `Assigned Coordinator (${manager.email})` : 'Messages will connect here once assigned.'}
-            </p>
+
+          <div className="flex items-center gap-3">
+            <div className="hidden sm:flex items-center gap-1.5 bg-surface-100 border border-surface-200 px-3 py-1.5 rounded-xl text-[11px] font-medium text-surface-600">
+              <Lock className="w-3.5 h-3.5 text-success-600" />
+              <span>HIPAA Encrypted Channel</span>
+            </div>
+
+            <button
+              type="button"
+              onClick={handleManualRefresh}
+              className={`p-2 rounded-xl border border-surface-200 text-surface-600 hover:text-surface-900 hover:bg-surface-50 transition-all ${
+                isRefreshing ? 'animate-spin' : ''
+              }`}
+              title="Refresh Message Feed"
+            >
+              <RefreshCw className="w-4 h-4" />
+            </button>
           </div>
         </div>
 
-        {/* Message Feed Area */}
+        {/* Chat Feed */}
         <div
           ref={feedRef}
-          className="flex-1 overflow-y-auto p-6 space-y-4 bg-surface-50/50"
+          className="flex-1 overflow-y-auto p-6 space-y-6 bg-surface-50/60"
         >
-          {messages.map((msg) => {
-            const isMe = msg.senderId === patientUserId;
-            return (
-              <div
-                key={msg.id}
-                className={`flex ${isMe ? 'justify-end' : 'justify-start'}`}
-              >
-                <div
-                  className={`
-                    max-w-[70%] rounded-lg p-3 text-xs leading-relaxed border shadow-xs
-                    ${
-                      isMe
-                        ? 'bg-primary-600 border-primary-700 text-white'
-                        : 'bg-white border-surface-200 text-surface-800'
-                    }
-                  `}
-                >
-                  <p className="whitespace-pre-wrap">{msg.body}</p>
-                  <span
-                    className={`
-                      text-[9px] block text-right mt-1.5 font-medium
-                      ${isMe ? 'text-primary-100' : 'text-surface-400'}
-                    `}
-                  >
-                    {new Date(msg.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                  </span>
-                </div>
+          {groupedMessages.map((group) => (
+            <div key={group.date} className="space-y-4">
+              <div className="flex items-center justify-center my-2">
+                <span className="px-3 py-1 bg-white border border-surface-200 text-surface-500 rounded-full text-[10px] font-bold shadow-2xs">
+                  {group.date}
+                </span>
               </div>
-            );
-          })}
+
+              {group.msgs.map((msg) => {
+                const isMe = msg.senderId === patientUserId;
+                return (
+                  <div
+                    key={msg.id}
+                    className={`flex items-end gap-2 ${isMe ? 'justify-end' : 'justify-start'}`}
+                  >
+                    {!isMe && (
+                      <div className="w-7 h-7 rounded-xl bg-primary-100 text-primary-800 font-bold text-[10px] flex items-center justify-center shrink-0 mb-1 border border-primary-200">
+                        {manager ? manager.fullName.charAt(0) : 'C'}
+                      </div>
+                    )}
+
+                    <div
+                      className={`
+                        max-w-[80%] sm:max-w-[70%] p-4 text-xs leading-relaxed shadow-xs transition-all
+                        ${
+                          isMe
+                            ? 'bg-primary-600 text-white rounded-2xl rounded-br-xs shadow-xs'
+                            : 'bg-white border border-surface-200 text-surface-900 rounded-2xl rounded-bl-xs shadow-xs'
+                        }
+                      `}
+                    >
+                      <p className="whitespace-pre-wrap">{msg.body}</p>
+
+                      <div
+                        className={`
+                          flex items-center justify-end gap-1 text-[9px] mt-2 font-medium
+                          ${isMe ? 'text-primary-100' : 'text-surface-400'}
+                        `}
+                      >
+                        <span>
+                          {new Date(msg.createdAt).toLocaleTimeString([], {
+                            hour: '2-digit',
+                            minute: '2-digit',
+                          })}
+                        </span>
+                        {isMe && <CheckCheck className="w-3.5 h-3.5 text-primary-200" />}
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          ))}
 
           {messages.length === 0 && (
-            <div className="flex flex-col items-center justify-center h-full text-center p-8">
-              <svg className="w-12 h-12 text-surface-300 mb-2" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
-                <path strokeLinecap="round" strokeLinejoin="round" d="M8.625 12a.375.375 0 11-.75 0 .375.375 0 01.75 0zm0 0H8.25m4.125 0a.375.375 0 11-.75 0 .375.375 0 01.75 0zm0 0H12m4.125 0a.375.375 0 11-.75 0 .375.375 0 01.75 0zm0 0h-.375M21 12c0 4.556-4.03 8.25-9 8.25a9.764 9.764 0 01-2.555-.337A5.972 5.972 0 015.41 20.97a5.969 5.969 0 01-.474-.065 4.48 4.48 0 00.978-2.025c.09-.457-.133-.901-.467-1.226C3.93 16.178 3 14.189 3 12c0-4.556 4.03-8.25 9-8.25s9 3.694 9 8.25z" />
-              </svg>
-              <h3 className="text-xs font-semibold text-surface-700">No Messages Yet</h3>
-              <p className="text-[11px] text-surface-400 mt-1 max-w-[280px]">
-                Ask questions regarding clinical schedule, accommodation options, or medical visa status.
+            <div className="flex flex-col items-center justify-center h-full text-center p-8 space-y-3">
+              <div className="w-14 h-14 rounded-2xl bg-white border border-surface-200 shadow-xs flex items-center justify-center text-primary-600">
+                <MessageSquare className="w-7 h-7" />
+              </div>
+              <h3 className="text-sm font-bold text-surface-900">Secure Direct Message Channel</h3>
+              <p className="text-xs text-surface-500 max-w-sm">
+                Send a coordination request regarding your medical itinerary, doctor consultation schedule, or hostel booking.
               </p>
             </div>
           )}
         </div>
 
-        {/* Message Input Controls */}
-        <div className="p-4 border-t border-surface-100 bg-white shrink-0">
-          <form onSubmit={handleSend} className="space-y-3">
+        {/* Footer Prompt Chips & Input */}
+        <div className="p-4 border-t border-surface-100 bg-white shrink-0 space-y-3">
+          <div className="flex items-center gap-2 overflow-x-auto pb-1 scrollbar-none">
+            <span className="text-[10px] font-bold uppercase tracking-wider text-surface-400 shrink-0">Quick Prompts:</span>
+            {QUICK_PROMPTS.map((item) => {
+              const IconComponent = item.icon;
+              return (
+                <button
+                  key={item.label}
+                  type="button"
+                  onClick={() => setInputMessage(item.prompt)}
+                  disabled={!manager}
+                  className="px-3 py-1.5 bg-surface-100 hover:bg-primary-50 hover:text-primary-700 hover:border-primary-200 border border-surface-200 rounded-xl text-xs font-semibold text-surface-700 whitespace-nowrap transition-all flex items-center gap-1.5 disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  <IconComponent className="w-3.5 h-3.5 text-primary-600" />
+                  <span>{item.label}</span>
+                </button>
+              );
+            })}
+          </div>
+
+          <form onSubmit={handleSend} className="space-y-2">
             {errorMsg && (
-              <p className="text-[11px] text-danger-600 font-semibold">{errorMsg}</p>
+              <div className="bg-danger-50 border border-danger-200 text-danger-800 p-2.5 rounded-xl text-xs flex items-center gap-2">
+                <AlertCircle className="w-4 h-4 text-danger-600 shrink-0" />
+                <span>{errorMsg}</span>
+              </div>
             )}
+
             <div className="flex gap-2">
               <input
                 type="text"
-                placeholder={manager ? "Write a coordination request..." : "No coordinator assigned"}
+                placeholder={
+                  manager
+                    ? 'Write a coordination request or medical inquiry...'
+                    : 'Awaiting case coordinator assignment...'
+                }
                 value={inputMessage}
                 onChange={(e) => setInputMessage(e.target.value)}
                 disabled={!manager || isSending}
-                className="flex-1 min-h-[44px] px-4 border border-surface-200 rounded-md text-xs text-surface-900 focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500 bg-white disabled:bg-surface-50 disabled:cursor-not-allowed"
+                className="flex-1 min-h-[46px] px-4 bg-surface-50 border border-surface-300 rounded-xl text-xs text-surface-900 font-medium focus:outline-none focus:border-primary-600 focus:bg-white transition-all disabled:bg-surface-100 disabled:cursor-not-allowed"
               />
-              <Button type="submit" isLoading={isSending} disabled={!manager || !inputMessage.trim()}>
-                Send Message
+              <Button
+                type="submit"
+                isLoading={isSending}
+                disabled={!manager || !inputMessage.trim()}
+                size="md"
+              >
+                <Send className="w-4 h-4 mr-1" /> Send
               </Button>
             </div>
           </form>

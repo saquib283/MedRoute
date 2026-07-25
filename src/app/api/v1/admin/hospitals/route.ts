@@ -1,13 +1,14 @@
 /**
  * MediRoute India — /api/v1/admin/hospitals
- * CRUD for hospital partner management.
+ * CRUD for hospital partner management with audit logging.
  */
 
 import { NextRequest } from 'next/server';
 import prisma from '@/lib/prisma';
-import { requireAuth } from '@/lib/api/auth-helper';
+import { requireAuth, getClientIP } from '@/lib/api/auth-helper';
 import { apiSuccess, apiError } from '@/lib/api/response';
 import { ERROR_CODES } from '@/lib/api/errors';
+import { createAuditLog, AUDIT_ACTIONS } from '@/lib/api/audit-logger';
 import { z } from 'zod';
 
 const hospitalSchema = z.object({
@@ -25,7 +26,7 @@ export async function GET(request: NextRequest) {
   try {
     const { user: authUser, error } = requireAuth(request);
     if (error) return error;
-    if (authUser!.role !== 'ADMIN' && authUser!.role !== 'SUPER_ADMIN') {
+    if (authUser!.role !== 'ADMIN') {
       return apiError(ERROR_CODES.FORBIDDEN, 'Admin access required', 403);
     }
 
@@ -54,7 +55,7 @@ export async function POST(request: NextRequest) {
   try {
     const { user: authUser, error } = requireAuth(request);
     if (error) return error;
-    if (authUser!.role !== 'ADMIN' && authUser!.role !== 'SUPER_ADMIN') {
+    if (authUser!.role !== 'ADMIN') {
       return apiError(ERROR_CODES.FORBIDDEN, 'Admin access required', 403);
     }
 
@@ -66,14 +67,16 @@ export async function POST(request: NextRequest) {
 
     const hospital = await prisma.hospital.create({
       data: {
-        name: result.data.name,
-        city: result.data.city,
-        address: result.data.address,
-        accreditation: result.data.accreditation,
-        contactPerson: result.data.contactPerson,
-        commissionRate: result.data.commissionRate,
-        departments: result.data.departments || [],
+        name: result.data.name, city: result.data.city, address: result.data.address,
+        accreditation: result.data.accreditation, contactPerson: result.data.contactPerson,
+        commissionRate: result.data.commissionRate, departments: result.data.departments || [],
       },
+    });
+
+    await createAuditLog({
+      actorId: authUser!.userId, action: AUDIT_ACTIONS.CREATE, entityType: 'Hospital',
+      entityId: hospital.id, newValue: { name: hospital.name, city: hospital.city },
+      ipAddress: getClientIP(request),
     });
 
     return apiSuccess({ hospital }, undefined, 201);
@@ -87,7 +90,7 @@ export async function PUT(request: NextRequest) {
   try {
     const { user: authUser, error } = requireAuth(request);
     if (error) return error;
-    if (authUser!.role !== 'ADMIN' && authUser!.role !== 'SUPER_ADMIN') {
+    if (authUser!.role !== 'ADMIN') {
       return apiError(ERROR_CODES.FORBIDDEN, 'Admin access required', 403);
     }
 
@@ -95,19 +98,49 @@ export async function PUT(request: NextRequest) {
     const { id, ...data } = body;
     if (!id) return apiError(ERROR_CODES.BAD_REQUEST, 'Hospital ID required', 400);
 
+    const existing = await prisma.hospital.findUnique({ where: { id }, select: { name: true, city: true, isActive: true } });
     const result = hospitalSchema.partial().safeParse(data);
     if (!result.success) {
       return apiError(ERROR_CODES.BAD_REQUEST, result.error.issues[0].message, 400);
     }
 
-    const hospital = await prisma.hospital.update({
-      where: { id },
-      data: result.data,
+    const hospital = await prisma.hospital.update({ where: { id }, data: result.data });
+
+    await createAuditLog({
+      actorId: authUser!.userId, action: AUDIT_ACTIONS.UPDATE, entityType: 'Hospital',
+      entityId: id, oldValue: existing, newValue: result.data, ipAddress: getClientIP(request),
     });
 
     return apiSuccess({ hospital });
   } catch (err) {
     console.error('[Admin Hospitals PUT Error]', err);
     return apiError(ERROR_CODES.INTERNAL_ERROR, 'Failed to update hospital', 500);
+  }
+}
+
+export async function DELETE(request: NextRequest) {
+  try {
+    const { user: authUser, error } = requireAuth(request);
+    if (error) return error;
+    if (authUser!.role !== 'ADMIN') {
+      return apiError(ERROR_CODES.FORBIDDEN, 'Admin access required', 403);
+    }
+
+    const { searchParams } = new URL(request.url);
+    const id = searchParams.get('id');
+    if (!id) return apiError(ERROR_CODES.BAD_REQUEST, 'Hospital ID required', 400);
+
+    const existing = await prisma.hospital.findUnique({ where: { id }, select: { name: true } });
+    await prisma.hospital.update({ where: { id }, data: { isActive: false } });
+
+    await createAuditLog({
+      actorId: authUser!.userId, action: AUDIT_ACTIONS.DEACTIVATE, entityType: 'Hospital',
+      entityId: id, oldValue: existing, ipAddress: getClientIP(request),
+    });
+
+    return apiSuccess({ message: 'Hospital deactivated' });
+  } catch (err) {
+    console.error('[Admin Hospitals DELETE Error]', err);
+    return apiError(ERROR_CODES.INTERNAL_ERROR, 'Failed to deactivate hospital', 500);
   }
 }

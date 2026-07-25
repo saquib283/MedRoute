@@ -56,8 +56,24 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Check if 2FA is required (Manager/Admin roles)
-    const requires2FA = false;
+    // Check System Maintenance Mode
+    const { checkMaintenanceActive } = await import('@/lib/api/settings-helper');
+    const isMaintenance = await checkMaintenanceActive(user.role);
+    if (isMaintenance) {
+      return apiError(
+        ERROR_CODES.FORBIDDEN,
+        'System is currently undergoing scheduled maintenance. Please try again later.',
+        403
+      );
+    }
+
+    // Check if 2FA is required (Manager/Admin roles) per HIPAA § 164.312(d)
+    // Disabled in development for ease of testing
+    const requires2FA =
+      process.env.NODE_ENV === 'production' &&
+      (user.role === 'ADMIN' ||
+       user.role === 'MANAGER');
+
 
     if (requires2FA && user.totpEnabled) {
       // Don't issue tokens yet — require TOTP verification

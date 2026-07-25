@@ -51,11 +51,18 @@ export async function POST(request: NextRequest) {
       return apiError(ERROR_CODES.TOTP_INVALID, 'Invalid authentication code', 401);
     }
 
-    // Revoke the temp session
-    await prisma.refreshToken.update({
-      where: { id: tempSession.id },
-      data: { revokedAt: new Date() },
-    });
+    // Revoke the temp session and ensure totpEnabled is true
+    await Promise.all([
+      prisma.refreshToken.update({
+        where: { id: tempSession.id },
+        data: { revokedAt: new Date() },
+      }),
+      prisma.user.update({
+        where: { id: tempSession.userId },
+        data: { totpEnabled: true },
+      }),
+    ]);
+
 
     // Issue real tokens
     const refreshTokenRecord = await prisma.refreshToken.create({

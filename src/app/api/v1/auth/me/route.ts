@@ -14,6 +14,17 @@ export async function GET(request: NextRequest) {
     const { user: authUser, error } = requireAuth(request);
     if (error) return error;
 
+    // Check System Maintenance Mode
+    const { checkMaintenanceActive, readSettings } = await import('@/lib/api/settings-helper');
+    const isMaintenance = await checkMaintenanceActive(authUser!.role);
+    if (isMaintenance) {
+      return apiError(
+        ERROR_CODES.FORBIDDEN,
+        'System is currently undergoing scheduled maintenance. Please try again later.',
+        403
+      );
+    }
+
     const user = await prisma.user.findUnique({
       where: { id: authUser!.userId },
       select: {
@@ -52,7 +63,11 @@ export async function GET(request: NextRequest) {
       return apiError(ERROR_CODES.USER_NOT_FOUND, 'User not found', 404);
     }
 
-    return apiSuccess({ user });
+    // Load global settings for alert banner text
+    const settings = await readSettings();
+    const alertBannerText = settings?.alertBannerText || '';
+
+    return apiSuccess({ user, alertBannerText });
   } catch (error) {
     console.error('[Get Me Error]', error);
     return apiError(ERROR_CODES.INTERNAL_ERROR, 'Failed to fetch profile', 500);

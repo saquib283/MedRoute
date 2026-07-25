@@ -9,6 +9,7 @@ import { useState, useEffect } from 'react';
 import { Card } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { Badge } from '@/components/ui/Badge';
+import { Select } from '@/components/ui/Select';
 import { APPOINTMENT_TYPE_LABELS } from '@/lib/constants';
 
 interface Appointment {
@@ -45,11 +46,7 @@ export default function DoctorAppointmentsPage() {
   const fetchAppointments = async () => {
     setLoading(true);
     try {
-      const token = localStorage.getItem('accessToken');
-      const headers: HeadersInit = {};
-      if (token) headers['Authorization'] = `Bearer ${token}`;
-
-      const res = await fetch(`/api/v1/doctor/appointments?filter=${filter}`, { headers });
+      const res = await fetch(`/api/v1/doctor/appointments?filter=${filter}`);
       const data = await res.json();
       if (data.success) {
         setAppointments(data.data.appointments);
@@ -67,11 +64,10 @@ export default function DoctorAppointmentsPage() {
 
     setIsUpdating(true);
     try {
-      const token = localStorage.getItem('accessToken');
       const headers: HeadersInit = { 'Content-Type': 'application/json' };
-      if (token) headers['Authorization'] = `Bearer ${token}`;
 
       const res = await fetch(`/api/v1/doctor/appointments?id=${selectedAppt.id}`, {
+
         method: 'PUT',
         headers,
         body: JSON.stringify({ status, clinicalNotes: notes }),
@@ -170,19 +166,18 @@ export default function DoctorAppointmentsPage() {
                   {selectedAppt.patient.user.fullName}
                 </div>
               </div>
-              <div className="space-y-1.5">
-                <label className="block text-xs font-semibold text-surface-700">Status</label>
-                <select
-                  value={status}
-                  onChange={(e) => setStatus(e.target.value)}
-                  className="w-full p-2.5 border border-surface-300 rounded text-sm focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500"
-                >
-                  <option value="SCHEDULED">Scheduled</option>
-                  <option value="IN_PROGRESS">In Progress</option>
-                  <option value="COMPLETED">Completed</option>
-                  <option value="CANCELLED">Cancelled</option>
-                </select>
-              </div>
+              <Select
+                label="Status"
+                value={status}
+                onChange={setStatus}
+                options={[
+                  { value: 'SCHEDULED', label: 'Scheduled' },
+                  { value: 'IN_PROGRESS', label: 'In Progress' },
+                  { value: 'COMPLETED', label: 'Completed' },
+                  { value: 'CANCELLED', label: 'Cancelled' }
+                ]}
+                required
+              />
               <div className="space-y-1.5">
                 <label className="block text-xs font-semibold text-surface-700">Clinical Notes</label>
                 <textarea

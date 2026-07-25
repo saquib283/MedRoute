@@ -9,60 +9,65 @@ import type { UserRole } from '@prisma/client';
 
 export const PERMISSIONS = {
   // Profile
-  'view:own-profile': ['PATIENT', 'MANAGER', 'ADMIN', 'SUPER_ADMIN'],
-  'edit:own-profile': ['PATIENT', 'MANAGER', 'ADMIN', 'SUPER_ADMIN'],
+  'view:own-profile': ['PATIENT', 'MANAGER', 'ADMIN'],
+  'edit:own-profile': ['PATIENT', 'MANAGER', 'ADMIN'],
 
   // Patient Management
-  'view:all-patients': ['ADMIN', 'SUPER_ADMIN'],
+  'view:all-patients': ['ADMIN'],
   'view:own-patients': ['MANAGER'],
   'view:own-case': ['PATIENT'],
 
   // Case Management
-  'create:case': ['MANAGER', 'ADMIN', 'SUPER_ADMIN'],
-  'edit:case': ['MANAGER', 'ADMIN', 'SUPER_ADMIN'],
-  'view:case': ['PATIENT', 'MANAGER', 'ADMIN', 'SUPER_ADMIN'],
+  'create:case': ['MANAGER', 'ADMIN'],
+  'edit:case': ['MANAGER', 'ADMIN'],
+  'view:case': ['PATIENT', 'MANAGER', 'ADMIN'],
 
   // Appointments
-  'book:appointment': ['MANAGER', 'ADMIN', 'SUPER_ADMIN'],
+  'book:appointment': ['MANAGER', 'ADMIN'],
   'request:appointment': ['PATIENT'],
-  'cancel:appointment': ['MANAGER', 'ADMIN', 'SUPER_ADMIN'],
-  'view:appointments': ['PATIENT', 'MANAGER', 'ADMIN', 'SUPER_ADMIN'],
+  'cancel:appointment': ['MANAGER', 'ADMIN'],
+  'view:appointments': ['PATIENT', 'MANAGER', 'ADMIN'],
 
   // Partners
-  'manage:hospitals': ['ADMIN', 'SUPER_ADMIN'],
-  'manage:hostels': ['ADMIN', 'SUPER_ADMIN'],
-  'manage:doctors': ['ADMIN', 'SUPER_ADMIN'],
-  'view:partners': ['MANAGER', 'ADMIN', 'SUPER_ADMIN'],
+  'manage:hospitals': ['ADMIN'],
+  'manage:hostels': ['ADMIN'],
+  'manage:doctors': ['ADMIN'],
+  'view:partners': ['MANAGER', 'ADMIN'],
 
   // Analytics & Reports
-  'view:analytics': ['ADMIN', 'SUPER_ADMIN'],
+  'view:analytics': ['ADMIN'],
   'view:limited-analytics': ['MANAGER'],
-  'export:reports': ['ADMIN', 'SUPER_ADMIN'],
+  'export:reports': ['ADMIN'],
 
   // User Management
-  'manage:users': ['ADMIN', 'SUPER_ADMIN'],
-  'manage:managers': ['ADMIN', 'SUPER_ADMIN'],
-  'view:audit-logs': ['ADMIN', 'SUPER_ADMIN'],
+  'manage:users': ['ADMIN'],
+  'manage:managers': ['ADMIN'],
+  'view:audit-logs': ['ADMIN'],
 
   // Settings
-  'manage:settings': ['ADMIN', 'SUPER_ADMIN'],
-  'manage:specialisations': ['ADMIN', 'SUPER_ADMIN'],
-  'manage:notification-templates': ['ADMIN', 'SUPER_ADMIN'],
+  'manage:settings': ['ADMIN'],
+  'manage:specialisations': ['ADMIN'],
+  'manage:notification-templates': ['ADMIN'],
 
   // Documents
-  'upload:documents': ['PATIENT', 'MANAGER', 'ADMIN', 'SUPER_ADMIN'],
-  'view:documents': ['PATIENT', 'MANAGER', 'ADMIN', 'SUPER_ADMIN'],
+  'upload:documents': ['PATIENT', 'MANAGER', 'ADMIN'],
+  'view:documents': ['PATIENT', 'MANAGER', 'ADMIN'],
 
   // Messaging
-  'send:messages': ['MANAGER', 'ADMIN', 'SUPER_ADMIN'],
-  'view:messages': ['PATIENT', 'MANAGER', 'ADMIN', 'SUPER_ADMIN'],
+  'send:messages': ['MANAGER', 'ADMIN'],
+  'view:messages': ['PATIENT', 'MANAGER', 'ADMIN'],
 
   // Escalation
   'escalate:case': ['MANAGER'],
-  'view:escalations': ['ADMIN', 'SUPER_ADMIN'],
+  'view:escalations': ['ADMIN'],
 
   // Notifications
-  'manage:notification-preferences': ['PATIENT', 'MANAGER', 'ADMIN', 'SUPER_ADMIN'],
+  'manage:notification-preferences': ['PATIENT', 'MANAGER', 'ADMIN'],
+
+  // Email Campaigns & Advanced Analytics (Admin-level)
+  'manage:email-campaigns': ['ADMIN'],
+  'manage:email-templates': ['ADMIN'],
+  'view:advanced-analytics': ['ADMIN'],
 } as const;
 
 export type Permission = keyof typeof PERMISSIONS;
@@ -115,9 +120,9 @@ export function getRolePermissions(role: UserRole): Permission[] {
  */
 export const ROUTE_ROLES: Record<string, UserRole[]> = {
   '/patient': ['PATIENT'],
-  '/manager': ['MANAGER', 'ADMIN', 'SUPER_ADMIN'],
-  '/admin': ['ADMIN', 'SUPER_ADMIN'],
-  '/doctor': ['DOCTOR', 'ADMIN', 'SUPER_ADMIN'],
+  '/manager': ['MANAGER', 'ADMIN'],
+  '/admin': ['ADMIN'],
+  '/doctor': ['DOCTOR', 'ADMIN'],
 };
 
 /**
@@ -145,7 +150,6 @@ export function getDefaultRoute(role: UserRole): string {
     case 'DOCTOR':
       return '/doctor/dashboard';
     case 'ADMIN':
-    case 'SUPER_ADMIN':
       return '/admin/dashboard';
     default:
       return '/login';

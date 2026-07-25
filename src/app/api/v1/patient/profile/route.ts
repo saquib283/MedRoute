@@ -9,7 +9,11 @@ import prisma from '@/lib/prisma';
 import { requireAuth } from '@/lib/api/auth-helper';
 import { apiSuccess, apiError } from '@/lib/api/response';
 import { ERROR_CODES } from '@/lib/api/errors';
+import { createAuditLog } from '@/lib/api/audit-logger';
+import { encryptMedicalProfile, decryptMedicalProfile } from '@/lib/api/phi-encryption';
+import { decrypt } from '@/lib/auth/crypto';
 import { Prisma } from '@prisma/client';
+
 
 export async function GET(request: NextRequest) {
   try {
@@ -35,7 +39,22 @@ export async function GET(request: NextRequest) {
       return apiError(ERROR_CODES.USER_NOT_FOUND, 'Patient profile not found', 404);
     }
 
-    return apiSuccess({ patient });
+    // Decrypt encrypted fields before returning to client
+    const decryptedPatient = {
+      ...patient,
+      passportNo: decrypt(patient.passportNo),
+      medicalProfile: decryptMedicalProfile(patient.medicalProfile as Record<string, unknown>),
+    };
+
+    // HIPAA Audit Logging (§ 164.312(b))
+    void createAuditLog({
+      actorId: authUser!.userId,
+      action: 'VIEW_PATIENT_PROFILE',
+      entityType: 'Patient',
+      entityId: patient.id,
+    });
+
+    return apiSuccess({ patient: decryptedPatient });
   } catch (err) {
     console.error('[Patient Profile GET Error]', err);
     return apiError(ERROR_CODES.INTERNAL_ERROR, 'Failed to fetch patient profile', 500);
@@ -68,6 +87,14 @@ export async function PUT(request: NextRequest) {
       return apiError(ERROR_CODES.USER_NOT_FOUND, 'Patient profile not found', 404);
     }
 
+    const encryptedProfileData = encryptMedicalProfile({
+      allergies,
+      medications,
+      surgeries,
+      chronicConditions,
+      specialisationsRequired,
+    });
+
     // Run transaction update for both Patient and PatientMedicalProfile tables
     const updatedPatient = await prisma.$transaction(async (tx) => {
       // 1. Update Patient details
@@ -85,22 +112,30 @@ export async function PUT(request: NextRequest) {
         where: { patientId: patient.id },
         create: {
           patientId: patient.id,
-          allergies: allergies !== undefined ? (allergies as Prisma.InputJsonValue) : [],
-          medications: medications !== undefined ? (medications as Prisma.InputJsonValue) : [],
-          surgeries: surgeries !== undefined ? (surgeries as Prisma.InputJsonValue) : [],
-          chronicConditions: chronicConditions !== undefined ? (chronicConditions as Prisma.InputJsonValue) : [],
-          specialisationsRequired: specialisationsRequired !== undefined ? (specialisationsRequired as Prisma.InputJsonValue) : [],
+          allergies: encryptedProfileData.allergies as Prisma.InputJsonValue || [],
+          medications: encryptedProfileData.medications as Prisma.InputJsonValue || [],
+          surgeries: encryptedProfileData.surgeries as Prisma.InputJsonValue || [],
+          chronicConditions: encryptedProfileData.chronicConditions as Prisma.InputJsonValue || [],
+          specialisationsRequired: (specialisationsRequired as Prisma.InputJsonValue) || [],
         },
         update: {
-          allergies: allergies !== undefined ? (allergies as Prisma.InputJsonValue) : undefined,
-          medications: medications !== undefined ? (medications as Prisma.InputJsonValue) : undefined,
-          surgeries: surgeries !== undefined ? (surgeries as Prisma.InputJsonValue) : undefined,
-          chronicConditions: chronicConditions !== undefined ? (chronicConditions as Prisma.InputJsonValue) : undefined,
+          allergies: encryptedProfileData.allergies !== undefined ? (encryptedProfileData.allergies as Prisma.InputJsonValue) : undefined,
+          medications: encryptedProfileData.medications !== undefined ? (encryptedProfileData.medications as Prisma.InputJsonValue) : undefined,
+          surgeries: encryptedProfileData.surgeries !== undefined ? (encryptedProfileData.surgeries as Prisma.InputJsonValue) : undefined,
+          chronicConditions: encryptedProfileData.chronicConditions !== undefined ? (encryptedProfileData.chronicConditions as Prisma.InputJsonValue) : undefined,
           specialisationsRequired: specialisationsRequired !== undefined ? (specialisationsRequired as Prisma.InputJsonValue) : undefined,
         },
       });
 
       return pat;
+    });
+
+    // Audit Logging
+    void createAuditLog({
+      actorId: authUser!.userId,
+      action: 'UPDATE_PATIENT_PROFILE',
+      entityType: 'Patient',
+      entityId: patient.id,
     });
 
     // Fetch the final combined object to return
@@ -109,9 +144,16 @@ export async function PUT(request: NextRequest) {
       include: { medicalProfile: true },
     });
 
-    return apiSuccess({ patient: finalProfile });
+    const decryptedProfile = {
+      ...finalProfile,
+      passportNo: decrypt(finalProfile?.passportNo || ''),
+      medicalProfile: decryptMedicalProfile(finalProfile?.medicalProfile as Record<string, unknown>),
+    };
+
+    return apiSuccess({ patient: decryptedProfile });
   } catch (err) {
     console.error('[Patient Profile PUT Error]', err);
     return apiError(ERROR_CODES.INTERNAL_ERROR, 'Failed to update patient profile', 500);
   }
 }
+

@@ -8,6 +8,7 @@
 import { useState, useEffect } from 'react';
 import { Card } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
+import { Select } from '@/components/ui/Select';
 
 enum CaseStatus {
   INQUIRY_RECEIVED = 'INQUIRY_RECEIVED',
@@ -262,22 +263,20 @@ export default function CasesPipeline() {
                 </div>
 
                 {/* Case Status Dropdown */}
-                <div className="space-y-1">
-                  <label htmlFor="status" className="font-semibold text-surface-700">Pipeline Stage</label>
-                  <select
-                    id="status"
-                    className="w-full p-2.5 rounded border border-surface-300 bg-white font-semibold text-surface-800"
-                    value={targetStatus}
-                    onChange={(e) => setTargetStatus(e.target.value as CaseStatus)}
-                  >
-                    <option value={CaseStatus.INQUIRY_RECEIVED}>Inquiry Received</option>
-                    <option value={CaseStatus.UNDER_REVIEW}>Under Review</option>
-                    <option value={CaseStatus.PLAN_CONFIRMED}>Plan Confirmed</option>
-                    <option value={CaseStatus.IN_TREATMENT}>In Treatment</option>
-                    <option value={CaseStatus.POST_TREATMENT}>Post Treatment</option>
-                    <option value={CaseStatus.CLOSED}>Closed</option>
-                  </select>
-                </div>
+                <Select
+                  label="Pipeline Stage"
+                  value={targetStatus}
+                  onChange={(val) => setTargetStatus(val as CaseStatus)}
+                  options={[
+                    { value: CaseStatus.INQUIRY_RECEIVED, label: 'Inquiry Received' },
+                    { value: CaseStatus.UNDER_REVIEW, label: 'Under Review' },
+                    { value: CaseStatus.PLAN_CONFIRMED, label: 'Plan Confirmed' },
+                    { value: CaseStatus.IN_TREATMENT, label: 'In Treatment' },
+                    { value: CaseStatus.POST_TREATMENT, label: 'Post Treatment' },
+                    { value: CaseStatus.CLOSED, label: 'Closed' }
+                  ]}
+                  required
+                />
 
                 {/* notes */}
                 <div className="space-y-1">

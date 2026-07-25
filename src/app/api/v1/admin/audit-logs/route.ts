@@ -1,6 +1,6 @@
 /**
  * MediRoute India — GET /api/v1/admin/audit-logs
- * Paginated audit log viewer.
+ * Enhanced paginated audit log viewer with date range and action filters.
  */
 
 import { NextRequest } from 'next/server';
@@ -13,19 +13,33 @@ export async function GET(request: NextRequest) {
   try {
     const { user: authUser, error } = requireAuth(request);
     if (error) return error;
-    if (authUser!.role !== 'ADMIN' && authUser!.role !== 'SUPER_ADMIN') {
+    if (authUser!.role !== 'ADMIN') {
       return apiError(ERROR_CODES.FORBIDDEN, 'Admin access required', 403);
     }
 
     const { searchParams } = new URL(request.url);
     const entityType = searchParams.get('entityType') || '';
     const actorId = searchParams.get('actorId') || '';
+    const action = searchParams.get('action') || '';
+    const actorSearch = searchParams.get('actorSearch') || '';
+    const dateFrom = searchParams.get('dateFrom') || '';
+    const dateTo = searchParams.get('dateTo') || '';
     const page = parseInt(searchParams.get('page') || '1', 10);
     const limit = parseInt(searchParams.get('limit') || '30', 10);
 
     const where: Record<string, unknown> = {};
     if (entityType) where.entityType = entityType;
     if (actorId) where.actorId = actorId;
+    if (action) where.action = action;
+    if (actorSearch) {
+      where.actor = { fullName: { contains: actorSearch } };
+    }
+    if (dateFrom || dateTo) {
+      const createdAt: Record<string, Date> = {};
+      if (dateFrom) createdAt.gte = new Date(dateFrom);
+      if (dateTo) createdAt.lte = new Date(dateTo);
+      where.createdAt = createdAt;
+    }
 
     const [logs, total] = await Promise.all([
       prisma.auditLog.findMany({

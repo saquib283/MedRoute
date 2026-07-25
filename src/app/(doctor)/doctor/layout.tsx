@@ -28,7 +28,7 @@ export default function DoctorLayout({ children }: { children: React.ReactNode }
           const data = await res.json();
           // Authenticate role
           const role = data.data?.user?.role;
-          if (role !== 'DOCTOR' && role !== 'ADMIN' && role !== 'SUPER_ADMIN') {
+          if (role !== 'DOCTOR' && role !== 'ADMIN' && role !== 'ADMIN') {
             router.push('/login');
             return;
           }
@@ -50,13 +50,12 @@ export default function DoctorLayout({ children }: { children: React.ReactNode }
   const handleLogout = async () => {
     try {
       await fetch('/api/v1/auth/logout', { method: 'POST' });
-      localStorage.removeItem('accessToken');
-      localStorage.removeItem('refreshToken');
       router.push('/login');
     } catch (err) {
       console.error('Logout error:', err);
     }
   };
+
 
   const menuItems = [
     {
@@ -96,10 +95,8 @@ export default function DoctorLayout({ children }: { children: React.ReactNode }
           isSidebarOpen ? 'translate-x-0' : '-translate-x-full'
         }`}
       >
-        <div className="p-6 pb-2 hidden lg:flex items-center gap-3 border-b border-surface-100/50 pb-5">
-          <Image src={logoImg} alt="Afzal Logo" width={64} height={32} className="object-contain" priority />
-          <div className="h-5 w-px bg-surface-200" />
-          <span className="font-bold text-surface-900 tracking-tight text-sm">MediRoute India</span>
+        <div className="p-6 hidden lg:flex items-center border-b border-surface-100/50 pb-5">
+          <Image src={logoImg} alt="Afzal Logo" width={110} height={36} className="h-9 w-auto object-contain" priority />
         </div>
 
         <nav className="flex-1 px-4 py-6 overflow-y-auto space-y-8">

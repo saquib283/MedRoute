@@ -16,7 +16,6 @@ enum UserRole {
   PATIENT
   MANAGER
   ADMIN
-  SUPER_ADMIN
   DOCTOR
 }
 
@@ -204,8 +203,9 @@ model Hospital {
   updatedAt      DateTime @updatedAt @map("updated_at")
 
   // Relations
-  doctors      Doctor[]
-  appointments Appointment[]
+  doctors             Doctor[]
+  appointments        Appointment[]
+  commissionOverrides CommissionOverride[]
 
   @@index([city])
   @@index([isActive])
@@ -399,3 +399,80 @@ model Message {
   @@index([isRead])
   @@map("messages")
 }
+
+// ─── Email Campaign System ──────────────────────────────────────────
+
+enum CampaignStatus {
+  DRAFT
+  QUEUED
+  SENT
+  FAILED
+}
+
+model EmailTemplate {
+  id          String   @id @default(cuid())
+  name        String   @unique
+  subject     String
+  body        String   @db.Text // HTML body
+  category    String   @default("general") // e.g., "marketing", "operational", "onboarding"
+  placeholders Json?   @default("[]") // e.g., ["fullName", "email"]
+  isActive    Boolean  @default(true) @map("is_active")
+  createdBy   String   @map("created_by")
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  // Relations
+  campaigns EmailCampaign[]
+
+  @@index([category])
+  @@index([isActive])
+  @@map("email_templates")
+}
+
+model EmailCampaign {
+  id           String         @id @default(cuid())
+  name         String
+  templateId   String         @map("template_id")
+  targetRole   String         @map("target_role") // 'ALL' | specific UserRole
+  status       CampaignStatus @default(DRAFT)
+  sentCount    Int            @default(0) @map("sent_count")
+  failedCount  Int            @default(0) @map("failed_count")
+  scheduledAt  DateTime?      @map("scheduled_at")
+  sentAt       DateTime?      @map("sent_at")
+  createdBy    String         @map("created_by")
+  createdAt    DateTime       @default(now()) @map("created_at")
+  updatedAt    DateTime       @updatedAt @map("updated_at")
+
+  // Relations
+  template EmailTemplate @relation(fields: [templateId], references: [id])
+
+  @@index([status])
+  @@index([templateId])
+  @@index([createdAt])
+  @@map("email_campaigns")
+}
+
+model CommissionOverride {
+  id          String   @id @default(cuid())
+  hospitalId  String   @map("hospital_id")
+  rate        Decimal  @map("rate") @db.Decimal(5, 2)
+  startDate   DateTime @map("start_date")
+  endDate     DateTime @map("end_date")
+  description String?
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  // Relations
+  hospital Hospital @relation(fields: [hospitalId], references: [id])
+
+  @@index([hospitalId])
+  @@map("commission_overrides")
+}
+
+model SystemConfig {
+  key       String   @id
+  value     String   @db.Text
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@map("system_configs")
+}
+

@@ -69,7 +69,7 @@ export async function POST(request: NextRequest) {
       return apiError(ERROR_CODES.BAD_REQUEST, 'File size exceeds 25MB limit', 400);
     }
 
-    // Write file to local disk under public/uploads
+    // Write file to local disk under private storage/uploads
     const arrayBuffer = await file.arrayBuffer();
     const buffer = Buffer.from(arrayBuffer);
 
@@ -77,7 +77,7 @@ export async function POST(request: NextRequest) {
     const timestamp = Date.now();
     const safeName = file.name.replace(/[^a-zA-Z0-9.-]/g, '_');
     const filename = `${timestamp}_${safeName}`;
-    const uploadDir = path.join(process.cwd(), 'public', 'uploads');
+    const uploadDir = path.join(process.cwd(), 'storage', 'uploads');
 
     // Ensure directory exists
     await fs.mkdir(uploadDir, { recursive: true });
@@ -85,22 +85,27 @@ export async function POST(request: NextRequest) {
     const filePath = path.join(uploadDir, filename);
     await fs.writeFile(filePath, buffer);
 
-    const fileUrl = `/uploads/${filename}`;
-
-    // Create database document record
+    // Create database document record (temporary placeholder for fileUrl)
     const document = await prisma.document.create({
       data: {
         patientId: patient.id,
         uploadedBy: authUser!.userId,
         category,
-        fileUrl,
+        fileUrl: `/uploads/${filename}`,
         fileName: file.name,
         fileSize: file.size,
         mimeType: file.type || 'application/octet-stream',
       },
     });
 
-    return apiSuccess({ document });
+    // Update fileUrl to point to authenticated download API
+    const downloadUrl = `/api/v1/patient/documents/download?id=${document.id}`;
+    const updatedDocument = await prisma.document.update({
+      where: { id: document.id },
+      data: { fileUrl: downloadUrl },
+    });
+
+    return apiSuccess({ document: updatedDocument });
   } catch (err) {
     console.error('[Patient Documents POST Error]', err);
     return apiError(ERROR_CODES.INTERNAL_ERROR, 'Failed to upload document', 500);
@@ -136,11 +141,13 @@ export async function DELETE(request: NextRequest) {
       return apiError(ERROR_CODES.FORBIDDEN, 'Unauthorized access to document', 403);
     }
 
-    // Delete physical file on disk
+    // Delete physical file on disk (check storage/uploads and legacy public/uploads)
     try {
       const filename = path.basename(document.fileUrl);
-      const filePath = path.join(process.cwd(), 'public', 'uploads', filename);
-      await fs.unlink(filePath);
+      const storagePath = path.join(process.cwd(), 'storage', 'uploads', filename);
+      const publicPath = path.join(process.cwd(), 'public', 'uploads', filename);
+
+      await fs.unlink(storagePath).catch(() => fs.unlink(publicPath).catch(() => {}));
     } catch (err) {
       console.warn('Physical file not found or failed to delete', err);
     }

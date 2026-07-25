@@ -1,13 +1,14 @@
 /**
  * MediRoute India — /api/v1/admin/users
- * Full CRUD for user management (admin only).
+ * Full CRUD for user management with audit logging and Admin guards.
  */
 
 import { NextRequest } from 'next/server';
 import prisma from '@/lib/prisma';
-import { requireAuth } from '@/lib/api/auth-helper';
+import { requireAuth, getClientIP } from '@/lib/api/auth-helper';
 import { apiSuccess, apiError } from '@/lib/api/response';
 import { ERROR_CODES } from '@/lib/api/errors';
+import { createAuditLog, AUDIT_ACTIONS } from '@/lib/api/audit-logger';
 import bcrypt from 'bcryptjs';
 import { z } from 'zod';
 
@@ -15,7 +16,7 @@ const createUserSchema = z.object({
   email: z.string().email(),
   password: z.string().min(8),
   fullName: z.string().min(1),
-  role: z.enum(['PATIENT', 'MANAGER', 'ADMIN', 'SUPER_ADMIN', 'DOCTOR']),
+  role: z.enum(['PATIENT', 'MANAGER', 'ADMIN', 'DOCTOR']),
   phone: z.string().optional(),
 });
 
@@ -24,7 +25,7 @@ const updateUserSchema = z.object({
   fullName: z.string().min(1).optional(),
   email: z.string().email().optional(),
   phone: z.string().optional(),
-  role: z.enum(['PATIENT', 'MANAGER', 'ADMIN', 'SUPER_ADMIN', 'DOCTOR']).optional(),
+  role: z.enum(['PATIENT', 'MANAGER', 'ADMIN', 'DOCTOR']).optional(),
   isActive: z.boolean().optional(),
 });
 
@@ -32,13 +33,14 @@ export async function GET(request: NextRequest) {
   try {
     const { user: authUser, error } = requireAuth(request);
     if (error) return error;
-    if (authUser!.role !== 'ADMIN' && authUser!.role !== 'SUPER_ADMIN') {
+    if (authUser!.role !== 'ADMIN') {
       return apiError(ERROR_CODES.FORBIDDEN, 'Admin access required', 403);
     }
 
     const { searchParams } = new URL(request.url);
     const search = searchParams.get('search') || '';
     const role = searchParams.get('role') || '';
+    const isActiveParam = searchParams.get('isActive');
     const page = parseInt(searchParams.get('page') || '1', 10);
     const limit = parseInt(searchParams.get('limit') || '20', 10);
 
@@ -51,6 +53,9 @@ export async function GET(request: NextRequest) {
     }
     if (role) {
       where.role = role;
+    }
+    if (isActiveParam !== null && isActiveParam !== '') {
+      where.isActive = isActiveParam === 'true';
     }
 
     const [users, total] = await Promise.all([
@@ -83,7 +88,7 @@ export async function POST(request: NextRequest) {
   try {
     const { user: authUser, error } = requireAuth(request);
     if (error) return error;
-    if (authUser!.role !== 'ADMIN' && authUser!.role !== 'SUPER_ADMIN') {
+    if (authUser!.role !== 'ADMIN') {
       return apiError(ERROR_CODES.FORBIDDEN, 'Admin access required', 403);
     }
 
@@ -110,6 +115,15 @@ export async function POST(request: NextRequest) {
       select: { id: true, email: true, fullName: true, role: true, isActive: true },
     });
 
+    await createAuditLog({
+      actorId: authUser!.userId,
+      action: AUDIT_ACTIONS.CREATE,
+      entityType: 'User',
+      entityId: user.id,
+      newValue: { email: user.email, role: user.role, fullName: user.fullName },
+      ipAddress: getClientIP(request),
+    });
+
     return apiSuccess({ user }, undefined, 201);
   } catch (err) {
     console.error('[Admin Users POST Error]', err);
@@ -121,7 +135,7 @@ export async function PUT(request: NextRequest) {
   try {
     const { user: authUser, error } = requireAuth(request);
     if (error) return error;
-    if (authUser!.role !== 'ADMIN' && authUser!.role !== 'SUPER_ADMIN') {
+    if (authUser!.role !== 'ADMIN') {
       return apiError(ERROR_CODES.FORBIDDEN, 'Admin access required', 403);
     }
 
@@ -132,6 +146,12 @@ export async function PUT(request: NextRequest) {
     }
 
     const { id, ...updateData } = result.data;
+
+    // Fetch existing user
+    const existingUser = await prisma.user.findUnique({ where: { id } });
+    if (!existingUser) {
+      return apiError(ERROR_CODES.USER_NOT_FOUND, 'User not found', 404);
+    }
 
     // If deactivating, revoke all refresh tokens
     if (updateData.isActive === false) {
@@ -147,6 +167,16 @@ export async function PUT(request: NextRequest) {
       select: { id: true, email: true, fullName: true, role: true, isActive: true },
     });
 
+    await createAuditLog({
+      actorId: authUser!.userId,
+      action: AUDIT_ACTIONS.UPDATE,
+      entityType: 'User',
+      entityId: id,
+      oldValue: { email: existingUser.email, role: existingUser.role, fullName: existingUser.fullName, isActive: existingUser.isActive },
+      newValue: updateData,
+      ipAddress: getClientIP(request),
+    });
+
     return apiSuccess({ user });
   } catch (err) {
     console.error('[Admin Users PUT Error]', err);
@@ -158,8 +188,8 @@ export async function DELETE(request: NextRequest) {
   try {
     const { user: authUser, error } = requireAuth(request);
     if (error) return error;
-    if (authUser!.role !== 'SUPER_ADMIN') {
-      return apiError(ERROR_CODES.FORBIDDEN, 'Super Admin access required', 403);
+    if (authUser!.role !== 'ADMIN') {
+      return apiError(ERROR_CODES.FORBIDDEN, 'Admin access required', 403);
     }
 
     const { searchParams } = new URL(request.url);
@@ -167,6 +197,11 @@ export async function DELETE(request: NextRequest) {
     if (!userId) {
       return apiError(ERROR_CODES.BAD_REQUEST, 'User ID required', 400);
     }
+
+    const existingUser = await prisma.user.findUnique({
+      where: { id: userId },
+      select: { email: true, role: true, fullName: true },
+    });
 
     // Soft delete
     await prisma.user.update({
@@ -178,6 +213,15 @@ export async function DELETE(request: NextRequest) {
     await prisma.refreshToken.updateMany({
       where: { userId, revokedAt: null },
       data: { revokedAt: new Date() },
+    });
+
+    await createAuditLog({
+      actorId: authUser!.userId,
+      action: AUDIT_ACTIONS.DEACTIVATE,
+      entityType: 'User',
+      entityId: userId,
+      oldValue: existingUser,
+      ipAddress: getClientIP(request),
     });
 
     return apiSuccess({ message: 'User deactivated' });

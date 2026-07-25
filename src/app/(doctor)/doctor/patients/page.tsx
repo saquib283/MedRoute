@@ -36,11 +36,7 @@ export default function DoctorPatientsPage() {
   useEffect(() => {
     async function fetchPatients() {
       try {
-        const token = localStorage.getItem('accessToken');
-        const headers: HeadersInit = {};
-        if (token) headers['Authorization'] = `Bearer ${token}`;
-
-        const res = await fetch('/api/v1/doctor/patients', { headers });
+        const res = await fetch('/api/v1/doctor/patients');
         const data = await res.json();
         
         if (data.success) {
@@ -52,6 +48,7 @@ export default function DoctorPatientsPage() {
         setLoading(false);
       }
     }
+
     fetchPatients();
   }, []);
 

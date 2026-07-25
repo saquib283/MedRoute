@@ -54,12 +54,12 @@ async function main() {
     create: {
       email: 'admin@mediroute.in',
       passwordHash: adminPasswordHash,
-      role: 'SUPER_ADMIN',
+      role: 'ADMIN',
       fullName: 'Rahul Mehra',
       phone: '+919876543210',
     },
   });
-  console.log(`  ✓ Super Admin: admin@mediroute.in / Admin@123`);
+  console.log(`  ✓ Admin: admin@mediroute.in / Admin@123`);
 
   // Manager
   const managerPasswordHash = await bcrypt.hash('Manager@123', BCRYPT_ROUNDS);

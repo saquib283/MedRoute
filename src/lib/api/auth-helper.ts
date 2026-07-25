@@ -71,7 +71,7 @@ export async function setAuthCookies(accessToken: string, refreshToken: string) 
   cookieStore.set('access_token', accessToken, {
     httpOnly: true,
     secure: process.env.NODE_ENV === 'production',
-    sameSite: 'lax',
+    sameSite: 'strict',
     path: '/',
     maxAge: 15 * 60, // 15 mins
   });
@@ -79,10 +79,11 @@ export async function setAuthCookies(accessToken: string, refreshToken: string) 
   cookieStore.set('refresh_token', refreshToken, {
     httpOnly: true,
     secure: process.env.NODE_ENV === 'production',
-    sameSite: 'lax',
+    sameSite: 'strict',
     path: '/',
     maxAge: 7 * 24 * 60 * 60, // 7 days
   });
+
 }
 
 export async function clearAuthCookies() {

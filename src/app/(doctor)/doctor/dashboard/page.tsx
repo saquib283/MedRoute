@@ -22,22 +22,19 @@ export default function DoctorDashboardPage() {
   useEffect(() => {
     async function fetchDashboard() {
       try {
-        const token = localStorage.getItem('accessToken');
-        const headers: HeadersInit = {};
-        if (token) headers['Authorization'] = `Bearer ${token}`;
-
-        const res = await fetch('/api/v1/doctor/dashboard', { headers });
+        const res = await fetch('/api/v1/doctor/dashboard');
         const data = await res.json();
         
         if (data.success && data.data?.metrics) {
           setMetrics(data.data.metrics);
         }
       } catch (err) {
-        console.error('Failed to load dashboard:', err);
+        console.error('Failed to load doctor dashboard metrics:', err);
       } finally {
         setLoading(false);
       }
     }
+
     fetchDashboard();
   }, []);
 

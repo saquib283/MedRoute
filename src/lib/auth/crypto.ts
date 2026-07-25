@@ -32,14 +32,17 @@ function getEncryptionKey(): Buffer {
  * Encrypt a plaintext string using AES-256-GCM.
  * Returns a colon-separated string: iv:authTag:ciphertext
  */
-export function encrypt(text: string): string {
-  if (!text) return '';
+export function encrypt(text: unknown): string {
+  if (text === null || text === undefined || text === '') return '';
   
+  const textToEncrypt = typeof text === 'string' ? text : JSON.stringify(text);
+  if (!textToEncrypt || textToEncrypt === '""' || textToEncrypt === '[]') return '';
+
   const key = getEncryptionKey();
   const iv = crypto.randomBytes(IV_LENGTH);
   const cipher = crypto.createCipheriv(ALGORITHM, key, iv);
   
-  let encrypted = cipher.update(text, 'utf8', 'hex');
+  let encrypted = cipher.update(textToEncrypt, 'utf8', 'hex');
   encrypted += cipher.final('hex');
   
   const authTag = cipher.getAuthTag().toString('hex');
@@ -51,8 +54,11 @@ export function encrypt(text: string): string {
  * Decrypt an AES-256-GCM encrypted string.
  * Supports legacy unencrypted values by returning the original string if parsing or decryption fails.
  */
-export function decrypt(ciphertext: string): string {
+export function decrypt(ciphertext: unknown): string {
   if (!ciphertext) return '';
+  if (typeof ciphertext !== 'string') {
+    return String(ciphertext);
+  }
   
   const parts = ciphertext.split(':');
   if (parts.length !== 3) {

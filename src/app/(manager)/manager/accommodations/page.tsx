@@ -8,6 +8,8 @@
 import { useState, useEffect } from 'react';
 import { Card } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
+import { DatePicker } from '@/components/ui/DatePicker';
+import { Select } from '@/components/ui/Select';
 
 enum AccommodationStatus {
   PENDING = 'PENDING',
@@ -320,80 +322,51 @@ export default function AccommodationsManager() {
             )}
 
             <form onSubmit={handleCreateBooking} className="space-y-4 font-semibold text-surface-700">
-              {/* Select Patient */}
-              <div className="space-y-1">
-                <label htmlFor="patient" className="block">Patient Selection</label>
-                <select
-                  id="patient"
-                  className="w-full p-2.5 rounded border border-surface-300 bg-white font-medium text-surface-800"
-                  value={targetPatientId}
-                  onChange={(e) => setTargetPatientId(e.target.value)}
-                >
-                  <option value="">-- Choose patient --</option>
-                  {patients.map((p) => (
-                    <option key={p.id} value={p.id}>
-                      {p.user.fullName} {p.cases.length === 0 ? '(No active cases)' : ''}
-                    </option>
-                  ))}
-                </select>
-              </div>
+              <Select
+                label="Patient Selection"
+                value={targetPatientId}
+                onChange={setTargetPatientId}
+                options={[
+                  { value: '', label: '-- Choose patient --' },
+                  ...patients.map((p) => ({
+                    value: p.id,
+                    label: `${p.user.fullName} ${p.cases.length === 0 ? '(No active cases)' : ''}`
+                  }))
+                ]}
+                required
+              />
 
-              {/* Select Hostel */}
-              <div className="space-y-1">
-                <label htmlFor="hostel" className="block">Hostel Property</label>
-                <select
-                  id="hostel"
-                  className="w-full p-2.5 rounded border border-surface-300 bg-white font-medium text-surface-800"
-                  value={targetHostelId}
-                  onChange={(e) => setTargetHostelId(e.target.value)}
-                >
-                  <option value="">-- Choose partner hostel --</option>
-                  {hostels.map((h) => (
-                    <option key={h.id} value={h.id}>
-                      {h.name} ({h.city}) — ${h.pricingPerNight}/night
-                    </option>
-                  ))}
-                </select>
-              </div>
+              <Select
+                label="Hostel Property"
+                value={targetHostelId}
+                onChange={setTargetHostelId}
+                options={[
+                  { value: '', label: '-- Choose partner hostel --' },
+                  ...hostels.map((h) => ({
+                    value: h.id,
+                    label: `${h.name} (${h.city}) — $${h.pricingPerNight}/night`
+                  }))
+                ]}
+                required
+              />
 
-              {/* Room Type */}
-              <div className="space-y-1">
-                <label htmlFor="room" className="block">Room Type</label>
-                <select
-                  id="room"
-                  className="w-full p-2.5 rounded border border-surface-300 bg-white font-medium text-surface-800"
-                  value={targetRoomType}
-                  onChange={(e) => setTargetRoomType(e.target.value as RoomType)}
-                >
-                  <option value={RoomType.SINGLE}>Single Private Room</option>
-                  <option value={RoomType.DOUBLE}>Shared Double Room</option>
-                  <option value={RoomType.SUITE}>Full Recovery Suite</option>
-                  <option value={RoomType.DORMITORY}>Shared Ward Room</option>
-                </select>
-              </div>
+              <Select
+                label="Room Type"
+                value={targetRoomType}
+                onChange={(val) => setTargetRoomType(val as RoomType)}
+                options={[
+                  { value: RoomType.SINGLE, label: 'Single Private Room' },
+                  { value: RoomType.DOUBLE, label: 'Shared Double Room' },
+                  { value: RoomType.SUITE, label: 'Full Recovery Suite' },
+                  { value: RoomType.DORMITORY, label: 'Shared Ward Room' }
+                ]}
+                required
+              />
 
               {/* Dates */}
               <div className="grid grid-cols-2 gap-3">
-                <div className="space-y-1">
-                  <label htmlFor="checkin" className="block">Check-in Date</label>
-                  <input
-                    type="date"
-                    id="checkin"
-                    className="w-full p-2.5 rounded border border-surface-300 font-medium text-surface-800"
-                    value={checkInDate}
-                    onChange={(e) => setCheckInDate(e.target.value)}
-                  />
-                </div>
-                <div className="space-y-1">
-                  <label htmlFor="checkout" className="block">Check-out Date</label>
-                  <input
-                    type="date"
-                    id="checkout"
-                    className="w-full p-2.5 rounded border border-surface-300 font-medium text-surface-800"
-                    value={checkOutDate}
-                    onChange={(e) => setCheckOutDate(e.target.value)}
-                  />
-                </div>
+                <DatePicker label="Check-in Date" value={checkInDate} onChange={setCheckInDate} placeholder="Pick check-in" />
+                <DatePicker label="Check-out Date" value={checkOutDate} onChange={setCheckOutDate} placeholder="Pick check-out" />
               </div>
 
               <div className="pt-3 border-t border-surface-100 flex gap-2">

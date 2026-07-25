@@ -1,13 +1,14 @@
 /**
  * MediRoute India — /api/v1/admin/doctors
- * CRUD for doctor management.
+ * CRUD for doctor management with audit logging.
  */
 
 import { NextRequest } from 'next/server';
 import prisma from '@/lib/prisma';
-import { requireAuth } from '@/lib/api/auth-helper';
+import { requireAuth, getClientIP } from '@/lib/api/auth-helper';
 import { apiSuccess, apiError } from '@/lib/api/response';
 import { ERROR_CODES } from '@/lib/api/errors';
+import { createAuditLog, AUDIT_ACTIONS } from '@/lib/api/audit-logger';
 import { z } from 'zod';
 
 const doctorSchema = z.object({
@@ -26,7 +27,7 @@ export async function GET(request: NextRequest) {
   try {
     const { user: authUser, error } = requireAuth(request);
     if (error) return error;
-    if (authUser!.role !== 'ADMIN' && authUser!.role !== 'SUPER_ADMIN') {
+    if (authUser!.role !== 'ADMIN') {
       return apiError(ERROR_CODES.FORBIDDEN, 'Admin access required', 403);
     }
 
@@ -51,7 +52,7 @@ export async function POST(request: NextRequest) {
   try {
     const { user: authUser, error } = requireAuth(request);
     if (error) return error;
-    if (authUser!.role !== 'ADMIN' && authUser!.role !== 'SUPER_ADMIN') {
+    if (authUser!.role !== 'ADMIN') {
       return apiError(ERROR_CODES.FORBIDDEN, 'Admin access required', 403);
     }
 
@@ -74,6 +75,15 @@ export async function POST(request: NextRequest) {
       },
     });
 
+    await createAuditLog({
+      actorId: authUser!.userId,
+      action: AUDIT_ACTIONS.CREATE,
+      entityType: 'Doctor',
+      entityId: doctor.id,
+      newValue: { fullName: doctor.fullName, hospitalId: doctor.hospitalId },
+      ipAddress: getClientIP(request),
+    });
+
     return apiSuccess({ doctor }, undefined, 201);
   } catch (err) {
     console.error('[Admin Doctors POST Error]', err);
@@ -85,13 +95,18 @@ export async function PUT(request: NextRequest) {
   try {
     const { user: authUser, error } = requireAuth(request);
     if (error) return error;
-    if (authUser!.role !== 'ADMIN' && authUser!.role !== 'SUPER_ADMIN') {
+    if (authUser!.role !== 'ADMIN') {
       return apiError(ERROR_CODES.FORBIDDEN, 'Admin access required', 403);
     }
 
     const body = await request.json();
     const { id, ...data } = body;
     if (!id) return apiError(ERROR_CODES.BAD_REQUEST, 'Doctor ID required', 400);
+
+    const existing = await prisma.doctor.findUnique({
+      where: { id },
+      select: { fullName: true, hospitalId: true, isActive: true },
+    });
 
     const result = doctorSchema.partial().safeParse(data);
     if (!result.success) {
@@ -103,9 +118,57 @@ export async function PUT(request: NextRequest) {
       data: result.data,
     });
 
+    await createAuditLog({
+      actorId: authUser!.userId,
+      action: AUDIT_ACTIONS.UPDATE,
+      entityType: 'Doctor',
+      entityId: id,
+      oldValue: existing,
+      newValue: result.data,
+      ipAddress: getClientIP(request),
+    });
+
     return apiSuccess({ doctor });
   } catch (err) {
     console.error('[Admin Doctors PUT Error]', err);
     return apiError(ERROR_CODES.INTERNAL_ERROR, 'Failed to update doctor', 500);
+  }
+}
+
+export async function DELETE(request: NextRequest) {
+  try {
+    const { user: authUser, error } = requireAuth(request);
+    if (error) return error;
+    if (authUser!.role !== 'ADMIN') {
+      return apiError(ERROR_CODES.FORBIDDEN, 'Admin access required', 403);
+    }
+
+    const { searchParams } = new URL(request.url);
+    const id = searchParams.get('id');
+    if (!id) return apiError(ERROR_CODES.BAD_REQUEST, 'Doctor ID required', 400);
+
+    const existing = await prisma.doctor.findUnique({
+      where: { id },
+      select: { fullName: true },
+    });
+
+    await prisma.doctor.update({
+      where: { id },
+      data: { isActive: false },
+    });
+
+    await createAuditLog({
+      actorId: authUser!.userId,
+      action: AUDIT_ACTIONS.DEACTIVATE,
+      entityType: 'Doctor',
+      entityId: id,
+      oldValue: existing,
+      ipAddress: getClientIP(request),
+    });
+
+    return apiSuccess({ message: 'Doctor deactivated' });
+  } catch (err) {
+    console.error('[Admin Doctors DELETE Error]', err);
+    return apiError(ERROR_CODES.INTERNAL_ERROR, 'Failed to deactivate doctor', 500);
   }
 }

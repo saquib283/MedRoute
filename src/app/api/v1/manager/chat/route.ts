@@ -14,7 +14,7 @@ export async function GET(request: Request) {
     const userId = request.headers.get('x-user-id');
     const userRole = request.headers.get('x-user-role');
 
-    if (!userId || (userRole !== 'MANAGER' && userRole !== 'ADMIN' && userRole !== 'SUPER_ADMIN')) {
+    if (!userId || (userRole !== 'MANAGER' && userRole !== 'ADMIN' && userRole !== 'ADMIN')) {
       return NextResponse.json({ error: 'Unauthorized role' }, { status: 403 });
     }
 
@@ -133,7 +133,7 @@ export async function POST(request: Request) {
     const userId = request.headers.get('x-user-id');
     const userRole = request.headers.get('x-user-role');
 
-    if (!userId || (userRole !== 'MANAGER' && userRole !== 'ADMIN' && userRole !== 'SUPER_ADMIN')) {
+    if (!userId || (userRole !== 'MANAGER' && userRole !== 'ADMIN' && userRole !== 'ADMIN')) {
       return NextResponse.json({ error: 'Unauthorized role' }, { status: 403 });
     }
 

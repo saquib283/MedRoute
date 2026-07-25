@@ -47,9 +47,11 @@ export default async function proxy(request: NextRequest) {
 
   // ─── Extract and verify JWT ───────────────────────────────────
 
-  const authHeader = request.headers.get('authorization');
+  // Extract JWT (HttpOnly cookie first for browser requests, fallback header for API clients)
   const cookieToken = request.cookies.get('access_token')?.value;
-  const token = authHeader?.replace('Bearer ', '') || cookieToken;
+  const authHeader = request.headers.get('authorization');
+  const token = cookieToken || authHeader?.replace('Bearer ', '');
+
 
   if (!token) {
     // API routes return 401, page routes redirect to login
