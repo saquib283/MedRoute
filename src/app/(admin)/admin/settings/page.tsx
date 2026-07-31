@@ -1,7 +1,7 @@
-'use client';
+﻿'use client';
 
 /**
- * MediRoute India — Platform Settings
+ * Afzal Healthcare — Platform Settings
  * Global system configurations, restricted to Admin only.
  */
 

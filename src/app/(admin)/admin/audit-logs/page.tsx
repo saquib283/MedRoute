@@ -1,7 +1,7 @@
 'use client';
 
 /**
- * MediRoute India — Admin Audit Logs
+ * Afzal Healthcare — Admin Audit Logs
  * Enhanced with date range, action filter, actor search, and CSV export.
  */
 
@@ -26,7 +26,7 @@ interface AuditLog {
 }
 
 const ACTION_OPTIONS = ['CREATE', 'UPDATE', 'DELETE', 'DEACTIVATE', 'ACTIVATE', 'RESET_PASSWORD', 'STATUS_CHANGE', 'REASSIGN', 'RESOLVE_ESCALATION'];
-const ENTITY_OPTIONS = ['User', 'Patient', 'Case', 'Appointment', 'Hospital', 'Doctor', 'Hostel', 'Specialisation'];
+const ENTITY_OPTIONS = ['User', 'Patient', 'Case', 'Appointment', 'Hospital', 'Doctor', 'Specialisation'];
 
 function AuditLogDiff({ oldVal, newVal }: { oldVal: any; newVal: any }) {
   const isObject = (val: any) => val && typeof val === 'object' && !Array.isArray(val);

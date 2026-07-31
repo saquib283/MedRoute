@@ -1,5 +1,5 @@
-/**
- * MediRoute India — Next.js Proxy
+﻿/**
+ * Afzal Healthcare — Next.js Proxy
  * Route protection with JWT validation and role-based access control.
  * Runs on the Edge runtime, using `jose` for JWT verification.
  */

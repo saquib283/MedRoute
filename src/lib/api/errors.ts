@@ -1,5 +1,5 @@
 /**
- * MediRoute India — Machine-Readable Error Codes
+ * Afzal Healthcare — Machine-Readable Error Codes
  * Per PRD Section 6.4: machine-readable codes alongside HTTP status codes.
  */
 
@@ -49,10 +49,6 @@ export const ERROR_CODES = {
   DOCTOR_NOT_FOUND: 'DOCTOR_NOT_FOUND',
   DOCTOR_INACTIVE: 'DOCTOR_INACTIVE',
 
-  // ─── Accommodation ────────────────────────────────────────────
-  HOSTEL_NOT_FOUND: 'HOSTEL_NOT_FOUND',
-  ACCOMMODATION_CONFLICT: 'ACCOMMODATION_CONFLICT',
-  CHECKOUT_BEFORE_APPOINTMENT: 'CHECKOUT_BEFORE_APPOINTMENT',
 
   // ─── Documents ────────────────────────────────────────────────
   FILE_TOO_LARGE: 'FILE_TOO_LARGE',

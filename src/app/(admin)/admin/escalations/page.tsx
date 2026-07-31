@@ -1,7 +1,7 @@
-'use client';
+﻿'use client';
 
 /**
- * MediRoute India — Escalation Queue
+ * Afzal Healthcare — Escalation Queue
  * Cases with escalation notes that need admin attention.
  */
 

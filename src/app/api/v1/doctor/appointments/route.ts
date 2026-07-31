@@ -1,5 +1,5 @@
-/**
- * MediRoute India — GET / PUT /api/v1/doctor/appointments
+﻿/**
+ * Afzal Healthcare — GET / PUT /api/v1/doctor/appointments
  * Fetch and update appointments specifically assigned to the doctor.
  */
 

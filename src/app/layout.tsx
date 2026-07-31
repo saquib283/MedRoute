@@ -1,9 +1,9 @@
-import type { Metadata } from "next";
+﻿import type { Metadata } from "next";
 import "./globals.css";
 import { GlobalProviders } from "@/components/GlobalProviders";
 
 export const metadata: Metadata = {
-  title: "MediRoute India — Medical Tourism Platform",
+  title: "Afzal Healthcare — Medical Tourism Platform",
   description:
     "Centralised medical tourism operations platform connecting international patients with India's best healthcare providers.",
   keywords: [

@@ -1,7 +1,7 @@
-'use client';
+﻿'use client';
 
 /**
- * MediRoute India — Admin Hospitals Management
+ * Afzal Healthcare — Admin Hospitals Management
  * CRUD for hospital partners with search, filters, deactivation, and toast notifications.
  */
 
@@ -519,7 +519,7 @@ export default function AdminHospitalsPage() {
             <div className="px-6 py-4 border-b border-surface-100 flex items-center justify-between sticky top-0 bg-white z-10">
               <h3 className="text-sm font-bold text-surface-900">{editing ? 'Edit Hospital' : 'Add Hospital'}</h3>
               <button onClick={() => setShowModal(false)} className="text-surface-400 hover:text-surface-600 font-bold text-lg">
-                ×
+                Ã—
               </button>
             </div>
             <form onSubmit={handleSave} className="p-6 space-y-4">

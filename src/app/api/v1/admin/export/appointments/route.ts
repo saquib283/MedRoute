@@ -1,5 +1,5 @@
-/**
- * MediRoute India — GET /api/v1/admin/export/appointments
+﻿/**
+ * Afzal Healthcare — GET /api/v1/admin/export/appointments
  * CSV export of appointments.
  */
 

@@ -1,7 +1,7 @@
-'use client';
+﻿'use client';
 
 /**
- * MediRoute India — Admin Patient Management
+ * Afzal Healthcare — Admin Patient Management
  * Paginated patient list with search, filters, and manager reassignment.
  */
 
@@ -189,7 +189,7 @@ export default function AdminPatientsPage() {
           <div className="bg-white rounded-lg shadow-xl w-full max-w-lg animate-scale-up max-h-[90vh] overflow-y-auto">
             <div className="px-6 py-4 border-b border-surface-100 flex items-center justify-between sticky top-0 bg-white z-10">
               <h3 className="text-sm font-bold text-surface-900">Patient Details</h3>
-              <button onClick={() => setSelectedPatient(null)} className="text-surface-400 hover:text-surface-600 font-bold text-lg">×</button>
+              <button onClick={() => setSelectedPatient(null)} className="text-surface-400 hover:text-surface-600 font-bold text-lg">Ã—</button>
             </div>
             <div className="p-6 space-y-5">
               <div className="grid grid-cols-2 gap-4">

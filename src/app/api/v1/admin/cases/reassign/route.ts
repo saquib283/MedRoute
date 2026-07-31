@@ -1,5 +1,5 @@
-/**
- * MediRoute India — /api/v1/admin/cases/reassign
+﻿/**
+ * Afzal Healthcare — /api/v1/admin/cases/reassign
  * Bulk case load reassignment endpoint. Admin only.
  */
 

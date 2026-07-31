@@ -1,5 +1,5 @@
-/**
- * MediRoute India — Patient Documents API Endpoint
+﻿/**
+ * Afzal Healthcare — Patient Documents API Endpoint
  * GET /api/v1/patient/documents — List all documents
  * POST /api/v1/patient/documents — Upload new document (saves to public/uploads)
  * DELETE /api/v1/patient/documents?id=... — Delete a document

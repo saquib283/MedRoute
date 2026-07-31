@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
+import { toast } from '@/components/ui/Toast';
 import {
   User,
   Briefcase,
@@ -20,10 +21,9 @@ import {
 } from 'lucide-react';
 
 const DEMO_ACCOUNTS = [
-  { role: 'Patient', email: 'patient@mediroute.in', pass: 'Patient@123', icon: User },
-  { role: 'Manager', email: 'manager@mediroute.in', pass: 'Manager@123', icon: Briefcase },
-  { role: 'Doctor', email: 'doctor@mediroute.in', pass: 'Doctor@123', icon: Stethoscope },
-  { role: 'Admin', email: 'admin@mediroute.in', pass: 'Admin@123', icon: Zap },
+  { role: 'Patient', email: 'patient@afzalhealthcare.in', pass: 'Patient@123', icon: User },
+  { role: 'Manager', email: 'manager@afzalhealthcare.in', pass: 'Manager@123', icon: Briefcase },
+  { role: 'Admin', email: 'admin@afzalhealthcare.in', pass: 'Admin@123', icon: Zap },
 ];
 
 export default function LoginPage() {
@@ -62,7 +62,9 @@ export default function LoginPage() {
       const data = await res.json();
 
       if (!data.success) {
-        setError(data.error?.message || 'Invalid email or password.');
+        const errMsg = data.error?.message || 'Invalid email or password.';
+        setError(errMsg);
+        toast.apiError(data, 'Invalid email or password.', 'Authentication Failed');
         return;
       }
 
@@ -86,10 +88,6 @@ export default function LoginPage() {
         case 'MANAGER':
           router.push('/manager/dashboard');
           break;
-        case 'DOCTOR':
-          router.push('/doctor/dashboard');
-          break;
-        case 'ADMIN':
         case 'ADMIN':
           router.push('/admin/dashboard');
           break;
@@ -220,7 +218,7 @@ export default function LoginPage() {
             <Input
               label="Email Address"
               type="email"
-              placeholder="name@mediroute.in"
+              placeholder="name@afzalhealthcare.in"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               required

@@ -1,6 +1,6 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
+﻿/* eslint-disable @typescript-eslint/no-explicit-any */
 /**
- * MediRoute India — /api/v1/admin/hospitals/overrides
+ * Afzal Healthcare — /api/v1/admin/hospitals/overrides
  * CRUD for managing specific date-bound commission overrides.
  */
 

@@ -1,5 +1,5 @@
-/**
- * MediRoute India — Authenticated Document Download Endpoint
+﻿/**
+ * Afzal Healthcare — Authenticated Document Download Endpoint
  * GET /api/v1/patient/documents/download?id=...
  * Enforces HIPAA authentication and authorization checks before serving ePHI documents.
  */

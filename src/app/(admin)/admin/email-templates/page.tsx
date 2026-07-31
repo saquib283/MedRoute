@@ -1,7 +1,7 @@
-'use client';
+﻿'use client';
 
 /**
- * MediRoute India — Admin Email Templates
+ * Afzal Healthcare — Admin Email Templates
  * Full CRUD for email templates with live HTML preview,
  * placeholder hints, category filtering, and search.
  */
@@ -244,7 +244,7 @@ export default function EmailTemplatesPage() {
           <div className="bg-white rounded-lg shadow-xl w-full max-w-3xl animate-scale-up my-8">
             <div className="px-6 py-4 border-b border-surface-100 flex items-center justify-between">
               <h3 className="text-sm font-bold text-surface-900">{editing ? 'Edit Template' : 'Create New Template'}</h3>
-              <button onClick={() => setShowModal(false)} className="text-surface-400 hover:text-surface-600 font-bold text-lg">×</button>
+              <button onClick={() => setShowModal(false)} className="text-surface-400 hover:text-surface-600 font-bold text-lg">Ã—</button>
             </div>
             <form onSubmit={handleSave} className="p-6 space-y-4">
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -263,7 +263,7 @@ export default function EmailTemplatesPage() {
 
               <div className="space-y-1.5">
                 <label className="block text-xs font-semibold text-surface-700">Subject Line *</label>
-                <input type="text" required value={form.subject} onChange={(e) => setForm({ ...form, subject: e.target.value })} className="w-full p-2.5 border border-surface-300 rounded text-sm focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500" placeholder="e.g., Welcome to MediRoute India, {{fullName}}" />
+                <input type="text" required value={form.subject} onChange={(e) => setForm({ ...form, subject: e.target.value })} className="w-full p-2.5 border border-surface-300 rounded text-sm focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500" placeholder="e.g., Welcome to Afzal Healthcare, {{fullName}}" />
               </div>
 
               {/* Placeholder Hints */}
@@ -285,7 +285,7 @@ export default function EmailTemplatesPage() {
                 <div className="flex items-center justify-between">
                   <label className="block text-xs font-semibold text-surface-700">Email Body (HTML) *</label>
                   <button type="button" onClick={() => setShowPreview(!showPreview)} className="text-xs font-semibold text-primary-600 hover:text-primary-700">
-                    {showPreview ? '← Back to Editor' : 'Preview →'}
+                    {showPreview ? '← Back to Editor' : 'Preview →'}
                   </button>
                 </div>
                 {showPreview ? (
@@ -299,7 +299,7 @@ export default function EmailTemplatesPage() {
                     onChange={(e) => setForm({ ...form, body: e.target.value })}
                     rows={10}
                     className="w-full p-3 border border-surface-300 rounded text-sm font-mono focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500 resize-y"
-                    placeholder="<h1>Hello {{fullName}},</h1><p>Welcome to MediRoute India...</p>"
+                    placeholder="<h1>Hello {{fullName}},</h1><p>Welcome to Afzal Healthcare...</p>"
                   />
                 )}
               </div>

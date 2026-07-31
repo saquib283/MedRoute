@@ -1,5 +1,5 @@
-/**
- * MediRoute India — Badge Component
+﻿/**
+ * Afzal Healthcare — Badge Component
  * Status indicator badges with semantic colors — clinical light-mode.
  */
 

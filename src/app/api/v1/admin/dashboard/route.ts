@@ -1,5 +1,5 @@
-/**
- * MediRoute India — GET /api/v1/admin/dashboard
+﻿/**
+ * Afzal Healthcare — GET /api/v1/admin/dashboard
  * Platform-wide KPI aggregation with date-range, trends, and distribution data.
  */
 

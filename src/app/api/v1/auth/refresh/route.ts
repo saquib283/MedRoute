@@ -1,5 +1,5 @@
-/**
- * MediRoute India — POST /api/v1/auth/refresh
+﻿/**
+ * Afzal Healthcare — POST /api/v1/auth/refresh
  * JWT refresh token rotation per PRD FR-AUTH-01.
  * Old refresh token is revoked, new pair (access + refresh) is issued.
  */

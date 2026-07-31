@@ -1,7 +1,7 @@
 'use client';
 
 /**
- * MediRoute India — Patient Overview Dashboard
+ * Afzal Healthcare — Patient Overview Dashboard
  * High-impact clinical dashboard with Lucide icons and treatment roadmap.
  */
 
@@ -23,6 +23,8 @@ import {
   ArrowRight,
 } from 'lucide-react';
 
+import { ClinicalRoadmapTree, ClinicalStepData, FitToFlyData } from '@/components/clinical/ClinicalRoadmapTree';
+
 interface Coordinator {
   fullName: string;
   email: string;
@@ -35,6 +37,8 @@ interface Case {
   notes: string | null;
   createdAt: string;
   manager: Coordinator | null;
+  clinicalSteps?: ClinicalStepData[];
+  fitToFlyClearance?: FitToFlyData | null;
 }
 
 const STATUS_STEPS = [
@@ -115,7 +119,7 @@ export default function PatientDashboard() {
             <span>HIPAA Compliant Patient Portal</span>
           </div>
           <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight flex items-center gap-2">
-            Welcome to MediRoute India
+            Welcome to Afzal Healthcare
           </h1>
           <p className="text-xs sm:text-sm text-primary-200 leading-relaxed">
             Track your treatment roadmap, communicate directly with your case coordinator, and manage medical records securely.
@@ -207,91 +211,110 @@ export default function PatientDashboard() {
       </div>
 
       {/* ─── Treatment Roadmap & Case Stepper ─────────────────────────────── */}
-      <Card className="p-6 rounded-2xl shadow-xs border border-surface-200 space-y-6">
-        <div className="border-b border-surface-100 pb-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-          <div>
-            <h2 className="text-base font-bold text-surface-900 tracking-tight">Treatment Journey Roadmap</h2>
-            <p className="text-xs text-surface-500 mt-0.5">Track your clinical milestones from inquiry to post-treatment recovery.</p>
-          </div>
-
-          {activeCase && (
-            <div className="flex items-center gap-2">
-              <span className="text-xs font-semibold text-surface-500">Current Phase:</span>
-              <Badge variant={activeCase.status === 'CLOSED' ? 'default' : 'primary'} dot>
-                {STATUS_STEPS[activeIndex]?.label || activeCase.status}
-              </Badge>
-            </div>
-          )}
+      {activeCase && (
+        <div className="flex items-center justify-end">
+          <Link href={`/manager/cases/${activeCase.id}/pathway`}>
+            <button
+              type="button"
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-primary-50 hover:bg-primary-100 text-primary-800 border border-primary-200 rounded-xl text-xs font-bold transition-colors shadow-2xs"
+            >
+              <Stethoscope className="w-3.5 h-3.5 text-primary-600" />
+              <span>Configure Pathway in Admin/Manager Panel</span>
+            </button>
+          </Link>
         </div>
+      )}
 
-        {activeCase ? (
-          <div className="relative pl-6 sm:pl-0 py-2">
-            <div className="hidden sm:block absolute top-7 left-[8%] right-[8%] h-0.5 bg-surface-200 -z-10" />
-            <div className="sm:hidden absolute left-3.5 top-4 bottom-4 w-0.5 bg-surface-200" />
-
-            <div className="grid grid-cols-1 sm:grid-cols-6 gap-6 sm:gap-3">
-              {STATUS_STEPS.map((step, idx) => {
-                const isPassed = idx < activeIndex;
-                const isActive = idx === activeIndex;
-
-                return (
-                  <div
-                    key={step.status}
-                    className="flex sm:flex-col sm:items-center sm:text-center gap-3.5 sm:gap-2.5 relative"
-                  >
-                    <div
-                      className={`
-                        w-8 h-8 rounded-full flex items-center justify-center shrink-0 border-2 font-bold text-xs transition-all shadow-xs
-                        ${
-                          isPassed
-                            ? 'bg-primary-600 border-primary-600 text-white'
-                            : isActive
-                            ? 'bg-white border-primary-600 text-primary-600 ring-4 ring-primary-100'
-                            : 'bg-white border-surface-300 text-surface-400'
-                        }
-                      `}
-                    >
-                      {isPassed ? <CheckCircle2 className="w-4 h-4" /> : idx + 1}
-                    </div>
-
-                    <div>
-                      <p
-                        className={`text-xs font-bold ${
-                          isActive ? 'text-primary-700' : isPassed ? 'text-surface-900' : 'text-surface-500'
-                        }`}
-                      >
-                        {step.label}
-                      </p>
-                      <p className="text-[11px] text-surface-400 mt-0.5 leading-tight max-w-[130px] sm:mx-auto">
-                        {step.desc}
-                      </p>
-                    </div>
-                  </div>
-                );
-              })}
+      {activeCase?.clinicalSteps && activeCase.clinicalSteps.length > 0 ? (
+        <ClinicalRoadmapTree
+          steps={activeCase.clinicalSteps}
+          fitToFly={activeCase.fitToFlyClearance}
+          currentStatus={activeCase.status}
+        />
+      ) : (
+        <Card className="p-6 rounded-2xl shadow-xs border border-surface-200 space-y-6">
+          <div className="border-b border-surface-100 pb-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+            <div>
+              <h2 className="text-base font-bold text-surface-900 tracking-tight">Treatment Journey Roadmap</h2>
+              <p className="text-xs text-surface-500 mt-0.5">Track your clinical milestones from inquiry to post-treatment recovery.</p>
             </div>
 
-            {activeCase.notes && (
-              <div className="mt-8 p-4 bg-surface-50 rounded-2xl border border-surface-200 flex items-start gap-3">
-                <div className="w-8 h-8 rounded-xl bg-primary-50 text-primary-600 flex items-center justify-center shrink-0">
-                  <MessageSquare className="w-4 h-4" />
-                </div>
-                <div>
-                  <span className="text-[10px] uppercase font-bold text-surface-500 tracking-wider">Coordinator Note</span>
-                  <p className="text-xs font-medium text-surface-800 mt-1 leading-relaxed">{activeCase.notes}</p>
-                </div>
+            {activeCase && (
+              <div className="flex items-center gap-2">
+                <span className="text-xs font-semibold text-surface-500">Current Phase:</span>
+                <Badge variant={activeCase.status === 'CLOSED' ? 'default' : 'primary'} dot>
+                  {STATUS_STEPS[activeIndex]?.label || activeCase.status}
+                </Badge>
               </div>
             )}
           </div>
-        ) : (
-          <div className="text-center py-10 space-y-2">
-            <p className="text-sm font-bold text-surface-700">No active medical care case found.</p>
-            <p className="text-xs text-surface-500 max-w-sm mx-auto">
-              Register your profile details or submit a treatment inquiry to get assigned a case coordinator.
-            </p>
-          </div>
-        )}
-      </Card>
+
+          {activeCase ? (
+            <div className="relative pl-6 sm:pl-0 py-2">
+              <div className="hidden sm:block absolute top-7 left-[8%] right-[8%] h-0.5 bg-surface-200 -z-10" />
+              <div className="sm:hidden absolute left-3.5 top-4 bottom-4 w-0.5 bg-surface-200" />
+
+              <div className="grid grid-cols-1 sm:grid-cols-6 gap-6 sm:gap-3">
+                {STATUS_STEPS.map((step, idx) => {
+                  const isPassed = idx < activeIndex;
+                  const isActive = idx === activeIndex;
+
+                  return (
+                    <div
+                      key={step.status}
+                      className="flex sm:flex-col sm:items-center sm:text-center gap-3.5 sm:gap-2.5 relative"
+                    >
+                      <div
+                        className={`
+                          w-8 h-8 rounded-full flex items-center justify-center shrink-0 border-2 font-bold text-xs transition-all shadow-xs
+                          ${
+                            isPassed
+                              ? 'bg-primary-600 border-primary-600 text-white'
+                              : isActive
+                              ? 'bg-white border-primary-600 text-primary-600 ring-4 ring-primary-100'
+                              : 'bg-white border-surface-300 text-surface-400'
+                          }
+                        `}
+                      >
+                        {isPassed ? <CheckCircle2 className="w-4 h-4" /> : idx + 1}
+                      </div>
+
+                      <div>
+                        <p
+                          className={`text-xs font-bold ${
+                            isActive ? 'text-primary-700' : isPassed ? 'text-surface-900' : 'text-surface-500'
+                          }`}
+                        >
+                          {step.label}
+                        </p>
+                        <p className="text-[11px] text-surface-400 mt-0.5 leading-tight max-w-[130px] sm:mx-auto">
+                          {step.desc}
+                        </p>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+
+              {activeCase.notes && (
+                <div className="mt-8 p-4 bg-surface-50 rounded-2xl border border-surface-200 flex items-start gap-3">
+                  <div className="w-8 h-8 rounded-xl bg-primary-50 text-primary-600 flex items-center justify-center shrink-0">
+                    <MessageSquare className="w-4 h-4" />
+                  </div>
+                  <div>
+                    <span className="text-[10px] uppercase font-bold text-surface-500 tracking-wider">Coordinator Note</span>
+                    <p className="text-xs font-medium text-surface-800 mt-1 leading-relaxed">{activeCase.notes}</p>
+                  </div>
+                </div>
+              )}
+            </div>
+          ) : (
+            <div className="text-center py-8">
+              <p className="text-sm font-medium text-surface-500">No active treatment case. Please contact your coordinator.</p>
+            </div>
+          )}
+        </Card>
+      )}
 
       {/* ─── Split Section ─────────────────────────────────────────────── */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">

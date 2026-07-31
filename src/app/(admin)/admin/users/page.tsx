@@ -1,7 +1,7 @@
-'use client';
+﻿'use client';
 
 /**
- * MediRoute India — Admin User Management
+ * Afzal Healthcare — Admin User Management
  * Full CRUD with Admin guards, password reset, deactivate, toast feedback.
  */
 
@@ -557,7 +557,7 @@ export default function AdminUsersPage() {
           <div className="bg-white rounded-lg shadow-xl w-full max-w-md animate-scale-up">
             <div className="px-6 py-4 border-b border-surface-100 flex items-center justify-between">
               <h3 className="text-sm font-bold text-surface-900">{editingUser ? 'Edit User' : 'Create New User'}</h3>
-              <button onClick={() => setShowModal(false)} className="text-surface-400 hover:text-surface-600 font-bold text-lg">×</button>
+              <button onClick={() => setShowModal(false)} className="text-surface-400 hover:text-surface-600 font-bold text-lg">Ã—</button>
             </div>
             <form onSubmit={handleSave} className="p-6 space-y-4">
               <div className="space-y-1.5">

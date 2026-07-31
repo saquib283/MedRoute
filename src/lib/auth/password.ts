@@ -1,5 +1,5 @@
-/**
- * MediRoute India — Password Hashing Utilities
+﻿/**
+ * Afzal Healthcare — Password Hashing Utilities
  * bcrypt with minimum 12 salt rounds per PRD Section 5.3
  */
 

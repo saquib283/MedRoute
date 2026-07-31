@@ -1,7 +1,7 @@
-'use client';
+﻿'use client';
 
 /**
- * MediRoute India — Admin Appointments Management
+ * Afzal Healthcare — Admin Appointments Management
  * Paginated appointments list with search, filters, cancel, and reschedule actions.
  */
 
@@ -320,7 +320,7 @@ export default function AdminAppointmentsPage() {
             <div className="px-6 py-4 border-b border-surface-100 flex items-center justify-between sticky top-0 bg-white z-10">
               <h3 className="text-sm font-bold text-surface-900">Appointment Details</h3>
               <button onClick={() => setSelectedAppt(null)} className="text-surface-400 hover:text-surface-600 font-bold text-lg">
-                ×
+                Ã—
               </button>
             </div>
             <div className="p-6 space-y-5">

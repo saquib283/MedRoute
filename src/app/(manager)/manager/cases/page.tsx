@@ -1,7 +1,7 @@
-'use client';
+﻿'use client';
 
 /**
- * MediRoute India — Manager Case Files Pipeline Board
+ * Afzal Healthcare — Manager Case Files Pipeline Board
  * Drag-and-drop or tab-filtered interface for patient treatment steps.
  */
 

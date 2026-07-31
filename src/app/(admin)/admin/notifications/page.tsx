@@ -1,7 +1,7 @@
-'use client';
+﻿'use client';
 
 /**
- * MediRoute India — Admin Notification Management
+ * Afzal Healthcare — Admin Notification Management
  * Draft and send broadcast notifications (email/SMS/in-app) to platform roles, view history logs.
  */
 

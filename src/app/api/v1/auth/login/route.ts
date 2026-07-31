@@ -1,5 +1,5 @@
-/**
- * MediRoute India — POST /api/v1/auth/login
+﻿/**
+ * Afzal Healthcare — POST /api/v1/auth/login
  * Email + password login with 2FA enforcement for Manager/Admin (FR-AUTH-01).
  */
 

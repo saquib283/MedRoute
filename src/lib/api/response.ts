@@ -1,5 +1,5 @@
-/**
- * MediRoute India — API Response Helpers
+﻿/**
+ * Afzal Healthcare — API Response Helpers
  * Consistent response envelope per PRD Section 6.4:
  * { success: boolean, data?: T, error?: { code: string, message: string }, meta?: object }
  */

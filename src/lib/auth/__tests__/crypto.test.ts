@@ -1,4 +1,4 @@
-import { encrypt, decrypt } from '../crypto';
+﻿import { encrypt, decrypt } from '../crypto';
 
 describe('Crypto Module AES-256-GCM', () => {
   const originalEnv = process.env.ENCRYPTION_KEY;
@@ -12,7 +12,7 @@ describe('Crypto Module AES-256-GCM', () => {
   });
 
   it('should encrypt and decrypt a message correctly', () => {
-    const plainText = 'Hello, MediRoute India!';
+    const plainText = 'Hello, Afzal Healthcare!';
     const encrypted = encrypt(plainText);
 
     // Verify it is encrypted and formatted correctly (iv:authTag:ciphertext)

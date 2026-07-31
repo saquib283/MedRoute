@@ -1,7 +1,7 @@
-'use client';
+﻿'use client';
 
 /**
- * MediRoute India — Forgot Password Page
+ * Afzal Healthcare — Forgot Password Page
  * OTP-based password reset flow.
  */
 
@@ -174,7 +174,7 @@ export default function ForgotPasswordPage() {
           href="/login"
           className="text-sm text-surface-500 hover:text-surface-700 transition-colors"
         >
-          ← Back to sign in
+          ← Back to sign in
         </Link>
       </div>
     </div>

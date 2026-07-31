@@ -1,5 +1,5 @@
-/**
- * MediRoute India — /api/v1/admin/patients
+﻿/**
+ * Afzal Healthcare — /api/v1/admin/patients
  * Paginated patient list with search and filters for admin oversight.
  */
 

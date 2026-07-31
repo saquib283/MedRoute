@@ -1,5 +1,5 @@
-/**
- * MediRoute India — ePHI Field-Level Encryption Utilities
+﻿/**
+ * Afzal Healthcare — ePHI Field-Level Encryption Utilities
  * Application-level AES-256-GCM encryption for clinical fields per HIPAA § 164.312(a)(2)(iv).
  */
 

@@ -1,7 +1,7 @@
-'use client';
+﻿'use client';
 
 /**
- * MediRoute India — Manager Appointments scheduler controller
+ * Afzal Healthcare — Manager Appointments scheduler controller
  * Schedule, reschedule, or cancel patient hospital appointments.
  */
 

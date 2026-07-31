@@ -1,5 +1,5 @@
-/**
- * MediRoute India — /api/v1/admin/specialisations
+﻿/**
+ * Afzal Healthcare — /api/v1/admin/specialisations
  * CRUD for medical specialisations with audit logging.
  */
 

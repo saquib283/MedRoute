@@ -1,5 +1,5 @@
-/**
- * MediRoute India — Button Component
+﻿/**
+ * Afzal Healthcare — Button Component
  * Clinical design system button with consistent variants and 44px min touch target.
  */
 

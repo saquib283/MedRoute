@@ -1,5 +1,5 @@
 /**
- * MediRoute India — Constants & Enum Definitions
+ * Afzal Healthcare — Constants & Enum Definitions
  * Single source of truth for all application constants.
  */
 
@@ -83,18 +83,28 @@ export const APPOINTMENT_STATUS_LABELS: Record<string, string> = {
 
 export const DOCUMENT_CATEGORIES = {
   PASSPORT: 'PASSPORT',
-  MEDICAL_REPORT: 'MEDICAL_REPORT',
-  INSURANCE: 'INSURANCE',
   VISA: 'VISA',
+  VISA_INVITATION_LETTER: 'VISA_INVITATION_LETTER',
+  PROFORMA_INVOICE: 'PROFORMA_INVOICE',
+  MEDICAL_OPINION: 'MEDICAL_OPINION',
+  MEDICAL_REPORT: 'MEDICAL_REPORT',
   PRESCRIPTION: 'PRESCRIPTION',
+  FIT_TO_FLY_CERTIFICATE: 'FIT_TO_FLY_CERTIFICATE',
+  FRRO_REGISTRATION: 'FRRO_REGISTRATION',
+  INSURANCE: 'INSURANCE',
 } as const;
 
 export const DOCUMENT_CATEGORY_LABELS: Record<string, string> = {
   PASSPORT: 'Passport',
-  MEDICAL_REPORT: 'Medical Report',
-  INSURANCE: 'Insurance',
-  VISA: 'Visa',
+  VISA: 'Travel Visa',
+  VISA_INVITATION_LETTER: 'Visa Invitation Letter (VIL)',
+  PROFORMA_INVOICE: 'Pro-Forma Cost Estimate',
+  MEDICAL_OPINION: 'Hospital Medical Opinion',
+  MEDICAL_REPORT: 'Medical Diagnostic Report',
   PRESCRIPTION: 'Prescription',
+  FIT_TO_FLY_CERTIFICATE: 'Fit-to-Fly Certificate',
+  FRRO_REGISTRATION: 'FRRO Registration',
+  INSURANCE: 'Medical Insurance',
 };
 
 // ─── Urgency Levels ─────────────────────────────────────────────────

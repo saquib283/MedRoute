@@ -1,5 +1,5 @@
-/**
- * MediRoute India — Audit Logger
+﻿/**
+ * Afzal Healthcare — Audit Logger
  * Server-side utility for creating audit log entries on admin mutations.
  */
 

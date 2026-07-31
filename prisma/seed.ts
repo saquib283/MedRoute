@@ -1,5 +1,5 @@
 /**
- * MediRoute India — Database Seed Script
+ * Afzal Healthcare — Database Seed Script
  * Seeds specialisations, test users, and sample partner data.
  * Run with: npx tsx prisma/seed.ts
  */
@@ -12,7 +12,7 @@ const prisma = new PrismaClient();
 const BCRYPT_ROUNDS = 12;
 
 async function main() {
-  console.log('🌱 Seeding database...\n');
+  console.log('ðŸŒ± Seeding database...\n');
 
   // ─── 1. Specialisations ───────────────────────────────────────────
   console.log('Creating specialisations...');
@@ -49,40 +49,40 @@ async function main() {
   // Super Admin
   const adminPasswordHash = await bcrypt.hash('Admin@123', BCRYPT_ROUNDS);
   const admin = await prisma.user.upsert({
-    where: { email: 'admin@mediroute.in' },
+    where: { email: 'admin@afzalhealthcare.in' },
     update: {},
     create: {
-      email: 'admin@mediroute.in',
+      email: 'admin@afzalhealthcare.in',
       passwordHash: adminPasswordHash,
       role: 'ADMIN',
       fullName: 'Rahul Mehra',
       phone: '+919876543210',
     },
   });
-  console.log(`  ✓ Admin: admin@mediroute.in / Admin@123`);
+  console.log(`  ✓ Admin: admin@afzalhealthcare.in / Admin@123`);
 
   // Manager
   const managerPasswordHash = await bcrypt.hash('Manager@123', BCRYPT_ROUNDS);
   const manager = await prisma.user.upsert({
-    where: { email: 'manager@mediroute.in' },
+    where: { email: 'manager@afzalhealthcare.in' },
     update: {},
     create: {
-      email: 'manager@mediroute.in',
+      email: 'manager@afzalhealthcare.in',
       passwordHash: managerPasswordHash,
       role: 'MANAGER',
       fullName: 'Priya Sharma',
       phone: '+919876543211',
     },
   });
-  console.log(`  ✓ Manager: manager@mediroute.in / Manager@123`);
+  console.log(`  ✓ Manager: manager@afzalhealthcare.in / Manager@123`);
 
   // Patient
   const patientPasswordHash = await bcrypt.hash('Patient@123', BCRYPT_ROUNDS);
   const patientUser = await prisma.user.upsert({
-    where: { email: 'patient@mediroute.in' },
+    where: { email: 'patient@afzalhealthcare.in' },
     update: {},
     create: {
-      email: 'patient@mediroute.in',
+      email: 'patient@afzalhealthcare.in',
       passwordHash: patientPasswordHash,
       role: 'PATIENT',
       fullName: 'Ranya Al-Hassan',
@@ -125,22 +125,7 @@ async function main() {
       specialisationsRequired: ['Cardiology'],
     },
   });
-  console.log(`  ✓ Patient: patient@mediroute.in / Patient@123`);
-
-  // Doctor
-  const doctorPasswordHash = await bcrypt.hash('Doctor@123', BCRYPT_ROUNDS);
-  const doctorUser = await prisma.user.upsert({
-    where: { email: 'doctor@mediroute.in' },
-    update: {},
-    create: {
-      email: 'doctor@mediroute.in',
-      passwordHash: doctorPasswordHash,
-      role: 'DOCTOR',
-      fullName: 'Dr. Ashok Seth',
-      phone: '+919876543212',
-    },
-  });
-  console.log(`  ✓ Doctor: doctor@mediroute.in / Doctor@123\n`);
+  console.log(`  ✓ Patient: patient@afzalhealthcare.in / Patient@123\n`);
 
   // ─── 3. Sample Case ──────────────────────────────────────────────
   console.log('Creating sample case...');
@@ -208,7 +193,6 @@ async function main() {
       update: {},
       create: {
         id: 'seed-doctor-001',
-        userId: doctorUser.id,
         hospitalId: hospital1.id,
         fullName: 'Dr. Ashok Seth',
         specialisationId: cardiologySpec.id,
@@ -254,29 +238,336 @@ async function main() {
 
   console.log(`  ✓ 3 doctors created\n`);
 
-  // ─── 6. Hostel ────────────────────────────────────────────────────
-  console.log('Creating hostel...');
-  await prisma.hostel.upsert({
-    where: { id: 'seed-hostel-001' },
-    update: {},
+  // ─── 6. Sample Case & Clinical Workflow Steps ─────────────────────
+  console.log('Creating sample clinical case & treatment steps...');
+  const sampleCase = await prisma.case.upsert({
+    where: { id: 'seed-case-001' },
+    update: {
+      status: 'WARD_RECOVERY',
+    },
     create: {
-      id: 'seed-hostel-001',
-      name: 'MediStay Residences',
-      city: 'New Delhi',
-      address: 'A-12, Saket, New Delhi, Delhi 110017',
-      capacity: 50,
-      pricingPerNight: 1500,
-      roomTypes: ['SINGLE', 'DOUBLE', 'SUITE'],
+      id: 'seed-case-001',
+      patientId: patient.id,
+      managerId: manager.id,
+      status: 'WARD_RECOVERY',
+      notes: 'Patient undergoing post-operative cardiac catheterization recovery and monitoring.',
+      isUrgent: false,
     },
   });
-  console.log('  ✓ 1 hostel created\n');
+
+  const clinicalStepsData = [
+    {
+      title: 'Inquiry & Initial Medical File Review',
+      category: 'PRE_OP',
+      status: 'COMPLETED',
+      doctorNotes: 'Coronary angiography scans and cardiac panel received. Referred to Senior Cardiologist.',
+      completedAt: new Date(Date.now() - 14 * 86400000),
+    },
+    {
+      title: 'Multi-Disciplinary Team (MDT) Board Clearance',
+      category: 'PRE_OP',
+      status: 'COMPLETED',
+      decisionBranch: 'APPROVED_FOR_SURGERY',
+      doctorNotes: 'MDT Board approves elective Percutaneous Coronary Intervention (PCI) with drug-eluting stent.',
+      completedAt: new Date(Date.now() - 10 * 86400000),
+    },
+    {
+      title: 'Pre-Anesthesia Clearance (PAC) & Cardiac Assessment',
+      category: 'PRE_OP',
+      status: 'COMPLETED',
+      decisionBranch: 'FIT_FOR_ANESTHESIA',
+      doctorNotes: 'ASA Class II. HbA1c 6.8%. Cleared for cardiac catheterization lab under local & MAC anesthesia.',
+      completedAt: new Date(Date.now() - 5 * 86400000),
+    },
+    {
+      title: 'Cardiac Catheterization & Stent Placement Procedure',
+      category: 'TREATMENT',
+      status: 'COMPLETED',
+      decisionBranch: 'UNCOMPLICATED_PROCEDURE',
+      doctorNotes: 'Successful placement of 2 drug-eluting stents in LAD artery. Zero intra-op complications.',
+      completedAt: new Date(Date.now() - 2 * 86400000),
+    },
+    {
+      title: 'Post-Op Coronary Care Unit (CCU) Monitoring',
+      category: 'POST_OP',
+      status: 'COMPLETED',
+      decisionBranch: 'STABLE_STEARN_HEMODYNAMICS',
+      doctorNotes: 'Transferred to CCU for 24h continuous telemetry. Vital signs stable, troponin levels trending down.',
+      completedAt: new Date(Date.now() - 1 * 86400000),
+    },
+    {
+      title: 'In-Patient Ward Recovery & Mobilization Protocol',
+      category: 'POST_OP',
+      status: 'IN_PROGRESS',
+      decisionBranch: 'NORMAL_RECOVERY_TRACK',
+      doctorNotes: 'Patient ambulatory, on dual antiplatelet therapy (DAPT). Surgical entry site clean.',
+    },
+    {
+      title: 'Criteria-Based Hospital Discharge & Epicrisis',
+      category: 'DISCHARGE',
+      status: 'PENDING',
+      doctorNotes: 'Scheduled for Day 5 post-procedure upon repeat blood panel.',
+    },
+    {
+      title: 'Outpatient Follow-Up & Fit-to-Fly Evaluation',
+      category: 'DISCHARGE',
+      status: 'PENDING',
+      decisionBranch: 'FIT_TO_FLY_PENDING',
+      doctorNotes: 'Cardiology outpatient visit scheduled for suture/sheath site review and flight clearance.',
+    },
+    {
+      title: 'Remote Tele-Rehabilitation & Telehealth Tracking',
+      category: 'REHAB',
+      status: 'PENDING',
+      doctorNotes: 'Scheduled virtual follow-ups at 2 weeks, 1 month, and 3 months post-discharge.',
+    },
+  ];
+
+  for (const step of clinicalStepsData) {
+    await prisma.clinicalStep.create({
+      data: {
+        caseId: sampleCase.id,
+        title: step.title,
+        category: step.category,
+        status: step.status,
+        decisionBranch: step.decisionBranch || null,
+        doctorNotes: step.doctorNotes,
+        completedAt: step.completedAt || null,
+      },
+    });
+  }
+
+  await prisma.fitToFlyClearance.upsert({
+    where: { caseId: sampleCase.id },
+    update: {},
+    create: {
+      caseId: sampleCase.id,
+      isCleared: true,
+      clearedBy: 'Dr. Ashok Seth (MBBS, MD Cardiology)',
+      clearanceDate: new Date(Date.now() + 3 * 86400000),
+      restrictions: 'Patient cleared for commercial flights. Must maintain hydrated state, wear compression stockings, and keep emergency nitroglycerin in carry-on bag.',
+    },
+  });
+
+  // ─── 7. Sample Verification & Hospital-Issued Documents ──────────
+  const sampleDocs = [
+    {
+      category: 'VISA_INVITATION_LETTER',
+      fileName: 'Official_Visa_Invitation_Letter_Fortis_Escorts.pdf',
+      fileUrl: '/api/v1/patient/documents/download?file=VIL_Sample.pdf',
+      fileSize: 245000,
+      mimeType: 'application/pdf',
+      verificationStatus: 'ISSUED_BY_HOSPITAL',
+      uploadedBy: manager.id,
+      verificationNotes: 'Official Medical Visa Invitation Letter issued by Fortis Escorts for Indian Consulate M-Visa application.',
+      verifiedAt: new Date(),
+    },
+    {
+      category: 'PROFORMA_INVOICE',
+      fileName: 'Treatment_Cost_Estimate_Proforma_Invoice.pdf',
+      fileUrl: '/api/v1/patient/documents/download?file=Invoice_Sample.pdf',
+      fileSize: 180000,
+      mimeType: 'application/pdf',
+      verificationStatus: 'ISSUED_BY_HOSPITAL',
+      uploadedBy: manager.id,
+      verificationNotes: 'Signed Pro-Forma treatment invoice for foreign currency exchange and hospital admission deposit.',
+      verifiedAt: new Date(),
+    },
+    {
+      category: 'PASSPORT',
+      fileName: 'International_Passport_UAE_Patient.pdf',
+      fileUrl: '/api/v1/patient/documents/download?file=Passport_Sample.pdf',
+      fileSize: 520000,
+      mimeType: 'application/pdf',
+      verificationStatus: 'VERIFIED',
+      uploadedBy: patientUser.id,
+      verifiedBy: manager.id,
+      verificationNotes: 'Verified UAE Passport. Expiry date valid for 18 months.',
+      verifiedAt: new Date(),
+    },
+    {
+      category: 'MEDICAL_REPORT',
+      fileName: 'Coronary_Angiography_Diagnostics_2026.pdf',
+      fileUrl: '/api/v1/patient/documents/download?file=Angio_Report.pdf',
+      fileSize: 1240000,
+      mimeType: 'application/pdf',
+      verificationStatus: 'VERIFIED',
+      uploadedBy: patientUser.id,
+      verifiedBy: manager.id,
+      verificationNotes: 'Pre-op diagnostic angiography labs verified by Senior Cardiologist.',
+      verifiedAt: new Date(),
+    },
+  ];
+
+  for (const doc of sampleDocs) {
+    await prisma.document.create({
+      data: {
+        patientId: patient.id,
+        category: doc.category as any,
+        fileName: doc.fileName,
+        fileUrl: doc.fileUrl,
+        fileSize: doc.fileSize,
+        mimeType: doc.mimeType,
+        verificationStatus: doc.verificationStatus,
+        uploadedBy: doc.uploadedBy,
+        verifiedBy: doc.verifiedBy || null,
+        verificationNotes: doc.verificationNotes || null,
+        verifiedAt: doc.verifiedAt || null,
+      },
+    });
+  }
+
+  // ─── 8. Sample Medical Bills & Itemized Breakdowns ──────────────
+  console.log('Creating sample medical bills & itemized breakdowns...');
+  const sampleBill = await prisma.medicalBill.upsert({
+    where: { billNumber: 'INV-2026-0042' },
+    update: {},
+    create: {
+      billNumber: 'INV-2026-0042',
+      caseId: sampleCase.id,
+      patientId: patient.id,
+      hospitalId: hospital1.id,
+      title: 'Percutaneous Coronary Intervention (PCI) Surgical & Hospital Bill',
+      category: 'HOSPITAL_SURGERY',
+      totalAmount: 4850.00,
+      paidAmount: 2000.00,
+      currency: 'USD',
+      status: 'PARTIALLY_PAID',
+      dueDate: new Date(Date.now() + 10 * 86400000),
+      fileUrl: '/api/v1/patient/documents/download?file=Invoice_Sample.pdf',
+      fileName: 'Hospital_Final_Tax_Invoice_INV0042.pdf',
+      notes: 'Initial $2,000 deposit paid prior to cardiac catheterization lab admission. Balance due upon discharge.',
+      createdBy: manager.id,
+    },
+  });
+
+  const billItemsData = [
+    { description: 'Cardiac Catheterization Lab & Operating Suite Charges', quantity: 1, unitPrice: 1800.00, amount: 1800.00, category: 'SURGERY_OT' },
+    { description: 'Drug-Eluting Coronary Stents (LAD Artery, x2)', quantity: 2, unitPrice: 750.00, amount: 1500.00, category: 'PHARMACY' },
+    { description: 'Coronary Care Unit (CCU) Bed Rent (24-Hour Telemetry Monitoring)', quantity: 2, unitPrice: 350.00, amount: 700.00, category: 'BED_RENT' },
+    { description: 'Pre-Op Angiography Diagnostics & Electrocardiogram', quantity: 1, unitPrice: 450.00, amount: 450.00, category: 'DIAGNOSTICS' },
+    { description: 'Senior Consultant Interventional Cardiologist Rounds', quantity: 2, unitPrice: 200.00, amount: 400.00, category: 'CONSULTATION' },
+  ];
+
+  for (const item of billItemsData) {
+    await prisma.billItem.create({
+      data: {
+        billId: sampleBill.id,
+        description: item.description,
+        quantity: item.quantity,
+        unitPrice: item.unitPrice,
+        amount: item.amount,
+        category: item.category,
+      },
+    });
+  }
+
+  console.log(`  ✓ Sample clinical case with 9 workflow steps & Fit-to-Fly clearance created`);
+  console.log(`  ✓ 4 official verification documents & VIL certificates issued`);
+  console.log(`  ✓ Sample medical bill ($4,850 USD) with 5 itemized line-item breakdowns created\n`);
+
+  // ─── 8. Accommodations & Hotels ──────────────────────────────────
+  console.log('Creating partner accommodations & hotel bookings...');
+  const hotel1 = await prisma.hotel.upsert({
+    where: { id: 'seed-hotel-001' },
+    update: {},
+    create: {
+      id: 'seed-hotel-001',
+      name: 'Taj Palace Luxury Recovery Suites',
+      city: 'New Delhi',
+      address: '2 Sardar Patel Marg, Diplomatic Enclave, New Delhi',
+      nearHospitalId: hospital1.id,
+      distanceKm: 1.8,
+      starRating: 5.0,
+      nightlyRateUsd: 140.00,
+      commissionPercent: 15.00,
+      amenities: ['Wheelchair Accessible', 'ICU Nurse On-Call', 'Halal Certified Kitchen', 'Airport Ambulance Shuttle', 'Post-Op Recliner Beds'],
+      images: [
+        'https://images.unsplash.com/photo-1566073771259-6a8506099945?auto=format&fit=crop&w=1200&q=80',
+        'https://images.unsplash.com/photo-1582719478250-c89cae4dc85b?auto=format&fit=crop&w=1200&q=80',
+        'https://images.unsplash.com/photo-1618773928121-c32242e63f39?auto=format&fit=crop&w=1200&q=80'
+      ],
+      description: 'Luxury 5-star medical recovery suites located 1.8 km from Fortis Heart Institute. Features dedicated post-op nursing care, customized Arabic/Halal meals, and wheelchair-accessible roll-in showers.',
+      contactPhone: '+911126110202',
+      contactEmail: 'medical.concierge@tajpalace.com',
+    },
+  });
+
+  const hotel2 = await prisma.hotel.upsert({
+    where: { id: 'seed-hotel-002' },
+    update: {},
+    create: {
+      id: 'seed-hotel-002',
+      name: 'Radisson Blu Executive Care Residence',
+      city: 'Gurgaon',
+      address: 'Adjacent to Medanta MediCity, Sector 38, Gurgaon',
+      nearHospitalId: hospital2.id,
+      distanceKm: 0.8,
+      starRating: 4.8,
+      nightlyRateUsd: 95.00,
+      commissionPercent: 12.50,
+      amenities: ['0.8 km to Medanta Hospital', 'Wheelchair Accessible', '24/7 Room Service', 'Kitchenette', 'Free High-Speed Wi-Fi'],
+      images: [
+        'https://images.unsplash.com/photo-1542314831-068cd1dbfeeb?auto=format&fit=crop&w=1200&q=80',
+        'https://images.unsplash.com/photo-1590490360182-c33d57733427?auto=format&fit=crop&w=1200&q=80'
+      ],
+      description: 'Executive service apartment suite located directly opposite Medanta Hospital. Includes full kitchenette for family attendants and zero-step wheelchair access.',
+      contactPhone: '+911244771100',
+      contactEmail: 'stay@radissongurgaon.com',
+    },
+  });
+
+  const hotel3 = await prisma.hotel.upsert({
+    where: { id: 'seed-hotel-003' },
+    update: {},
+    create: {
+      id: 'seed-hotel-003',
+      name: 'Medanta Wellness & Recovery Guest House',
+      city: 'Gurgaon',
+      address: 'Block C, Sector 38, Gurgaon',
+      nearHospitalId: hospital2.id,
+      distanceKm: 0.4,
+      starRating: 4.5,
+      nightlyRateUsd: 65.00,
+      commissionPercent: 10.00,
+      amenities: ['Hospital Shuttle', 'Wheelchair Access', 'Translator Support', 'Laundry Service'],
+      images: [
+        'https://images.unsplash.com/photo-1596394516093-501ba68a0ba6?auto=format&fit=crop&w=1200&q=80'
+      ],
+      description: 'Dedicated patient and family guest suites with direct covered walkway access to hospital wings. Optimized for post-discharge outpatient observation.',
+      contactPhone: '+911244141414',
+      contactEmail: 'guesthouse@medanta.org',
+    },
+  });
+
+  // Sample Hotel Booking
+  await prisma.hotelBooking.upsert({
+    where: { bookingNo: 'HTL-2026-8801' },
+    update: {},
+    create: {
+      bookingNo: 'HTL-2026-8801',
+      patientId: patient.id,
+      hotelId: hotel1.id,
+      caseId: 'seed-case-001',
+      checkInDate: new Date('2026-08-05'),
+      checkOutDate: new Date('2026-08-10'),
+      roomType: 'Deluxe Recovery Suite with Recliner',
+      numGuests: 2,
+      numNights: 5,
+      totalAmountUsd: 700.00,
+      commissionAmountUsd: 105.00, // 15% of $700
+      status: 'CONFIRMED',
+      specialRequests: 'Ground floor suite required. Wheelchair access and Arabic halal breakfast requested.',
+    },
+  });
+
+  console.log(`  ✓ 3 partner hotels & 1 accommodation booking ($105 USD partner commission) created\n`);
 
   console.log('✅ Database seeded successfully!\n');
   console.log('Test credentials:');
-  console.log('  Super Admin: admin@mediroute.in / Admin@123');
-  console.log('  Manager:     manager@mediroute.in / Manager@123');
-  console.log('  Patient:     patient@mediroute.in / Patient@123');
-  console.log('  Doctor:      doctor@mediroute.in / Doctor@123');
+  console.log('  Super Admin: admin@afzalhealthcare.in / Admin@123');
+  console.log('  Manager:     manager@afzalhealthcare.in / Manager@123');
+  console.log('  Patient:     patient@afzalhealthcare.in / Patient@123');
   
   // Suppress unused variable warnings
   void admin;

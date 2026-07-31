@@ -1,5 +1,5 @@
-/**
- * MediRoute India — POST /api/v1/auth/2fa/validate
+﻿/**
+ * Afzal Healthcare — POST /api/v1/auth/2fa/validate
  * Validates TOTP code during login flow and issues tokens.
  */
 

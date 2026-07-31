@@ -1,7 +1,7 @@
 'use client';
 
 /**
- * MediRoute India — Manager Dashboard Overview
+ * Afzal Healthcare — Manager Dashboard Overview
  * Clinical light-mode layout showing critical queue statistics.
  */
 
@@ -13,7 +13,6 @@ import Link from 'next/link';
 interface DashboardMetrics {
   totalPatients: number;
   activeCases: number;
-  pendingAccommodations: number;
   upcomingAppointments: number;
 }
 
@@ -57,7 +56,7 @@ export default function ManagerDashboard() {
       </div>
 
       {/* KPI Cards Grid */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 sm:gap-6">
         <Card className="p-5 flex items-center justify-between border-l-4 border-l-primary-600 bg-white">
           <div>
             <p className="text-xs font-bold text-surface-400 uppercase tracking-wider">Assigned Cohort</p>
@@ -82,18 +81,6 @@ export default function ManagerDashboard() {
           </div>
         </Card>
 
-        <Card className="p-5 flex items-center justify-between border-l-4 border-l-amber-500 bg-white">
-          <div>
-            <p className="text-xs font-bold text-surface-400 uppercase tracking-wider">Pending Hostel Bookings</p>
-            <p className="text-3xl font-bold text-surface-900 mt-2">{metrics?.pendingAccommodations ?? 0}</p>
-          </div>
-          <div className="p-3 bg-amber-50 rounded-lg text-amber-600 shrink-0">
-            <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-              <path strokeLinecap="round" strokeLinejoin="round" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
-            </svg>
-          </div>
-        </Card>
-
         <Card className="p-5 flex items-center justify-between border-l-4 border-l-blue-600 bg-white">
           <div>
             <p className="text-xs font-bold text-surface-400 uppercase tracking-wider">Upcoming Appointments</p>
@@ -112,7 +99,7 @@ export default function ManagerDashboard() {
         <Card className="p-6 bg-white flex flex-col justify-between">
           <div className="space-y-4">
             <h3 className="text-base font-bold text-surface-900">Coordinator Quick Actions</h3>
-            <p className="text-sm text-surface-500">Accelerate treatment logistics by directly booking clinical encounters, hostels, and messages.</p>
+            <p className="text-sm text-surface-500">Accelerate treatment logistics by directly booking clinical encounters and sending messages.</p>
           </div>
           <div className="space-y-3 mt-6">
             <Link href="/manager/appointments" className="block">
@@ -121,14 +108,6 @@ export default function ManagerDashboard() {
                   <path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" />
                 </svg>
                 Schedule Clinic Appointment
-              </Button>
-            </Link>
-            <Link href="/manager/accommodations" className="block">
-              <Button className="w-full justify-start gap-3" variant="secondary">
-                <svg className="w-4 h-4 text-teal-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />
-                </svg>
-                Book Hostel Accommodation
               </Button>
             </Link>
             <Link href="/manager/chat" className="block">
@@ -147,12 +126,11 @@ export default function ManagerDashboard() {
           <h3 className="text-base font-bold text-surface-900 mb-4">Workspace Guidelines</h3>
           <div className="space-y-4 text-sm text-surface-600">
             <p>
-              As a <strong>MediRoute Case Manager</strong>, you are responsible for overseeing the logistics of international patient care journeys in India.
+              As a <strong>Afzal Healthcare Case Manager</strong>, you are responsible for overseeing the logistics of international patient care journeys in India.
             </p>
             <ul className="list-disc pl-5 space-y-2 text-surface-500">
               <li>Review incoming medical records and update the patient's case pipeline status.</li>
               <li>Schedule JCI accredited hospital consultations, assessments, and surgeries.</li>
-              <li>Coordinate verified local hostel accommodations based on recovery duration.</li>
               <li>Use the secure coordination chat to maintain continuous messaging with patients.</li>
             </ul>
             <div className="p-3 bg-surface-50 rounded-md border border-surface-200/50 flex items-start gap-3 mt-4">

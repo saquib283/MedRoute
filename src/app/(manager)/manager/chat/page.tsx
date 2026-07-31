@@ -1,7 +1,7 @@
-'use client';
+﻿'use client';
 
 /**
- * MediRoute India — Manager Chat Inbox Page
+ * Afzal Healthcare — Manager Chat Inbox Page
  * Renders list of assigned patient conversation threads with messaging feeds.
  */
 

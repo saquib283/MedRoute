@@ -1,7 +1,7 @@
-'use client';
+﻿'use client';
 
 /**
- * MediRoute India — Premium Date & Time Picker Component
+ * Afzal Healthcare — Premium Date & Time Picker Component
  * Interactive calendar modal popover with Lucide icons, month navigation, and time selection.
  */
 

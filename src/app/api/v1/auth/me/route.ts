@@ -1,5 +1,5 @@
-/**
- * MediRoute India — GET /api/v1/auth/me
+﻿/**
+ * Afzal Healthcare — GET /api/v1/auth/me
  * Returns the authenticated user's profile information.
  */
 

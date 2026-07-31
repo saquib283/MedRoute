@@ -1,7 +1,7 @@
-'use client';
+﻿'use client';
 
 /**
- * MediRoute India — Premium Select Dropdown Component
+ * Afzal Healthcare — Premium Select Dropdown Component
  * Accessible custom dropdown UI with search filtering, Lucide icons, and keyboard support.
  */
 

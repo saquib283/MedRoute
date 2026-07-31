@@ -1,7 +1,7 @@
 'use client';
 
 /**
- * MediRoute India — Patient Secure Messaging Portal
+ * Afzal Healthcare — Patient Secure Messaging Portal
  * Real-time encrypted messaging interface with Lucide SVG icons and prompt chips.
  */
 
@@ -38,7 +38,6 @@ interface Manager {
 const QUICK_PROMPTS = [
   { label: 'Check Appointment Status', icon: Calendar, prompt: 'Hi, could you please provide an update on my scheduled doctor appointment status?' },
   { label: 'Medical Visa Assistance', icon: Plane, prompt: 'Hi, I need assistance with my medical visa recommendation letter for India.' },
-  { label: 'Hostel & Stay Query', icon: Home, prompt: 'Hi, I have a question regarding my accommodation check-in details and airport transfer.' },
   { label: 'Clinical Report Review', icon: FileSearch, prompt: 'Hi, I have uploaded new lab test reports to my vault. Could the doctor review them?' },
 ];
 
@@ -283,7 +282,7 @@ export default function SecureMessagesPage() {
               </div>
               <h3 className="text-sm font-bold text-surface-900">Secure Direct Message Channel</h3>
               <p className="text-xs text-surface-500 max-w-sm">
-                Send a coordination request regarding your medical itinerary, doctor consultation schedule, or hostel booking.
+                Send a coordination request regarding your medical itinerary or doctor consultation schedule.
               </p>
             </div>
           )}

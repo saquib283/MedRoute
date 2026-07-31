@@ -1,5 +1,5 @@
-/**
- * MediRoute India — /api/v1/admin/analytics
+﻿/**
+ * Afzal Healthcare — /api/v1/admin/analytics
  * Advanced analytics endpoint for Admin dashboard.
  * Provides deep platform insights: nationality distribution, trends,
  * hospital utilization, doctor volume, case lifecycle metrics.

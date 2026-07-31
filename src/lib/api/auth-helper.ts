@@ -1,5 +1,5 @@
-/**
- * MediRoute India — API Route Helper
+﻿/**
+ * Afzal Healthcare — API Route Helper
  * Extracts authenticated user info from middleware-injected headers.
  */
 

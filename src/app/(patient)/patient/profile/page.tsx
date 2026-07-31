@@ -1,7 +1,7 @@
 'use client';
 
 /**
- * MediRoute India — Patient Medical Profile Page
+ * Afzal Healthcare — Patient Medical Profile Page
  * Tabbed clinical profile manager with Lucide icons and custom Select dropdown.
  */
 
@@ -10,6 +10,7 @@ import { Card } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import { Badge } from '@/components/ui/Badge';
+import { toast } from '@/components/ui/Toast';
 import { Select, SelectOption } from '@/components/ui/Select';
 import { PhoneInput } from '@/components/ui/PhoneInput';
 import { DatePicker } from '@/components/ui/DatePicker';
@@ -223,12 +224,16 @@ export default function PatientProfilePage() {
       const data = await res.json();
       if (data.success) {
         setSuccessMsg('Your medical profile has been encrypted and saved successfully.');
+        toast.success('Your medical profile has been encrypted and saved successfully.', 'Profile Saved');
         window.scrollTo({ top: 0, behavior: 'smooth' });
       } else {
-        setErrorMsg(data.error?.message || 'Failed to save medical profile.');
+        const errMsg = data.error?.message || 'Failed to save medical profile.';
+        setErrorMsg(errMsg);
+        toast.apiError(data, 'Failed to save medical profile.', 'Save Error');
       }
-    } catch {
+    } catch (err) {
       setErrorMsg('Network error occurred. Please try again.');
+      toast.apiError(err, 'Network error occurred. Please try again.', 'Connection Error');
     } finally {
       setIsSaving(false);
     }
@@ -496,7 +501,7 @@ export default function PatientProfilePage() {
                       onClick={() => removeAllergy(idx)}
                       className="text-danger-400 hover:text-danger-700 font-bold ml-1"
                     >
-                      ×
+                      Ã—
                     </button>
                   </span>
                 ))}
@@ -540,7 +545,7 @@ export default function PatientProfilePage() {
                       onClick={() => removeCondition(idx)}
                       className="text-warning-400 hover:text-warning-700 font-bold ml-1"
                     >
-                      ×
+                      Ã—
                     </button>
                   </span>
                 ))}

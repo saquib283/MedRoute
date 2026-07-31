@@ -1,5 +1,5 @@
-/**
- * MediRoute India — Patient Messages API Endpoint
+﻿/**
+ * Afzal Healthcare — Patient Messages API Endpoint
  * GET /api/v1/patient/messages — Fetch message history with coordinator
  * POST /api/v1/patient/messages — Send a message to the coordinator
  */

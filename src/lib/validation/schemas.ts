@@ -1,5 +1,5 @@
 /**
- * MediRoute India — Zod Validation Schemas
+ * Afzal Healthcare — Zod Validation Schemas
  * Input validation for all API endpoints per PRD Section 6.4.
  */
 
@@ -198,28 +198,6 @@ export const doctorSchema = z.object({
     .optional(),
 });
 
-// ─── Hostel Schemas ─────────────────────────────────────────────────
-
-export const hostelSchema = z.object({
-  name: z.string().min(2).max(200),
-  city: z.string().min(2).max(100),
-  address: z.string().min(5).max(500),
-  capacity: z.number().int().min(1),
-  pricingPerNight: z.number().min(0),
-  roomTypes: z
-    .array(z.enum(['SINGLE', 'DOUBLE', 'SUITE', 'DORMITORY']))
-    .optional(),
-});
-
-// ─── Accommodation Booking Schemas ──────────────────────────────────
-
-export const accommodationBookingSchema = z.object({
-  caseId: z.string().min(1),
-  hostelId: z.string().min(1),
-  checkIn: z.string().refine((val) => !isNaN(Date.parse(val))),
-  checkOut: z.string().refine((val) => !isNaN(Date.parse(val))),
-  roomType: z.enum(['SINGLE', 'DOUBLE', 'SUITE', 'DORMITORY']),
-});
 
 // ─── Pagination Schemas ─────────────────────────────────────────────
 

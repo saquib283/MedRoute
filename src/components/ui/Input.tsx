@@ -1,5 +1,5 @@
-/**
- * MediRoute India — Input Component
+﻿/**
+ * Afzal Healthcare — Input Component
  * Accessible form input with label, error state, and icons.
  * Clinical design system — light-mode, white background, subtle borders.
  */

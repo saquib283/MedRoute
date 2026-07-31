@@ -1,5 +1,5 @@
-/**
- * MediRoute India — /api/v1/admin/doctors
+﻿/**
+ * Afzal Healthcare — /api/v1/admin/doctors
  * CRUD for doctor management with audit logging.
  */
 

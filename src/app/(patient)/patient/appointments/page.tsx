@@ -1,7 +1,7 @@
-'use client';
+﻿'use client';
 
 /**
- * MediRoute India — Patient Appointments Page
+ * Afzal Healthcare — Patient Appointments Page
  * Appointments timeline, status filters, and booking wizard modal using custom Select & DatePicker components.
  */
 

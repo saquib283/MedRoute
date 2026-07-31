@@ -1,5 +1,5 @@
-/**
- * MediRoute India — /api/v1/admin/hospitals
+﻿/**
+ * Afzal Healthcare — /api/v1/admin/hospitals
  * CRUD for hospital partner management with audit logging.
  */
 

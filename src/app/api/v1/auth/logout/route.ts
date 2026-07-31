@@ -1,5 +1,5 @@
-/**
- * MediRoute India — POST /api/v1/auth/logout
+﻿/**
+ * Afzal Healthcare — POST /api/v1/auth/logout
  * Revokes the refresh token to end the session.
  */
 

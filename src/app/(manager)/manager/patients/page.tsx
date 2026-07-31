@@ -1,7 +1,7 @@
-'use client';
+﻿'use client';
 
 /**
- * MediRoute India — Manager Patient Cohort Dashboard
+ * Afzal Healthcare — Manager Patient Cohort Dashboard
  * Cohort roster list and full medical dossier details viewer.
  */
 

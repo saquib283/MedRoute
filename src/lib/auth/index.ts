@@ -1,5 +1,5 @@
-/**
- * MediRoute India — Auth Module Barrel Export
+﻿/**
+ * Afzal Healthcare — Auth Module Barrel Export
  */
 
 export { hashPassword, verifyPassword } from './password';

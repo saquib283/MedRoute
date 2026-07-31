@@ -1,5 +1,5 @@
-/**
- * MediRoute India — Patient Profile API Endpoint
+﻿/**
+ * Afzal Healthcare — Patient Profile API Endpoint
  * GET /api/v1/patient/profile — Fetch current patient and medical data
  * PUT /api/v1/patient/profile — Update patient and medical data
  */

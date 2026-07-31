@@ -1,5 +1,5 @@
-/**
- * MediRoute India — GET /api/v1/doctor/dashboard
+﻿/**
+ * Afzal Healthcare — GET /api/v1/doctor/dashboard
  * Aggregates summary counters for the doctor dashboard.
  */
 

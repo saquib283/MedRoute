@@ -21,7 +21,7 @@ export async function GET(request: Request) {
       return NextResponse.json({ error: 'Manager not found' }, { status: 404 });
     }
 
-    const [totalPatients, activeCases, pendingAccommodations, upcomingAppointments] = await Promise.all([
+    const [totalPatients, activeCases, upcomingAppointments] = await Promise.all([
       prisma.patient.count({
         where: { assignedManagerId: manager.id },
       }),
@@ -29,14 +29,6 @@ export async function GET(request: Request) {
         where: {
           managerId: manager.id,
           status: { not: 'CLOSED' },
-        },
-      }),
-      prisma.accommodationBooking.count({
-        where: {
-          case: {
-            managerId: manager.id,
-          },
-          status: 'PENDING',
         },
       }),
       prisma.appointment.count({
@@ -54,7 +46,6 @@ export async function GET(request: Request) {
       metrics: {
         totalPatients,
         activeCases,
-        pendingAccommodations,
         upcomingAppointments,
       },
     });

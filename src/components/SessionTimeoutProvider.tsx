@@ -1,7 +1,7 @@
-'use client';
+﻿'use client';
 
 /**
- * MediRoute India — Session Inactivity Timeout Provider
+ * Afzal Healthcare — Session Inactivity Timeout Provider
  * Mandated by HIPAA § 164.312(a)(2)(iii) Automatic Logoff Requirement.
  * Monitors user inactivity and automatically logs out users after 15 minutes of idleness.
  */

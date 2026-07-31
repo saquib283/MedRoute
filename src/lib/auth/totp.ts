@@ -1,12 +1,12 @@
-/**
- * MediRoute India — TOTP Two-Factor Authentication
+﻿/**
+ * Afzal Healthcare — TOTP Two-Factor Authentication
  * Mandatory for Manager and Admin roles per PRD FR-AUTH-01.
  * Uses the `otpauth` library for TOTP generation and verification.
  */
 
 import { TOTP, Secret } from 'otpauth';
 
-const ISSUER = 'MediRoute India';
+const ISSUER = 'Afzal Healthcare';
 const ALGORITHM = 'SHA1';
 const DIGITS = 6;
 const PERIOD = 30; // seconds

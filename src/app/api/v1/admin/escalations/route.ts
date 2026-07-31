@@ -1,5 +1,5 @@
-/**
- * MediRoute India — /api/v1/admin/escalations
+﻿/**
+ * Afzal Healthcare — /api/v1/admin/escalations
  * Escalated cases queue with resolve capability.
  */
 

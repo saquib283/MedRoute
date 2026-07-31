@@ -1,5 +1,5 @@
-/**
- * MediRoute India — /api/v1/admin/email-campaigns
+﻿/**
+ * Afzal Healthcare — /api/v1/admin/email-campaigns
  * Campaign management: list, create & send. Admin only.
  */
 

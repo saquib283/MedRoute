@@ -1,5 +1,5 @@
-/**
- * MediRoute India — /api/v1/admin/email-templates
+﻿/**
+ * Afzal Healthcare — /api/v1/admin/email-templates
  * Full CRUD for email templates. Admin only.
  */
 

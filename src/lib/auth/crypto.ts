@@ -1,5 +1,5 @@
-/**
- * MediRoute India — AES-256-GCM Application-Level Encryption
+﻿/**
+ * Afzal Healthcare — AES-256-GCM Application-Level Encryption
  * Used to encrypt PII (e.g. passport numbers) and TOTP secrets before database storage.
  */
 

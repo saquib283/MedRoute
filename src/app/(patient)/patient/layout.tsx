@@ -1,7 +1,7 @@
 'use client';
 
 /**
- * MediRoute India — Patient Sidebar & Layout Container
+ * Afzal Healthcare — Patient Sidebar & Layout Container
  * Restrained clinical light-mode layout.
  */
 
@@ -83,11 +83,20 @@ export default function PatientLayout({
           ),
         },
         {
-          label: 'Medical Profile',
-          href: '/patient/profile',
+          label: 'Billing & Receipts',
+          href: '/patient/billing',
           icon: (
             <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-              <path strokeLinecap="round" strokeLinejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+              <path strokeLinecap="round" strokeLinejoin="round" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
+          ),
+        },
+        {
+          label: 'Accommodations & Hotels',
+          href: '/patient/accommodations',
+          icon: (
+            <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5m0 0v-5a2 2 0 012-2h2a2 2 0 012 2v5m-4 0h4" />
             </svg>
           ),
         },
@@ -132,22 +141,22 @@ export default function PatientLayout({
       {/* ─── Sidebar Navigation ────────────────────────────────────────── */}
       <aside
         className={`
-          fixed inset-y-0 left-0 z-40 w-64 bg-surface-50 border-r border-surface-200/80
-          flex flex-col justify-between transition-transform duration-200 lg:translate-x-0 lg:sticky lg:top-0 lg:h-screen lg:shrink-0
+          fixed inset-y-0 left-0 z-40 w-64 bg-white border-r border-surface-200
+          flex flex-col justify-between transition-transform duration-200 lg:translate-x-0 lg:sticky lg:top-0 lg:h-screen lg:shrink-0 shadow-xs
           ${isSidebarOpen ? 'translate-x-0' : '-translate-x-full'}
         `}
       >
         <div>
           {/* Logo Brand Header */}
-          <div className="flex items-center px-6 h-16 border-b border-surface-200/60 bg-white">
-            <Image src={logoImg} alt="Afzal Logo" width={110} height={36} className="h-9 w-auto object-contain shrink-0" priority />
+          <div className="flex items-center px-6 h-16 border-b border-surface-150 bg-white">
+            <Image src={logoImg} alt="Afzal Logo" width={120} height={38} className="h-9 w-auto object-contain shrink-0" priority />
           </div>
 
           {/* Navigation Links */}
-          <nav className="p-4 space-y-6">
+          <nav className="p-4 space-y-6 overflow-y-auto">
             {navSections.map((section) => (
               <div key={section.title} className="space-y-2">
-                <span className="px-3 text-[11px] font-bold text-surface-400 uppercase tracking-widest block mb-2">
+                <span className="px-3 text-[11px] font-black text-surface-400 uppercase tracking-widest block mb-2">
                   {section.title}
                 </span>
                 <div className="space-y-1">
@@ -158,11 +167,11 @@ export default function PatientLayout({
                         key={item.href}
                         href={item.href}
                         className={`
-                          flex items-center gap-3 px-3 py-2.5 text-sm font-semibold rounded-md transition-colors duration-150
+                          flex items-center gap-3 px-3 py-2.5 text-xs font-bold rounded-xl transition-all duration-150
                           ${
                             isActive
-                              ? 'bg-primary-50 text-primary-700 border-l-2 border-primary-600 rounded-r-md rounded-l-none pl-2'
-                              : 'text-surface-600 hover:bg-surface-200/50 hover:text-surface-900 border-l-2 border-transparent'
+                              ? 'bg-primary-50 text-primary-800 border-l-4 border-primary-600 rounded-r-xl rounded-l-none pl-3 shadow-xs'
+                              : 'text-surface-700 hover:bg-surface-100 hover:text-surface-900 border-l-4 border-transparent'
                           }
                         `}
                         onClick={() => setIsSidebarOpen(false)}
@@ -170,7 +179,7 @@ export default function PatientLayout({
                         <span className={isActive ? 'text-primary-600' : 'text-surface-400 group-hover:text-surface-600'}>
                           {item.icon}
                         </span>
-                        {item.label}
+                        <span className="truncate">{item.label}</span>
                       </Link>
                     );
                   })}
@@ -181,25 +190,25 @@ export default function PatientLayout({
         </div>
 
         {/* User profile dropdown and Logout */}
-        <div className="border-t border-surface-200/60 p-4 bg-white space-y-3">
-          <div className="flex items-center gap-3 px-3 py-2 bg-surface-50 border border-surface-200/40 rounded-md">
-            <div className="w-9 h-9 rounded-full bg-primary-100 text-primary-700 flex items-center justify-center font-bold text-sm shrink-0">
+        <div className="border-t border-surface-200 p-4 bg-surface-50/60 space-y-3 shrink-0">
+          <div className="flex items-center gap-3 p-2 bg-white border border-surface-200 rounded-xl shadow-2xs">
+            <div className="w-9 h-9 rounded-full bg-primary-100 text-primary-800 flex items-center justify-center font-black text-xs shrink-0 border border-primary-200">
               {userName.charAt(0)}
             </div>
             <div className="min-w-0 flex-1">
-              <p className="text-sm font-semibold text-surface-900 truncate">{userName}</p>
-              <p className="text-xs text-surface-500 truncate">{userEmail}</p>
+              <p className="text-xs font-extrabold text-surface-900 truncate">{userName}</p>
+              <p className="text-[10px] text-surface-500 truncate font-medium">{userEmail}</p>
             </div>
           </div>
 
           <button
             onClick={handleLogout}
-            className="w-full flex items-center gap-3 px-3 py-2.5 text-sm font-semibold text-surface-500 hover:text-surface-900 hover:bg-surface-100 rounded-md transition-colors text-left"
+            className="w-full flex items-center gap-3 px-3 py-2 text-xs font-bold text-surface-600 hover:text-surface-900 hover:bg-surface-100 rounded-xl transition-colors text-left"
           >
-            <svg className="w-5 h-5 text-surface-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+            <svg className="w-4 h-4 text-surface-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
               <path strokeLinecap="round" strokeLinejoin="round" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
             </svg>
-            Sign Out
+            <span>Sign Out</span>
           </button>
         </div>
       </aside>

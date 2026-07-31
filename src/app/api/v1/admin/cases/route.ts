@@ -1,5 +1,5 @@
-/**
- * MediRoute India — /api/v1/admin/cases
+﻿/**
+ * Afzal Healthcare — /api/v1/admin/cases
  * Platform-wide case listing with enhanced filters, status transitions, and manager reassignment.
  */
 

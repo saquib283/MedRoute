@@ -1,7 +1,7 @@
-'use client';
+﻿'use client';
 
 /**
- * MediRoute India — Admin Advanced Analytics
+ * Afzal Healthcare — Admin Advanced Analytics
  * Rich data visualization with CSS-based charts, trend analysis,
  * nationality distribution, hospital & doctor leaderboards, and case lifecycle.
  */

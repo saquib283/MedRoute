@@ -1,5 +1,5 @@
-/**
- * MediRoute India — /api/v1/admin/settings
+﻿/**
+ * Afzal Healthcare — /api/v1/admin/settings
  * Platform configuration settings. Admin only.
  */
 

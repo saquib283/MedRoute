@@ -1,7 +1,7 @@
-'use client';
+﻿'use client';
 
 /**
- * MediRoute India — Admin Dashboard
+ * Afzal Healthcare — Admin Dashboard
  * Platform-wide KPI overview with premium trends, interactive analytics charts, and styled timeline feed.
  */
 

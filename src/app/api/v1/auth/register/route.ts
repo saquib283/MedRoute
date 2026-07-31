@@ -1,5 +1,5 @@
-/**
- * MediRoute India — POST /api/v1/auth/register
+﻿/**
+ * Afzal Healthcare — POST /api/v1/auth/register
  * Patient self-registration is disabled. All accounts are created by platform administrators.
  */
 

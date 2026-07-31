@@ -1,5 +1,5 @@
-/**
- * MediRoute India — /api/v1/admin/users
+﻿/**
+ * Afzal Healthcare — /api/v1/admin/users
  * Full CRUD for user management with audit logging and Admin guards.
  */
 

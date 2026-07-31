@@ -1,5 +1,5 @@
-/**
- * MediRoute India — Card Component
+﻿/**
+ * Afzal Healthcare — Card Component
  * Clinical design system card — white background, subtle border, clean elevation.
  */
 

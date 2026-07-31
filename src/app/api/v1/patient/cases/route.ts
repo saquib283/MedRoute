@@ -1,5 +1,5 @@
 /**
- * MediRoute India — Patient Cases API Endpoint
+ * Afzal Healthcare — Patient Cases API Endpoint
  * GET /api/v1/patient/cases — Query case status and coordinator contact
  */
 
@@ -35,6 +35,10 @@ export async function GET(request: NextRequest) {
             phone: true,
           },
         },
+        clinicalSteps: {
+          orderBy: { createdAt: 'asc' },
+        },
+        fitToFlyClearance: true,
       },
       orderBy: { createdAt: 'desc' },
     });

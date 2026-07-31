@@ -1,5 +1,5 @@
-/**
- * MediRoute India — Patient Appointments API Endpoint
+﻿/**
+ * Afzal Healthcare — Patient Appointments API Endpoint
  * GET /api/v1/patient/appointments — List appointments & available metadata
  * POST /api/v1/patient/appointments — Request/book a new consultation
  */

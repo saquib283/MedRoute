@@ -1,7 +1,7 @@
-'use client';
+﻿'use client';
 
 /**
- * MediRoute India — Confirmation Dialog
+ * Afzal Healthcare — Confirmation Dialog
  * Reusable modal for destructive actions (delete, deactivate, etc.)
  */
 

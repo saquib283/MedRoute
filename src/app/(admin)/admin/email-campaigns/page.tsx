@@ -1,7 +1,7 @@
-'use client';
+﻿'use client';
 
 /**
- * MediRoute India — Admin Email Campaigns
+ * Afzal Healthcare — Admin Email Campaigns
  * Create & send campaigns using templates, target specific audiences,
  * view campaign history with status tracking.
  */
@@ -270,7 +270,7 @@ export default function EmailCampaignsPage() {
           <div className="bg-white rounded-lg shadow-xl w-full max-w-2xl animate-scale-up my-8">
             <div className="px-6 py-4 border-b border-surface-100 flex items-center justify-between">
               <h3 className="text-sm font-bold text-surface-900">New Email Campaign</h3>
-              <button onClick={() => setShowModal(false)} className="text-surface-400 hover:text-surface-600 font-bold text-lg">×</button>
+              <button onClick={() => setShowModal(false)} className="text-surface-400 hover:text-surface-600 font-bold text-lg">Ã—</button>
             </div>
             <form onSubmit={handleSend} className="p-6 space-y-5">
               <div className="space-y-1.5">
@@ -365,7 +365,7 @@ export default function EmailCampaignsPage() {
           <div className="bg-white rounded-lg shadow-xl w-full max-w-md animate-scale-up">
             <div className="px-6 py-4 border-b border-surface-100 flex items-center justify-between">
               <h3 className="text-sm font-bold text-surface-900">Campaign Details</h3>
-              <button onClick={() => setViewingCampaign(null)} className="text-surface-400 hover:text-surface-600 font-bold text-lg">×</button>
+              <button onClick={() => setViewingCampaign(null)} className="text-surface-400 hover:text-surface-600 font-bold text-lg">Ã—</button>
             </div>
             <div className="p-6 space-y-4">
               <div className="space-y-3">

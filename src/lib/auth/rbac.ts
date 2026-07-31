@@ -1,5 +1,5 @@
 /**
- * MediRoute India — RBAC (Role-Based Access Control)
+ * Afzal Healthcare — RBAC (Role-Based Access Control)
  * Implements the permission matrix from PRD FR-AUTH-02.
  */
 
@@ -30,7 +30,6 @@ export const PERMISSIONS = {
 
   // Partners
   'manage:hospitals': ['ADMIN'],
-  'manage:hostels': ['ADMIN'],
   'manage:doctors': ['ADMIN'],
   'view:partners': ['MANAGER', 'ADMIN'],
 
@@ -122,7 +121,6 @@ export const ROUTE_ROLES: Record<string, UserRole[]> = {
   '/patient': ['PATIENT'],
   '/manager': ['MANAGER', 'ADMIN'],
   '/admin': ['ADMIN'],
-  '/doctor': ['DOCTOR', 'ADMIN'],
 };
 
 /**
@@ -147,8 +145,6 @@ export function getDefaultRoute(role: UserRole): string {
       return '/patient/dashboard';
     case 'MANAGER':
       return '/manager/dashboard';
-    case 'DOCTOR':
-      return '/doctor/dashboard';
     case 'ADMIN':
       return '/admin/dashboard';
     default:
