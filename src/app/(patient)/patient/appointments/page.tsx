@@ -1,4 +1,4 @@
-﻿'use client';
+'use client';
 
 /**
  * Afzal Healthcare — Patient Appointments Page
@@ -335,7 +335,7 @@ export default function AppointmentsPage() {
                     Dr
                   </div>
                   <div>
-                    <span className="text-[10px] text-primary-700 font-bold uppercase tracking-wider bg-primary-50 px-2 py-0.5 rounded-md border border-primary-100 inline-block">
+                    <span className="text-xs text-primary-700 font-bold uppercase tracking-wider bg-primary-50 px-2.5 py-0.5 rounded-md border border-primary-200 inline-block">
                       {APPOINTMENT_TYPE_LABELS[app.appointmentType] || app.appointmentType}
                     </span>
                     <h3 className="text-base font-bold text-surface-900 mt-1 group-hover:text-primary-600 transition-colors">

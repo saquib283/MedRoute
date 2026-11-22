@@ -173,7 +173,7 @@ export default function EmailCampaignsPage() {
         <div>
           <div className="flex items-center gap-3 mb-1">
             <h1 className="text-2xl font-bold text-surface-900 tracking-tight">Email Campaigns</h1>
-            <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider bg-primary-50 text-primary-700 border border-primary-200">Admin</span>
+            <span className="px-2.5 py-0.5 rounded-full text-xs font-bold uppercase tracking-wider bg-primary-50 text-primary-700 border border-primary-200">Admin</span>
           </div>
           <p className="text-sm text-surface-500">Send targeted email campaigns to platform users using templates.</p>
         </div>
@@ -267,7 +267,7 @@ export default function EmailCampaignsPage() {
       {/* New Campaign Modal */}
       {showModal && (
         <div className="fixed inset-0 z-50 flex items-start justify-center p-4 pt-[5vh] bg-surface-900/40 backdrop-blur-xs overflow-y-auto">
-          <div className="bg-white rounded-lg shadow-xl w-full max-w-2xl animate-scale-up my-8">
+          <div className="bg-white rounded-2xl shadow-2xl border border-surface-200 w-full max-w-2xl animate-scale-up my-8">
             <div className="px-6 py-4 border-b border-surface-100 flex items-center justify-between">
               <h3 className="text-sm font-bold text-surface-900">New Email Campaign</h3>
               <button
@@ -288,7 +288,7 @@ export default function EmailCampaignsPage() {
                   required
                   value={form.name}
                   onChange={(e) => setForm({ ...form, name: e.target.value })}
-                  className="w-full p-2.5 border border-surface-300 rounded text-sm focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500"
+                  className="w-full p-2.5 border border-surface-200 rounded-xl text-sm focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500"
                   placeholder="e.g., July Welcome Campaign"
                 />
               </div>
@@ -370,7 +370,7 @@ export default function EmailCampaignsPage() {
       {/* Campaign Detail View */}
       {viewingCampaign && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-surface-900/40 backdrop-blur-xs">
-          <div className="bg-white rounded-lg shadow-xl w-full max-w-md animate-scale-up">
+          <div className="bg-white rounded-2xl shadow-2xl border border-surface-200 w-full max-w-md animate-scale-up">
             <div className="px-6 py-4 border-b border-surface-100 flex items-center justify-between">
               <h3 className="text-sm font-bold text-surface-900">Campaign Details</h3>
               <button
@@ -386,34 +386,34 @@ export default function EmailCampaignsPage() {
             <div className="p-6 space-y-4">
               <div className="space-y-3">
                 <div>
-                  <p className="text-[10px] font-bold text-surface-500 uppercase tracking-wider">Campaign Name</p>
+                  <p className="text-xs font-bold text-surface-500 uppercase tracking-wider">Campaign Name</p>
                   <p className="text-sm font-semibold text-surface-900 mt-0.5">{viewingCampaign.name}</p>
                 </div>
                 <div className="grid grid-cols-2 gap-3">
                   <div>
-                    <p className="text-[10px] font-bold text-surface-500 uppercase tracking-wider">Template</p>
+                    <p className="text-xs font-bold text-surface-500 uppercase tracking-wider">Template</p>
                     <p className="text-sm text-surface-700 mt-0.5">{viewingCampaign.template.name}</p>
                   </div>
                   <div>
-                    <p className="text-[10px] font-bold text-surface-500 uppercase tracking-wider">Audience</p>
+                    <p className="text-xs font-bold text-surface-500 uppercase tracking-wider">Audience</p>
                     <p className="text-sm text-surface-700 mt-0.5">{viewingCampaign.targetRole}</p>
                   </div>
                 </div>
                 <div className="grid grid-cols-3 gap-3">
                   <div className="p-3 bg-surface-50 rounded-lg text-center">
                     <p className="text-lg font-bold text-surface-900">{viewingCampaign.sentCount}</p>
-                    <p className="text-[10px] text-surface-500 font-semibold">Sent</p>
+                    <p className="text-xs text-surface-500 font-semibold">Sent</p>
                   </div>
                   <div className="p-3 bg-surface-50 rounded-lg text-center">
                     <p className="text-lg font-bold text-surface-900">{viewingCampaign.failedCount}</p>
-                    <p className="text-[10px] text-surface-500 font-semibold">Failed</p>
+                    <p className="text-xs text-surface-500 font-semibold">Failed</p>
                   </div>
                   <div className="p-3 bg-surface-50 rounded-lg text-center">
                     <Badge variant={STATUS_VARIANTS[viewingCampaign.status] || 'default'} dot>{viewingCampaign.status}</Badge>
                   </div>
                 </div>
                 <div>
-                  <p className="text-[10px] font-bold text-surface-500 uppercase tracking-wider">Sent At</p>
+                  <p className="text-xs font-bold text-surface-500 uppercase tracking-wider">Sent At</p>
                   <p className="text-sm text-surface-700 mt-0.5">
                     {viewingCampaign.sentAt ? new Date(viewingCampaign.sentAt).toLocaleString() : 'Not yet sent'}
                   </p>

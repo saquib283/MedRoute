@@ -1,4 +1,4 @@
-﻿'use client';
+'use client';
 
 /**
  * Afzal Healthcare — Admin Notification Management
@@ -139,7 +139,7 @@ export default function AdminNotificationsPage() {
                 value={title}
                 onChange={(e) => setTitle(e.target.value)}
                 placeholder="Important Announcement..."
-                className="w-full p-2.5 border border-surface-300 rounded text-sm focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500"
+                className="w-full p-2.5 border border-surface-200 rounded-xl text-sm focus:border-primary-600 focus:outline-none"
               />
             </div>
 
@@ -151,7 +151,7 @@ export default function AdminNotificationsPage() {
                 value={message}
                 onChange={(e) => setMessage(e.target.value)}
                 placeholder="Type your message here..."
-                className="w-full p-2.5 border border-surface-300 rounded text-sm focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500"
+                className="w-full p-2.5 border border-surface-200 rounded-xl text-sm focus:border-primary-600 focus:outline-none"
               />
             </div>
 
@@ -188,11 +188,11 @@ export default function AdminNotificationsPage() {
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2 flex-wrap">
                       <p className="text-sm font-bold text-surface-900">{log.title}</p>
-                      <Badge variant="default" className="text-[9px]">
+                      <Badge variant="default" className="text-xs">
                         {log.channel}
                       </Badge>
                       {log.triggerEvent && (
-                        <Badge variant="primary" className="text-[9px]">
+                        <Badge variant="primary" className="text-xs">
                           {log.triggerEvent}
                         </Badge>
                       )}
@@ -200,12 +200,12 @@ export default function AdminNotificationsPage() {
                     <p className="text-sm text-surface-600 mt-1.5 line-clamp-2" title={log.body}>
                       {log.body}
                     </p>
-                    <p className="text-[11px] text-surface-400 mt-2">
+                    <p className="text-xs text-surface-500 mt-2">
                       To: <span className="font-semibold">{log.user.fullName}</span> ({log.user.role}) •{' '}
                       {new Date(log.sentAt).toLocaleString()}
                     </p>
                   </div>
-                  <Badge variant={log.isRead ? 'success' : 'default'} className="text-[9px] shrink-0">
+                  <Badge variant={log.isRead ? 'success' : 'default'} className="text-xs shrink-0">
                     {log.isRead ? 'Read' : 'Delivered'}
                   </Badge>
                 </div>

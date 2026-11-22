@@ -60,10 +60,10 @@ const PERIODS = [
 ];
 
 function TrendBadge({ value }: { value: number }) {
-  if (value === 0) return <span className="text-[10px] text-surface-400 font-semibold">—</span>;
+  if (value === 0) return <span className="text-xs text-surface-500 font-semibold">—</span>;
   const isUp = value > 0;
   return (
-    <span className={`inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded text-[10px] font-bold ${
+    <span className={`inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-md text-xs font-bold ${
       isUp ? 'bg-success-50 text-success-700' : 'bg-danger-50 text-danger-700'
     }`}>
       {isUp ? '↑' : '↓'} {Math.abs(value)}%
@@ -155,7 +155,7 @@ export default function AdminDashboardPage() {
             >
               <div className="flex items-start justify-between">
                 <div className="space-y-1">
-                  <p className="text-[10px] font-bold text-surface-400 uppercase tracking-wider">{kpi.label}</p>
+                  <p className="text-xs font-bold text-surface-600 uppercase tracking-wider">{kpi.label}</p>
                   <p className="text-3xl font-extrabold text-surface-900 tracking-tight mt-1">{kpi.value}</p>
                 </div>
                 <div className={`w-10 h-10 rounded-xl bg-gradient-to-br ${kpi.color} flex items-center justify-center border shrink-0`}>
@@ -167,7 +167,7 @@ export default function AdminDashboardPage() {
               {'trend' in kpi && kpi.trend !== undefined && kpi.trend !== null && (
                 <div className="flex items-center gap-2 mt-4 pt-3 border-t border-surface-100/80">
                   <TrendBadge value={kpi.trend} />
-                  <span className="text-[10px] text-surface-400 font-semibold">vs previous period</span>
+                  <span className="text-xs text-surface-500 font-semibold">vs previous period</span>
                 </div>
               )}
               {!('trend' in kpi) && (
@@ -222,7 +222,7 @@ export default function AdminDashboardPage() {
                       </div>
                       <div className="text-right">
                         <span className="text-xs font-bold text-surface-950 block">{d.count}</span>
-                        <span className="text-[10px] text-surface-400 block mt-0.5">{pct}%</span>
+                        <span className="text-xs text-surface-500 block mt-0.5">{pct}%</span>
                       </div>
                     </div>
                   );
@@ -230,7 +230,7 @@ export default function AdminDashboardPage() {
               </div>
             </div>
           ) : (
-            <p className="text-sm text-surface-400 text-center py-10">No active cases registered.</p>
+            <p className="text-sm text-surface-500 text-center py-10">No active cases registered.</p>
           )}
         </Card>
 
@@ -345,16 +345,16 @@ export default function AdminDashboardPage() {
                         <p className="text-sm text-surface-800 font-semibold">
                           {log.actor.fullName}{' '}
                           <span className="text-surface-500 font-medium">performed action</span>{' '}
-                          <span className="text-surface-900 font-bold bg-surface-100 px-1.5 py-0.5 rounded text-xs">{log.action}</span>
+                          <span className="text-surface-900 font-bold bg-surface-100 px-1.5 py-0.5 rounded-md text-xs">{log.action}</span>
                         </p>
-                        <span className="text-[10px] text-surface-400 font-semibold sm:text-right">
+                        <span className="text-xs text-surface-500 font-semibold sm:text-right">
                           {new Date(log.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })} • {new Date(log.createdAt).toLocaleDateString()}
                         </span>
                       </div>
                       
                       <div className="flex items-center gap-2 mt-2">
                         <Badge variant={actionBadgeColor} size="sm">{log.entityType}</Badge>
-                        <span className="text-xs text-surface-400 font-medium">Entity Reference: {log.entityId}</span>
+                        <span className="text-xs text-surface-500 font-medium">Entity Reference: {log.entityId}</span>
                       </div>
                     </div>
                   </div>

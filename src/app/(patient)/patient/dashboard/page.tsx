@@ -151,9 +151,9 @@ export default function PatientDashboard() {
         {/* KPI 1 */}
         <Card className="p-5 rounded-2xl border border-surface-200 shadow-xs hover:shadow-md transition-all flex items-center justify-between">
           <div>
-            <p className="text-xs font-bold uppercase tracking-wider text-surface-500">Upcoming Consults</p>
+            <p className="text-xs font-bold uppercase tracking-wider text-surface-600">Upcoming Consults</p>
             <h3 className="text-2xl font-extrabold text-surface-900 mt-1">{appointmentsCount}</h3>
-            <Link href="/patient/appointments" className="text-[11px] font-semibold text-primary-600 hover:text-primary-700 mt-1 inline-flex items-center gap-1">
+            <Link href="/patient/appointments" className="text-xs font-semibold text-primary-600 hover:text-primary-700 mt-1 inline-flex items-center gap-1">
               View Schedule <ArrowRight className="w-3 h-3" />
             </Link>
           </div>
@@ -165,9 +165,9 @@ export default function PatientDashboard() {
         {/* KPI 2 */}
         <Card className="p-5 rounded-2xl border border-surface-200 shadow-xs hover:shadow-md transition-all flex items-center justify-between">
           <div>
-            <p className="text-xs font-bold uppercase tracking-wider text-surface-500">Document Vault</p>
+            <p className="text-xs font-bold uppercase tracking-wider text-surface-600">Document Vault</p>
             <h3 className="text-2xl font-extrabold text-surface-900 mt-1">{documentsCount}</h3>
-            <Link href="/patient/documents" className="text-[11px] font-semibold text-info-600 hover:text-info-700 mt-1 inline-flex items-center gap-1">
+            <Link href="/patient/documents" className="text-xs font-semibold text-info-600 hover:text-info-700 mt-1 inline-flex items-center gap-1">
               Manage Vault <ArrowRight className="w-3 h-3" />
             </Link>
           </div>
@@ -179,11 +179,11 @@ export default function PatientDashboard() {
         {/* KPI 3 */}
         <Card className="p-5 rounded-2xl border border-surface-200 shadow-xs hover:shadow-md transition-all flex items-center justify-between">
           <div className="min-w-0 pr-2">
-            <p className="text-xs font-bold uppercase tracking-wider text-surface-500">Case Manager</p>
+            <p className="text-xs font-bold uppercase tracking-wider text-surface-600">Case Manager</p>
             <h3 className="text-base font-extrabold text-surface-900 mt-1 truncate">
               {activeCase?.manager?.fullName || 'Unassigned'}
             </h3>
-            <Link href="/patient/messages" className="text-[11px] font-semibold text-success-600 hover:text-success-700 mt-1 inline-flex items-center gap-1">
+            <Link href="/patient/messages" className="text-xs font-semibold text-success-600 hover:text-success-700 mt-1 inline-flex items-center gap-1">
               Open Chat <ArrowRight className="w-3 h-3" />
             </Link>
           </div>
@@ -195,7 +195,7 @@ export default function PatientDashboard() {
         {/* KPI 4 */}
         <Card className="p-5 rounded-2xl border border-surface-200 shadow-xs hover:shadow-md transition-all flex flex-col justify-between">
           <div className="flex items-center justify-between text-xs">
-            <span className="font-bold uppercase tracking-wider text-surface-500">Journey Progress</span>
+            <span className="font-bold uppercase tracking-wider text-surface-600">Journey Progress</span>
             <span className="font-bold text-primary-700">{progressPercentage}%</span>
           </div>
           <div className="w-full bg-surface-100 h-3 rounded-full overflow-hidden my-2">
@@ -204,7 +204,7 @@ export default function PatientDashboard() {
               style={{ width: `${progressPercentage}%` }}
             />
           </div>
-          <span className="text-[10px] text-surface-400">
+          <span className="text-xs text-surface-600 font-medium">
             Phase {activeIndex + 1} of {STATUS_STEPS.length}: {STATUS_STEPS[activeIndex]?.label}
           </span>
         </Card>
@@ -302,7 +302,7 @@ export default function PatientDashboard() {
                     <MessageSquare className="w-4 h-4" />
                   </div>
                   <div>
-                    <span className="text-[10px] uppercase font-bold text-surface-500 tracking-wider">Coordinator Note</span>
+                    <span className="text-xs uppercase font-bold text-surface-600 tracking-wider">Coordinator Note</span>
                     <p className="text-xs font-medium text-surface-800 mt-1 leading-relaxed">{activeCase.notes}</p>
                   </div>
                 </div>
@@ -353,7 +353,7 @@ export default function PatientDashboard() {
         <Card className="lg:col-span-2 p-6 rounded-2xl shadow-xs border border-surface-200 space-y-4">
           <div className="border-b border-surface-100 pb-3 flex items-center justify-between">
             <h3 className="text-xs font-bold text-surface-800 uppercase tracking-wider">Action Items & Shortcuts</h3>
-            <span className="text-[10px] font-bold text-primary-600 bg-primary-50 px-2 py-0.5 rounded-md border border-primary-100">
+            <span className="text-xs font-bold text-primary-700 bg-primary-50 px-2.5 py-0.5 rounded-md border border-primary-200">
               High Priority
             </span>
           </div>

@@ -424,7 +424,7 @@ export default function AdminHospitalsPage() {
                       placeholder="e.g. 12.5"
                       value={overrideForm.rate}
                       onChange={(e) => setOverrideForm({ ...overrideForm, rate: e.target.value })}
-                      className="w-full p-2.5 border border-surface-300 rounded text-sm focus:ring-2 focus:ring-primary-500/20"
+                      className="w-full p-2.5 border border-surface-200 rounded-xl text-sm focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500"
                     />
                   </div>
 
@@ -450,7 +450,7 @@ export default function AdminHospitalsPage() {
                       placeholder="e.g., Promotional wellness package rate."
                       value={overrideForm.notes}
                       onChange={(e) => setOverrideForm({ ...overrideForm, notes: e.target.value })}
-                      className="w-full p-2.5 border border-surface-300 rounded text-sm focus:ring-2 focus:ring-primary-500/20 min-h-[80px]"
+                      className="w-full p-2.5 border border-surface-200 rounded-xl text-sm focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500 min-h-[80px]"
                     />
                   </div>
 
@@ -515,7 +515,7 @@ export default function AdminHospitalsPage() {
 
       {showModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-surface-900/40 backdrop-blur-xs">
-          <div className="bg-white rounded-lg shadow-xl w-full max-w-lg animate-scale-up max-h-[90vh] overflow-y-auto">
+          <div className="bg-white rounded-2xl shadow-2xl border border-surface-200 w-full max-w-lg animate-scale-up max-h-[90vh] overflow-y-auto">
             <div className="px-6 py-4 border-b border-surface-100 flex items-center justify-between sticky top-0 bg-white z-10">
               <h3 className="text-sm font-bold text-surface-900">{editing ? 'Edit Hospital' : 'Add Hospital'}</h3>
               <button
@@ -536,7 +536,7 @@ export default function AdminHospitalsPage() {
                   required
                   value={form.name}
                   onChange={(e) => setForm({ ...form, name: e.target.value })}
-                  className="w-full p-2.5 border border-surface-300 rounded text-sm focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500"
+                  className="w-full p-2.5 border border-surface-200 rounded-xl text-sm focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500"
                 />
               </div>
               <div className="grid grid-cols-2 gap-4">
@@ -547,7 +547,7 @@ export default function AdminHospitalsPage() {
                     required
                     value={form.city}
                     onChange={(e) => setForm({ ...form, city: e.target.value })}
-                    className="w-full p-2.5 border border-surface-300 rounded text-sm focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500"
+                    className="w-full p-2.5 border border-surface-200 rounded-xl text-sm focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500"
                   />
                 </div>
                 <div className="space-y-1.5">
@@ -556,7 +556,7 @@ export default function AdminHospitalsPage() {
                     type="text"
                     value={form.accreditation}
                     onChange={(e) => setForm({ ...form, accreditation: e.target.value })}
-                    className="w-full p-2.5 border border-surface-300 rounded text-sm focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500"
+                    className="w-full p-2.5 border border-surface-200 rounded-xl text-sm focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500"
                   />
                 </div>
               </div>
@@ -567,7 +567,7 @@ export default function AdminHospitalsPage() {
                   required
                   value={form.address}
                   onChange={(e) => setForm({ ...form, address: e.target.value })}
-                  className="w-full p-2.5 border border-surface-300 rounded text-sm focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500"
+                  className="w-full p-2.5 border border-surface-200 rounded-xl text-sm focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500"
                 />
               </div>
               <div className="grid grid-cols-2 gap-4">
@@ -577,7 +577,7 @@ export default function AdminHospitalsPage() {
                     type="text"
                     value={form.contactPerson}
                     onChange={(e) => setForm({ ...form, contactPerson: e.target.value })}
-                    className="w-full p-2.5 border border-surface-300 rounded text-sm focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500"
+                    className="w-full p-2.5 border border-surface-200 rounded-xl text-sm focus:border-primary-600 focus:outline-none"
                   />
                 </div>
                 <div className="space-y-1.5">
@@ -587,7 +587,7 @@ export default function AdminHospitalsPage() {
                     step="0.01"
                     value={form.commissionRate}
                     onChange={(e) => setForm({ ...form, commissionRate: e.target.value })}
-                    className="w-full p-2.5 border border-surface-300 rounded text-sm focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500"
+                    className="w-full p-2.5 border border-surface-200 rounded-xl text-sm focus:border-primary-600 focus:outline-none"
                   />
                 </div>
               </div>
@@ -597,7 +597,7 @@ export default function AdminHospitalsPage() {
                   type="text"
                   value={form.departments}
                   onChange={(e) => setForm({ ...form, departments: e.target.value })}
-                  className="w-full p-2.5 border border-surface-300 rounded text-sm focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500"
+                  className="w-full p-2.5 border border-surface-200 rounded-xl text-sm focus:border-primary-600 focus:outline-none"
                   placeholder="Cardiology, Neurology, Orthopaedics"
                 />
               </div>

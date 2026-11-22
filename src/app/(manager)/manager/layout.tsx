@@ -270,7 +270,7 @@ export default function ManagerLayout({
                   <LayoutDashboard className="w-4 h-4" />
                 </div>
                 <div>
-                  <span className="text-[10px] font-bold text-primary-600 uppercase tracking-widest block mb-0.5">Coordinator Portal</span>
+                  <span className="text-xs font-bold text-primary-700 uppercase tracking-wider block mb-0.5">Coordinator Portal</span>
                   <h2 className="text-base font-bold text-surface-900 tracking-tight">Operations Overview</h2>
                 </div>
               </div>
@@ -282,7 +282,7 @@ export default function ManagerLayout({
                   <Users className="w-4 h-4" />
                 </div>
                 <div>
-                  <span className="text-[10px] font-bold text-primary-600 uppercase tracking-widest block mb-0.5">Care Roster</span>
+                  <span className="text-xs font-bold text-primary-700 uppercase tracking-wider block mb-0.5">Care Roster</span>
                   <h2 className="text-base font-bold text-surface-900 tracking-tight">Patient Cohort</h2>
                 </div>
               </div>
@@ -294,7 +294,7 @@ export default function ManagerLayout({
                   <Briefcase className="w-4 h-4" />
                 </div>
                 <div>
-                  <span className="text-[10px] font-bold text-primary-600 uppercase tracking-widest block mb-0.5">Clinical Cases</span>
+                  <span className="text-xs font-bold text-primary-700 uppercase tracking-wider block mb-0.5">Clinical Cases</span>
                   <h2 className="text-base font-bold text-surface-900 tracking-tight">Case Pipeline Files</h2>
                 </div>
               </div>
@@ -307,7 +307,7 @@ export default function ManagerLayout({
                   <Calendar className="w-4 h-4" />
                 </div>
                 <div>
-                  <span className="text-[10px] font-bold text-primary-600 uppercase tracking-widest block mb-0.5">Surgical Roster</span>
+                  <span className="text-xs font-bold text-primary-700 uppercase tracking-wider block mb-0.5">Surgical Roster</span>
                   <h2 className="text-base font-bold text-surface-900 tracking-tight">Consultations & Surgery Schedule</h2>
                 </div>
               </div>
@@ -319,7 +319,7 @@ export default function ManagerLayout({
                   <MessageSquare className="w-4 h-4" />
                 </div>
                 <div>
-                  <span className="text-[10px] font-bold text-primary-600 uppercase tracking-widest block mb-0.5">Patient Communication</span>
+                  <span className="text-xs font-bold text-primary-700 uppercase tracking-wider block mb-0.5">Patient Communication</span>
                   <h2 className="text-base font-bold text-surface-900 tracking-tight">Coordination Chat Center</h2>
                 </div>
               </div>

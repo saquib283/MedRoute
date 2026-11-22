@@ -1,4 +1,4 @@
-﻿'use client';
+'use client';
 
 /**
  * Afzal Healthcare — Manager Patient Cohort Dashboard
@@ -208,7 +208,7 @@ export default function PatientsRoster() {
               <div className="space-y-3">
                 <h4 className="text-xs font-bold text-surface-400 uppercase tracking-widest">Travel & Vital Data</h4>
                 <div className="grid grid-cols-2 gap-3 text-xs">
-                  <div className="bg-surface-50 p-2.5 rounded border border-surface-200/30">
+                  <div className="bg-surface-50 p-3 rounded-xl border border-surface-200/60">
                     <p className="text-surface-400 font-medium">DOB</p>
                     <p className="font-semibold text-surface-900 mt-0.5">
                       {new Date(selectedPatient.dob).toLocaleDateString(undefined, {
@@ -218,7 +218,7 @@ export default function PatientsRoster() {
                       })}
                     </p>
                   </div>
-                  <div className="bg-surface-50 p-2.5 rounded border border-surface-200/30">
+                  <div className="bg-surface-50 p-3 rounded-xl border border-surface-200/60">
                     <p className="text-surface-400 font-medium">Blood Group</p>
                     <p className="font-semibold text-surface-900 mt-0.5">{selectedPatient.bloodGroup || '—'}</p>
                   </div>
@@ -229,7 +229,7 @@ export default function PatientsRoster() {
               <div className="space-y-2">
                 <h4 className="text-xs font-bold text-surface-400 uppercase tracking-widest">Emergency Contact</h4>
                 {selectedPatient.emergencyContact ? (
-                  <div className="p-3 bg-surface-50 rounded border border-surface-200/40 text-xs space-y-1">
+                  <div className="p-3.5 bg-surface-50 rounded-xl border border-surface-200/60 text-xs space-y-1">
                     <p className="font-semibold text-surface-900">
                       {selectedPatient.emergencyContact.name || (selectedPatient.emergencyContact as any).name || '—'}
                     </p>
@@ -257,7 +257,7 @@ export default function PatientsRoster() {
                       <span className="text-xs text-surface-400">None declared</span>
                     ) : (
                       formatJSONList(selectedPatient.medicalProfile?.allergies).map((item) => (
-                        <span key={item} className="bg-red-50 text-red-700 border border-red-100 text-[10px] px-2 py-0.5 rounded font-semibold">
+                        <span key={item} className="bg-red-50 text-red-700 border border-red-100 text-xs px-2 py-0.5 rounded-lg font-semibold">
                           {item}
                         </span>
                       ))
@@ -273,7 +273,7 @@ export default function PatientsRoster() {
                       <span className="text-xs text-surface-400">None declared</span>
                     ) : (
                       formatJSONList(selectedPatient.medicalProfile?.chronicConditions).map((item) => (
-                        <span key={item} className="bg-amber-50 text-amber-700 border border-amber-100 text-[10px] px-2 py-0.5 rounded font-semibold">
+                        <span key={item} className="bg-amber-50 text-amber-700 border border-amber-100 text-xs px-2 py-0.5 rounded-lg font-semibold">
                           {item}
                         </span>
                       ))
@@ -289,7 +289,7 @@ export default function PatientsRoster() {
                   ) : (
                     <div className="space-y-1">
                       {formatJSONMedications(selectedPatient.medicalProfile?.medications).map((med, idx) => (
-                        <div key={idx} className="bg-surface-50 p-2 rounded border border-surface-200/20 text-xs flex justify-between">
+                        <div key={idx} className="bg-surface-50 p-2.5 rounded-xl border border-surface-200/60 text-xs flex justify-between">
                           <span className="font-semibold text-surface-800">{med.name}</span>
                           <span className="text-surface-500">{med.dosage} ({med.frequency})</span>
                         </div>
@@ -307,10 +307,10 @@ export default function PatientsRoster() {
                 ) : (
                   <div className="space-y-1.5">
                     {selectedPatient.documents.map((doc) => (
-                      <div key={doc.id} className="flex items-center justify-between p-2.5 bg-surface-50 border border-surface-200/40 rounded text-xs">
+                      <div key={doc.id} className="flex items-center justify-between p-2.5 bg-surface-50 border border-surface-200/40 rounded-xl text-xs">
                         <div className="min-w-0 flex-1 mr-2">
                           <p className="font-semibold text-surface-800 truncate">{doc.fileName}</p>
-                          <p className="text-[10px] text-surface-400 uppercase">{doc.category}</p>
+                          <p className="text-xs text-surface-500 uppercase">{doc.category}</p>
                         </div>
                         <a
                           href={doc.fileUrl}
@@ -328,7 +328,7 @@ export default function PatientsRoster() {
               </div>
             </Card>
           ) : (
-            <Card className="bg-surface-50/50 border border-dashed border-surface-300 text-center py-20 px-6 rounded-lg sticky top-6">
+            <Card className="bg-surface-50/50 border border-dashed border-surface-300 text-center py-20 px-6 rounded-2xl sticky top-6">
               <svg className="w-10 h-10 text-surface-300 mx-auto mb-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
                 <path strokeLinecap="round" strokeLinejoin="round" d="M15 9h3.75M15 12h3.75M15 15h3.75M4.5 19.5h15a2.25 2.25 0 002.25-2.25V6.75A2.25 2.25 0 0019.5 4.5h-15a2.25 2.25 0 00-2.25 2.25v10.5A2.25 2.25 0 004.5 19.5zm6-10.125a1.875 1.875 0 11-3.75 0 1.875 1.875 0 013.75 0zm1.294 6.336a6.721 6.721 0 01-3.17.789 6.721 6.721 0 01-3.168-.789 3.376 3.376 0 016.338 0z" />
               </svg>

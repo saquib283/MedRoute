@@ -104,7 +104,7 @@ export default function AnalyticsPage() {
       <div>
         <div className="flex items-center gap-3 mb-1">
           <h1 className="text-2xl font-bold text-surface-900 tracking-tight">Advanced Analytics</h1>
-          <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider bg-primary-50 text-primary-700 border border-primary-200">Admin</span>
+          <span className="px-2.5 py-0.5 rounded-full text-xs font-bold uppercase tracking-wider bg-primary-50 text-primary-700 border border-primary-200">Admin</span>
         </div>
         <p className="text-sm text-surface-500">Deep platform insights, trends, and operational intelligence.</p>
       </div>
@@ -129,7 +129,7 @@ export default function AnalyticsPage() {
               </div>
               <div>
                 <p className="text-xl font-bold text-surface-900">{kpi.value}</p>
-                <p className="text-[10px] font-semibold text-surface-500 uppercase tracking-wider mt-0.5">{kpi.label}</p>
+                <p className="text-xs font-semibold text-surface-600 uppercase tracking-wider mt-0.5">{kpi.label}</p>
               </div>
             </Card>
           );
@@ -141,19 +141,19 @@ export default function AnalyticsPage() {
         {/* Monthly Registrations */}
         <Card className="p-6 bg-white border border-surface-200 lg:col-span-2">
           <h2 className="text-sm font-bold text-surface-900 mb-1">Monthly User Registrations</h2>
-          <p className="text-xs text-surface-400 mb-5">Last 12 months</p>
+          <p className="text-xs text-surface-500 mb-5">Last 12 months</p>
           <div className="flex items-end gap-1.5 h-40">
             {data.monthlyRegistrations.map((m) => {
               const pct = Math.max((m.total / maxMonthly) * 100, 4);
               const label = m.month.split('-')[1];
               return (
                 <div key={m.month} className="flex-1 flex flex-col items-center gap-1 group" title={`${m.month}: ${m.total} registrations (${m.patients}P / ${m.managers}M / ${m.doctors}D)`}>
-                  <span className="text-[9px] font-bold text-surface-500 opacity-0 group-hover:opacity-100 transition-opacity">{m.total}</span>
+                  <span className="text-xs font-bold text-surface-600 opacity-0 group-hover:opacity-100 transition-opacity">{m.total}</span>
                   <div
                     className="w-full rounded-t-md bg-gradient-to-t from-primary-600 to-primary-400 transition-all duration-500 hover:from-primary-700 hover:to-primary-500 cursor-pointer"
                     style={{ height: `${pct}%`, minHeight: '4px' }}
                   />
-                  <span className="text-[9px] font-semibold text-surface-400">{label}</span>
+                  <span className="text-xs font-semibold text-surface-500">{label}</span>
                 </div>
               );
             })}
@@ -227,19 +227,19 @@ export default function AnalyticsPage() {
           <div className="grid grid-cols-2 gap-4 mb-6">
             <div className="p-4 bg-surface-50 rounded-xl border border-surface-200 text-center">
               <p className="text-3xl font-extrabold text-surface-900">{data.caseLifecycle.totalCases}</p>
-              <p className="text-[10px] font-bold text-surface-500 uppercase tracking-wider mt-1">Total Cases</p>
+              <p className="text-xs font-bold text-surface-600 uppercase tracking-wider mt-1">Total Cases</p>
             </div>
             <div className="p-4 bg-success-50 rounded-xl border border-success-200 text-center">
               <p className="text-3xl font-extrabold text-success-700">{data.caseLifecycle.closedCases}</p>
-              <p className="text-[10px] font-bold text-success-600 uppercase tracking-wider mt-1">Closed</p>
+              <p className="text-xs font-bold text-success-700 uppercase tracking-wider mt-1">Closed</p>
             </div>
             <div className="p-4 bg-primary-50 rounded-xl border border-primary-200 text-center">
               <p className="text-3xl font-extrabold text-primary-700">{data.caseLifecycle.completionRate}%</p>
-              <p className="text-[10px] font-bold text-primary-600 uppercase tracking-wider mt-1">Completion Rate</p>
+              <p className="text-xs font-bold text-primary-700 uppercase tracking-wider mt-1">Completion Rate</p>
             </div>
             <div className="p-4 bg-amber-50 rounded-xl border border-amber-200 text-center">
               <p className="text-3xl font-extrabold text-amber-700">{data.caseLifecycle.avgDurationDays}d</p>
-              <p className="text-[10px] font-bold text-amber-600 uppercase tracking-wider mt-1">Avg Duration</p>
+              <p className="text-xs font-bold text-amber-700 uppercase tracking-wider mt-1">Avg Duration</p>
             </div>
           </div>
 
@@ -249,11 +249,11 @@ export default function AnalyticsPage() {
             <div className="grid grid-cols-2 gap-3">
               <div className="p-3 bg-surface-50 rounded-lg">
                 <p className="text-lg font-bold text-surface-900">{data.revenueEstimates.completedAppointments}</p>
-                <p className="text-[10px] text-surface-500 font-semibold">Completed Appts</p>
+                <p className="text-xs text-surface-600 font-semibold">Completed Appts</p>
               </div>
               <div className="p-3 bg-surface-50 rounded-lg">
                 <p className="text-lg font-bold text-surface-900">{data.revenueEstimates.avgCommissionRate}%</p>
-                <p className="text-[10px] text-surface-500 font-semibold">Avg Commission</p>
+                <p className="text-xs text-surface-600 font-semibold">Avg Commission</p>
               </div>
             </div>
           </div>
@@ -266,7 +266,7 @@ export default function AnalyticsPage() {
         <Card className="bg-white border border-surface-200 overflow-hidden">
           <div className="px-6 py-4 border-b border-surface-100">
             <h2 className="text-sm font-bold text-surface-900">Hospital Utilization</h2>
-            <p className="text-xs text-surface-400 mt-0.5">Top 10 by appointment volume</p>
+            <p className="text-xs text-surface-500 mt-0.5">Top 10 by appointment volume</p>
           </div>
           <div className="divide-y divide-surface-100">
             {data.hospitalUtilization.map((h, i) => {
@@ -275,10 +275,10 @@ export default function AnalyticsPage() {
                 <div key={h.id} className="px-6 py-3.5 hover:bg-surface-50 transition-colors">
                   <div className="flex items-center justify-between mb-1.5">
                     <div className="flex items-center gap-2.5">
-                      <span className="w-6 h-6 rounded-full bg-primary-100 text-primary-700 flex items-center justify-center text-[10px] font-bold">{i + 1}</span>
+                      <span className="w-6 h-6 rounded-full bg-primary-100 text-primary-700 flex items-center justify-center text-xs font-bold">{i + 1}</span>
                       <div>
                         <p className="text-sm font-semibold text-surface-900">{h.name}</p>
-                        <p className="text-[10px] text-surface-400">{h.city} • {h.doctors} doctors • {h.commissionRate}% comm.</p>
+                        <p className="text-xs text-surface-500">{h.city} • {h.doctors} doctors • {h.commissionRate}% comm.</p>
                       </div>
                     </div>
                     <span className="text-sm font-bold text-surface-700">{h.appointments}</span>
@@ -299,7 +299,7 @@ export default function AnalyticsPage() {
         <Card className="bg-white border border-surface-200 overflow-hidden">
           <div className="px-6 py-4 border-b border-surface-100">
             <h2 className="text-sm font-bold text-surface-900">Doctor Consultation Leaderboard</h2>
-            <p className="text-xs text-surface-400 mt-0.5">Top 10 by total appointments</p>
+            <p className="text-xs text-surface-500 mt-0.5">Top 10 by total appointments</p>
           </div>
           <div className="divide-y divide-surface-100">
             {data.doctorLeaderboard.map((d, i) => {
@@ -308,12 +308,12 @@ export default function AnalyticsPage() {
                 <div key={d.id} className="px-6 py-3.5 hover:bg-surface-50 transition-colors">
                   <div className="flex items-center justify-between mb-1.5">
                     <div className="flex items-center gap-2.5">
-                      <span className={`w-6 h-6 rounded-full flex items-center justify-center text-[10px] font-bold ${
+                      <span className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold ${
                         i === 0 ? 'bg-amber-100 text-amber-700' : i === 1 ? 'bg-surface-200 text-surface-600' : i === 2 ? 'bg-orange-100 text-orange-700' : 'bg-surface-100 text-surface-500'
                       }`}>{i + 1}</span>
                       <div>
                         <p className="text-sm font-semibold text-surface-900">{d.name}</p>
-                        <p className="text-[10px] text-surface-400">{d.specialisation} • {d.hospital}</p>
+                        <p className="text-xs text-surface-500">{d.specialisation} • {d.hospital}</p>
                       </div>
                     </div>
                     <span className="text-sm font-bold text-surface-700">{d.appointments}</span>

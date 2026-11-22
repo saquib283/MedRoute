@@ -186,7 +186,7 @@ export default function AdminPatientsPage() {
       {/* Patient Detail Drawer */}
       {selectedPatient && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-surface-900/40 backdrop-blur-xs">
-          <div className="bg-white rounded-lg shadow-xl w-full max-w-lg animate-scale-up max-h-[90vh] overflow-y-auto">
+          <div className="bg-white rounded-2xl shadow-2xl border border-surface-200 w-full max-w-lg animate-scale-up max-h-[90vh] overflow-y-auto">
             <div className="px-6 py-4 border-b border-surface-100 flex items-center justify-between sticky top-0 bg-white z-10">
               <h3 className="text-sm font-bold text-surface-900">Patient Details</h3>
               <button
@@ -201,17 +201,17 @@ export default function AdminPatientsPage() {
             </div>
             <div className="p-6 space-y-5">
               <div className="grid grid-cols-2 gap-4">
-                <div><p className="text-[10px] font-bold text-surface-400 uppercase">Name</p><p className="text-sm font-semibold text-surface-900 mt-0.5">{selectedPatient.user.fullName}</p></div>
-                <div><p className="text-[10px] font-bold text-surface-400 uppercase">Email</p><p className="text-sm text-surface-600 mt-0.5">{selectedPatient.user.email}</p></div>
-                <div><p className="text-[10px] font-bold text-surface-400 uppercase">Nationality</p><p className="text-sm text-surface-600 mt-0.5">{selectedPatient.nationality}</p></div>
-                <div><p className="text-[10px] font-bold text-surface-400 uppercase">Language</p><p className="text-sm text-surface-600 mt-0.5">{selectedPatient.primaryLanguage || '—'}</p></div>
-                <div><p className="text-[10px] font-bold text-surface-400 uppercase">Urgency</p><p className="mt-0.5"><Badge variant={URGENCY_BADGE[selectedPatient.urgencyLevel] || 'default'}>{URGENCY_LEVEL_LABELS[selectedPatient.urgencyLevel]}</Badge></p></div>
-                <div><p className="text-[10px] font-bold text-surface-400 uppercase">Status</p><p className="mt-0.5"><Badge variant={selectedPatient.user.isActive ? 'success' : 'danger'} dot>{selectedPatient.user.isActive ? 'Active' : 'Inactive'}</Badge></p></div>
+                <div><p className="text-xs font-bold text-surface-500 uppercase">Name</p><p className="text-sm font-semibold text-surface-900 mt-0.5">{selectedPatient.user.fullName}</p></div>
+                <div><p className="text-xs font-bold text-surface-500 uppercase">Email</p><p className="text-sm text-surface-600 mt-0.5">{selectedPatient.user.email}</p></div>
+                <div><p className="text-xs font-bold text-surface-500 uppercase">Nationality</p><p className="text-sm text-surface-600 mt-0.5">{selectedPatient.nationality}</p></div>
+                <div><p className="text-xs font-bold text-surface-500 uppercase">Language</p><p className="text-sm text-surface-600 mt-0.5">{selectedPatient.primaryLanguage || '—'}</p></div>
+                <div><p className="text-xs font-bold text-surface-500 uppercase">Urgency</p><p className="mt-0.5"><Badge variant={URGENCY_BADGE[selectedPatient.urgencyLevel] || 'default'}>{URGENCY_LEVEL_LABELS[selectedPatient.urgencyLevel]}</Badge></p></div>
+                <div><p className="text-xs font-bold text-surface-500 uppercase">Status</p><p className="mt-0.5"><Badge variant={selectedPatient.user.isActive ? 'success' : 'danger'} dot>{selectedPatient.user.isActive ? 'Active' : 'Inactive'}</Badge></p></div>
               </div>
               <div className="grid grid-cols-3 gap-4 p-3 bg-surface-50 rounded-lg border border-surface-200">
-                <div className="text-center"><p className="text-lg font-bold text-surface-900">{selectedPatient._count.cases}</p><p className="text-[10px] text-surface-500 font-semibold uppercase">Cases</p></div>
-                <div className="text-center"><p className="text-lg font-bold text-surface-900">{selectedPatient._count.appointments}</p><p className="text-[10px] text-surface-500 font-semibold uppercase">Appts</p></div>
-                <div className="text-center"><p className="text-lg font-bold text-surface-900">{selectedPatient._count.documents}</p><p className="text-[10px] text-surface-500 font-semibold uppercase">Docs</p></div>
+                <div className="text-center"><p className="text-lg font-bold text-surface-900">{selectedPatient._count.cases}</p><p className="text-xs text-surface-500 font-semibold uppercase">Cases</p></div>
+                <div className="text-center"><p className="text-lg font-bold text-surface-900">{selectedPatient._count.appointments}</p><p className="text-xs text-surface-500 font-semibold uppercase">Appts</p></div>
+                <div className="text-center"><p className="text-lg font-bold text-surface-900">{selectedPatient._count.documents}</p><p className="text-xs text-surface-500 font-semibold uppercase">Docs</p></div>
               </div>
 
               {/* Reassign Manager */}

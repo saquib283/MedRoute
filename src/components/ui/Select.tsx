@@ -111,7 +111,7 @@ export function Select({
                 ? 'bg-white border-primary-600 text-surface-900 shadow-xs'
                 : error
                 ? 'bg-white border-danger-300 text-surface-900 hover:border-danger-400'
-                : 'bg-white border-surface-300 text-surface-900 hover:border-surface-400'
+                : 'bg-white border-surface-200 text-surface-900 hover:border-surface-300'
             }
           `}
         >
@@ -119,7 +119,7 @@ export function Select({
             {icon && <span className="text-surface-400 shrink-0">{icon}</span>}
             {selectedOption?.icon && <span className="shrink-0">{selectedOption.icon}</span>}
 
-            <span className={`truncate ${!selectedOption ? 'text-surface-400 font-normal' : 'font-semibold'}`}>
+            <span className={`truncate ${!selectedOption ? 'text-surface-500 font-normal' : 'font-semibold'}`}>
               {selectedOption ? selectedOption.label : placeholder}
             </span>
           </div>
@@ -186,7 +186,7 @@ export function Select({
                         <div className="min-w-0">
                           <p className="truncate">{opt.label}</p>
                           {opt.description && (
-                            <p className="text-[10px] text-surface-400 font-normal truncate mt-0.5">
+                            <p className="text-xs text-surface-500 font-normal truncate mt-0.5">
                               {opt.description}
                             </p>
                           )}
@@ -206,7 +206,7 @@ export function Select({
       </div>
 
       {error && <p className="text-[11px] text-danger-600 font-semibold mt-1">{error}</p>}
-      {!error && helperText && <p className="text-[11px] text-surface-400 font-medium mt-1">{helperText}</p>}
+      {!error && helperText && <p className="text-xs text-surface-600 font-medium mt-1">{helperText}</p>}
     </div>
   );
 }

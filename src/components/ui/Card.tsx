@@ -1,4 +1,4 @@
-﻿/**
+/**
  * Afzal Healthcare — Card Component
  * Clinical design system card — white background, subtle border, clean elevation.
  */
@@ -27,10 +27,10 @@ export function Card({
   return (
     <div
       className={`
-        bg-white border border-surface-300 rounded-lg shadow-xs
+        bg-white border border-surface-200 rounded-2xl shadow-xs
         ${paddingStyles[padding]}
         ${hover
-          ? 'transition-shadow duration-200 hover:shadow-md hover:border-surface-400'
+          ? 'transition-shadow duration-200 hover:shadow-md hover:border-surface-300'
           : ''
         }
         ${className}

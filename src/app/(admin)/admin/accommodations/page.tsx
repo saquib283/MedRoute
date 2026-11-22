@@ -271,12 +271,12 @@ export default function AdminAccommodationsPage() {
                     {/* Medical Amenities Pills */}
                     <div className="flex items-center gap-1.5 flex-wrap pt-1">
                       {amenityList.slice(0, 3).map((amenity, idx) => (
-                        <span key={idx} className="px-2 py-0.5 bg-surface-100 text-surface-700 rounded-md text-[10px] font-extrabold border border-surface-200">
+                        <span key={idx} className="px-2 py-0.5 bg-surface-100 text-surface-700 rounded-md text-xs font-semibold border border-surface-200">
                           {amenity}
                         </span>
                       ))}
                       {amenityList.length > 3 && (
-                        <span className="text-[10px] font-bold text-surface-400">+{amenityList.length - 3} more</span>
+                        <span className="text-xs font-semibold text-surface-500">+{amenityList.length - 3} more</span>
                       )}
                     </div>
                   </div>
@@ -285,7 +285,7 @@ export default function AdminAccommodationsPage() {
                 {/* Footer Pricing */}
                 <div className="p-5 pt-0 border-t border-surface-100 mt-3 flex items-center justify-between">
                   <div>
-                    <span className="text-[10px] font-bold text-surface-400 uppercase tracking-wider block">Nightly Rate</span>
+                    <span className="text-xs font-bold text-surface-500 uppercase tracking-wider block">Nightly Rate</span>
                     <span className="text-lg font-black text-surface-900">${Number(hotel.nightlyRateUsd)} <span className="text-xs text-surface-500 font-semibold">/ night</span></span>
                   </div>
 
@@ -310,7 +310,7 @@ export default function AdminAccommodationsPage() {
           <div className="overflow-x-auto">
             <table className="w-full text-left border-collapse">
               <thead>
-                <tr className="bg-surface-50 border-b border-surface-200 text-[11px] font-black uppercase text-surface-400 tracking-wider">
+                <tr className="bg-surface-50 border-b border-surface-200 text-xs font-bold uppercase text-surface-500 tracking-wider">
                   <th className="p-4">Booking No</th>
                   <th className="p-4">Patient Name</th>
                   <th className="p-4">Hotel Property</th>
@@ -326,7 +326,7 @@ export default function AdminAccommodationsPage() {
                     <td className="p-4 font-black text-surface-900">{b.bookingNo}</td>
                     <td className="p-4">
                       <p className="font-extrabold text-surface-900">{b.patient?.user?.fullName}</p>
-                      <p className="text-[10px] text-surface-400 font-medium">{b.patient?.user?.email}</p>
+                      <p className="text-xs text-surface-500 font-medium">{b.patient?.user?.email}</p>
                     </td>
                     <td className="p-4 font-extrabold text-surface-900">{b.hotel?.name}</td>
                     <td className="p-4 text-surface-600">
@@ -337,7 +337,7 @@ export default function AdminAccommodationsPage() {
                       +${Number(b.commissionAmountUsd).toFixed(2)} USD Cut
                     </td>
                     <td className="p-4">
-                      <span className="px-2.5 py-0.5 bg-emerald-100 text-emerald-800 rounded-md text-[10px] font-black uppercase tracking-wider">
+                      <span className="px-2.5 py-0.5 bg-emerald-100 text-emerald-800 rounded-md text-xs font-bold uppercase tracking-wider">
                         {b.status}
                       </span>
                     </td>

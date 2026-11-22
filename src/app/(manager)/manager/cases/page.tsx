@@ -154,7 +154,7 @@ export default function CasesPipeline() {
               onClick={() => setActiveTab(tab.value)}
             >
               {tab.label}
-              <span className={`px-1.5 py-0.5 text-[10px] rounded-full font-bold ${
+              <span className={`px-2 py-0.5 text-xs rounded-full font-bold ${
                 activeTab === tab.value ? 'bg-primary-100 text-primary-800' : 'bg-surface-100 text-surface-600'
               }`}>
                 {count}
@@ -188,7 +188,7 @@ export default function CasesPipeline() {
                       <div className="flex items-center gap-2">
                         <h3 className="font-bold text-surface-900 text-base">{c.patient.user.fullName}</h3>
                         {c.isUrgent && (
-                          <span className="bg-red-50 text-red-700 border border-red-200 text-[10px] px-1.5 py-0.5 rounded font-bold uppercase">
+                          <span className="bg-red-50 text-red-700 border border-red-200 text-xs px-2 py-0.5 rounded-md font-bold uppercase">
                             Urgent
                           </span>
                         )}
@@ -212,13 +212,13 @@ export default function CasesPipeline() {
                   </div>
 
                   {c.notes && (
-                    <div className="mt-3.5 bg-surface-50 p-3 rounded border border-surface-200/20 text-xs text-surface-700 leading-relaxed font-medium">
+                    <div className="mt-3.5 bg-surface-50 p-3.5 rounded-xl border border-surface-200/60 text-xs text-surface-700 leading-relaxed font-medium">
                       {c.notes}
                     </div>
                   )}
 
                   {c.escalationNote && (
-                    <div className="mt-2 bg-red-50/40 p-3 rounded border border-red-200/40 text-xs text-red-700 font-medium flex gap-2">
+                    <div className="mt-2 bg-red-50/40 p-3.5 rounded-xl border border-red-200/60 text-xs text-red-700 font-medium flex gap-2">
                       <svg className="w-4 h-4 shrink-0 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                         <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
                       </svg>
@@ -257,7 +257,7 @@ export default function CasesPipeline() {
 
               <form onSubmit={handleUpdateCase} className="space-y-4 text-xs">
                 {/* Patient Name banner */}
-                <div className="bg-surface-50 p-3 rounded border border-surface-200/40">
+                <div className="bg-surface-50 p-3.5 rounded-xl border border-surface-200/60">
                   <p className="text-surface-400 font-medium">Patient</p>
                   <p className="text-sm font-bold text-surface-900 mt-0.5">{editingCase.patient.user.fullName}</p>
                 </div>
@@ -284,7 +284,7 @@ export default function CasesPipeline() {
                   <textarea
                     id="notes"
                     rows={4}
-                    className="w-full p-2.5 rounded border border-surface-300 font-medium"
+                    className="w-full p-3 rounded-xl border border-surface-200 font-medium focus:border-primary-600 focus:outline-none"
                     placeholder="Enter diagnostic review, partner response status, flight details, or notes..."
                     value={caseNotes}
                     onChange={(e) => setCaseNotes(e.target.value)}
@@ -311,7 +311,7 @@ export default function CasesPipeline() {
                   <textarea
                     id="escalation"
                     rows={2}
-                    className="w-full p-2.5 rounded border border-red-300 bg-red-50/20 font-medium text-red-800"
+                    className="w-full p-3 rounded-xl border border-red-200 bg-red-50/40 font-medium text-red-800 focus:border-red-400 focus:outline-none"
                     placeholder="Explain emergency conditions, critical treatment delays..."
                     value={escalationNote}
                     onChange={(e) => setEscalationNote(e.target.value)}
@@ -326,7 +326,7 @@ export default function CasesPipeline() {
               </form>
             </Card>
           ) : (
-            <Card className="bg-surface-50/50 border border-dashed border-surface-300 text-center py-20 px-6 rounded-lg sticky top-6">
+            <Card className="bg-surface-50/50 border border-dashed border-surface-300 text-center py-20 px-6 rounded-2xl sticky top-6">
               <svg className="w-10 h-10 text-surface-300 mx-auto mb-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
                 <path strokeLinecap="round" strokeLinejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 00-3.375-3.375h-1.5A1.125 1.125 0 0113.5 7.125v-1.5a3.375 3.375 0 00-3.375-3.375H8.25m0 12.75h7.5m-7.5 3H12M10.5 2.25H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 00-9-9z" />
               </svg>

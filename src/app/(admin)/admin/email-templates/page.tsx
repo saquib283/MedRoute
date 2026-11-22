@@ -150,7 +150,7 @@ export default function EmailTemplatesPage() {
         <div>
           <div className="flex items-center gap-3 mb-1">
             <h1 className="text-2xl font-bold text-surface-900 tracking-tight">Email Templates</h1>
-            <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider bg-primary-50 text-primary-700 border border-primary-200">Admin</span>
+            <span className="px-2.5 py-0.5 rounded-full text-xs font-bold uppercase tracking-wider bg-primary-50 text-primary-700 border border-primary-200">Admin</span>
           </div>
           <p className="text-sm text-surface-500">Create and manage reusable email templates for campaigns.</p>
         </div>
@@ -241,7 +241,7 @@ export default function EmailTemplatesPage() {
       {/* Create/Edit Modal */}
       {showModal && (
         <div className="fixed inset-0 z-50 flex items-start justify-center p-4 pt-[5vh] bg-surface-900/40 backdrop-blur-xs overflow-y-auto">
-          <div className="bg-white rounded-lg shadow-xl w-full max-w-3xl animate-scale-up my-8">
+          <div className="bg-white rounded-2xl shadow-2xl border border-surface-200 w-full max-w-3xl animate-scale-up my-8">
             <div className="px-6 py-4 border-b border-surface-100 flex items-center justify-between">
               <h3 className="text-sm font-bold text-surface-900">{editing ? 'Edit Template' : 'Create New Template'}</h3>
               <button
@@ -258,7 +258,7 @@ export default function EmailTemplatesPage() {
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div className="space-y-1.5">
                   <label className="block text-xs font-semibold text-surface-700">Template Name *</label>
-                  <input type="text" required value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} className="w-full p-2.5 border border-surface-300 rounded text-sm focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500" placeholder="e.g., Welcome Email" />
+                  <input type="text" required value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} className="w-full p-2.5 border border-surface-200 rounded-xl text-sm focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500" placeholder="e.g., Welcome Email" />
                 </div>
                 <Select
                   label="Category"
@@ -271,18 +271,18 @@ export default function EmailTemplatesPage() {
 
               <div className="space-y-1.5">
                 <label className="block text-xs font-semibold text-surface-700">Subject Line *</label>
-                <input type="text" required value={form.subject} onChange={(e) => setForm({ ...form, subject: e.target.value })} className="w-full p-2.5 border border-surface-300 rounded text-sm focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500" placeholder="e.g., Welcome to Afzal Healthcare, {{fullName}}" />
+                <input type="text" required value={form.subject} onChange={(e) => setForm({ ...form, subject: e.target.value })} className="w-full p-2.5 border border-surface-200 rounded-xl text-sm focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500" placeholder="e.g., Welcome to Afzal Healthcare, {{fullName}}" />
               </div>
 
               {/* Placeholder Hints */}
               <div className="flex flex-wrap gap-1.5">
-                <span className="text-[10px] font-bold text-surface-500 uppercase tracking-wider self-center mr-1">Placeholders:</span>
+                <span className="text-xs font-bold text-surface-500 uppercase tracking-wider self-center mr-1">Placeholders:</span>
                 {PLACEHOLDER_HINTS.map((ph) => (
                   <button
                     key={ph}
                     type="button"
                     onClick={() => setForm({ ...form, body: form.body + ph })}
-                    className="px-2 py-0.5 bg-primary-50 text-primary-700 border border-primary-200 rounded text-[10px] font-mono font-bold hover:bg-primary-100 transition-colors"
+                    className="px-2.5 py-1 bg-primary-50 text-primary-700 border border-primary-200 rounded-lg text-xs font-mono font-bold hover:bg-primary-100 transition-colors"
                   >
                     {ph}
                   </button>
@@ -297,7 +297,7 @@ export default function EmailTemplatesPage() {
                   </button>
                 </div>
                 {showPreview ? (
-                  <div className="w-full min-h-[200px] max-h-[400px] overflow-auto p-4 border border-surface-300 rounded bg-white text-sm">
+                  <div className="w-full min-h-[200px] max-h-[400px] overflow-auto p-4 border border-surface-200 rounded-xl bg-white text-sm">
                     <div dangerouslySetInnerHTML={{ __html: form.body }} />
                   </div>
                 ) : (
@@ -306,7 +306,7 @@ export default function EmailTemplatesPage() {
                     value={form.body}
                     onChange={(e) => setForm({ ...form, body: e.target.value })}
                     rows={10}
-                    className="w-full p-3 border border-surface-300 rounded text-sm font-mono focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500 resize-y"
+                    className="w-full p-3 border border-surface-200 rounded-xl text-sm font-mono focus:border-primary-600 focus:outline-none resize-y"
                     placeholder="<h1>Hello {{fullName}},</h1><p>Welcome to Afzal Healthcare...</p>"
                   />
                 )}
@@ -314,7 +314,7 @@ export default function EmailTemplatesPage() {
 
               <div className="space-y-1.5">
                 <label className="block text-xs font-semibold text-surface-700">Tracked Placeholders (comma-separated)</label>
-                <input type="text" value={form.placeholders} onChange={(e) => setForm({ ...form, placeholders: e.target.value })} className="w-full p-2.5 border border-surface-300 rounded text-sm focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500" placeholder="fullName, email, appointmentDate" />
+                <input type="text" value={form.placeholders} onChange={(e) => setForm({ ...form, placeholders: e.target.value })} className="w-full p-2.5 border border-surface-200 rounded-xl text-sm focus:border-primary-600 focus:outline-none" placeholder="fullName, email, appointmentDate" />
               </div>
 
               <div className="flex gap-3 pt-2">

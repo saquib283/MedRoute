@@ -167,7 +167,7 @@ export default function PatientBillingPage() {
                   </div>
 
                   <div className="text-right sm:border-l sm:border-surface-100 sm:pl-6">
-                    <p className="text-[10px] uppercase font-extrabold tracking-wider text-surface-400">Total Invoice Amount</p>
+                    <p className="text-xs uppercase font-bold tracking-wider text-surface-500">Total Invoice Amount</p>
                     <p className="text-2xl font-black text-surface-900 mt-0.5">${total.toLocaleString('en-US', { minimumFractionDigits: 2 })} {bill.currency}</p>
                     {due > 0 ? (
                       <p className="text-xs font-bold text-amber-600 mt-0.5">Remaining Balance: ${due.toLocaleString('en-US', { minimumFractionDigits: 2 })}</p>
@@ -213,7 +213,7 @@ export default function PatientBillingPage() {
                           <tr key={item.id} className="hover:bg-surface-50">
                             <td className="p-3.5 font-extrabold text-surface-900">{item.description}</td>
                             <td className="p-3.5 text-center">
-                              <span className="px-2 py-0.5 bg-surface-100 text-surface-700 rounded-md text-[10px] font-bold">
+                              <span className="px-2 py-0.5 bg-surface-100 text-surface-700 rounded-md text-xs font-semibold">
                                 {item.category || 'GENERAL'}
                               </span>
                             </td>
@@ -225,7 +225,7 @@ export default function PatientBillingPage() {
                       </tbody>
                       <tfoot className="bg-surface-50/80 font-extrabold border-t border-surface-200">
                         <tr>
-                          <td colSpan={4} className="p-3.5 text-right uppercase text-surface-500 text-[10px]">Net Invoiced Amount:</td>
+                          <td colSpan={4} className="p-3.5 text-right uppercase text-surface-500 text-xs">Net Invoiced Amount:</td>
                           <td className="p-3.5 text-right text-sm text-primary-700 font-black">
                             ${total.toFixed(2)} {bill.currency}
                           </td>

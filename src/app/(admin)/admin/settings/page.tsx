@@ -1,4 +1,4 @@
-﻿'use client';
+'use client';
 
 /**
  * Afzal Healthcare — Platform Settings
@@ -124,7 +124,7 @@ export default function AdminSettingsPage() {
                   required
                   value={settings.maxPatientsPerManager}
                   onChange={(e) => setSettings({ ...settings, maxPatientsPerManager: parseInt(e.target.value, 10) })}
-                  className="w-full p-2.5 border border-surface-300 rounded text-sm focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500"
+                  className="w-full p-2.5 border border-surface-200 rounded-xl text-sm focus:border-primary-600 focus:outline-none"
                 />
                 <p className="text-[11px] text-surface-400">Hard limit on total patients assignable to an operations manager.</p>
               </div>
@@ -137,7 +137,7 @@ export default function AdminSettingsPage() {
                   required
                   value={settings.defaultCommissionRate}
                   onChange={(e) => setSettings({ ...settings, defaultCommissionRate: parseFloat(e.target.value) })}
-                  className="w-full p-2.5 border border-surface-300 rounded text-sm focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500"
+                  className="w-full p-2.5 border border-surface-200 rounded-xl text-sm focus:border-primary-600 focus:outline-none"
                 />
                 <p className="text-[11px] text-surface-400">Default rate applied to new hospital bookings if no custom commission is set.</p>
               </div>
@@ -154,7 +154,7 @@ export default function AdminSettingsPage() {
                   required
                   value={settings.sessionTimeoutMinutes}
                   onChange={(e) => setSettings({ ...settings, sessionTimeoutMinutes: parseInt(e.target.value, 10) })}
-                  className="w-full p-2.5 border border-surface-300 rounded text-sm focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500"
+                  className="w-full p-2.5 border border-surface-200 rounded-xl text-sm focus:border-primary-600 focus:outline-none"
                 />
                 <p className="text-[11px] text-surface-400">Idle duration before active JSON Web Tokens are invalidated.</p>
               </div>
@@ -168,7 +168,7 @@ export default function AdminSettingsPage() {
                   type="checkbox"
                   checked={settings.maintenanceMode}
                   onChange={(e) => setSettings({ ...settings, maintenanceMode: e.target.checked })}
-                  className="w-5 h-5 accent-primary-600 rounded cursor-pointer"
+                  className="w-5 h-5 accent-primary-600 rounded-md cursor-pointer"
                 />
               </div>
             </div>
@@ -183,7 +183,7 @@ export default function AdminSettingsPage() {
                   type="text"
                   value={settings.alertBannerText}
                   onChange={(e) => setSettings({ ...settings, alertBannerText: e.target.value })}
-                  className="w-full p-2.5 border border-surface-300 rounded text-sm focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500"
+                  className="w-full p-2.5 border border-surface-200 rounded-xl text-sm focus:border-primary-600 focus:outline-none"
                   placeholder="e.g., Scheduled maintenance this Sunday from 2 AM to 4 AM IST."
                 />
                 <p className="text-[11px] text-surface-400">If set, this warning message will be rendered as a global header alert across all admin dashboards.</p>

@@ -197,7 +197,7 @@ export default function PatientLayout({
             </div>
             <div className="min-w-0 flex-1">
               <p className="text-xs font-extrabold text-surface-900 truncate">{userName}</p>
-              <p className="text-[10px] text-surface-500 truncate font-medium">{userEmail}</p>
+              <p className="text-xs text-surface-500 truncate font-medium">{userEmail}</p>
             </div>
           </div>
 
@@ -243,7 +243,7 @@ export default function PatientLayout({
                   <LayoutDashboard className="w-4 h-4" />
                 </div>
                 <div>
-                  <span className="text-[10px] font-bold text-primary-600 uppercase tracking-widest block mb-0.5">Patient Portal</span>
+                  <span className="text-xs font-bold text-primary-700 uppercase tracking-wider block mb-0.5">Patient Portal</span>
                   <h2 className="text-base font-bold text-surface-900 tracking-tight">Overview Dashboard</h2>
                 </div>
               </div>
@@ -255,7 +255,7 @@ export default function PatientLayout({
                   <User className="w-4 h-4" />
                 </div>
                 <div>
-                  <span className="text-[10px] font-bold text-primary-600 uppercase tracking-widest block mb-0.5">Clinical File</span>
+                  <span className="text-xs font-bold text-primary-700 uppercase tracking-wider block mb-0.5">Clinical File</span>
                   <h2 className="text-base font-bold text-surface-900 tracking-tight">Medical Profile</h2>
                 </div>
               </div>
@@ -267,7 +267,7 @@ export default function PatientLayout({
                   <Calendar className="w-4 h-4" />
                 </div>
                 <div>
-                  <span className="text-[10px] font-bold text-primary-600 uppercase tracking-widest block mb-0.5">Clinical Schedule</span>
+                  <span className="text-xs font-bold text-primary-700 uppercase tracking-wider block mb-0.5">Clinical Schedule</span>
                   <h2 className="text-base font-bold text-surface-900 tracking-tight">Consultations & Care Appointments</h2>
                 </div>
               </div>
@@ -279,7 +279,7 @@ export default function PatientLayout({
                   <FolderLock className="w-4 h-4" />
                 </div>
                 <div>
-                  <span className="text-[10px] font-bold text-primary-600 uppercase tracking-widest block mb-0.5">ePHI Security</span>
+                  <span className="text-xs font-bold text-primary-700 uppercase tracking-wider block mb-0.5">ePHI Security</span>
                   <h2 className="text-base font-bold text-surface-900 tracking-tight">Encrypted Document Vault</h2>
                 </div>
               </div>
@@ -291,7 +291,7 @@ export default function PatientLayout({
                   <MessageSquare className="w-4 h-4" />
                 </div>
                 <div>
-                  <span className="text-[10px] font-bold text-primary-600 uppercase tracking-widest block mb-0.5">Real-Time Messaging</span>
+                  <span className="text-xs font-bold text-primary-700 uppercase tracking-wider block mb-0.5">Real-Time Messaging</span>
                   <h2 className="text-base font-bold text-surface-900 tracking-tight">Coordination Chat</h2>
                 </div>
               </div>

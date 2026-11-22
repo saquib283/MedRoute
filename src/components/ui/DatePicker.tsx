@@ -174,7 +174,7 @@ export function DatePicker({
                 ? 'bg-white border-primary-600 text-surface-900 shadow-xs'
                 : error
                 ? 'bg-white border-danger-300 text-surface-900 hover:border-danger-400'
-                : 'bg-white border-surface-300 text-surface-900 hover:border-surface-400'
+                : 'bg-white border-surface-200 text-surface-900 hover:border-surface-300'
             }
           `}
         >
@@ -229,7 +229,7 @@ export function DatePicker({
             {/* Days of Week Header */}
             <div className="grid grid-cols-7 gap-1 text-center">
               {DAYS_OF_WEEK.map((d) => (
-                <span key={d} className="text-[10px] font-bold text-surface-400 uppercase">
+                <span key={d} className="text-xs font-bold text-surface-500 uppercase">
                   {d}
                 </span>
               ))}

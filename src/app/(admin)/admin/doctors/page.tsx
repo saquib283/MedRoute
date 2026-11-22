@@ -328,7 +328,7 @@ export default function AdminDoctorsPage() {
 
       {showModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-surface-900/40 backdrop-blur-xs">
-          <div className="bg-white rounded-lg shadow-xl w-full max-w-lg animate-scale-up max-h-[90vh] overflow-y-auto">
+          <div className="bg-white rounded-2xl shadow-2xl border border-surface-200 w-full max-w-lg animate-scale-up max-h-[90vh] overflow-y-auto">
             <div className="px-6 py-4 border-b border-surface-100 flex items-center justify-between sticky top-0 bg-white z-10">
               <h3 className="text-sm font-bold text-surface-900">{editing ? 'Edit Doctor' : 'Add Doctor'}</h3>
               <button
@@ -349,7 +349,7 @@ export default function AdminDoctorsPage() {
                   required
                   value={form.fullName}
                   onChange={(e) => setForm({ ...form, fullName: e.target.value })}
-                  className="w-full p-2.5 border border-surface-300 rounded text-sm focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500"
+                  className="w-full p-2.5 border border-surface-200 rounded-xl text-sm focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500"
                 />
               </div>
               {!editing && (
@@ -379,7 +379,7 @@ export default function AdminDoctorsPage() {
                     type="text"
                     value={form.qualification}
                     onChange={(e) => setForm({ ...form, qualification: e.target.value })}
-                    className="w-full p-2.5 border border-surface-300 rounded text-sm focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500"
+                    className="w-full p-2.5 border border-surface-200 rounded-xl text-sm focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500"
                   />
                 </div>
                 <div className="space-y-1.5">
@@ -388,7 +388,7 @@ export default function AdminDoctorsPage() {
                     type="number"
                     value={form.consultationFee}
                     onChange={(e) => setForm({ ...form, consultationFee: e.target.value })}
-                    className="w-full p-2.5 border border-surface-300 rounded text-sm focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500"
+                    className="w-full p-2.5 border border-surface-200 rounded-xl text-sm focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500"
                   />
                 </div>
               </div>

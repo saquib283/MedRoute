@@ -135,26 +135,26 @@ export function ClinicalRoadmapTree({ steps, fitToFly, currentStatus }: Clinical
     switch (step.actionType) {
       case 'ISSUE_VIL':
         return (
-          <Link href="/patient/documents" className="inline-flex items-center gap-1 px-2.5 py-1 bg-sky-600 hover:bg-sky-700 text-white rounded-xl text-[10px] font-extrabold shadow-2xs transition-colors">
+          <Link href="/patient/documents" className="inline-flex items-center gap-1 px-2.5 py-1 bg-sky-600 hover:bg-sky-700 text-white rounded-xl text-xs font-bold shadow-2xs transition-colors">
             <Download className="w-3 h-3" /> Download VIL
           </Link>
         );
       case 'SIGN_FIT_TO_FLY':
         return (
-          <Link href="/patient/documents" className="inline-flex items-center gap-1 px-2.5 py-1 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-[10px] font-extrabold shadow-2xs transition-colors">
+          <Link href="/patient/documents" className="inline-flex items-center gap-1 px-2.5 py-1 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-bold shadow-2xs transition-colors">
             <ShieldCheck className="w-3 h-3" /> Fit-to-Fly Cert
           </Link>
         );
       case 'ISSUE_PROFORMA':
       case 'SETTLE_BILL':
         return (
-          <Link href="/patient/billing" className="inline-flex items-center gap-1 px-2.5 py-1 bg-primary-600 hover:bg-primary-700 text-white rounded-xl text-[10px] font-extrabold shadow-2xs transition-colors">
+          <Link href="/patient/billing" className="inline-flex items-center gap-1 px-2.5 py-1 bg-primary-600 hover:bg-primary-700 text-white rounded-xl text-xs font-bold shadow-2xs transition-colors">
             <CreditCard className="w-3 h-3" /> View Invoice
           </Link>
         );
       case 'UPLOAD_DOCS':
         return (
-          <Link href="/patient/documents" className="inline-flex items-center gap-1 px-2.5 py-1 bg-amber-600 hover:bg-amber-700 text-white rounded-xl text-[10px] font-extrabold shadow-2xs transition-colors">
+          <Link href="/patient/documents" className="inline-flex items-center gap-1 px-2.5 py-1 bg-amber-600 hover:bg-amber-700 text-white rounded-xl text-xs font-bold shadow-2xs transition-colors">
             <UploadCloud className="w-3 h-3" /> Upload Scans
           </Link>
         );
@@ -186,7 +186,7 @@ export function ClinicalRoadmapTree({ steps, fitToFly, currentStatus }: Clinical
 
         <div className="flex items-center gap-3 shrink-0 bg-surface-50 p-3.5 rounded-2xl border border-surface-200">
           <div className="text-right">
-            <p className="text-[10px] font-extrabold uppercase text-surface-400">Total Milestones</p>
+            <p className="text-xs font-bold uppercase text-surface-500">Total Milestones</p>
             <p className="text-sm font-black text-surface-900">{completedCount} of {totalCount} Done</p>
           </div>
           <div className="w-11 h-11 rounded-2xl bg-primary-600 text-white font-black text-xs flex items-center justify-center shadow-xs">
@@ -213,7 +213,7 @@ export function ClinicalRoadmapTree({ steps, fitToFly, currentStatus }: Clinical
                 <h3 className="text-sm font-extrabold flex items-center gap-2">
                   Fit-to-Fly International Travel Clearance
                   {fitToFly.isCleared && (
-                    <span className="inline-flex items-center gap-1 bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 text-[10px] font-extrabold px-2.5 py-0.5 rounded-md">
+                    <span className="inline-flex items-center gap-1 bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 text-xs font-bold px-2.5 py-0.5 rounded-md">
                       <ShieldCheck className="w-3.5 h-3.5 text-emerald-400" /> Certified
                     </span>
                   )}
@@ -302,16 +302,16 @@ export function ClinicalRoadmapTree({ steps, fitToFly, currentStatus }: Clinical
 
                     <div className="min-w-0">
                       <div className="flex items-center gap-2 flex-wrap">
-                        <span className="text-[10px] font-black text-primary-700 uppercase tracking-widest">
+                        <span className="text-xs font-bold text-primary-700 uppercase tracking-wider">
                           Stage Trunk Node 0{stageIdx + 1}
                         </span>
                         {isStageActive && (
-                          <span className="bg-amber-500 text-white text-[9px] font-black uppercase tracking-wider px-2 py-0.5 rounded-full">
+                          <span className="bg-amber-500 text-white text-xs font-bold uppercase tracking-wider px-2.5 py-0.5 rounded-full">
                             Active Stage Focus
                           </span>
                         )}
                         {isStageComplete && (
-                          <span className="bg-emerald-100 text-emerald-800 text-[9px] font-black uppercase tracking-wider px-2 py-0.5 rounded-full border border-emerald-200">
+                          <span className="bg-emerald-100 text-emerald-800 text-xs font-bold uppercase tracking-wider px-2.5 py-0.5 rounded-full border border-emerald-200">
                             100% Cleared
                           </span>
                         )}
@@ -333,7 +333,7 @@ export function ClinicalRoadmapTree({ steps, fitToFly, currentStatus }: Clinical
                 {/* Sub-Tree Branches Container */}
                 {isOpen && (
                   <div className="p-5 pt-2 border-t border-surface-100 bg-surface-50/50 space-y-3">
-                    <div className="text-[10px] font-black text-surface-400 uppercase tracking-widest flex items-center gap-1.5 mb-2 pl-2">
+                    <div className="text-xs font-bold text-surface-500 uppercase tracking-wider flex items-center gap-1.5 mb-2 pl-2">
                       <GitBranch className="w-3.5 h-3.5 text-primary-600" /> Decision & Milestone Sub-Branches
                     </div>
 
@@ -369,7 +369,7 @@ export function ClinicalRoadmapTree({ steps, fitToFly, currentStatus }: Clinical
                                 <div className="flex items-center gap-2">
                                   <span
                                     className={`
-                                      w-5 h-5 rounded-md flex items-center justify-center font-black text-[10px] shrink-0
+                                      w-5 h-5 rounded-md flex items-center justify-center font-bold text-xs shrink-0
                                       ${
                                         isCompleted
                                           ? 'bg-emerald-100 text-emerald-800 border border-emerald-200'
@@ -386,14 +386,14 @@ export function ClinicalRoadmapTree({ steps, fitToFly, currentStatus }: Clinical
 
                                 <div className="flex items-center gap-2 shrink-0">
                                   {branchInfo && (
-                                    <span className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-md text-[10px] font-extrabold border ${branchInfo.style}`}>
+                                    <span className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-md text-xs font-bold border ${branchInfo.style}`}>
                                       <Award className="w-3 h-3" />
                                       {branchInfo.label}
                                     </span>
                                   )}
 
                                   <span
-                                    className={`text-[10px] font-black uppercase tracking-wider px-2 py-0.5 rounded-md ${
+                                    className={`text-xs font-bold uppercase tracking-wider px-2 py-0.5 rounded-md ${
                                       isCompleted
                                         ? 'bg-emerald-100 text-emerald-800'
                                         : isInProgress
@@ -413,7 +413,7 @@ export function ClinicalRoadmapTree({ steps, fitToFly, currentStatus }: Clinical
                                     <strong className="text-surface-900 font-bold">Clinical Note:</strong> {step.doctorNotes}
                                   </p>
                                 ) : (
-                                  <span className="text-[10px] text-surface-400 font-medium">Tree Branch Active</span>
+                                  <span className="text-xs text-surface-500 font-medium">Tree Branch Active</span>
                                 )}
 
                                 {renderActionButton(step)}

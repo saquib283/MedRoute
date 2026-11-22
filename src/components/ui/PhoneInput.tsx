@@ -1,4 +1,4 @@
-﻿'use client';
+'use client';
 
 /**
  * Afzal Healthcare — Premium Custom Phone Input Component
@@ -575,7 +575,7 @@ export function PhoneInput({
                         </div>
 
                         <div className="flex items-center gap-1.5 shrink-0">
-                          <span className="font-mono text-[11px] px-1.5 py-0.5 rounded bg-surface-100 text-surface-600 font-bold">
+                          <span className="font-mono text-[11px] px-1.5 py-0.5 rounded-md bg-surface-100 text-surface-600 font-bold">
                             {item.code}
                           </span>
                           {isSelected && <Check className="w-3.5 h-3.5 text-primary-600 shrink-0" />}

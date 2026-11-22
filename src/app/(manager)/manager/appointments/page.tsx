@@ -1,4 +1,4 @@
-﻿'use client';
+'use client';
 
 /**
  * Afzal Healthcare — Manager Appointments scheduler controller
@@ -336,16 +336,16 @@ export default function AppointmentsManager() {
                   <tr key={appt.id} className="hover:bg-surface-50/50">
                     <td className="px-6 py-4">
                       <p className="font-semibold text-surface-900">{appt.patient.user.fullName}</p>
-                      <p className="text-[10px] text-surface-400 font-mono">Case ID: {appt.caseId}</p>
+                      <p className="text-xs text-surface-500 font-mono">Case ID: {appt.caseId}</p>
                     </td>
                     <td className="px-6 py-4">
                       <p className="font-semibold text-surface-900">Dr. {appt.doctor.fullName}</p>
-                      <p className="text-[10px] text-surface-500">
+                      <p className="text-xs text-surface-500">
                         {appt.doctor.specialisation.name} • {appt.hospital.name} ({appt.hospital.city})
                       </p>
                     </td>
                     <td className="px-6 py-4 text-surface-600 font-medium">
-                      <span className="bg-surface-100 text-surface-700 px-2 py-0.5 rounded text-[10px] border border-surface-200">
+                      <span className="bg-surface-100 text-surface-700 px-2.5 py-0.5 rounded-lg text-xs border border-surface-200">
                         {appt.appointmentType.replace(/_/g, ' ')}
                       </span>
                     </td>
@@ -371,7 +371,7 @@ export default function AppointmentsManager() {
                         {appt.status}
                       </span>
                       {appt.cancellationReason && (
-                        <p className="text-[10px] text-red-500 mt-1 max-w-[150px] truncate" title={appt.cancellationReason}>
+                        <p className="text-xs text-red-600 mt-1 max-w-[150px] truncate" title={appt.cancellationReason}>
                           Reason: {appt.cancellationReason}
                         </p>
                       )}
@@ -410,7 +410,7 @@ export default function AppointmentsManager() {
             </div>
 
             {formError && (
-              <div className="bg-red-50 text-red-700 p-2.5 rounded border border-red-200">
+              <div className="bg-red-50 text-red-700 p-3 rounded-xl border border-red-200">
                 {formError}
               </div>
             )}
@@ -546,7 +546,7 @@ export default function AppointmentsManager() {
                 <textarea
                   id="reason"
                   rows={3}
-                  className="w-full p-2.5 rounded border border-surface-300 font-medium text-surface-800"
+                  className="w-full p-3 rounded-xl border border-surface-200 font-medium text-surface-800 focus:border-primary-600 focus:outline-none"
                   placeholder="Explain why consultation is being cancelled (e.g. visa delay, patient request)..."
                   value={cancellationReason}
                   onChange={(e) => setCancellationReason(e.target.value)}

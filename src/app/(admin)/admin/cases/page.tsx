@@ -184,12 +184,12 @@ export default function AdminCasesPage() {
                     <tr key={c.id} className="hover:bg-surface-50 transition-colors">
                       <td className="px-5 py-3.5">
                         <p className="font-semibold text-surface-900">{c.patient.user.fullName}</p>
-                        <p className="text-xs text-surface-400">{c.patient.user.email}</p>
+                        <p className="text-xs text-surface-600 font-medium">{c.patient.user.email}</p>
                       </td>
                       <td className="px-5 py-3.5 text-surface-600">{c.manager?.fullName || '—'}</td>
                       <td className="px-5 py-3.5"><Badge variant={STATUS_BADGE[c.status] || 'default'}>{CASE_STATUS_LABELS[c.status] || c.status}</Badge></td>
                       <td className="px-5 py-3.5 text-surface-600">{c._count.appointments}</td>
-                      <td className="px-5 py-3.5 text-xs text-surface-500">{new Date(c.createdAt).toLocaleDateString()}</td>
+                      <td className="px-5 py-3.5 text-xs text-surface-600">{new Date(c.createdAt).toLocaleDateString()}</td>
                       <td className="px-5 py-3.5">
                         <div className="flex gap-1">
                           {c.isUrgent && <Badge variant="danger" dot>Urgent</Badge>}
@@ -220,7 +220,7 @@ export default function AdminCasesPage() {
       {/* Case Detail Drawer */}
       {selectedCase && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-surface-900/40 backdrop-blur-xs">
-          <div className="bg-white rounded-lg shadow-xl w-full max-w-lg animate-scale-up max-h-[90vh] overflow-y-auto">
+          <div className="bg-white rounded-2xl shadow-2xl border border-surface-200 w-full max-w-lg animate-scale-up max-h-[90vh] overflow-y-auto">
             <div className="px-6 py-4 border-b border-surface-100 flex items-center justify-between sticky top-0 bg-white z-10">
               <h3 className="text-sm font-bold text-surface-900">Case Details</h3>
               <button
@@ -235,17 +235,17 @@ export default function AdminCasesPage() {
             </div>
             <div className="p-6 space-y-5">
               <div className="grid grid-cols-2 gap-4">
-                <div><p className="text-[10px] font-bold text-surface-400 uppercase">Patient</p><p className="text-sm font-semibold text-surface-900 mt-0.5">{selectedCase.patient.user.fullName}</p></div>
-                <div><p className="text-[10px] font-bold text-surface-400 uppercase">Manager</p><p className="text-sm text-surface-600 mt-0.5">{selectedCase.manager?.fullName || 'Unassigned'}</p></div>
-                <div><p className="text-[10px] font-bold text-surface-400 uppercase">Status</p><p className="mt-0.5"><Badge variant={STATUS_BADGE[selectedCase.status] || 'default'}>{CASE_STATUS_LABELS[selectedCase.status]}</Badge></p></div>
-                <div><p className="text-[10px] font-bold text-surface-400 uppercase">Appointments</p><p className="text-sm text-surface-600 mt-0.5">{selectedCase._count.appointments}</p></div>
+                <div><p className="text-xs font-bold text-surface-600 uppercase">Patient</p><p className="text-sm font-semibold text-surface-900 mt-0.5">{selectedCase.patient.user.fullName}</p></div>
+                <div><p className="text-xs font-bold text-surface-600 uppercase">Manager</p><p className="text-sm text-surface-600 mt-0.5">{selectedCase.manager?.fullName || 'Unassigned'}</p></div>
+                <div><p className="text-xs font-bold text-surface-600 uppercase">Status</p><p className="mt-0.5"><Badge variant={STATUS_BADGE[selectedCase.status] || 'default'}>{CASE_STATUS_LABELS[selectedCase.status]}</Badge></p></div>
+                <div><p className="text-xs font-bold text-surface-600 uppercase">Appointments</p><p className="text-sm text-surface-600 mt-0.5">{selectedCase._count.appointments}</p></div>
               </div>
 
               {selectedCase.notes && (
-                <div><p className="text-[10px] font-bold text-surface-400 uppercase mb-1">Notes</p><p className="text-sm text-surface-600 bg-surface-50 p-3 rounded-lg border border-surface-200">{selectedCase.notes}</p></div>
+                <div><p className="text-xs font-bold text-surface-600 uppercase mb-1">Notes</p><p className="text-sm text-surface-600 bg-surface-50 p-3 rounded-lg border border-surface-200">{selectedCase.notes}</p></div>
               )}
               {selectedCase.escalationNote && (
-                <div><p className="text-[10px] font-bold text-surface-400 uppercase mb-1">Escalation Note</p><p className="text-sm text-warning-700 bg-warning-50 p-3 rounded-lg border border-warning-200">{selectedCase.escalationNote}</p></div>
+                <div><p className="text-xs font-bold text-surface-600 uppercase mb-1">Escalation Note</p><p className="text-sm text-warning-700 bg-warning-50 p-3 rounded-lg border border-warning-200">{selectedCase.escalationNote}</p></div>
               )}
 
               {/* Status Transition */}

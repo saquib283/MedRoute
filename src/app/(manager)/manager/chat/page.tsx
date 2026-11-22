@@ -1,4 +1,4 @@
-﻿'use client';
+'use client';
 
 /**
  * Afzal Healthcare — Manager Chat Inbox Page
@@ -185,12 +185,12 @@ export default function ChatCenter() {
                     <div className="flex items-center gap-2">
                       <p className="font-semibold text-surface-900 truncate">{thread.fullName}</p>
                       {thread.unreadCount > 0 && (
-                        <span className="bg-primary-600 text-white font-bold text-[9px] w-4.5 h-4.5 rounded-full flex items-center justify-center shrink-0">
+                        <span className="bg-primary-600 text-white font-bold text-xs w-5 h-5 rounded-full flex items-center justify-center shrink-0">
                           {thread.unreadCount}
                         </span>
                       )}
                     </div>
-                    <p className="text-[10px] text-surface-400 truncate mt-0.5">{thread.email}</p>
+                    <p className="text-xs text-surface-500 truncate mt-0.5">{thread.email}</p>
                     {thread.lastMessage && (
                       <p className="text-xs text-surface-600 mt-2 truncate font-medium">
                         {thread.lastMessage}
@@ -198,7 +198,7 @@ export default function ChatCenter() {
                     )}
                   </div>
                   {thread.lastMessageTime && (
-                    <span className="text-[9px] text-surface-400 whitespace-nowrap">
+                    <span className="text-xs text-surface-500 whitespace-nowrap">
                       {new Date(thread.lastMessageTime).toLocaleDateString(undefined, {
                         month: 'short',
                         day: 'numeric',
@@ -222,7 +222,7 @@ export default function ChatCenter() {
                 </div>
                 <div>
                   <h3 className="font-bold text-surface-900 text-sm">{selectedThread.fullName}</h3>
-                  <p className="text-[10px] text-surface-400">{selectedThread.email}</p>
+                  <p className="text-xs text-surface-500">{selectedThread.email}</p>
                 </div>
               </div>
 
@@ -250,8 +250,8 @@ export default function ChatCenter() {
                         >
                           <p>{msg.body}</p>
                           <p
-                            className={`text-[9px] mt-1 text-right block ${
-                              isSelf ? 'text-primary-100' : 'text-surface-400'
+                            className={`text-xs mt-1 text-right block ${
+                              isSelf ? 'text-primary-100' : 'text-surface-500'
                             }`}
                           >
                             {new Date(msg.createdAt).toLocaleTimeString(undefined, {
@@ -272,7 +272,7 @@ export default function ChatCenter() {
                 <input
                   type="text"
                   placeholder={`Send a secure coordination update to ${selectedThread.fullName}...`}
-                  className="flex-1 p-2.5 rounded border border-surface-300 font-medium text-surface-800 focus:outline-none focus:border-primary-500 text-xs"
+                  className="flex-1 px-4 py-2.5 rounded-xl border border-surface-200 font-medium text-surface-800 focus:outline-none focus:border-primary-600 text-xs"
                   value={inputText}
                   onChange={(e) => setInputText(e.target.value)}
                   disabled={sending}

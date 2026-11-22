@@ -78,7 +78,7 @@ export function ConfirmDialog({
     <div className="fixed inset-0 z-[9998] flex items-center justify-center p-4 bg-surface-900/40 backdrop-blur-xs">
       <div
         ref={dialogRef}
-        className="bg-white rounded-lg shadow-xl w-full max-w-sm animate-scale-up"
+        className="bg-white rounded-2xl shadow-2xl border border-surface-200 w-full max-w-sm animate-scale-up"
         role="dialog"
         aria-modal="true"
         aria-labelledby="confirm-dialog-title"

@@ -199,7 +199,7 @@ export default function PatientAccommodationsPage() {
             {myBookings.map((b) => (
               <Card key={b.id} className="p-5 rounded-3xl border border-emerald-200 bg-gradient-to-r from-emerald-50/50 via-white to-white shadow-xs space-y-3">
                 <div className="flex items-center justify-between">
-                  <span className="px-2 py-0.5 bg-emerald-600 text-white rounded-md text-[10px] font-black uppercase tracking-widest">
+                  <span className="px-2 py-0.5 bg-emerald-600 text-white rounded-md text-xs font-bold uppercase tracking-wider">
                     Voucher: {b.bookingNo}
                   </span>
                   <span className="text-xs font-extrabold text-emerald-800 bg-emerald-100 px-2.5 py-0.5 rounded-full border border-emerald-200">
@@ -216,13 +216,13 @@ export default function PatientAccommodationsPage() {
 
                 <div className="grid grid-cols-2 gap-2 text-xs pt-1 border-t border-surface-100">
                   <div>
-                    <span className="text-[10px] font-bold text-surface-400 block">Check-In / Out</span>
+                    <span className="text-xs font-bold text-surface-500 block">Check-In / Out</span>
                     <span className="font-extrabold text-surface-800">
                       {new Date(b.checkInDate).toLocaleDateString()} - {new Date(b.checkOutDate).toLocaleDateString()}
                     </span>
                   </div>
                   <div>
-                    <span className="text-[10px] font-bold text-surface-400 block">Total Stay Price</span>
+                    <span className="text-xs font-bold text-surface-500 block">Total Stay Price</span>
                     <span className="font-black text-emerald-800">${Number(b.totalAmountUsd).toFixed(2)} USD</span>
                   </div>
                 </div>
@@ -271,7 +271,7 @@ export default function PatientAccommodationsPage() {
                     {/* Medical Amenities Pills */}
                     <div className="flex items-center gap-1.5 flex-wrap pt-1">
                       {amenityList.map((amenity, idx) => (
-                        <span key={idx} className="px-2 py-0.5 bg-primary-50 text-primary-800 rounded-md text-[10px] font-extrabold border border-primary-100">
+                        <span key={idx} className="px-2 py-0.5 bg-primary-50 text-primary-800 rounded-md text-xs font-semibold border border-primary-100">
                           {amenity}
                         </span>
                       ))}
@@ -282,7 +282,7 @@ export default function PatientAccommodationsPage() {
                 {/* Footer Pricing & Reserve Button */}
                 <div className="p-5 pt-0 border-t border-surface-100 mt-3 flex items-center justify-between">
                   <div>
-                    <span className="text-[10px] font-bold text-surface-400 uppercase tracking-wider block">Nightly Rate</span>
+                    <span className="text-xs font-bold text-surface-500 uppercase tracking-wider block">Nightly Rate</span>
                     <span className="text-lg font-black text-surface-900">${Number(hotel.nightlyRateUsd)} <span className="text-xs text-surface-500 font-semibold">/ night</span></span>
                   </div>
 
@@ -305,7 +305,7 @@ export default function PatientAccommodationsPage() {
           <div className="bg-white rounded-3xl max-w-xl w-full p-6 space-y-6 shadow-2xl border border-surface-200 max-h-[90vh] overflow-y-auto animate-scale-up">
             <div className="flex items-center justify-between border-b border-surface-100 pb-4">
               <div>
-                <span className="text-[10px] font-black uppercase text-primary-700 tracking-wider">Hotel Reservation</span>
+                <span className="text-xs font-bold uppercase text-primary-700 tracking-wider">Hotel Reservation</span>
                 <h3 className="text-lg font-extrabold text-surface-900 mt-0.5">{selectedHotel.name}</h3>
               </div>
               <button
@@ -381,7 +381,7 @@ export default function PatientAccommodationsPage() {
               {/* Calculated Price Summary */}
               <div className="p-4 bg-emerald-50 rounded-2xl border border-emerald-200 flex items-center justify-between">
                 <div>
-                  <span className="text-[10px] font-black uppercase text-emerald-800 tracking-wider block">Estimated Total Stay Cost</span>
+                  <span className="text-xs font-bold uppercase text-emerald-800 tracking-wider block">Estimated Total Stay Cost</span>
                   <span className="text-xl font-black text-emerald-900">${calculateStayPrice().toFixed(2)} USD</span>
                 </div>
 

@@ -178,7 +178,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
         <nav className="flex-1 px-4 py-6 overflow-y-auto space-y-7">
           {menuSections.map((section) => (
             <div key={section.label}>
-              <h3 className="px-3 text-[11px] font-bold uppercase tracking-wider text-surface-400 mb-2.5">
+              <h3 className="px-3 text-xs font-bold uppercase tracking-wider text-surface-500 mb-2.5">
                 {section.label}
               </h3>
               <ul className="space-y-1">
@@ -199,7 +199,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
                         <Icon className={`w-5 h-5 ${isActive ? 'text-primary-600' : 'text-surface-400'}`} />
                         <span className="flex-1">{item.label}</span>
                         {'badge' in item && item.badge && (
-                          <span className="px-2 py-0.5 rounded-full bg-danger-500 text-white text-[10px] font-bold">
+                          <span className="px-2 py-0.5 rounded-full bg-danger-500 text-white text-xs font-bold">
                             {item.badge}
                           </span>
                         )}
@@ -220,7 +220,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
             </div>
             <div className="flex-1 min-w-0 overflow-hidden">
               <p className="text-sm font-bold text-surface-900 truncate" title={userName}>{userName}</p>
-              <p className="text-[11px] text-surface-500 truncate" title={userEmail}>{userEmail}</p>
+              <p className="text-xs text-surface-500 truncate" title={userEmail}>{userEmail}</p>
             </div>
           </div>
           <Button variant="ghost" className="w-full mt-3 justify-center text-danger-600 hover:bg-danger-50 hover:text-danger-700 font-bold text-sm" onClick={handleLogout}>

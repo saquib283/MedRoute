@@ -182,7 +182,7 @@ export default function LoginPage() {
 
           {/* Quick Demo Credentials Selector */}
           <div className="space-y-1.5 bg-surface-50 p-3 rounded-2xl border border-surface-200">
-            <span className="text-[10px] font-extrabold uppercase tracking-wider text-surface-400 block px-1 flex items-center gap-1">
+            <span className="text-xs font-bold uppercase tracking-wider text-surface-500 block px-1 flex items-center gap-1">
               <Zap className="w-3 h-3 text-amber-500" /> Quick Fill Test Roles:
             </span>
             <div className="grid grid-cols-2 gap-1.5">
@@ -257,7 +257,7 @@ export default function LoginPage() {
                   type="checkbox"
                   checked={rememberMe}
                   onChange={(e) => setRememberMe(e.target.checked)}
-                  className="w-4 h-4 rounded border-surface-300 bg-white text-primary-600 focus:ring-primary-500 focus:ring-offset-0"
+                  className="w-4 h-4 rounded-md border-surface-300 bg-white text-primary-600 focus:ring-primary-500 focus:ring-offset-0"
                 />
                 <span>Keep session active</span>
               </label>
@@ -349,7 +349,7 @@ export default function LoginPage() {
           {isFetchingSecret ? (
             <div className="flex flex-col items-center justify-center py-6 gap-2">
               <div className="w-6 h-6 border-2 border-primary-600 border-t-transparent rounded-full animate-spin" />
-              <p className="text-[10px] text-surface-500 font-medium">Generating secure 2FA secret...</p>
+              <p className="text-xs text-surface-500 font-medium">Generating secure 2FA secret...</p>
             </div>
           ) : (
             <form onSubmit={handle2FAVerify} className="space-y-4 text-left">

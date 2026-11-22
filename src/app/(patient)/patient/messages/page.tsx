@@ -184,7 +184,7 @@ export default function SecureMessagesPage() {
                   {manager ? manager.fullName : 'Awaiting Case Coordinator'}
                 </h2>
                 {manager && (
-                  <span className="px-2 py-0.5 bg-primary-50 text-primary-700 text-[10px] font-bold rounded-md border border-primary-100">
+                  <span className="px-2.5 py-0.5 bg-primary-50 text-primary-700 text-xs font-bold rounded-md border border-primary-200">
                     Assigned
                   </span>
                 )}
@@ -224,7 +224,7 @@ export default function SecureMessagesPage() {
           {groupedMessages.map((group) => (
             <div key={group.date} className="space-y-4">
               <div className="flex items-center justify-center my-2">
-                <span className="px-3 py-1 bg-white border border-surface-200 text-surface-500 rounded-full text-[10px] font-bold shadow-2xs">
+                <span className="px-3 py-1 bg-white border border-surface-200 text-surface-500 rounded-full text-xs font-semibold shadow-2xs">
                   {group.date}
                 </span>
               </div>
@@ -237,7 +237,7 @@ export default function SecureMessagesPage() {
                     className={`flex items-end gap-2 ${isMe ? 'justify-end' : 'justify-start'}`}
                   >
                     {!isMe && (
-                      <div className="w-7 h-7 rounded-xl bg-primary-100 text-primary-800 font-bold text-[10px] flex items-center justify-center shrink-0 mb-1 border border-primary-200">
+                      <div className="w-7 h-7 rounded-xl bg-primary-100 text-primary-800 font-bold text-xs flex items-center justify-center shrink-0 mb-1 border border-primary-200">
                         {manager ? manager.fullName.charAt(0) : 'C'}
                       </div>
                     )}
@@ -256,8 +256,8 @@ export default function SecureMessagesPage() {
 
                       <div
                         className={`
-                          flex items-center justify-end gap-1 text-[9px] mt-2 font-medium
-                          ${isMe ? 'text-primary-100' : 'text-surface-400'}
+                          flex items-center justify-end gap-1 text-xs mt-2 font-medium
+                          ${isMe ? 'text-primary-100' : 'text-surface-500'}
                         `}
                       >
                         <span>
@@ -291,7 +291,7 @@ export default function SecureMessagesPage() {
         {/* Footer Prompt Chips & Input */}
         <div className="p-4 border-t border-surface-100 bg-white shrink-0 space-y-3">
           <div className="flex items-center gap-2 overflow-x-auto pb-1 scrollbar-none">
-            <span className="text-[10px] font-bold uppercase tracking-wider text-surface-400 shrink-0">Quick Prompts:</span>
+            <span className="text-xs font-bold uppercase tracking-wider text-surface-600 shrink-0">Quick Prompts:</span>
             {QUICK_PROMPTS.map((item) => {
               const IconComponent = item.icon;
               return (

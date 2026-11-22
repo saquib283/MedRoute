@@ -38,12 +38,12 @@ function AuditLogDiff({ oldVal, newVal }: { oldVal: any; newVal: any }) {
     return (
       <div className="text-xs space-y-1">
         {oldVal !== undefined && oldVal !== null && (
-          <div className="text-danger-700 bg-danger-50 px-2.5 py-1 rounded border border-danger-100 line-through">
+          <div className="text-danger-700 bg-danger-50 px-2.5 py-1 rounded-lg border border-danger-100 line-through">
             - {String(oldVal)}
           </div>
         )}
         {newVal !== undefined && newVal !== null && (
-          <div className="text-success-700 bg-success-50 px-2.5 py-1 rounded border border-success-100 font-semibold">
+          <div className="text-success-700 bg-success-50 px-2.5 py-1 rounded-lg border border-success-100 font-semibold">
             + {String(newVal)}
           </div>
         )}
@@ -71,7 +71,7 @@ function AuditLogDiff({ oldVal, newVal }: { oldVal: any; newVal: any }) {
 
   return (
     <div className="border border-surface-200 rounded-lg overflow-hidden text-xs bg-surface-50 divide-y divide-surface-200 w-full">
-      <div className="px-3 py-1.5 bg-surface-100 font-bold text-surface-500 uppercase tracking-wider text-[10px] grid grid-cols-3 gap-4">
+      <div className="px-3 py-1.5 bg-surface-100 font-bold text-surface-600 uppercase tracking-wider text-xs grid grid-cols-3 gap-4">
         <span>Field</span>
         <span>Before</span>
         <span>After</span>
@@ -83,7 +83,7 @@ function AuditLogDiff({ oldVal, newVal }: { oldVal: any; newVal: any }) {
             <span className="font-mono font-bold text-surface-700">{c.key}</span>
             <div className="min-w-0 break-all">
               {c.oldValue !== undefined ? (
-                <span className="px-1.5 py-0.5 rounded bg-danger-50 text-danger-700 border border-danger-100 line-through font-mono">
+                <span className="px-1.5 py-0.5 rounded-md bg-danger-50 text-danger-700 border border-danger-100 line-through font-mono">
                   {typeof c.oldValue === 'object' ? JSON.stringify(c.oldValue) : String(c.oldValue)}
                 </span>
               ) : (
@@ -92,7 +92,7 @@ function AuditLogDiff({ oldVal, newVal }: { oldVal: any; newVal: any }) {
             </div>
             <div className="min-w-0 break-all">
               {c.newValue !== undefined ? (
-                <span className="px-1.5 py-0.5 rounded bg-success-50 text-success-700 border border-success-100 font-bold font-mono">
+                <span className="px-1.5 py-0.5 rounded-md bg-success-50 text-success-700 border border-success-100 font-bold font-mono">
                   {typeof c.newValue === 'object' ? JSON.stringify(c.newValue) : String(c.newValue)}
                 </span>
               ) : (
@@ -239,20 +239,20 @@ export default function AdminAuditLogsPage() {
                     <div className="flex-1 min-w-0">
                       <p className="text-sm text-surface-800">
                         <span className="font-semibold">{log.actor.fullName}</span>{' '}
-                        <Badge variant="default" className="text-[9px] mx-1">{log.action}</Badge>{' '}
+                        <Badge variant="default" className="text-xs mx-1">{log.action}</Badge>{' '}
                         <span className="font-medium">{log.entityType}</span>{' '}
-                        <span className="text-surface-400 text-xs">({log.entityId.substring(0, 8)}…)</span>
+                        <span className="text-surface-500 text-xs">({log.entityId.substring(0, 8)}…)</span>
                       </p>
-                      <p className="text-[11px] text-surface-400 mt-0.5">
+                      <p className="text-xs text-surface-500 mt-0.5">
                         {new Date(log.createdAt).toLocaleString()} {log.ipAddress && `• IP: ${log.ipAddress}`}
                       </p>
                     </div>
-                    <Badge variant="default" className="text-[10px]">{log.actor.role}</Badge>
+                    <Badge variant="default" className="text-xs">{log.actor.role}</Badge>
                     <svg className={`w-4 h-4 text-surface-400 transition-transform ${expandedId === log.id ? 'rotate-180' : ''}`} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" /></svg>
                   </button>
                   {expandedId === log.id && (
                     <div className="px-6 pb-5">
-                      <p className="text-[10px] font-bold text-surface-400 uppercase mb-2">Change Details</p>
+                      <p className="text-xs font-bold text-surface-500 uppercase mb-2">Change Details</p>
                       <AuditLogDiff oldVal={log.oldValue} newVal={log.newValue} />
                     </div>
                   )}

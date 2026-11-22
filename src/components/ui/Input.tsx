@@ -1,4 +1,4 @@
-﻿/**
+/**
  * Afzal Healthcare — Input Component
  * Accessible form input with label, error state, and icons.
  * Clinical design system — light-mode, white background, subtle borders.
@@ -42,13 +42,13 @@ export const Input = React.forwardRef<HTMLInputElement, InputProps>(
             className={`
               w-full min-h-[44px] px-4 py-2.5
               ${icon ? 'pl-11' : ''}
-              bg-white border rounded-lg
-              text-surface-900 placeholder:text-surface-400
+              bg-white border rounded-xl
+              text-surface-900 placeholder:text-surface-500
               transition-colors duration-150
               focus:outline-none focus:border-primary-600
               ${error
                 ? 'border-danger-500 focus:border-danger-600'
-                : 'border-surface-300 hover:border-surface-400'
+                : 'border-surface-200 hover:border-surface-300 focus:border-primary-600'
               }
               ${className}
             `}
@@ -88,7 +88,7 @@ export const Input = React.forwardRef<HTMLInputElement, InputProps>(
         {helperText && !error && (
           <p
             id={`${inputId}-helper`}
-            className="text-xs text-surface-500"
+            className="text-xs text-surface-600 font-medium"
           >
             {helperText}
           </p>

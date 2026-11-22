@@ -313,7 +313,7 @@ export default function DocumentVaultPage() {
               <span className="absolute text-[11px] font-black text-white">{readinessMetrics.percent}%</span>
             </div>
             <div>
-              <p className="text-[10px] uppercase font-bold text-primary-300 tracking-wider">Travel Verification</p>
+              <p className="text-xs uppercase font-bold text-primary-300 tracking-wider">Travel Verification</p>
               <p className="text-sm font-extrabold text-white">
                 {readinessMetrics.count} of {readinessMetrics.total} Verified
               </p>
@@ -345,7 +345,7 @@ export default function DocumentVaultPage() {
                 }`}
               >
                 <div className="flex items-start justify-between gap-2">
-                  <span className="text-[10px] font-extrabold uppercase tracking-wider text-surface-400">{doc.role}</span>
+                  <span className="text-xs font-bold uppercase tracking-wider text-surface-500">{doc.role}</span>
                   {isVerified ? (
                     <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
                   ) : (
@@ -357,7 +357,7 @@ export default function DocumentVaultPage() {
                   <h4 className="text-xs font-extrabold text-surface-900 leading-tight">
                     {DOCUMENT_CATEGORY_LABELS[doc.key] || doc.label}
                   </h4>
-                  <p className="text-[10px] text-surface-500 mt-0.5">
+                  <p className="text-xs text-surface-500 mt-0.5">
                     {isVerified ? 'Document Verified' : 'Action Required'}
                   </p>
                 </div>
@@ -562,13 +562,13 @@ export default function DocumentVaultPage() {
                   </div>
 
                   <div>
-                    <span className="text-[10px] font-bold uppercase tracking-wider text-surface-400">
+                    <span className="text-xs font-bold uppercase tracking-wider text-surface-500">
                       {DOCUMENT_CATEGORY_LABELS[doc.category] || doc.category}
                     </span>
                     <h4 className="text-sm font-extrabold text-surface-900 truncate mt-0.5" title={doc.fileName}>
                       {doc.fileName}
                     </h4>
-                    <p className="text-[11px] text-surface-400 mt-1">
+                    <p className="text-xs text-surface-500 mt-1">
                       {formatFileSize(doc.fileSize)} • {new Date(doc.createdAt).toLocaleDateString()}
                     </p>
                   </div>

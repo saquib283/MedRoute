@@ -410,9 +410,9 @@ export default function ManagerBillingPage() {
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         <Card className="p-5 rounded-2xl border border-surface-200 shadow-xs flex items-center justify-between">
           <div>
-            <p className="text-[10px] uppercase font-extrabold tracking-wider text-surface-400">Total Invoiced</p>
+            <p className="text-xs uppercase font-bold tracking-wider text-surface-500">Total Invoiced</p>
             <h3 className="text-2xl font-extrabold text-surface-900 mt-1">${metrics.totalRev.toLocaleString('en-US', { minimumFractionDigits: 2 })}</h3>
-            <p className="text-[11px] font-semibold text-surface-500 mt-0.5">Across active patient cases</p>
+            <p className="text-xs font-medium text-surface-500 mt-0.5">Across active patient cases</p>
           </div>
           <div className="w-12 h-12 rounded-2xl bg-primary-50 text-primary-600 border border-primary-100 flex items-center justify-center font-bold text-xl shrink-0">
             <DollarSign className="w-6 h-6" />
@@ -421,9 +421,9 @@ export default function ManagerBillingPage() {
 
         <Card className="p-5 rounded-2xl border border-surface-200 shadow-xs flex items-center justify-between">
           <div>
-            <p className="text-[10px] uppercase font-extrabold tracking-wider text-surface-400">Paid Amount</p>
+            <p className="text-xs uppercase font-bold tracking-wider text-surface-500">Paid Amount</p>
             <h3 className="text-2xl font-extrabold text-emerald-600 mt-1">${metrics.paidRev.toLocaleString('en-US', { minimumFractionDigits: 2 })}</h3>
-            <p className="text-[11px] font-semibold text-surface-500 mt-0.5">Settled by patients</p>
+            <p className="text-xs font-medium text-surface-500 mt-0.5">Settled by patients</p>
           </div>
           <div className="w-12 h-12 rounded-2xl bg-emerald-50 text-emerald-600 border border-emerald-100 flex items-center justify-center font-bold text-xl shrink-0">
             <CreditCard className="w-6 h-6" />
@@ -432,9 +432,9 @@ export default function ManagerBillingPage() {
 
         <Card className="p-5 rounded-2xl border border-surface-200 shadow-xs flex items-center justify-between">
           <div>
-            <p className="text-[10px] uppercase font-extrabold tracking-wider text-surface-400">Pending Invoices</p>
+            <p className="text-xs uppercase font-bold tracking-wider text-surface-500">Pending Invoices</p>
             <h3 className="text-2xl font-extrabold text-amber-600 mt-1">{metrics.pendingCount}</h3>
-            <p className="text-[11px] font-semibold text-surface-500 mt-0.5">Awaiting payment settlement</p>
+            <p className="text-xs font-medium text-surface-500 mt-0.5">Awaiting payment settlement</p>
           </div>
           <div className="w-12 h-12 rounded-2xl bg-amber-50 text-amber-600 border border-amber-100 flex items-center justify-center font-bold text-xl shrink-0">
             <Clock className="w-6 h-6" />
@@ -443,9 +443,9 @@ export default function ManagerBillingPage() {
 
         <Card className="p-5 rounded-2xl border border-surface-200 shadow-xs flex items-center justify-between">
           <div>
-            <p className="text-[10px] uppercase font-extrabold tracking-wider text-surface-400">Partially Paid</p>
+            <p className="text-xs uppercase font-bold tracking-wider text-surface-500">Partially Paid</p>
             <h3 className="text-2xl font-extrabold text-sky-600 mt-1">{metrics.partialCount}</h3>
-            <p className="text-[11px] font-semibold text-surface-500 mt-0.5">Deposit received</p>
+            <p className="text-xs font-medium text-surface-500 mt-0.5">Deposit received</p>
           </div>
           <div className="w-12 h-12 rounded-2xl bg-sky-50 text-sky-600 border border-sky-100 flex items-center justify-center font-bold text-xl shrink-0">
             <Percent className="w-6 h-6" />
@@ -517,25 +517,25 @@ export default function ManagerBillingPage() {
                 {filteredBills.map((bill) => (
                   <tr key={bill.id} className="hover:bg-surface-50/60 transition-colors">
                     <td className="p-4">
-                      <span className="text-[10px] font-black text-primary-700 uppercase tracking-widest block">
+                      <span className="text-xs font-bold text-primary-700 uppercase tracking-wider block">
                         {bill.billNumber}
                       </span>
                       <h4 className="text-xs font-extrabold text-surface-900 mt-0.5" title={bill.title}>
                         {bill.title}
                       </h4>
-                      <p className="text-[10px] text-surface-400 mt-0.5">
+                      <p className="text-xs text-surface-500 mt-0.5">
                         Issued: {new Date(bill.createdAt).toLocaleDateString()}
                       </p>
                     </td>
 
                     <td className="p-4">
                       <div className="flex items-center gap-2">
-                        <div className="w-7 h-7 rounded-full bg-primary-100 text-primary-800 font-bold flex items-center justify-center text-[10px]">
+                        <div className="w-7 h-7 rounded-full bg-primary-100 text-primary-800 font-bold flex items-center justify-center text-xs">
                           {bill.patient?.user?.fullName?.charAt(0) || 'P'}
                         </div>
                         <div>
                           <p className="font-extrabold text-surface-900">{bill.patient?.user?.fullName}</p>
-                          <p className="text-[10px] text-surface-400">{bill.patient?.user?.email}</p>
+                          <p className="text-xs text-surface-500">{bill.patient?.user?.email}</p>
                         </div>
                       </div>
                     </td>
@@ -544,7 +544,7 @@ export default function ManagerBillingPage() {
                       <button
                         type="button"
                         onClick={() => setSelectedBillForDetails(bill)}
-                        className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-surface-100 hover:bg-surface-200 text-surface-800 rounded-lg text-[11px] font-bold border border-surface-200 transition-colors"
+                        className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-surface-100 hover:bg-surface-200 text-surface-800 rounded-lg text-xs font-bold border border-surface-200 transition-colors"
                       >
                         <Layers className="w-3.5 h-3.5 text-primary-600" />
                         <span>{bill.items?.length || 0} Sub-Items</span>
@@ -553,14 +553,14 @@ export default function ManagerBillingPage() {
 
                     <td className="p-4 font-black text-surface-900 text-sm">
                       ${Number(bill.totalAmount).toLocaleString('en-US', { minimumFractionDigits: 2 })}
-                      <span className="text-[10px] font-normal text-surface-400 block">{bill.currency}</span>
+                      <span className="text-xs font-normal text-surface-500 block">{bill.currency}</span>
                     </td>
 
                     <td className="p-4">
                       <p className="font-extrabold text-emerald-600">
                         ${Number(bill.paidAmount).toLocaleString('en-US', { minimumFractionDigits: 2 })}
                       </p>
-                      <p className="text-[10px] text-surface-400">
+                      <p className="text-xs text-surface-500">
                         Due: ${Math.max(0, Number(bill.totalAmount) - Number(bill.paidAmount)).toLocaleString('en-US', { minimumFractionDigits: 2 })}
                       </p>
                     </td>
@@ -603,7 +603,7 @@ export default function ManagerBillingPage() {
           <div className="bg-white rounded-3xl max-w-2xl w-full p-6 space-y-6 shadow-2xl border border-surface-200 animate-scale-in max-h-[90vh] overflow-y-auto">
             <div className="flex items-start justify-between border-b border-surface-100 pb-4">
               <div>
-                <span className="text-[10px] font-extrabold uppercase tracking-widest text-primary-600">
+                <span className="text-xs font-bold uppercase tracking-wider text-primary-600">
                   {selectedBillForDetails.billNumber}
                 </span>
                 <h3 className="text-lg font-extrabold text-surface-900 mt-0.5">
@@ -644,7 +644,7 @@ export default function ManagerBillingPage() {
                       <tr key={idx} className="hover:bg-surface-50">
                         <td className="p-3 font-extrabold text-surface-900">{item.description}</td>
                         <td className="p-3 text-center">
-                          <span className="px-2 py-0.5 bg-surface-100 text-surface-700 rounded-md text-[10px] font-bold">
+                          <span className="px-2 py-0.5 bg-surface-100 text-surface-700 rounded-md text-xs font-semibold">
                             {item.category || 'GENERAL'}
                           </span>
                         </td>
@@ -656,7 +656,7 @@ export default function ManagerBillingPage() {
                   </tbody>
                   <tfoot className="bg-surface-50/80 font-extrabold border-t border-surface-200">
                     <tr>
-                      <td colSpan={4} className="p-3 text-right uppercase text-surface-500 text-[10px]">Net Invoice Total:</td>
+                      <td colSpan={4} className="p-3 text-right uppercase text-surface-500 text-xs">Net Invoice Total:</td>
                       <td className="p-3 text-right text-sm text-primary-700 font-black">
                         ${Number(selectedBillForDetails.totalAmount).toFixed(2)} USD
                       </td>
@@ -728,9 +728,9 @@ export default function ManagerBillingPage() {
                     <div>
                       <h4 className="text-xs font-black tracking-wide text-white uppercase flex items-center gap-1.5">
                         Smart OCR Bill Auto-Scanner
-                        <span className="bg-emerald-500/20 text-emerald-300 text-[9px] font-bold px-2 py-0.5 rounded-full border border-emerald-400/30">AI Instant Extract</span>
+                        <span className="bg-emerald-500/20 text-emerald-300 text-xs font-bold px-2 py-0.5 rounded-full border border-emerald-400/30">AI Instant Extract</span>
                       </h4>
-                      <p className="text-[11px] text-slate-300">Upload a hospital bill scan or PDF to auto-extract itemized breakdowns instantly.</p>
+                      <p className="text-xs text-slate-300">Upload a hospital bill scan or PDF to auto-extract itemized breakdowns instantly.</p>
                     </div>
                   </div>
                 </div>
@@ -768,12 +768,12 @@ export default function ManagerBillingPage() {
                         <FileCheck2 className="w-4 h-4 text-emerald-400 shrink-0" />
                         <div>
                           <p className="font-bold text-white">Multi-Page OCR Stitched ({ocrSuccessData.confidence}% Accuracy)</p>
-                          <p className="text-[11px] text-emerald-200">
+                          <p className="text-xs text-emerald-200">
                             {ocrSuccessData.itemCount} sub-items extracted across {ocrSuccessData.pageCount} pages ({ocrSuccessData.hospitalName || 'hospital bill'}).
                           </p>
                         </div>
                       </div>
-                      <span className="text-[10px] font-black uppercase bg-emerald-400 text-slate-950 px-2 py-0.5 rounded-md shrink-0">Stitched</span>
+                      <span className="text-xs font-bold uppercase bg-emerald-400 text-slate-950 px-2 py-0.5 rounded-md shrink-0">Stitched</span>
                     </div>
 
                     {/* Page-by-Page Audit Tray */}
@@ -782,7 +782,7 @@ export default function ManagerBillingPage() {
                         {ocrSuccessData.pages.map((p) => (
                           <span
                             key={p.pageNumber}
-                            className="bg-white/10 text-emerald-200 text-[10px] font-extrabold px-2.5 py-1 rounded-lg border border-white/10 flex items-center gap-1"
+                            className="bg-white/10 text-emerald-200 text-xs font-semibold px-2.5 py-1 rounded-lg border border-white/10 flex items-center gap-1"
                           >
                             <span>Page {p.pageNumber}:</span>
                             <span className="text-white">{p.itemsFound} items</span>

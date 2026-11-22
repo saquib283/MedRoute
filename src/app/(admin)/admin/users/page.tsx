@@ -531,7 +531,7 @@ export default function AdminUsersPage() {
                         <div className="text-xs">
                           <p className="font-bold text-surface-900">Case #{c.id.substring(0, 8)}</p>
                           <p className="text-surface-600 font-medium mt-0.5">Patient: {c.patient?.user?.fullName || 'Unknown'}</p>
-                          <p className="text-[10px] text-surface-400 mt-0.5">Status: {c.status} • Urgency: {c.urgencyLevel || 'ROUTINE'}</p>
+                          <p className="text-xs text-surface-500 mt-0.5">Status: {c.status} • Urgency: {c.urgencyLevel || 'ROUTINE'}</p>
                         </div>
                       </label>
                     );
@@ -554,7 +554,7 @@ export default function AdminUsersPage() {
       {/* Create/Edit Modal */}
       {showModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-surface-900/40 backdrop-blur-xs">
-          <div className="bg-white rounded-lg shadow-xl w-full max-w-md animate-scale-up">
+          <div className="bg-white rounded-2xl shadow-2xl border border-surface-200 w-full max-w-md animate-scale-up">
             <div className="px-6 py-4 border-b border-surface-100 flex items-center justify-between">
               <h3 className="text-sm font-bold text-surface-900">{editingUser ? 'Edit User' : 'Create New User'}</h3>
               <button
@@ -570,16 +570,16 @@ export default function AdminUsersPage() {
             <form onSubmit={handleSave} className="p-6 space-y-4">
               <div className="space-y-1.5">
                 <label className="block text-xs font-semibold text-surface-700">Full Name</label>
-                <input type="text" required value={formData.fullName} onChange={(e) => setFormData({ ...formData, fullName: e.target.value })} className="w-full p-2.5 border border-surface-300 rounded text-sm focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500" />
+                <input type="text" required value={formData.fullName} onChange={(e) => setFormData({ ...formData, fullName: e.target.value })} className="w-full p-2.5 border border-surface-200 rounded-xl text-sm focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500" />
               </div>
               <div className="space-y-1.5">
                 <label className="block text-xs font-semibold text-surface-700">Email</label>
-                <input type="email" required value={formData.email} onChange={(e) => setFormData({ ...formData, email: e.target.value })} className="w-full p-2.5 border border-surface-300 rounded text-sm focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500" />
+                <input type="email" required value={formData.email} onChange={(e) => setFormData({ ...formData, email: e.target.value })} className="w-full p-2.5 border border-surface-200 rounded-xl text-sm focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500" />
               </div>
               {!editingUser && (
                 <div className="space-y-1.5">
                   <label className="block text-xs font-semibold text-surface-700">Password</label>
-                  <input type="password" required value={formData.password} onChange={(e) => setFormData({ ...formData, password: e.target.value })} className="w-full p-2.5 border border-surface-300 rounded text-sm focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500" placeholder="Min 8 characters" />
+                  <input type="password" required value={formData.password} onChange={(e) => setFormData({ ...formData, password: e.target.value })} className="w-full p-2.5 border border-surface-200 rounded-xl text-sm focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500" placeholder="Min 8 characters" />
                 </div>
               )}
               <div className="grid grid-cols-2 gap-4">
@@ -593,7 +593,7 @@ export default function AdminUsersPage() {
                 />
                 <div className="space-y-1.5">
                   <label className="block text-xs font-semibold text-surface-700">Phone</label>
-                  <input type="text" value={formData.phone} onChange={(e) => setFormData({ ...formData, phone: e.target.value })} className="w-full p-2.5 border border-surface-300 rounded text-sm focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500" />
+                  <input type="text" value={formData.phone} onChange={(e) => setFormData({ ...formData, phone: e.target.value })} className="w-full p-2.5 border border-surface-200 rounded-xl text-sm focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500" />
                 </div>
               </div>
               {editingUser && (
@@ -626,7 +626,7 @@ export default function AdminUsersPage() {
       {/* Password Reset Result */}
       {resetResult.open && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-surface-900/40 backdrop-blur-xs">
-          <div className="bg-white rounded-lg shadow-xl w-full max-w-sm animate-scale-up p-6 space-y-4">
+          <div className="bg-white rounded-2xl shadow-2xl border border-surface-200 w-full max-w-sm animate-scale-up p-6 space-y-4">
             <div className="w-12 h-12 rounded-full bg-success-100 text-success-600 flex items-center justify-center mx-auto">
               <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                 <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />

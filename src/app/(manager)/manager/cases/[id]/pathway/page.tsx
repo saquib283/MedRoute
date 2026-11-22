@@ -452,7 +452,7 @@ export default function ConfigurablePathwayBuilderPage({
                   {stageIdx + 1}
                 </span>
                 <div className="flex-1">
-                  <label className="text-[10px] font-black uppercase tracking-wider text-surface-400 block mb-1">
+                  <label className="text-xs font-bold uppercase tracking-wider text-surface-600 block mb-1">
                     Stage Name (Editable)
                   </label>
                   <input
@@ -513,7 +513,7 @@ export default function ConfigurablePathwayBuilderPage({
                 <div key={stepIdx} className="p-4 bg-surface-50 rounded-2xl border border-surface-200 space-y-3 relative">
                   <div className="grid grid-cols-1 md:grid-cols-12 gap-3 items-center">
                     <div className="md:col-span-5 space-y-1">
-                      <label className="text-[10px] font-bold text-surface-500 block">Milestone Title</label>
+                      <label className="text-xs font-semibold text-surface-600 block">Milestone Title</label>
                       <input
                         type="text"
                         value={step.title}
@@ -525,7 +525,7 @@ export default function ConfigurablePathwayBuilderPage({
                     </div>
 
                     <div className="md:col-span-3 space-y-1">
-                      <label className="text-[10px] font-bold text-surface-500 block">Category</label>
+                      <label className="text-xs font-semibold text-surface-600 block">Category</label>
                       <select
                         value={step.category}
                         onChange={(e) => updateSubStep(stageIdx, stepIdx, 'category', e.target.value)}
@@ -538,7 +538,7 @@ export default function ConfigurablePathwayBuilderPage({
                     </div>
 
                     <div className="md:col-span-3 space-y-1">
-                      <label className="text-[10px] font-bold text-surface-500 block">Milestone Status</label>
+                      <label className="text-xs font-semibold text-surface-600 block">Milestone Status</label>
                       <select
                         value={step.status}
                         onChange={(e) => updateSubStep(stageIdx, stepIdx, 'status', e.target.value)}
@@ -567,7 +567,7 @@ export default function ConfigurablePathwayBuilderPage({
                   {/* Decision Branch & Action Type */}
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-3 pt-1 border-t border-surface-200/60">
                     <div className="space-y-1">
-                      <label className="text-[10px] font-bold text-surface-500 block">Decision Clearance Tag</label>
+                      <label className="text-xs font-semibold text-surface-600 block">Decision Clearance Tag</label>
                       <select
                         value={step.decisionBranch || ''}
                         onChange={(e) => updateSubStep(stageIdx, stepIdx, 'decisionBranch', e.target.value)}
@@ -580,7 +580,7 @@ export default function ConfigurablePathwayBuilderPage({
                     </div>
 
                     <div className="space-y-1">
-                      <label className="text-[10px] font-bold text-surface-500 block">Interactive Action Button</label>
+                      <label className="text-xs font-semibold text-surface-600 block">Interactive Action Button</label>
                       <select
                         value={step.actionType || ''}
                         onChange={(e) => updateSubStep(stageIdx, stepIdx, 'actionType', e.target.value)}
@@ -593,7 +593,7 @@ export default function ConfigurablePathwayBuilderPage({
                     </div>
 
                     <div className="space-y-1">
-                      <label className="text-[10px] font-bold text-surface-500 block">Doctor's Clinical Notes</label>
+                      <label className="text-xs font-semibold text-surface-600 block">Doctor's Clinical Notes</label>
                       <input
                         type="text"
                         value={step.doctorNotes || ''}
