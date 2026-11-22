@@ -207,22 +207,13 @@ function ToastCard({ t }: { t: ToastItemData }) {
   const removeToast = useToastStore((s) => s.removeToast);
   const config = VARIANT_CONFIG[t.variant];
   const Icon = config.IconComponent;
-  const [progress, setProgress] = useState(100);
 
   useEffect(() => {
-    const startTime = Date.now();
-    const interval = setInterval(() => {
-      const elapsed = Date.now() - startTime;
-      const remainingPercent = Math.max(0, 100 - (elapsed / t.duration) * 100);
-      setProgress(remainingPercent);
-    }, 40);
-
     const timer = setTimeout(() => {
       removeToast(t.id);
     }, t.duration);
 
     return () => {
-      clearInterval(interval);
       clearTimeout(timer);
     };
   }, [t.id, t.duration, removeToast]);
@@ -265,8 +256,10 @@ function ToastCard({ t }: { t: ToastItemData }) {
       {/* Auto-dismiss Animated Progress Bar */}
       <div className="absolute bottom-0 left-0 right-0 h-1 bg-surface-100/60 overflow-hidden">
         <div
-          className={`h-full transition-all duration-75 linear ${config.progressColor}`}
-          style={{ width: `${progress}%` }}
+          className={`h-full ${config.progressColor}`}
+          style={{
+            animation: `shrink-progress ${t.duration}ms linear forwards`,
+          }}
         />
       </div>
     </div>

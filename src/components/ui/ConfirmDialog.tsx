@@ -1,10 +1,11 @@
-﻿'use client';
+'use client';
 
 /**
  * Afzal Healthcare — Confirmation Dialog
  * Reusable modal for destructive actions (delete, deactivate, etc.)
  */
 
+import { useEffect, useRef } from 'react';
 import { Button } from '@/components/ui/Button';
 
 interface ConfirmDialogProps {
@@ -30,6 +31,42 @@ export function ConfirmDialog({
   onConfirm,
   onCancel,
 }: ConfirmDialogProps) {
+  const dialogRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!open) return;
+
+    // Trap focus inside modal
+    const dialogElement = dialogRef.current;
+    const focusableElements = dialogElement?.querySelectorAll<HTMLElement>(
+      'button:not([disabled]), [tabindex]:not([tabindex="-1"])'
+    );
+    const firstElement = focusableElements?.[0];
+    const lastElement = focusableElements?.[focusableElements.length - 1];
+
+    firstElement?.focus();
+
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape' && !loading) {
+        onCancel();
+        return;
+      }
+
+      if (e.key === 'Tab' && focusableElements && focusableElements.length > 0) {
+        if (e.shiftKey && document.activeElement === firstElement) {
+          e.preventDefault();
+          lastElement?.focus();
+        } else if (!e.shiftKey && document.activeElement === lastElement) {
+          e.preventDefault();
+          firstElement?.focus();
+        }
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [open, loading, onCancel]);
+
   if (!open) return null;
 
   const confirmColor =
@@ -39,7 +76,14 @@ export function ConfirmDialog({
 
   return (
     <div className="fixed inset-0 z-[9998] flex items-center justify-center p-4 bg-surface-900/40 backdrop-blur-xs">
-      <div className="bg-white rounded-lg shadow-xl w-full max-w-sm animate-scale-up">
+      <div
+        ref={dialogRef}
+        className="bg-white rounded-lg shadow-xl w-full max-w-sm animate-scale-up"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="confirm-dialog-title"
+        aria-describedby="confirm-dialog-desc"
+      >
         <div className="p-6 space-y-4">
           {/* Icon */}
           <div
@@ -58,8 +102,8 @@ export function ConfirmDialog({
 
           {/* Content */}
           <div className="text-center">
-            <h3 className="text-lg font-bold text-surface-900">{title}</h3>
-            <p className="text-sm text-surface-600 mt-1.5">{message}</p>
+            <h3 id="confirm-dialog-title" className="text-lg font-bold text-surface-900">{title}</h3>
+            <p id="confirm-dialog-desc" className="text-sm text-surface-600 mt-1.5">{message}</p>
           </div>
 
           {/* Actions */}

@@ -136,6 +136,7 @@ export async function DELETE(request: NextRequest) {
     if (!existing) {
       return apiError(ERROR_CODES.NOT_FOUND, 'Override not found', 404);
     }
+    
 
     await prisma.commissionOverride.delete({ where: { id } });
 

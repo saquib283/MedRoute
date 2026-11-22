@@ -1,4 +1,4 @@
-﻿'use client';
+'use client';
 
 /**
  * Afzal Healthcare — Premium Date & Time Picker Component
@@ -57,15 +57,24 @@ export function DatePicker({
     }
   }, [value]);
 
-  // Close popover on click outside
+  // Close popover on click outside or escape
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       if (containerRef.current && !containerRef.current.contains(event.target as Node)) {
         setIsOpen(false);
       }
     };
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        setIsOpen(false);
+      }
+    };
     document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
+    document.addEventListener('keydown', handleKeyDown);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+      document.removeEventListener('keydown', handleKeyDown);
+    };
   }, []);
 
   const MONTH_NAMES = [
@@ -154,6 +163,8 @@ export function DatePicker({
           type="button"
           onClick={() => !disabled && setIsOpen(!isOpen)}
           disabled={disabled}
+          aria-haspopup="dialog"
+          aria-expanded={isOpen}
           className={`
             w-full min-h-[46px] px-3.5 py-2.5 rounded-xl border text-xs font-medium text-left flex items-center justify-between gap-2 transition-all
             ${
@@ -248,9 +259,10 @@ export function DatePicker({
                   <button
                     key={day}
                     type="button"
+                    aria-label={`${MONTH_NAMES[viewMonth]} ${day}, ${viewYear}`}
                     onClick={() => handleDaySelect(day)}
                     className={`
-                      w-8 h-8 rounded-xl text-xs font-semibold flex items-center justify-center transition-all
+                      w-8 h-8 rounded-xl text-xs font-semibold flex items-center justify-center transition-all relative after:absolute after:-inset-1.5 after:content-['']
                       ${
                         isSelected
                           ? 'bg-primary-600 text-white font-bold shadow-2xs'

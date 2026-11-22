@@ -1,6 +1,13 @@
-﻿import type { Metadata } from "next";
+import type { Metadata } from "next";
+import { Plus_Jakarta_Sans } from "next/font/google";
 import "./globals.css";
 import { GlobalProviders } from "@/components/GlobalProviders";
+
+const plusJakartaSans = Plus_Jakarta_Sans({
+  subsets: ["latin"],
+  display: "swap",
+  variable: "--font-sans",
+});
 
 export const metadata: Metadata = {
   title: "Afzal Healthcare — Medical Tourism Platform",
@@ -22,7 +29,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en">
+    <html lang="en" className={plusJakartaSans.variable}>
       <body className="font-sans antialiased">
         <GlobalProviders>{children}</GlobalProviders>
       </body>

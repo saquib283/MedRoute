@@ -88,7 +88,7 @@ export default function AuthLayout({
         <div className="z-10 my-auto max-w-lg space-y-8 animate-slide-up">
           <h1 className="text-4xl xl:text-5xl font-extrabold tracking-tight leading-[1.15] text-white">
             Bridging Borders, <br />
-            <span className="bg-gradient-to-r from-primary-300 via-teal-200 to-emerald-400 bg-clip-text text-transparent">
+            <span className="text-primary-300">
               Simplifying Care.
             </span>
           </h1>

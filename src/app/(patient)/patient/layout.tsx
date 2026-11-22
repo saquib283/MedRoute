@@ -170,8 +170,8 @@ export default function PatientLayout({
                           flex items-center gap-3 px-3 py-2.5 text-xs font-bold rounded-xl transition-all duration-150
                           ${
                             isActive
-                              ? 'bg-primary-50 text-primary-800 border-l-4 border-primary-600 rounded-r-xl rounded-l-none pl-3 shadow-xs'
-                              : 'text-surface-700 hover:bg-surface-100 hover:text-surface-900 border-l-4 border-transparent'
+                              ? 'bg-primary-50 text-primary-800 shadow-xs'
+                              : 'text-surface-700 hover:bg-surface-100 hover:text-surface-900'
                           }
                         `}
                         onClick={() => setIsSidebarOpen(false)}

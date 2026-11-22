@@ -1,4 +1,4 @@
-﻿'use client';
+'use client';
 
 /**
  * Afzal Healthcare — Premium Select Dropdown Component
@@ -57,7 +57,7 @@ export function Select({
       (opt.description && opt.description.toLowerCase().includes(searchTerm.toLowerCase()))
   );
 
-  // Close dropdown on outside click
+  // Close dropdown on outside click or escape
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       if (containerRef.current && !containerRef.current.contains(event.target as Node)) {
@@ -65,8 +65,18 @@ export function Select({
         setSearchTerm('');
       }
     };
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        setIsOpen(false);
+        setSearchTerm('');
+      }
+    };
     document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
+    document.addEventListener('keydown', handleKeyDown);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+      document.removeEventListener('keydown', handleKeyDown);
+    };
   }, []);
 
   const handleSelect = (optionValue: string) => {
@@ -89,6 +99,9 @@ export function Select({
           type="button"
           onClick={() => !disabled && setIsOpen(!isOpen)}
           disabled={disabled}
+          role="combobox"
+          aria-expanded={isOpen}
+          aria-haspopup="listbox"
           className={`
             w-full min-h-[46px] px-3.5 py-2.5 rounded-xl border text-xs font-medium text-left flex items-center justify-between gap-2 transition-all
             ${
@@ -148,7 +161,7 @@ export function Select({
             )}
 
             {/* Options List */}
-            <div className="overflow-y-auto p-1.5 space-y-0.5">
+            <div className="overflow-y-auto p-1.5 space-y-0.5" role="listbox">
               {filteredOptions.length > 0 ? (
                 filteredOptions.map((opt) => {
                   const isSelected = opt.value === value;
@@ -156,6 +169,8 @@ export function Select({
                     <button
                       key={opt.value}
                       type="button"
+                      role="option"
+                      aria-selected={isSelected}
                       onClick={() => handleSelect(opt.value)}
                       className={`
                         w-full px-3 py-2.5 rounded-xl text-xs flex items-center justify-between gap-2 transition-all text-left

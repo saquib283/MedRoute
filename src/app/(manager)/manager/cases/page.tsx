@@ -1,4 +1,4 @@
-﻿'use client';
+'use client';
 
 /**
  * Afzal Healthcare — Manager Case Files Pipeline Board
@@ -180,7 +180,7 @@ export default function CasesPipeline() {
               >
                 <Card
                   className={`bg-white p-5 border transition-all ${
-                    c.isUrgent ? 'border-l-4 border-l-red-500 border-surface-200' : 'border-surface-200/80'
+                    c.isUrgent ? 'border-danger-300 bg-danger-50/20' : 'border-surface-200/80'
                   } hover:shadow-sm`}
                 >
                   <div className="flex justify-between items-start gap-4">

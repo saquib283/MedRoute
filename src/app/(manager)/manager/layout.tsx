@@ -197,8 +197,8 @@ export default function ManagerLayout({
                           flex items-center gap-3 px-3 py-2.5 text-sm font-semibold rounded-md transition-colors duration-150
                           ${
                             isActive
-                              ? 'bg-primary-50 text-primary-700 border-l-2 border-primary-600 rounded-r-md rounded-l-none pl-2'
-                              : 'text-surface-600 hover:bg-surface-200/50 hover:text-surface-900 border-l-2 border-transparent'
+                              ? 'bg-primary-50 text-primary-700'
+                              : 'text-surface-600 hover:bg-surface-200/50 hover:text-surface-900'
                           }
                         `}
                         onClick={() => setIsSidebarOpen(false)}

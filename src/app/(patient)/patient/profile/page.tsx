@@ -33,6 +33,7 @@ import {
   Scissors,
   Plus,
   Trash2,
+  X,
   Lock,
   Globe,
   Smile,
@@ -499,9 +500,10 @@ export default function PatientProfilePage() {
                     <button
                       type="button"
                       onClick={() => removeAllergy(idx)}
-                      className="text-danger-400 hover:text-danger-700 font-bold ml-1"
+                      aria-label={`Remove allergy ${allergy}`}
+                      className="text-danger-400 hover:text-danger-700 ml-1 p-0.5 rounded"
                     >
-                      Ã—
+                      <X className="w-3.5 h-3.5" />
                     </button>
                   </span>
                 ))}
@@ -543,9 +545,10 @@ export default function PatientProfilePage() {
                     <button
                       type="button"
                       onClick={() => removeCondition(idx)}
-                      className="text-warning-400 hover:text-warning-700 font-bold ml-1"
+                      aria-label={`Remove condition ${cond}`}
+                      className="text-warning-400 hover:text-warning-700 ml-1 p-0.5 rounded"
                     >
-                      Ã—
+                      <X className="w-3.5 h-3.5" />
                     </button>
                   </span>
                 ))}

@@ -1,4 +1,4 @@
-﻿'use client';
+'use client';
 
 /**
  * Afzal Healthcare — Admin Advanced Analytics
@@ -112,14 +112,14 @@ export default function AnalyticsPage() {
       {/* Platform Totals - Compact Grid */}
       <div className="grid grid-cols-2 sm:grid-cols-4 xl:grid-cols-8 gap-3">
         {[
-          { label: 'Users', value: p.totalUsers, icon: UsersIcon, color: 'bg-primary-50 text-primary-600' },
-          { label: 'Patients', value: p.totalPatients, icon: PatientIcon, color: 'bg-blue-50 text-blue-600' },
-          { label: 'Hospitals', value: p.totalHospitals, icon: HospitalIcon, color: 'bg-emerald-50 text-emerald-600' },
-          { label: 'Doctors', value: p.totalDoctors, icon: DoctorIcon, color: 'bg-violet-50 text-violet-600' },
-          { label: 'Appointments', value: p.totalAppointments, icon: CalendarIcon, color: 'bg-cyan-50 text-cyan-600' },
-          { label: 'Cases', value: p.totalCases, icon: CasesIcon, color: 'bg-amber-50 text-amber-600' },
-          { label: 'Campaigns', value: p.totalCampaigns, icon: CampaignIcon, color: 'bg-rose-50 text-rose-600' },
-          { label: 'Templates', value: p.totalTemplates, icon: TemplateIcon, color: 'bg-indigo-50 text-indigo-600' },
+          { label: 'Users', value: p.totalUsers, icon: UsersIcon, color: 'bg-primary-50 text-primary-700' },
+          { label: 'Patients', value: p.totalPatients, icon: PatientIcon, color: 'bg-info-50 text-info-700' },
+          { label: 'Hospitals', value: p.totalHospitals, icon: HospitalIcon, color: 'bg-success-50 text-success-700' },
+          { label: 'Doctors', value: p.totalDoctors, icon: DoctorIcon, color: 'bg-primary-50 text-primary-800' },
+          { label: 'Appointments', value: p.totalAppointments, icon: CalendarIcon, color: 'bg-info-50 text-info-800' },
+          { label: 'Cases', value: p.totalCases, icon: CasesIcon, color: 'bg-warning-50 text-warning-700' },
+          { label: 'Campaigns', value: p.totalCampaigns, icon: CampaignIcon, color: 'bg-danger-50 text-danger-700' },
+          { label: 'Templates', value: p.totalTemplates, icon: TemplateIcon, color: 'bg-surface-200 text-surface-700' },
         ].map((kpi) => {
           const Icon = kpi.icon;
           return (
@@ -319,7 +319,7 @@ export default function AnalyticsPage() {
                     <span className="text-sm font-bold text-surface-700">{d.appointments}</span>
                   </div>
                   <div className="h-1.5 bg-surface-100 rounded-full overflow-hidden ml-8">
-                    <div className="h-full rounded-full bg-gradient-to-r from-violet-500 to-purple-400 transition-all duration-500" style={{ width: `${pct}%` }} />
+                    <div className="h-full rounded-full bg-primary-600 transition-all duration-500" style={{ width: `${pct}%` }} />
                   </div>
                 </div>
               );

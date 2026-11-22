@@ -1,4 +1,4 @@
-﻿'use client';
+'use client';
 
 /**
  * Afzal Healthcare — Admin Dashboard
@@ -104,7 +104,7 @@ export default function AdminDashboardPage() {
   const kpis = [
     { label: 'Total Users', value: m?.totalUsers || 0, color: 'from-primary-500/10 to-primary-600/5 text-primary-700 border-primary-200/50', icon: UsersIcon },
     { label: 'Active Patients', value: m?.totalPatients || 0, color: 'from-blue-500/10 to-blue-600/5 text-blue-700 border-blue-200/50', icon: PatientIcon },
-    { label: 'Active Managers', value: m?.totalManagers || 0, color: 'from-violet-500/10 to-violet-600/5 text-violet-700 border-violet-200/50', icon: ChecklistIcon },
+    { label: 'Active Managers', value: m?.totalManagers || 0, color: 'from-primary-500/10 to-primary-600/5 text-primary-700 border-primary-200/50', icon: ChecklistIcon },
     { label: 'Active Doctors', value: m?.totalDoctors || 0, color: 'from-emerald-500/10 to-emerald-600/5 text-emerald-700 border-emerald-200/50', icon: DoctorIcon },
     { label: 'Active Cases', value: m?.activeCases || 0, color: 'from-amber-500/10 to-amber-600/5 text-amber-700 border-amber-200/50', icon: CasesIcon, trend: data?.trends.cases },
     { label: `Appointments`, value: m?.appointmentsThisPeriod || 0, color: 'from-cyan-500/10 to-cyan-600/5 text-cyan-700 border-cyan-200/50', icon: CalendarIcon, trend: data?.trends.appointments },
@@ -119,7 +119,7 @@ export default function AdminDashboardPage() {
       {/* Premium Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-6 pb-2 border-b border-surface-200/60">
         <div>
-          <h1 className="text-3xl font-extrabold text-surface-900 tracking-tight bg-gradient-to-r from-surface-900 to-surface-700 bg-clip-text text-transparent">Operations Dashboard</h1>
+          <h1 className="text-3xl font-extrabold text-surface-900 tracking-tight">Operations Dashboard</h1>
           <p className="text-sm text-surface-500 mt-1.5 font-medium">Real-time metrics, case flow, hospital assignments, and system audit feed.</p>
         </div>
         

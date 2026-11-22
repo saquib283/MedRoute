@@ -88,6 +88,7 @@ export async function PUT(request: NextRequest) {
     if (!result.success) {
       return apiError(ERROR_CODES.BAD_REQUEST, result.error.issues[0].message, 400);
     }
+    
 
     const { id, ...updateData } = result.data;
 
