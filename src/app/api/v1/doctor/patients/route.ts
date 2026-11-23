@@ -49,6 +49,16 @@ export async function GET(request: NextRequest) {
       include: {
         user: { select: { fullName: true, email: true, phone: true } },
         medicalProfile: true,
+        cases: {
+          where: { status: { not: 'CLOSED' } },
+          select: {
+            id: true,
+            status: true,
+            isUrgent: true,
+            fitToFlyClearance: true,
+          },
+          orderBy: { createdAt: 'desc' },
+        },
       },
     });
 
