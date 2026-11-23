@@ -32,6 +32,7 @@ export const registerSchema = z.object({
     message: 'Invalid date of birth',
   }),
   primaryLanguage: z.string().optional(),
+  medicalCondition: z.string().max(2000).optional(),
 });
 
 export const loginSchema = z.object({

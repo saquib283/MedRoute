@@ -56,7 +56,17 @@ export default function AdminUsersPage() {
   // Modal state
   const [showModal, setShowModal] = useState(false);
   const [editingUser, setEditingUser] = useState<User | null>(null);
-  const [formData, setFormData] = useState({ email: '', fullName: '', password: '', role: 'MANAGER', phone: '', isActive: true });
+  const [formData, setFormData] = useState({
+    email: '',
+    fullName: '',
+    password: '',
+    role: 'MANAGER',
+    phone: '',
+    isActive: true,
+    nationality: '',
+    passportNo: '',
+    dob: '',
+  });
   const [saving, setSaving] = useState(false);
 
   // Confirm dialog
@@ -100,7 +110,7 @@ export default function AdminUsersPage() {
       const res = await fetch(`/api/v1/admin/cases?managerId=${managerId}&limit=100`);
       const data = await res.json();
       if (data.success) {
-        setSourceCases(data.data.cases);
+        setSourceCases(data.data.cases.filter((c: SourceCase) => c.status !== 'CLOSED'));
         setSelectedCaseIds([]); // reset selection
       }
     } catch (err) {
@@ -195,7 +205,17 @@ export default function AdminUsersPage() {
 
   const openCreate = () => {
     setEditingUser(null);
-    setFormData({ email: '', fullName: '', password: '', role: 'MANAGER', phone: '', isActive: true });
+    setFormData({
+      email: '',
+      fullName: '',
+      password: '',
+      role: 'MANAGER',
+      phone: '',
+      isActive: true,
+      nationality: '',
+      passportNo: '',
+      dob: '',
+    });
     setShowModal(true);
   };
 
@@ -206,7 +226,17 @@ export default function AdminUsersPage() {
       return;
     }
     setEditingUser(user);
-    setFormData({ email: user.email, fullName: user.fullName, password: '', role: user.role, phone: user.phone || '', isActive: user.isActive });
+    setFormData({
+      email: user.email,
+      fullName: user.fullName,
+      password: '',
+      role: user.role,
+      phone: user.phone || '',
+      isActive: user.isActive,
+      nationality: '',
+      passportNo: '',
+      dob: '',
+    });
     setShowModal(true);
   };
 
@@ -224,14 +254,26 @@ export default function AdminUsersPage() {
         if (!data.success) { toast.error(data.error?.message || 'Failed to update user'); return; }
         toast.success('User updated successfully');
       } else {
+        const payload: Record<string, unknown> = {
+          email: formData.email,
+          fullName: formData.fullName,
+          password: formData.password,
+          role: formData.role,
+          phone: formData.phone || undefined,
+        };
+        if (formData.role === 'PATIENT') {
+          payload.nationality = formData.nationality;
+          payload.passportNo = formData.passportNo;
+          payload.dob = formData.dob;
+        }
         const res = await fetch('/api/v1/admin/users', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(formData),
+          body: JSON.stringify(payload),
         });
         const data = await res.json();
         if (!data.success) { toast.error(data.error?.message || 'Failed to create user'); return; }
-        toast.success('User created successfully');
+        toast.success(formData.role === 'PATIENT' ? 'Patient onboarded successfully' : 'User created successfully');
       }
       setShowModal(false);
       fetchUsers(pagination.page);
@@ -531,7 +573,7 @@ export default function AdminUsersPage() {
                         <div className="text-xs">
                           <p className="font-bold text-surface-900">Case #{c.id.substring(0, 8)}</p>
                           <p className="text-surface-600 font-medium mt-0.5">Patient: {c.patient?.user?.fullName || 'Unknown'}</p>
-                          <p className="text-xs text-surface-500 mt-0.5">Status: {c.status} • Urgency: {c.urgencyLevel || 'ROUTINE'}</p>
+                          <p className="text-xs text-surface-500 mt-0.5">Status: {c.status} • Urgency: {c.isUrgent ? 'URGENT' : 'ROUTINE'}</p>
                         </div>
                       </label>
                     );
@@ -554,7 +596,7 @@ export default function AdminUsersPage() {
       {/* Create/Edit Modal */}
       {showModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-surface-900/40 backdrop-blur-xs">
-          <div className="bg-white rounded-2xl shadow-2xl border border-surface-200 w-full max-w-md animate-scale-up">
+          <div className="bg-white rounded-2xl shadow-2xl border border-surface-200 w-full max-w-md animate-scale-up max-h-[90vh] overflow-y-auto">
             <div className="px-6 py-4 border-b border-surface-100 flex items-center justify-between">
               <h3 className="text-sm font-bold text-surface-900">{editingUser ? 'Edit User' : 'Create New User'}</h3>
               <button
@@ -596,6 +638,44 @@ export default function AdminUsersPage() {
                   <input type="text" value={formData.phone} onChange={(e) => setFormData({ ...formData, phone: e.target.value })} className="w-full p-2.5 border border-surface-200 rounded-xl text-sm focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500" />
                 </div>
               </div>
+              {!editingUser && formData.role === 'PATIENT' && (
+                <div className="space-y-3 pt-2 border-t border-surface-100">
+                  <p className="text-xs font-bold text-surface-700 uppercase tracking-wider">Patient Onboarding Details</p>
+                  <div className="grid grid-cols-2 gap-3">
+                    <div className="space-y-1.5">
+                      <label className="block text-xs font-semibold text-surface-700">Nationality *</label>
+                      <input
+                        type="text"
+                        required
+                        value={formData.nationality}
+                        onChange={(e) => setFormData({ ...formData, nationality: e.target.value })}
+                        className="w-full p-2.5 border border-surface-200 rounded-xl text-sm focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500"
+                      />
+                    </div>
+                    <div className="space-y-1.5">
+                      <label className="block text-xs font-semibold text-surface-700">Passport No *</label>
+                      <input
+                        type="text"
+                        required
+                        minLength={5}
+                        value={formData.passportNo}
+                        onChange={(e) => setFormData({ ...formData, passportNo: e.target.value })}
+                        className="w-full p-2.5 border border-surface-200 rounded-xl text-sm focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500"
+                      />
+                    </div>
+                  </div>
+                  <div className="space-y-1.5">
+                    <label className="block text-xs font-semibold text-surface-700">Date of Birth *</label>
+                    <input
+                      type="date"
+                      required
+                      value={formData.dob}
+                      onChange={(e) => setFormData({ ...formData, dob: e.target.value })}
+                      className="w-full p-2.5 border border-surface-200 rounded-xl text-sm focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500"
+                    />
+                  </div>
+                </div>
+              )}
               {editingUser && (
                 <div className="flex items-center gap-2">
                   <input type="checkbox" id="isActive" checked={formData.isActive} onChange={(e) => setFormData({ ...formData, isActive: e.target.checked })} />

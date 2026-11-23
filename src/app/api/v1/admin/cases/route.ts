@@ -10,9 +10,18 @@ import { apiSuccess, apiError } from '@/lib/api/response';
 import { ERROR_CODES } from '@/lib/api/errors';
 import { createAuditLog, AUDIT_ACTIONS } from '@/lib/api/audit-logger';
 import { CASE_STATUS_ORDER } from '@/lib/constants';
+import { createCaseForPatient } from '@/lib/services/onboarding.service';
+import { assignPatientCoordinator } from '@/lib/services/case-assignment.service';
 import { z } from 'zod';
 
 const VALID_STATUSES = CASE_STATUS_ORDER;
+
+const createCaseAdminSchema = z.object({
+  patientId: z.string().min(1),
+  notes: z.string().max(5000).optional(),
+  isUrgent: z.boolean().optional(),
+  managerId: z.string().nullable().optional(),
+});
 
 const updateCaseSchema = z.object({
   id: z.string().min(1),
@@ -76,6 +85,37 @@ export async function GET(request: NextRequest) {
   }
 }
 
+export async function POST(request: NextRequest) {
+  try {
+    const { user: authUser, error } = requireAuth(request);
+    if (error) return error;
+    if (authUser!.role !== 'ADMIN') {
+      return apiError(ERROR_CODES.FORBIDDEN, 'Admin access required', 403);
+    }
+
+    const body = await request.json();
+    const result = createCaseAdminSchema.safeParse(body);
+    if (!result.success) {
+      return apiError(ERROR_CODES.BAD_REQUEST, result.error.issues[0].message, 400);
+    }
+
+    const caseRes = await createCaseForPatient({
+      ...result.data,
+      actorId: authUser!.userId,
+      ipAddress: getClientIP(request),
+    });
+
+    if (!caseRes.ok) {
+      return apiError(caseRes.code, caseRes.message, caseRes.status);
+    }
+
+    return apiSuccess({ case: caseRes.case }, undefined, 201);
+  } catch (err) {
+    console.error('[Admin Cases POST Error]', err);
+    return apiError(ERROR_CODES.INTERNAL_ERROR, 'Failed to create case', 500);
+  }
+}
+
 export async function PUT(request: NextRequest) {
   try {
     const { user: authUser, error } = requireAuth(request);
@@ -89,42 +129,63 @@ export async function PUT(request: NextRequest) {
     if (!result.success) {
       return apiError(ERROR_CODES.BAD_REQUEST, result.error.issues[0].message, 400);
     }
-    
 
-    const { id, ...updateData } = result.data;
+    const { id, managerId, ...restUpdateData } = result.data;
 
     const existing = await prisma.case.findUnique({ where: { id } });
     if (!existing) {
       return apiError(ERROR_CODES.CASE_NOT_FOUND, 'Case not found', 404);
     }
 
-    if (existing.status === 'CLOSED' && updateData.status && updateData.status !== 'CLOSED') {
+    if (existing.status === 'CLOSED' && restUpdateData.status && restUpdateData.status !== 'CLOSED') {
       return apiError(ERROR_CODES.CASE_ALREADY_CLOSED, 'Cannot reopen a closed case', 400);
     }
 
-    const updatedCase = await prisma.case.update({
+    if (managerId !== undefined) {
+      const assignRes = await assignPatientCoordinator({
+        caseIds: [id],
+        managerId,
+        actorId: authUser!.userId,
+        ipAddress: getClientIP(request),
+      });
+      if (!assignRes.ok) {
+        return apiError(assignRes.code, assignRes.message, assignRes.status);
+      }
+    }
+
+    const hasOtherUpdates =
+      restUpdateData.status !== undefined ||
+      restUpdateData.notes !== undefined ||
+      restUpdateData.escalationNote !== undefined;
+
+    if (hasOtherUpdates) {
+      await prisma.case.update({
+        where: { id },
+        data: restUpdateData,
+      });
+
+      const action =
+        restUpdateData.status && restUpdateData.status !== existing.status
+          ? AUDIT_ACTIONS.STATUS_CHANGE
+          : AUDIT_ACTIONS.UPDATE;
+
+      await createAuditLog({
+        actorId: authUser!.userId,
+        action,
+        entityType: 'Case',
+        entityId: id,
+        oldValue: { status: existing.status, managerId: existing.managerId },
+        newValue: restUpdateData,
+        ipAddress: getClientIP(request),
+      });
+    }
+
+    const updatedCase = await prisma.case.findUnique({
       where: { id },
-      data: updateData,
       include: {
         patient: { include: { user: { select: { fullName: true } } } },
         manager: { select: { fullName: true } },
       },
-    });
-
-    const action = updateData.status
-      ? AUDIT_ACTIONS.STATUS_CHANGE
-      : updateData.managerId !== undefined
-        ? AUDIT_ACTIONS.REASSIGN
-        : AUDIT_ACTIONS.UPDATE;
-
-    await createAuditLog({
-      actorId: authUser!.userId,
-      action,
-      entityType: 'Case',
-      entityId: id,
-      oldValue: { status: existing.status, managerId: existing.managerId },
-      newValue: updateData,
-      ipAddress: getClientIP(request),
     });
 
     return apiSuccess({ case: updatedCase });

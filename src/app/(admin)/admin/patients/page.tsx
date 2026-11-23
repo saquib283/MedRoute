@@ -20,7 +20,7 @@ interface Patient {
   primaryLanguage: string | null;
   createdAt: string;
   user: { fullName: string; email: string; phone: string | null; isActive: boolean; createdAt: string };
-  assignedManager: { fullName: string } | null;
+  assignedManager: { id: string; fullName: string; email?: string } | null;
   _count: { cases: number; documents: number; appointments: number };
 }
 
@@ -44,6 +44,22 @@ export default function AdminPatientsPage() {
   const [selectedPatient, setSelectedPatient] = useState<Patient | null>(null);
   const [reassignManagerId, setReassignManagerId] = useState('');
   const [reassigning, setReassigning] = useState(false);
+
+  // Onboard modal
+  const [showOnboardModal, setShowOnboardModal] = useState(false);
+  const [onboarding, setOnboarding] = useState(false);
+  const [onboardForm, setOnboardForm] = useState({
+    fullName: '',
+    email: '',
+    password: '',
+    phone: '',
+    nationality: '',
+    passportNo: '',
+    dob: '',
+    urgencyLevel: 'ROUTINE',
+    assignedManagerId: '',
+    medicalCondition: '',
+  });
 
   const fetchPatients = useCallback(async (page = 1) => {
     setLoading(true);
@@ -71,6 +87,54 @@ export default function AdminPatientsPage() {
       .catch(() => {});
   }, []);
 
+  const handleOnboardPatient = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setOnboarding(true);
+    try {
+      const payload = {
+        fullName: onboardForm.fullName.trim(),
+        email: onboardForm.email.trim(),
+        password: onboardForm.password,
+        phone: onboardForm.phone.trim() || undefined,
+        nationality: onboardForm.nationality.trim(),
+        passportNo: onboardForm.passportNo.trim(),
+        dob: onboardForm.dob,
+        urgencyLevel: onboardForm.urgencyLevel,
+        assignedManagerId: onboardForm.assignedManagerId || undefined,
+        medicalCondition: onboardForm.medicalCondition.trim() || undefined,
+      };
+      const res = await fetch('/api/v1/admin/patients', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      });
+      const data = await res.json();
+      if (!data.success) {
+        toast.error(data.error?.message || 'Failed to onboard patient');
+        return;
+      }
+      toast.success('Patient onboarded with initial case created');
+      setShowOnboardModal(false);
+      setOnboardForm({
+        fullName: '',
+        email: '',
+        password: '',
+        phone: '',
+        nationality: '',
+        passportNo: '',
+        dob: '',
+        urgencyLevel: 'ROUTINE',
+        assignedManagerId: '',
+        medicalCondition: '',
+      });
+      fetchPatients(1);
+    } catch {
+      toast.error('Failed to onboard patient.');
+    } finally {
+      setOnboarding(false);
+    }
+  };
+
   const handleReassign = async () => {
     if (!selectedPatient) return;
     setReassigning(true);
@@ -90,9 +154,12 @@ export default function AdminPatientsPage() {
 
   return (
     <div className="max-w-7xl mx-auto space-y-6 animate-fade-in">
-      <div>
-        <h1 className="text-2xl font-bold text-surface-900 tracking-tight">Patients</h1>
-        <p className="text-sm text-surface-500 mt-1">Manage registered patients and their assignments.</p>
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div>
+          <h1 className="text-2xl font-bold text-surface-900 tracking-tight">Patients</h1>
+          <p className="text-sm text-surface-500 mt-1">Manage registered patients and their assignments.</p>
+        </div>
+        <Button onClick={() => setShowOnboardModal(true)}>+ Onboard Patient</Button>
       </div>
 
       {/* Filters */}
@@ -163,7 +230,7 @@ export default function AdminPatientsPage() {
                       <td className="px-5 py-3.5 text-surface-600">{p._count.cases}</td>
                       <td className="px-5 py-3.5 text-xs text-surface-500">{new Date(p.user.createdAt).toLocaleDateString()}</td>
                       <td className="px-5 py-3.5 text-right">
-                        <Button variant="ghost" size="sm" onClick={() => { setSelectedPatient(p); setReassignManagerId(p.assignedManager ? '' : ''); }}>View</Button>
+                        <Button variant="ghost" size="sm" onClick={() => { setSelectedPatient(p); setReassignManagerId(p.assignedManager?.id || ''); }}>View</Button>
                       </td>
                     </tr>
                   ))
@@ -230,6 +297,143 @@ export default function AdminPatientsPage() {
                 <Button size="sm" className="w-full" onClick={handleReassign} isLoading={reassigning}>Reassign Manager</Button>
               </div>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* Onboard Patient Modal */}
+      {showOnboardModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-surface-900/40 backdrop-blur-xs">
+          <div className="bg-white rounded-2xl shadow-2xl border border-surface-200 w-full max-w-lg animate-scale-up max-h-[90vh] overflow-y-auto">
+            <div className="px-6 py-4 border-b border-surface-100 flex items-center justify-between sticky top-0 bg-white z-10">
+              <h3 className="text-sm font-bold text-surface-900">Onboard New Patient</h3>
+              <button
+                onClick={() => setShowOnboardModal(false)}
+                aria-label="Close"
+                className="text-surface-400 hover:text-surface-600 p-1 rounded-lg hover:bg-surface-100 transition-colors"
+              >
+                <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2} aria-hidden="true">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
+            <form onSubmit={handleOnboardPatient} className="p-6 space-y-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div className="space-y-1.5">
+                  <label className="block text-xs font-semibold text-surface-700">Full Name *</label>
+                  <input
+                    type="text"
+                    required
+                    value={onboardForm.fullName}
+                    onChange={(e) => setOnboardForm({ ...onboardForm, fullName: e.target.value })}
+                    className="w-full p-2.5 border border-surface-200 rounded-xl text-sm focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500"
+                  />
+                </div>
+                <div className="space-y-1.5">
+                  <label className="block text-xs font-semibold text-surface-700">Email *</label>
+                  <input
+                    type="email"
+                    required
+                    value={onboardForm.email}
+                    onChange={(e) => setOnboardForm({ ...onboardForm, email: e.target.value })}
+                    className="w-full p-2.5 border border-surface-200 rounded-xl text-sm focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500"
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div className="space-y-1.5">
+                  <label className="block text-xs font-semibold text-surface-700">Password *</label>
+                  <input
+                    type="password"
+                    required
+                    minLength={8}
+                    placeholder="Min 8 characters"
+                    value={onboardForm.password}
+                    onChange={(e) => setOnboardForm({ ...onboardForm, password: e.target.value })}
+                    className="w-full p-2.5 border border-surface-200 rounded-xl text-sm focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500"
+                  />
+                </div>
+                <div className="space-y-1.5">
+                  <label className="block text-xs font-semibold text-surface-700">Phone</label>
+                  <input
+                    type="text"
+                    value={onboardForm.phone}
+                    onChange={(e) => setOnboardForm({ ...onboardForm, phone: e.target.value })}
+                    className="w-full p-2.5 border border-surface-200 rounded-xl text-sm focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500"
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                <div className="space-y-1.5">
+                  <label className="block text-xs font-semibold text-surface-700">Nationality *</label>
+                  <input
+                    type="text"
+                    required
+                    value={onboardForm.nationality}
+                    onChange={(e) => setOnboardForm({ ...onboardForm, nationality: e.target.value })}
+                    className="w-full p-2.5 border border-surface-200 rounded-xl text-sm focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500"
+                  />
+                </div>
+                <div className="space-y-1.5">
+                  <label className="block text-xs font-semibold text-surface-700">Passport No *</label>
+                  <input
+                    type="text"
+                    required
+                    minLength={5}
+                    value={onboardForm.passportNo}
+                    onChange={(e) => setOnboardForm({ ...onboardForm, passportNo: e.target.value })}
+                    className="w-full p-2.5 border border-surface-200 rounded-xl text-sm focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500"
+                  />
+                </div>
+                <div className="space-y-1.5">
+                  <label className="block text-xs font-semibold text-surface-700">Date of Birth *</label>
+                  <input
+                    type="date"
+                    required
+                    value={onboardForm.dob}
+                    onChange={(e) => setOnboardForm({ ...onboardForm, dob: e.target.value })}
+                    className="w-full p-2.5 border border-surface-200 rounded-xl text-sm focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500"
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <Select
+                  label="Urgency Level"
+                  value={onboardForm.urgencyLevel}
+                  onChange={(val) => setOnboardForm({ ...onboardForm, urgencyLevel: val })}
+                  options={URGENCY_OPTIONS.map((u) => ({ value: u, label: URGENCY_LEVEL_LABELS[u] || u }))}
+                  required
+                />
+                <Select
+                  label="Assigned Coordinator"
+                  value={onboardForm.assignedManagerId}
+                  onChange={(val) => setOnboardForm({ ...onboardForm, assignedManagerId: val })}
+                  options={[
+                    { value: '', label: 'Auto-assign (least loaded)' },
+                    ...managers.map((m) => ({ value: m.id, label: m.fullName })),
+                  ]}
+                />
+              </div>
+
+              <div className="space-y-1.5">
+                <label className="block text-xs font-semibold text-surface-700">Medical Condition / Initial Case Notes</label>
+                <textarea
+                  rows={3}
+                  value={onboardForm.medicalCondition}
+                  onChange={(e) => setOnboardForm({ ...onboardForm, medicalCondition: e.target.value })}
+                  placeholder="Diagnosis, treatment inquiry, or triage notes..."
+                  className="w-full p-2.5 border border-surface-200 rounded-xl text-sm focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500"
+                />
+              </div>
+
+              <div className="flex gap-3 pt-2">
+                <Button type="button" variant="secondary" className="flex-1" onClick={() => setShowOnboardModal(false)}>Cancel</Button>
+                <Button type="submit" className="flex-1" isLoading={onboarding}>Onboard Patient</Button>
+              </div>
+            </form>
           </div>
         </div>
       )}

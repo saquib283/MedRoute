@@ -3,7 +3,15 @@ import { CaseStatus } from '@prisma/client';
 import prisma from '@/lib/prisma';
 import { getClientIP } from '@/lib/api/auth-helper';
 import { createAuditLog, AUDIT_ACTIONS } from '@/lib/api/audit-logger';
+import { createCaseForPatient } from '@/lib/services/onboarding.service';
 import { z } from 'zod';
+
+const createCaseManagerSchema = z.object({
+  patientId: z.string().min(1),
+  notes: z.string().max(5000).optional(),
+  isUrgent: z.boolean().optional(),
+  managerId: z.string().nullable().optional(),
+});
 
 const updateCaseSchema = z.object({
   caseId: z.string(),
@@ -47,6 +55,41 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ cases });
   } catch (err) {
     console.error('Failed to load manager cases:', err);
+    return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 });
+  }
+}
+
+export async function POST(request: NextRequest) {
+  try {
+    const userId = request.headers.get('x-user-id');
+    const userRole = request.headers.get('x-user-role');
+
+    if (!userId || (userRole !== 'MANAGER' && userRole !== 'ADMIN')) {
+      return NextResponse.json({ error: 'Unauthorized role' }, { status: 403 });
+    }
+
+    const body = await request.json();
+    const parsed = createCaseManagerSchema.safeParse(body);
+    if (!parsed.success) {
+      return NextResponse.json({ error: 'Invalid parameters', details: parsed.error.issues }, { status: 400 });
+    }
+
+    const caseRes = await createCaseForPatient({
+      patientId: parsed.data.patientId,
+      notes: parsed.data.notes,
+      isUrgent: parsed.data.isUrgent,
+      managerId: userRole === 'MANAGER' ? userId : parsed.data.managerId,
+      actorId: userId,
+      ipAddress: getClientIP(request),
+    });
+
+    if (!caseRes.ok) {
+      return NextResponse.json({ error: caseRes.message, code: caseRes.code }, { status: caseRes.status });
+    }
+
+    return NextResponse.json({ success: true, case: caseRes.case }, { status: 201 });
+  } catch (err) {
+    console.error('Failed to create manager case:', err);
     return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 });
   }
 }
@@ -111,7 +154,7 @@ export async function PUT(request: NextRequest) {
 
     await createAuditLog({
       actorId: userId,
-      action: status ? AUDIT_ACTIONS.STATUS_CHANGE : AUDIT_ACTIONS.UPDATE,
+      action: status && status !== caseRecord.status ? AUDIT_ACTIONS.STATUS_CHANGE : AUDIT_ACTIONS.UPDATE,
       entityType: 'Case',
       entityId: caseId,
       oldValue: {
