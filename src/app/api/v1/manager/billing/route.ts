@@ -1,19 +1,26 @@
 /**
  * Afzal Healthcare — Manager Billing & Itemized Invoicing API
- * GET /api/v1/manager/billing — List all patient medical bills with line items
+ * GET /api/v1/manager/billing — List all patient medical bills with line items (and optional ?meta=true)
  * POST /api/v1/manager/billing — Create a new bill with itemized cost breakdowns
+ * PATCH /api/v1/manager/billing — Record payments or update bill status, due date, notes, or hospital
  */
 
 import { NextRequest } from 'next/server';
 import type { Prisma } from '@prisma/client';
 import prisma from '@/lib/prisma';
-import { requireAuth } from '@/lib/api/auth-helper';
+import { getClientIP, requireAuth } from '@/lib/api/auth-helper';
 import { apiSuccess, apiError } from '@/lib/api/response';
 import { ERROR_CODES } from '@/lib/api/errors';
 import {
   removeStoredFile,
   saveValidatedUpload,
 } from '@/lib/services/document-storage.service';
+import {
+  deriveBillStatus,
+  getManagerBillingMetadata,
+  syncCaseSettleBillSteps,
+  updateMedicalBill,
+} from '@/lib/services/billing.service';
 
 interface BillItemInput {
   description?: string;
@@ -35,6 +42,7 @@ export async function GET(request: NextRequest) {
     const caseId = searchParams.get('caseId');
     const patientId = searchParams.get('patientId');
     const status = searchParams.get('status');
+    const includeMeta = searchParams.get('meta') === 'true';
 
     const where: Prisma.MedicalBillWhereInput = {};
     if (caseId) where.caseId = caseId;
@@ -61,6 +69,14 @@ export async function GET(request: NextRequest) {
       },
       orderBy: { createdAt: 'desc' },
     });
+
+    if (includeMeta) {
+      const metadata = await getManagerBillingMetadata({
+        userId: authUser!.userId,
+        role: authUser!.role,
+      });
+      return apiSuccess({ bills, metadata });
+    }
 
     return apiSuccess({ bills });
   } catch (err) {
@@ -127,7 +143,7 @@ export async function POST(request: NextRequest) {
       hospitalId = body.hospitalId || null;
       title = body.title;
       category = body.category || 'HOSPITAL_SURGERY';
-      paidAmount = body.paidAmount || 0;
+      paidAmount = Number(body.paidAmount ?? 0);
       currency = body.currency || 'USD';
       status = body.status || 'PENDING';
       dueDateStr = body.dueDate || null;
@@ -151,19 +167,7 @@ export async function POST(request: NextRequest) {
       return apiError(ERROR_CODES.FORBIDDEN, 'Case is not assigned to you', 403);
     }
 
-    if (uploadFile) {
-      const saved = await saveValidatedUpload(uploadFile, 'bill');
-      if (!saved.ok) {
-        return apiError(ERROR_CODES.BAD_REQUEST, saved.message, 400);
-      }
-      savedStorageKey = saved.storageKey;
-      fileName = uploadFile.name;
-    }
-
-    // Auto-generate bill number if not specified
-    const billNumber = `INV-${new Date().getFullYear()}-${Math.floor(1000 + Math.random() * 9000)}`;
-
-    // Compute total from line items
+    // Compute total from line items and validate upfront payment bounds before saving uploads
     let calculatedTotal = 0;
     const processedItems = itemsRaw.map((item) => {
       const qty = parseInt(String(item.quantity ?? ''), 10) || 1;
@@ -180,6 +184,30 @@ export async function POST(request: NextRequest) {
       };
     });
 
+    calculatedTotal = Math.round(calculatedTotal * 100) / 100;
+
+    if (!Number.isFinite(paidAmount) || paidAmount < 0 || paidAmount > calculatedTotal + 0.005) {
+      return apiError(
+        ERROR_CODES.BAD_REQUEST,
+        'Paid amount cannot be negative or exceed total invoice amount',
+        400
+      );
+    }
+
+    const normalizedPaid = Math.min(calculatedTotal, Math.round(paidAmount * 100) / 100);
+    const normalizedStatus = deriveBillStatus(calculatedTotal, normalizedPaid, status);
+
+    if (uploadFile) {
+      const saved = await saveValidatedUpload(uploadFile, 'bill');
+      if (!saved.ok) {
+        return apiError(ERROR_CODES.BAD_REQUEST, saved.message, 400);
+      }
+      savedStorageKey = saved.storageKey;
+      fileName = uploadFile.name;
+    }
+
+    // Auto-generate bill number if not specified
+    const billNumber = `INV-${new Date().getFullYear()}-${Math.floor(1000 + Math.random() * 9000)}`;
     const dueDate = dueDateStr ? new Date(dueDateStr) : null;
 
     let finalBill;
@@ -193,9 +221,9 @@ export async function POST(request: NextRequest) {
           title,
           category,
           totalAmount: calculatedTotal,
-          paidAmount,
+          paidAmount: normalizedPaid,
           currency,
-          status,
+          status: normalizedStatus,
           dueDate,
           fileUrl: null,
           storageKey: savedStorageKey,
@@ -230,6 +258,10 @@ export async function POST(request: NextRequest) {
             },
           })
         : newBill;
+
+      if (normalizedStatus === 'PAID') {
+        await syncCaseSettleBillSteps(prisma, caseId);
+      }
     } catch (dbErr) {
       if (savedStorageKey) {
         await removeStoredFile(savedStorageKey);
@@ -241,5 +273,43 @@ export async function POST(request: NextRequest) {
   } catch (err) {
     console.error('[Manager Billing POST Error]', err);
     return apiError(ERROR_CODES.INTERNAL_ERROR, 'Failed to create medical bill', 500);
+  }
+}
+
+export async function PATCH(request: NextRequest) {
+  try {
+    const { user: authUser, error } = requireAuth(request);
+    if (error) return error;
+
+    let body: Record<string, unknown>;
+    try {
+      body = (await request.json()) as Record<string, unknown>;
+    } catch {
+      return apiError(ERROR_CODES.BAD_REQUEST, 'Invalid JSON request body', 400);
+    }
+
+    const result = await updateMedicalBill({
+      billId: body.billId,
+      paymentAmount: body.paymentAmount,
+      paidAmount: body.paidAmount,
+      status: body.status,
+      dueDate: body.dueDate,
+      notes: body.notes,
+      hospitalId: body.hospitalId,
+      actor: {
+        userId: authUser!.userId,
+        role: authUser!.role,
+        ipAddress: getClientIP(request),
+      },
+    });
+
+    if (!result.ok) {
+      return apiError(result.code, result.message, result.status);
+    }
+
+    return apiSuccess(result.data);
+  } catch (err) {
+    console.error('[Manager Billing PATCH Error]', err);
+    return apiError(ERROR_CODES.INTERNAL_ERROR, 'Failed to update medical bill', 500);
   }
 }

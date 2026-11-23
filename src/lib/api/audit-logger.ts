@@ -82,5 +82,10 @@ export const AUDIT_ACTIONS = {
   VERIFY_DOCUMENT: 'VERIFY_DOCUMENT',
   ISSUE_DOCUMENT: 'ISSUE_DOCUMENT',
   SIGN_FIT_TO_FLY: 'SIGN_FIT_TO_FLY',
+
+  // Sub-Project 3: Billing Settlement & Accommodations Lifecycle
+  SETTLE_BILL: 'SETTLE_BILL',
+  UPDATE_BILL: 'UPDATE_BILL',
+  UPDATE_BOOKING: 'UPDATE_BOOKING',
 } as const;
 
