@@ -229,6 +229,74 @@ describe('Task 1: SystemConfig Governance Service & Runtime Enforcement', () => 
     }
   });
 
+  it('rejects mixed-batch bulk caseIds reassignment at maxPatientsPerManager cap while allowing idempotent batch', async () => {
+    mockedPrisma.systemConfig.findMany.mockResolvedValue([
+      { key: 'maxPatientsPerManager', value: '2' },
+    ]);
+    mockedPrisma.user.findUnique.mockResolvedValue({
+      id: 'mgr-1',
+      fullName: 'Coord One',
+      role: 'MANAGER',
+      isActive: true,
+    });
+
+    const currentlyAssignedToMgr1 = ['pat-1', 'pat-other'];
+    mockedPrisma.patient.count.mockImplementation(
+      async (args: { where: { assignedManagerId: string; id?: { notIn?: string[] } } }) => {
+        const excluded = new Set(args?.where?.id?.notIn ?? []);
+        return currentlyAssignedToMgr1.filter((id) => !excluded.has(id)).length;
+      }
+    );
+
+    // Mixed batch: c-1 belongs to already-assigned pat-1, c-2 belongs to unassigned pat-2
+    mockedPrisma.case.findMany.mockResolvedValueOnce([
+      { id: 'c-1', patientId: 'pat-1', managerId: 'mgr-1', status: 'UNDER_REVIEW' },
+      { id: 'c-2', patientId: 'pat-2', managerId: null, status: 'INQUIRY_RECEIVED' },
+    ]);
+    mockedPrisma.patient.findUnique
+      .mockResolvedValueOnce({ id: 'pat-1', userId: 'u-pat-1', assignedManagerId: 'mgr-1' })
+      .mockResolvedValueOnce({ id: 'pat-2', userId: 'u-pat-2', assignedManagerId: null });
+
+    const mixedRes = await assignPatientCoordinator({
+      caseIds: ['c-1', 'c-2'],
+      managerId: 'mgr-1',
+      actorId: 'adm-1',
+    });
+    expect(mixedRes.ok).toBe(false);
+    if (!mixedRes.ok) {
+      expect(mixedRes.status).toBe(400);
+      expect(mixedRes.message).toMatch(/maximum capacity/i);
+    }
+    expect(mockedPrisma.patient.count).toHaveBeenCalledWith({
+      where: {
+        assignedManagerId: 'mgr-1',
+        id: { notIn: ['pat-2'] },
+      },
+    });
+    expect(mockedPrisma.case.updateMany).not.toHaveBeenCalled();
+
+    // Idempotent batch: only c-1 belonging to already-assigned pat-1
+    mockedPrisma.case.findMany.mockResolvedValueOnce([
+      { id: 'c-1', patientId: 'pat-1', managerId: 'mgr-1', status: 'UNDER_REVIEW' },
+    ]);
+    mockedPrisma.patient.findUnique.mockResolvedValueOnce({
+      id: 'pat-1',
+      userId: 'u-pat-1',
+      assignedManagerId: 'mgr-1',
+    });
+    mockedPrisma.case.updateMany.mockResolvedValue({ count: 1 });
+    mockedPrisma.patient.update.mockResolvedValue({});
+    mockedPrisma.auditLog.create.mockResolvedValue({});
+    mockedPrisma.notification.createMany.mockResolvedValue({});
+
+    const idempotentRes = await assignPatientCoordinator({
+      caseIds: ['c-1'],
+      managerId: 'mgr-1',
+      actorId: 'adm-1',
+    });
+    expect(idempotentRes.ok).toBe(true);
+  });
+
   it('applies defaultCommissionRate on POST /api/v1/admin/hospitals and POST /api/v1/accommodations when omitted', async () => {
     mockedPrisma.systemConfig.findMany.mockResolvedValue([
       { key: 'defaultCommissionRate', value: '17.5' },

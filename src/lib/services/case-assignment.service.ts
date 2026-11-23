@@ -179,15 +179,16 @@ export async function assignPatientCoordinator({
     }
 
     if (managerId) {
-      const incomingNewPatients = patientRecords.filter(
-        (p) => !p || p.assignedManagerId !== managerId
-      ).length;
-      if (incomingNewPatients > 0) {
+      const incomingPatientIds = uniquePatientIds.filter((_, i) => {
+        const p = patientRecords[i];
+        return !p || p.assignedManagerId !== managerId;
+      });
+      if (incomingPatientIds.length > 0) {
         const capCheck = await assertManagerCapacity(
           tx,
           managerId,
-          incomingNewPatients,
-          uniquePatientIds
+          incomingPatientIds.length,
+          incomingPatientIds
         );
         if (!capCheck.ok) {
           return capCheck;
