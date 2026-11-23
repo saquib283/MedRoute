@@ -187,10 +187,14 @@ export default function DoctorCaseWorkspacePage({
   }, []);
 
   const loadCaseWorkspace = useCallback(
-    async (isCancelled?: () => boolean) => {
+    async (opts?: { silent?: boolean; isCancelled?: () => boolean }) => {
+      const silent = Boolean(opts?.silent);
+      const isCancelled = opts?.isCancelled;
       try {
-        setLoadError(null);
-        setLoading(true);
+        if (!silent) {
+          setLoadError(null);
+          setLoading(true);
+        }
         const [pathwayRes, ftfRes] = await Promise.all([
           fetch(`/api/v1/cases/${caseId}/pathway`),
           fetch(`/api/v1/cases/${caseId}/fit-to-fly`),
@@ -202,7 +206,12 @@ export default function DoctorCaseWorkspacePage({
         if (isCancelled?.()) return;
 
         if (!pathwayRes.ok || !pathwayJson.success) {
-          setLoadError(pathwayJson?.error?.message || 'Failed to load clinical case');
+          const message = pathwayJson?.error?.message || 'Failed to load clinical case';
+          if (silent) {
+            toast.error(message, 'Refresh Failed');
+          } else {
+            setLoadError(message);
+          }
           return;
         }
 
@@ -219,10 +228,14 @@ export default function DoctorCaseWorkspacePage({
       } catch (err) {
         console.error('Failed to load doctor case workspace:', err);
         if (!isCancelled?.()) {
-          setLoadError('Network error loading clinical case workspace');
+          if (silent) {
+            toast.apiError(err, 'Failed to refresh clinical case workspace');
+          } else {
+            setLoadError('Network error loading clinical case workspace');
+          }
         }
       } finally {
-        if (!isCancelled?.()) {
+        if (!silent && !isCancelled?.()) {
           setLoading(false);
         }
       }
@@ -233,7 +246,7 @@ export default function DoctorCaseWorkspacePage({
   useEffect(() => {
     let cancelled = false;
     const timer = setTimeout(() => {
-      void loadCaseWorkspace(() => cancelled);
+      void loadCaseWorkspace({ isCancelled: () => cancelled });
     }, 0);
     return () => {
       cancelled = true;
@@ -355,7 +368,7 @@ export default function DoctorCaseWorkspacePage({
       );
 
       // Refresh pathway so SIGN_FIT_TO_FLY milestone and case status reflect updates
-      await loadCaseWorkspace();
+      await loadCaseWorkspace({ silent: true });
     } catch (err) {
       toast.apiError(err, 'Network error updating Fit-to-Fly clearance');
     } finally {
@@ -838,7 +851,7 @@ export default function DoctorCaseWorkspacePage({
             caseId={caseId}
             canVerify={false}
             issueCategories={DOCTOR_ISSUE_CATEGORIES}
-            onDocumentIssued={() => void loadCaseWorkspace()}
+            onDocumentIssued={() => void loadCaseWorkspace({ silent: true })}
           />
         </div>
       </div>

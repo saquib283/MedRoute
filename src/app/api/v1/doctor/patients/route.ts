@@ -1,4 +1,4 @@
-﻿/**
+/**
  * Afzal Healthcare — GET /api/v1/doctor/patients
  * Fetch patients that have appointments with the authenticated doctor.
  */

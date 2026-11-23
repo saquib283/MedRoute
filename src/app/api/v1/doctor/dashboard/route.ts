@@ -1,4 +1,4 @@
-﻿/**
+/**
  * Afzal Healthcare — GET /api/v1/doctor/dashboard
  * Aggregates summary counters for the doctor dashboard.
  */
