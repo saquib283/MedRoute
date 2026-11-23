@@ -129,7 +129,7 @@ export default function ManagerDashboard() {
               As a <strong>Afzal Healthcare Case Manager</strong>, you are responsible for overseeing the logistics of international patient care journeys in India.
             </p>
             <ul className="list-disc pl-5 space-y-2 text-surface-500">
-              <li>Review incoming medical records and update the patient's case pipeline status.</li>
+              <li>Review incoming medical records and update the patient&apos;s case pipeline status.</li>
               <li>Schedule JCI accredited hospital consultations, assessments, and surgeries.</li>
               <li>Use the secure coordination chat to maintain continuous messaging with patients.</li>
             </ul>

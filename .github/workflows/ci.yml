@@ -1,4 +1,4 @@
-﻿name: CI — Afzal Healthcare
+name: CI — Afzal Healthcare
 
 on:
   push:
@@ -57,7 +57,9 @@ jobs:
         run: npm run lint
 
       - name: Typecheck
-        run: npx tsc --noEmit
+        run: |
+          npx next typegen
+          npx tsc --noEmit
 
       - name: Test
         run: npm test -- --passWithNoTests

@@ -35,18 +35,20 @@ export function maskPassportNumber(rawOrEncrypted: string | null | undefined): s
 /**
  * Format a patient record for API responses by decrypting (or masking) passportNo and decrypting medicalProfile arrays.
  */
-export function formatPatientForViewer<T extends Record<string, any>>(
+export function formatPatientForViewer<T extends Record<string, unknown>>(
   patient: T,
   options: { maskPassport?: boolean } = {}
 ): T {
-  const result: Record<string, any> = { ...patient };
+  const result: Record<string, unknown> = { ...patient };
   if ('passportNo' in result && typeof result.passportNo === 'string') {
     result.passportNo = options.maskPassport
       ? maskPassportNumber(result.passportNo)
       : safeDecryptString(result.passportNo);
   }
   if ('medicalProfile' in result && result.medicalProfile) {
-    result.medicalProfile = decryptMedicalProfile(result.medicalProfile);
+    result.medicalProfile = decryptMedicalProfile(
+      result.medicalProfile as Parameters<typeof decryptMedicalProfile>[0]
+    );
   }
   return result as T;
 }

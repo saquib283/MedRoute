@@ -60,7 +60,10 @@ export default function AdminSpecialisationsPage() {
   }, [search]);
 
   useEffect(() => {
-    fetchSpecs();
+    const timer = setTimeout(() => {
+      void fetchSpecs();
+    }, 0);
+    return () => clearTimeout(timer);
   }, [fetchSpecs]);
 
   const openCreate = () => {

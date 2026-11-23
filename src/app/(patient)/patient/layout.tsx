@@ -17,6 +17,8 @@ import {
   Calendar,
   FolderLock,
   MessageSquare,
+  Receipt,
+  Building2,
 } from 'lucide-react';
 
 interface NavItem {
@@ -115,6 +117,11 @@ export default function PatientLayout({
       title: 'Resources & Records',
       items: [
         {
+          label: 'Medical Profile',
+          href: '/patient/profile',
+          icon: <User className="w-5 h-5" />,
+        },
+        {
           label: 'Document Vault',
           href: '/patient/documents',
           icon: (
@@ -191,7 +198,11 @@ export default function PatientLayout({
 
         {/* User profile dropdown and Logout */}
         <div className="border-t border-surface-200 p-4 bg-surface-50/60 space-y-3 shrink-0">
-          <div className="flex items-center gap-3 p-2 bg-white border border-surface-200 rounded-xl shadow-2xs">
+          <Link
+            href="/patient/profile"
+            onClick={() => setIsSidebarOpen(false)}
+            className="flex items-center gap-3 p-2 bg-white border border-surface-200 hover:border-primary-300 rounded-xl shadow-2xs transition-colors"
+          >
             <div className="w-9 h-9 rounded-full bg-primary-100 text-primary-800 flex items-center justify-center font-black text-xs shrink-0 border border-primary-200">
               {userName.charAt(0)}
             </div>
@@ -199,7 +210,7 @@ export default function PatientLayout({
               <p className="text-xs font-extrabold text-surface-900 truncate">{userName}</p>
               <p className="text-xs text-surface-500 truncate font-medium">{userEmail}</p>
             </div>
-          </div>
+          </Link>
 
           <button
             onClick={handleLogout}
@@ -293,6 +304,30 @@ export default function PatientLayout({
                 <div>
                   <span className="text-xs font-bold text-primary-700 uppercase tracking-wider block mb-0.5">Real-Time Messaging</span>
                   <h2 className="text-base font-bold text-surface-900 tracking-tight">Coordination Chat</h2>
+                </div>
+              </div>
+            )}
+
+            {pathname === '/patient/billing' && (
+              <div className="flex items-center gap-2.5">
+                <div className="w-8 h-8 rounded-xl bg-primary-50 text-primary-600 border border-primary-100 flex items-center justify-center font-bold">
+                  <Receipt className="w-4 h-4" />
+                </div>
+                <div>
+                  <span className="text-xs font-bold text-primary-700 uppercase tracking-wider block mb-0.5">Financial Ledger</span>
+                  <h2 className="text-base font-bold text-surface-900 tracking-tight">Billing &amp; Receipts</h2>
+                </div>
+              </div>
+            )}
+
+            {pathname === '/patient/accommodations' && (
+              <div className="flex items-center gap-2.5">
+                <div className="w-8 h-8 rounded-xl bg-primary-50 text-primary-600 border border-primary-100 flex items-center justify-center font-bold">
+                  <Building2 className="w-4 h-4" />
+                </div>
+                <div>
+                  <span className="text-xs font-bold text-primary-700 uppercase tracking-wider block mb-0.5">Partner Lodging</span>
+                  <h2 className="text-base font-bold text-surface-900 tracking-tight">Accommodations &amp; Hotels</h2>
                 </div>
               </div>
             )}

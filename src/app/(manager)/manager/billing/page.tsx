@@ -159,7 +159,7 @@ export default function ManagerBillingPage() {
 
         if (ocr.items && ocr.items.length > 0) {
           setLineItems(
-            ocr.items.map((it: any) => ({
+            ocr.items.map((it: BillItemData) => ({
               description: it.description,
               quantity: it.quantity,
               unitPrice: it.unitPrice,
@@ -198,10 +198,6 @@ export default function ManagerBillingPage() {
     { description: 'Operating Suite & Surgical Charges', quantity: 1, unitPrice: 1500, amount: 1500, category: 'SURGERY_OT' },
   ]);
 
-  useEffect(() => {
-    fetchBillingData();
-  }, []);
-
   const fetchBillingData = async () => {
     try {
       const res = await fetch('/api/v1/manager/billing');
@@ -214,11 +210,13 @@ export default function ManagerBillingPage() {
       const casesRes = await fetch('/api/v1/patient/cases');
       const casesData = await casesRes.json();
       if (casesData.success && casesData.data?.cases) {
-        const opts: PatientOption[] = casesData.data.cases.map((c: any) => ({
-          id: c.patientId,
-          fullName: c.patient?.user?.fullName || `Patient #${c.patientId.slice(0, 6)}`,
-          caseId: c.id,
-        }));
+        const opts: PatientOption[] = casesData.data.cases.map(
+          (c: { id: string; patientId: string; patient?: { user?: { fullName?: string } } }) => ({
+            id: c.patientId,
+            fullName: c.patient?.user?.fullName || `Patient #${c.patientId.slice(0, 6)}`,
+            caseId: c.id,
+          })
+        );
         setPatients(opts);
         if (opts.length > 0) {
           setSelectedPatientId(opts[0].id);
@@ -228,10 +226,17 @@ export default function ManagerBillingPage() {
     } catch (err) {
       console.error('Failed to load billing workspace', err);
       toast.apiError(err, 'Failed to load billing data', 'Fetch Error');
-    } fontally: {
+    } finally {
       setIsLoading(false);
     }
   };
+
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      void fetchBillingData();
+    }, 0);
+    return () => clearTimeout(timer);
+  }, []);
 
   // Line Item Handlers
   const addLineItem = () => {
@@ -246,13 +251,13 @@ export default function ManagerBillingPage() {
     setLineItems(lineItems.filter((_, i) => i !== index));
   };
 
-  const updateLineItem = (index: number, field: keyof BillItemData, value: any) => {
+  const updateLineItem = (index: number, field: keyof BillItemData, value: string | number) => {
     const updated = [...lineItems];
     const item = { ...updated[index], [field]: value };
 
     if (field === 'quantity' || field === 'unitPrice') {
-      const qty = field === 'quantity' ? parseInt(value) || 0 : item.quantity;
-      const price = field === 'unitPrice' ? parseFloat(value) || 0 : item.unitPrice;
+      const qty = field === 'quantity' ? parseInt(String(value), 10) || 0 : item.quantity;
+      const price = field === 'unitPrice' ? parseFloat(String(value)) || 0 : item.unitPrice;
       item.amount = qty * price;
     }
 
@@ -496,7 +501,7 @@ export default function ManagerBillingPage() {
             </div>
             <h3 className="text-sm font-bold text-surface-800">No medical bills found</h3>
             <p className="text-xs text-surface-500 max-w-sm mx-auto">
-              Click 'Create New Medical Bill' to issue itemized hospital invoices for your patients.
+              Click &lsquo;Create New Medical Bill&rsquo; to issue itemized hospital invoices for your patients.
             </p>
           </div>
         ) : (

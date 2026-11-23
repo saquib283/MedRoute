@@ -108,8 +108,11 @@ export default function AdminDoctorsPage() {
   };
 
   useEffect(() => {
-    fetchDoctors();
-    fetchMeta();
+    const timer = setTimeout(() => {
+      void fetchDoctors();
+      void fetchMeta();
+    }, 0);
+    return () => clearTimeout(timer);
   }, [fetchDoctors]);
 
   const openCreate = () => {

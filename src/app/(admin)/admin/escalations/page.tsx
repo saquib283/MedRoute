@@ -40,7 +40,12 @@ export default function AdminEscalationsPage() {
     } catch (err) { console.error(err); } finally { setLoading(false); }
   }, []);
 
-  useEffect(() => { fetchEscalations(); }, [fetchEscalations]);
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      void fetchEscalations();
+    }, 0);
+    return () => clearTimeout(timer);
+  }, [fetchEscalations]);
 
   const handleResolve = async () => {
     setResolving(true);

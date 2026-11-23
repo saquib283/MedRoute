@@ -96,6 +96,13 @@ const ACTION_TYPES = [
   { value: 'OPERATIVE_SUMMARY', label: 'Record Surgical Operative Summary' },
 ];
 
+interface PathwayTemplate {
+  id?: string;
+  specialtyName: string;
+  description?: string;
+  steps?: ClinicalStepConfig[];
+}
+
 export default function ConfigurablePathwayBuilderPage({
   params,
 }: {
@@ -105,7 +112,7 @@ export default function ConfigurablePathwayBuilderPage({
   const [caseDetails, setCaseDetails] = useState<CaseDetails | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
-  const [presetTemplates, setPresetTemplates] = useState<any[]>([]);
+  const [presetTemplates, setPresetTemplates] = useState<PathwayTemplate[]>([]);
 
   // Builder State
   const [stages, setStages] = useState<StageGroup[]>([
@@ -118,11 +125,6 @@ export default function ConfigurablePathwayBuilderPage({
       ],
     },
   ]);
-
-  useEffect(() => {
-    fetchCasePathway();
-    fetchPresetTemplates();
-  }, [caseId]);
 
   const fetchPresetTemplates = async () => {
     try {
@@ -166,8 +168,16 @@ export default function ConfigurablePathwayBuilderPage({
     }
   };
 
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      void fetchCasePathway();
+      void fetchPresetTemplates();
+    }, 0);
+    return () => clearTimeout(timer);
+  }, [caseId]);
+
   // Apply a Specialty Preset Template
-  const applyPresetTemplate = (template: any) => {
+  const applyPresetTemplate = (template: PathwayTemplate) => {
     const presetSteps: ClinicalStepConfig[] = template.steps || [];
     const map = new Map<string, { stageName: string; stageOrder: number; steps: ClinicalStepConfig[] }>();
     
@@ -275,10 +285,15 @@ export default function ConfigurablePathwayBuilderPage({
   };
 
   // Update Sub-Step Field
-  const updateSubStep = (stageIdx: number, stepIdx: number, field: keyof ClinicalStepConfig, value: any) => {
+  const updateSubStep = <K extends keyof ClinicalStepConfig>(
+    stageIdx: number,
+    stepIdx: number,
+    field: K,
+    value: ClinicalStepConfig[K]
+  ) => {
     const updated = [...stages];
     const targetStep = updated[stageIdx].steps[stepIdx];
-    (targetStep as any)[field] = value;
+    targetStep[field] = value;
     setStages(updated);
   };
 
@@ -593,7 +608,7 @@ export default function ConfigurablePathwayBuilderPage({
                     </div>
 
                     <div className="space-y-1">
-                      <label className="text-xs font-semibold text-surface-600 block">Doctor's Clinical Notes</label>
+                      <label className="text-xs font-semibold text-surface-600 block">Doctor&apos;s Clinical Notes</label>
                       <input
                         type="text"
                         value={step.doctorNotes || ''}

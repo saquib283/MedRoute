@@ -59,10 +59,6 @@ export default function PatientBillingPage() {
   const [bills, setBills] = useState<MedicalBill[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
-  useEffect(() => {
-    fetchPatientBills();
-  }, []);
-
   const fetchPatientBills = async () => {
     try {
       const res = await fetch('/api/v1/patient/billing');
@@ -79,6 +75,13 @@ export default function PatientBillingPage() {
       setIsLoading(false);
     }
   };
+
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      void fetchPatientBills();
+    }, 0);
+    return () => clearTimeout(timer);
+  }, []);
 
   const renderStatusBadge = (status: string) => {
     switch (status) {

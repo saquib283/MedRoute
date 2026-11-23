@@ -103,10 +103,6 @@ export default function AdminAccommodationsPage() {
     contactEmail: 'concierge@partnerhotel.com',
   });
 
-  useEffect(() => {
-    fetchData();
-  }, []);
-
   const fetchData = async () => {
     try {
       const [hotelsRes, bookingsRes] = await Promise.all([
@@ -129,6 +125,13 @@ export default function AdminAccommodationsPage() {
       setIsLoading(false);
     }
   };
+
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      void fetchData();
+    }, 0);
+    return () => clearTimeout(timer);
+  }, []);
 
   const handleAddHotel = async (e: React.FormEvent) => {
     e.preventDefault();

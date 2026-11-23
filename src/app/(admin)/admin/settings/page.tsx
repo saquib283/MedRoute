@@ -27,24 +27,6 @@ export default function AdminSettingsPage() {
   const [saving, setSaving] = useState(false);
   const [userRole, setUserRole] = useState('');
 
-  useEffect(() => {
-    // Check permission
-    fetch('/api/v1/auth/me')
-      .then((r) => r.json())
-      .then((d) => {
-        if (d.success) {
-          const role = d.data?.user?.role;
-          setUserRole(role);
-          if (role === 'ADMIN') {
-            fetchSettings();
-          } else {
-            setLoading(false);
-          }
-        }
-      })
-      .catch(() => setLoading(false));
-  }, []);
-
   const fetchSettings = async () => {
     setLoading(true);
     try {
@@ -59,6 +41,24 @@ export default function AdminSettingsPage() {
       setLoading(false);
     }
   };
+
+  useEffect(() => {
+    // Check permission
+    fetch('/api/v1/auth/me')
+      .then((r) => r.json())
+      .then((d) => {
+        if (d.success) {
+          const role = d.data?.user?.role;
+          setUserRole(role);
+          if (role === 'ADMIN') {
+            void fetchSettings();
+          } else {
+            setLoading(false);
+          }
+        }
+      })
+      .catch(() => setLoading(false));
+  }, []);
 
   const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();

@@ -66,7 +66,10 @@ export default function AdminNotificationsPage() {
   }, []);
 
   useEffect(() => {
-    fetchLogs();
+    const timer = setTimeout(() => {
+      void fetchLogs();
+    }, 0);
+    return () => clearTimeout(timer);
   }, [fetchLogs]);
 
   const handleBroadcast = async (e: React.FormEvent) => {

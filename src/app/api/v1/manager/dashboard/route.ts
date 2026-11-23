@@ -1,14 +1,12 @@
 import { NextResponse } from 'next/server';
-import { PrismaClient } from '@prisma/client';
-
-const prisma = new PrismaClient();
+import prisma from '@/lib/prisma';
 
 export async function GET(request: Request) {
   try {
     const userId = request.headers.get('x-user-id');
     const userRole = request.headers.get('x-user-role');
 
-    if (!userId || (userRole !== 'MANAGER' && userRole !== 'ADMIN' && userRole !== 'ADMIN')) {
+    if (!userId || (userRole !== 'MANAGER' && userRole !== 'ADMIN')) {
       return NextResponse.json({ error: 'Unauthorized role' }, { status: 403 });
     }
 

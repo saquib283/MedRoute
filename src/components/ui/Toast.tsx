@@ -5,7 +5,7 @@
  * Global toast with Zustand store. Supports success, error, warning, info, and secure API error abstraction.
  */
 
-import React, { useEffect, useState } from 'react';
+import React, { useEffect } from 'react';
 import { create } from 'zustand';
 import {
   CheckCircle2,
@@ -127,16 +127,19 @@ export const toast = {
   /**
    * Helper to handle API response error objects or catches cleanly with security abstraction
    */
-  apiError: (errorObj: any, fallback = 'Action failed. Please try again.', title = 'Request Error') => {
+  apiError: (errorObj: unknown, fallback = 'Action failed. Please try again.', title = 'Request Error') => {
     let msg = fallback;
     if (typeof errorObj === 'string') {
       msg = errorObj;
-    } else if (errorObj?.error?.message) {
-      msg = errorObj.error.message;
-    } else if (errorObj?.error && typeof errorObj.error === 'string') {
-      msg = errorObj.error;
-    } else if (errorObj?.message) {
-      msg = errorObj.message;
+    } else if (errorObj && typeof errorObj === 'object') {
+      const err = errorObj as { error?: string | { message?: unknown }; message?: unknown };
+      if (err.error && typeof err.error === 'object' && typeof err.error.message === 'string') {
+        msg = err.error.message;
+      } else if (typeof err.error === 'string') {
+        msg = err.error;
+      } else if (typeof err.message === 'string') {
+        msg = err.message;
+      }
     }
 
     const safeMessage = sanitizeErrorMessage(msg, fallback);

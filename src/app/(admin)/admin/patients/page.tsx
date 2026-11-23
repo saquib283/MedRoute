@@ -77,7 +77,12 @@ export default function AdminPatientsPage() {
     } catch (err) { console.error(err); } finally { setLoading(false); }
   }, [search, urgencyFilter, managerFilter]);
 
-  useEffect(() => { fetchPatients(); }, [fetchPatients]);
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      void fetchPatients();
+    }, 0);
+    return () => clearTimeout(timer);
+  }, [fetchPatients]);
 
   useEffect(() => {
     // Fetch managers for filter + reassignment

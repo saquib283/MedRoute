@@ -8,6 +8,14 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { Calendar as CalendarIcon, Clock, ChevronLeft, ChevronRight, X } from 'lucide-react';
 
+export function parseLocalCalendarDate(value: string): Date {
+  if (/^\d{4}-\d{2}-\d{2}$/.test(value)) {
+    const [y, m, d] = value.split('-').map(Number);
+    return new Date(y, m - 1, d);
+  }
+  return new Date(value);
+}
+
 interface DatePickerProps {
   label?: string;
   value: string; // ISO date string or datetime-local format 'YYYY-MM-DDTHH:mm'
@@ -40,22 +48,13 @@ export function DatePicker({
   const containerRef = useRef<HTMLDivElement>(null);
 
   // Selected date object parsing
-  const parsedDate = value ? new Date(value) : new Date();
-  const [viewYear, setViewYear] = useState(parsedDate.getFullYear());
-  const [viewMonth, setViewMonth] = useState(parsedDate.getMonth()); // 0-indexed
+  const parsedDate = value ? parseLocalCalendarDate(value) : new Date();
+  const initialDate = !isNaN(parsedDate.getTime()) ? parsedDate : new Date();
+  const [viewYear, setViewYear] = useState(initialDate.getFullYear());
+  const [viewMonth, setViewMonth] = useState(initialDate.getMonth()); // 0-indexed
   const [selectedTime, setSelectedTime] = useState(
     value && value.includes('T') ? value.split('T')[1].slice(0, 5) : '10:00'
   );
-
-  useEffect(() => {
-    if (value) {
-      const d = new Date(value);
-      if (!isNaN(d.getTime())) {
-        setViewYear(d.getFullYear());
-        setViewMonth(d.getMonth());
-      }
-    }
-  }, [value]);
 
   // Close popover on click outside or escape
   useEffect(() => {
@@ -88,6 +87,18 @@ export function DatePicker({
   const daysInMonth = new Date(viewYear, viewMonth + 1, 0).getDate();
   const firstDayOfWeek = new Date(viewYear, viewMonth, 1).getDay();
 
+  const handleToggleOpen = () => {
+    if (disabled) return;
+    if (!isOpen && value) {
+      const d = parseLocalCalendarDate(value);
+      if (!isNaN(d.getTime())) {
+        setViewYear(d.getFullYear());
+        setViewMonth(d.getMonth());
+      }
+    }
+    setIsOpen(!isOpen);
+  };
+
   const handlePrevMonth = () => {
     if (viewMonth === 0) {
       setViewMonth(11);
@@ -111,12 +122,12 @@ export function DatePicker({
     const d = String(day).padStart(2, '0');
     const dateStr = `${viewYear}-${m}-${d}`;
 
-    if (includeTime) {
+    if (hasTimePicker) {
       onChange(`${dateStr}T${selectedTime}`);
     } else {
       onChange(dateStr);
     }
-    if (!includeTime) {
+    if (!hasTimePicker) {
       setIsOpen(false);
     }
   };
@@ -131,9 +142,9 @@ export function DatePicker({
 
   const formatDisplay = () => {
     if (!value) return '';
-    const d = new Date(value);
+    const d = parseLocalCalendarDate(value);
     if (isNaN(d.getTime())) return value;
-    if (includeTime) {
+    if (hasTimePicker) {
       return d.toLocaleString(undefined, {
         month: 'short',
         day: 'numeric',
@@ -161,12 +172,12 @@ export function DatePicker({
         {/* Trigger input button */}
         <button
           type="button"
-          onClick={() => !disabled && setIsOpen(!isOpen)}
+          onClick={handleToggleOpen}
           disabled={disabled}
           aria-haspopup="dialog"
           aria-expanded={isOpen}
           className={`
-            w-full min-h-[46px] px-3.5 py-2.5 rounded-xl border text-xs font-medium text-left flex items-center justify-between gap-2 transition-all
+            w-full min-h-[46px] px-3.5 py-2.5 ${value && !disabled ? 'pr-9' : ''} rounded-xl border text-xs font-medium text-left flex items-center justify-between gap-2 transition-all
             ${
               disabled
                 ? 'bg-surface-100 border-surface-200 text-surface-400 cursor-not-allowed'
@@ -185,20 +196,22 @@ export function DatePicker({
             </span>
           </div>
 
-          {value ? (
-            <span
-              onClick={(e) => {
-                e.stopPropagation();
-                onChange('');
-              }}
-              className="p-1 text-surface-400 hover:text-surface-600 rounded-full"
-            >
-              <X className="w-3.5 h-3.5" />
-            </span>
-          ) : (
-            <Clock className="w-3.5 h-3.5 text-surface-400 shrink-0" />
-          )}
+          {!value && <Clock className="w-3.5 h-3.5 text-surface-400 shrink-0" />}
         </button>
+
+        {value && !disabled && (
+          <button
+            type="button"
+            aria-label="Clear date"
+            onClick={(e) => {
+              e.stopPropagation();
+              onChange('');
+            }}
+            className="absolute right-2.5 top-1/2 -translate-y-1/2 p-1 text-surface-400 hover:text-surface-600 rounded-full"
+          >
+            <X className="w-3.5 h-3.5" />
+          </button>
+        )}
 
         {/* Calendar Popover */}
         {isOpen && (

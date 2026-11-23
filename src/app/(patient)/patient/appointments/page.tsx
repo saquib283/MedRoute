@@ -88,10 +88,6 @@ export default function AppointmentsPage() {
   const [selectedType, setSelectedType] = useState('CONSULTATION');
   const [scheduledAt, setScheduledAt] = useState('');
 
-  useEffect(() => {
-    fetchAppointments();
-  }, []);
-
   const fetchAppointments = async () => {
     try {
       const res = await fetch('/api/v1/patient/appointments?meta=true');
@@ -111,6 +107,13 @@ export default function AppointmentsPage() {
       setIsLoading(false);
     }
   };
+
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      void fetchAppointments();
+    }, 0);
+    return () => clearTimeout(timer);
+  }, []);
 
   const handleBook = async (e: React.FormEvent) => {
     e.preventDefault();

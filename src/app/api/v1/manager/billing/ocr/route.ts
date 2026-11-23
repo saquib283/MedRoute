@@ -77,10 +77,10 @@ function parseMultiPageMedicalBillOcr(files: File[]): MultiPageOcrExtractionResu
   const primaryName = files[0].name.toLowerCase();
 
   let title = 'Multi-Page Hospital Surgical & Inpatient Medical Bill';
-  let category = 'HOSPITAL_SURGERY';
-  let currency = 'USD';
-  let hospitalName = 'Apollo Multi-Specialty Hospital, India';
-  let invoiceNumber = `INV-2026-${Math.floor(1000 + Math.random() * 9000)}`;
+  const category = 'HOSPITAL_SURGERY';
+  const currency = 'USD';
+  const hospitalName = 'Apollo Multi-Specialty Hospital, India';
+  const invoiceNumber = `INV-2026-${Math.floor(1000 + Math.random() * 9000)}`;
 
   const pageMetas: PageOcrMetadata[] = [];
   const stitchedItems: OcrLineItem[] = [];

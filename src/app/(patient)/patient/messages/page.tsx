@@ -69,18 +69,6 @@ export default function SecureMessagesPage() {
     fetchMe();
   }, []);
 
-  useEffect(() => {
-    fetchMessages();
-    const interval = setInterval(fetchMessages, 15000);
-    return () => clearInterval(interval);
-  }, []);
-
-  useEffect(() => {
-    if (feedRef.current) {
-      feedRef.current.scrollTop = feedRef.current.scrollHeight;
-    }
-  }, [messages]);
-
   const fetchMessages = async () => {
     try {
       const res = await fetch('/api/v1/patient/messages');
@@ -96,6 +84,25 @@ export default function SecureMessagesPage() {
       setIsRefreshing(false);
     }
   };
+
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      void fetchMessages();
+    }, 0);
+    const interval = setInterval(() => {
+      void fetchMessages();
+    }, 15000);
+    return () => {
+      clearTimeout(timer);
+      clearInterval(interval);
+    };
+  }, []);
+
+  useEffect(() => {
+    if (feedRef.current) {
+      feedRef.current.scrollTop = feedRef.current.scrollHeight;
+    }
+  }, [messages]);
 
   const handleManualRefresh = () => {
     setIsRefreshing(true);

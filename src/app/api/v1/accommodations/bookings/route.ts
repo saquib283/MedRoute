@@ -5,17 +5,23 @@
  */
 
 import { NextRequest } from 'next/server';
+import type { Prisma } from '@prisma/client';
 import prisma from '@/lib/prisma';
 import { requireAuth } from '@/lib/api/auth-helper';
 import { apiSuccess, apiError } from '@/lib/api/response';
 import { ERROR_CODES } from '@/lib/api/errors';
+import { calculateHotelStayNights } from '@/lib/validation/booking-helpers';
 
 export async function GET(request: NextRequest) {
   try {
     const { user: authUser, error } = requireAuth(request);
     if (error) return error;
 
-    let where: any = {};
+    if (authUser.role === 'DOCTOR') {
+      return apiError(ERROR_CODES.FORBIDDEN, 'Doctors cannot access hotel bookings', 403);
+    }
+
+    const where: Prisma.HotelBookingWhereInput = {};
 
     if (authUser.role === 'PATIENT') {
       const patient = await prisma.patient.findUnique({
@@ -23,6 +29,8 @@ export async function GET(request: NextRequest) {
       });
       if (!patient) return apiError(ERROR_CODES.NOT_FOUND, 'Patient profile not found', 404);
       where.patientId = patient.id;
+    } else if (authUser.role === 'MANAGER') {
+      where.patient = { assignedManagerId: authUser.userId };
     }
 
     const bookings = await prisma.hotelBooking.findMany({
@@ -30,7 +38,9 @@ export async function GET(request: NextRequest) {
       include: {
         hotel: true,
         patient: {
-          include: {
+          select: {
+            id: true,
+            nationality: true,
             user: { select: { fullName: true, email: true, phone: true } },
           },
         },
@@ -38,13 +48,23 @@ export async function GET(request: NextRequest) {
       orderBy: { createdAt: 'desc' },
     });
 
-    // Calculate revenue metrics
+    if (authUser.role === 'PATIENT') {
+      const sanitized = bookings.map(({ commissionAmountUsd: _commissionAmountUsd, ...rest }) => {
+        void _commissionAmountUsd;
+        return rest;
+      });
+      return apiSuccess({ bookings: sanitized });
+    }
+
+    // Calculate revenue metrics (excluding cancelled bookings)
     let totalGrossRevenue = 0;
     let totalCommissionEarned = 0;
 
     bookings.forEach((b) => {
-      totalGrossRevenue += Number(b.totalAmountUsd);
-      totalCommissionEarned += Number(b.commissionAmountUsd);
+      if (b.status !== 'CANCELLED') {
+        totalGrossRevenue += Number(b.totalAmountUsd);
+        totalCommissionEarned += Number(b.commissionAmountUsd);
+      }
     });
 
     return apiSuccess({
@@ -66,34 +86,96 @@ export async function POST(request: NextRequest) {
     const { user: authUser, error } = requireAuth(request);
     if (error) return error;
 
+    if (
+      authUser.role !== 'PATIENT' &&
+      authUser.role !== 'MANAGER' &&
+      authUser.role !== 'ADMIN'
+    ) {
+      return apiError(
+        ERROR_CODES.FORBIDDEN,
+        'Only patients, managers, or admins can create hotel bookings',
+        403
+      );
+    }
+
     const body = await request.json();
-    const { hotelId, checkInDate, checkOutDate, roomType, numGuests, specialRequests, caseId } = body;
+    const {
+      hotelId,
+      checkInDate,
+      checkOutDate,
+      roomType,
+      numGuests,
+      specialRequests,
+      caseId,
+      patientId: bodyPatientId,
+    } = body;
 
     if (!hotelId || !checkInDate || !checkOutDate) {
       return apiError(ERROR_CODES.BAD_REQUEST, 'hotelId, checkInDate, and checkOutDate are required', 400);
     }
 
     // Find Patient
-    const patient = await prisma.patient.findUnique({
-      where: { userId: authUser.userId },
-    });
+    let patient;
+    if (
+      (authUser.role === 'MANAGER' || authUser.role === 'ADMIN') &&
+      typeof bodyPatientId === 'string' &&
+      bodyPatientId
+    ) {
+      patient = await prisma.patient.findUnique({ where: { id: bodyPatientId } });
+      if (!patient) {
+        return apiError(ERROR_CODES.NOT_FOUND, 'Patient profile not found', 404);
+      }
+      if (authUser.role === 'MANAGER' && patient.assignedManagerId !== authUser.userId) {
+        return apiError(ERROR_CODES.FORBIDDEN, 'Patient is not assigned to you', 403);
+      }
+    } else {
+      patient = await prisma.patient.findUnique({
+        where: { userId: authUser.userId },
+      });
+    }
     if (!patient) {
       return apiError(ERROR_CODES.NOT_FOUND, 'Patient profile required for hotel booking', 404);
     }
 
-    // Find Hotel
+    // Find Hotel & ensure active
     const hotel = await prisma.hotel.findUnique({
       where: { id: hotelId },
     });
     if (!hotel) {
       return apiError(ERROR_CODES.NOT_FOUND, 'Partner hotel not found', 404);
     }
+    if (!hotel.isActive) {
+      return apiError(ERROR_CODES.BAD_REQUEST, 'Partner hotel is currently inactive', 400);
+    }
 
-    // Calculate Nights
-    const start = new Date(checkInDate);
-    const end = new Date(checkOutDate);
-    const diffTime = Math.abs(end.getTime() - start.getTime());
-    const numNights = Math.max(1, Math.ceil(diffTime / (1000 * 60 * 60 * 24)));
+    // Validate dates & calculate stay nights
+    let start: Date;
+    let end: Date;
+    let numNights: number;
+    try {
+      const stay = calculateHotelStayNights(checkInDate, checkOutDate);
+      start = stay.start;
+      end = stay.end;
+      numNights = stay.numNights;
+    } catch (dateErr) {
+      const message =
+        dateErr instanceof Error ? dateErr.message : 'Invalid check-in or check-out date';
+      return apiError(ERROR_CODES.BAD_REQUEST, message, 400);
+    }
+
+    // Validate guest count
+    const parsedGuests = Number(numGuests ?? 2);
+    if (!Number.isInteger(parsedGuests) || parsedGuests < 1 || parsedGuests > 10) {
+      return apiError(ERROR_CODES.BAD_REQUEST, 'Number of guests must be between 1 and 10', 400);
+    }
+
+    // Verify optional case ownership
+    if (caseId) {
+      const caseRecord = await prisma.case.findUnique({ where: { id: caseId } });
+      if (!caseRecord || caseRecord.patientId !== patient.id) {
+        return apiError(ERROR_CODES.FORBIDDEN, 'Invalid case for patient', 403);
+      }
+    }
 
     // Calculate Price & Partner Commission Cut ($ USD)
     const nightlyPrice = Number(hotel.nightlyRateUsd);
@@ -112,7 +194,7 @@ export async function POST(request: NextRequest) {
         checkInDate: start,
         checkOutDate: end,
         roomType: roomType || 'Deluxe Medical Suite',
-        numGuests: parseInt(numGuests) || 2,
+        numGuests: parsedGuests,
         numNights,
         totalAmountUsd,
         commissionAmountUsd,
@@ -123,6 +205,12 @@ export async function POST(request: NextRequest) {
         hotel: true,
       },
     });
+
+    if (authUser.role === 'PATIENT') {
+      const { commissionAmountUsd: _commissionAmountUsd, ...sanitizedBooking } = booking;
+      void _commissionAmountUsd;
+      return apiSuccess({ booking: sanitizedBooking });
+    }
 
     return apiSuccess({ booking });
   } catch (err) {

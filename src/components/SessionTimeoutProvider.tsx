@@ -18,8 +18,8 @@ export function SessionTimeoutProvider({ children }: { children: React.ReactNode
   const [showWarning, setShowWarning] = useState(false);
   const [remainingSeconds, setRemainingSeconds] = useState(120);
 
-  const lastActivityRef = useRef<number>(Date.now());
-  const lastRefreshRef = useRef<number>(Date.now());
+  const lastActivityRef = useRef<number>(0);
+  const lastRefreshRef = useRef<number>(0);
   const isRefreshingRef = useRef<boolean>(false);
   const warningTimerRef = useRef<NodeJS.Timeout | null>(null);
   const logoutTimerRef = useRef<NodeJS.Timeout | null>(null);
@@ -62,50 +62,57 @@ export function SessionTimeoutProvider({ children }: { children: React.ReactNode
     }
   }, [router]);
 
-  const resetTimers = useCallback(() => {
-    lastActivityRef.current = Date.now();
+  const resetTimers = useCallback(
+    (hideWarning = false) => {
+      lastActivityRef.current = Date.now();
 
-    if (showWarning) {
-      setShowWarning(false);
-    }
+      if (hideWarning) {
+        setShowWarning(false);
+      }
 
-    if (warningTimerRef.current) clearTimeout(warningTimerRef.current);
-    if (logoutTimerRef.current) clearTimeout(logoutTimerRef.current);
-    if (countdownIntervalRef.current) clearInterval(countdownIntervalRef.current);
+      if (warningTimerRef.current) clearTimeout(warningTimerRef.current);
+      if (logoutTimerRef.current) clearTimeout(logoutTimerRef.current);
+      if (countdownIntervalRef.current) clearInterval(countdownIntervalRef.current);
 
-    if (isPublicRoute) return;
+      if (isPublicRoute) return;
 
-    // Set warning timer at 13 min
-    warningTimerRef.current = setTimeout(() => {
-      setShowWarning(true);
-      setRemainingSeconds(120);
+      // Set warning timer at 13 min
+      warningTimerRef.current = setTimeout(() => {
+        setShowWarning(true);
+        setRemainingSeconds(120);
 
-      countdownIntervalRef.current = setInterval(() => {
-        setRemainingSeconds((prev) => {
-          if (prev <= 1) {
-            if (countdownIntervalRef.current) clearInterval(countdownIntervalRef.current);
-            return 0;
-          }
-          return prev - 1;
-        });
-      }, 1000);
-    }, WARNING_THRESHOLD_MS);
+        countdownIntervalRef.current = setInterval(() => {
+          setRemainingSeconds((prev) => {
+            if (prev <= 1) {
+              if (countdownIntervalRef.current) clearInterval(countdownIntervalRef.current);
+              return 0;
+            }
+            return prev - 1;
+          });
+        }, 1000);
+      }, WARNING_THRESHOLD_MS);
 
-    // Set hard logout timer at 15 min
-    logoutTimerRef.current = setTimeout(() => {
-      handleLogout();
-    }, INACTIVITY_LIMIT_MS);
-  }, [isPublicRoute, showWarning, handleLogout]);
+      // Set hard logout timer at 15 min
+      logoutTimerRef.current = setTimeout(() => {
+        handleLogout();
+      }, INACTIVITY_LIMIT_MS);
+    },
+    [isPublicRoute, handleLogout]
+  );
 
   const handleStayLoggedIn = useCallback(async () => {
     const ok = await refreshSession();
     if (ok) {
-      resetTimers();
+      resetTimers(true);
     }
   }, [refreshSession, resetTimers]);
 
   useEffect(() => {
     if (isPublicRoute) return;
+
+    const nowInit = Date.now();
+    lastActivityRef.current = nowInit;
+    lastRefreshRef.current = nowInit;
 
     const events = ['mousemove', 'keydown', 'mousedown', 'touchstart', 'scroll'];
     const handleUserActivity = () => {
@@ -116,14 +123,17 @@ export function SessionTimeoutProvider({ children }: { children: React.ReactNode
       }
       // Throttle activity updates to once per 5 seconds
       if (now - lastActivityRef.current > 5000) {
-        resetTimers();
+        resetTimers(true);
       }
     };
 
     events.forEach((event) => window.addEventListener(event, handleUserActivity));
-    resetTimers();
+    const initTimer = setTimeout(() => {
+      resetTimers(false);
+    }, 0);
 
     return () => {
+      clearTimeout(initTimer);
       events.forEach((event) => window.removeEventListener(event, handleUserActivity));
       if (warningTimerRef.current) clearTimeout(warningTimerRef.current);
       if (logoutTimerRef.current) clearTimeout(logoutTimerRef.current);

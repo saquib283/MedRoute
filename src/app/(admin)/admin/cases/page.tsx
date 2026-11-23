@@ -71,7 +71,12 @@ export default function AdminCasesPage() {
     } catch (err) { console.error(err); } finally { setLoading(false); }
   }, [statusFilter, urgentOnly, search, managerFilter]);
 
-  useEffect(() => { fetchCases(); }, [fetchCases]);
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      void fetchCases();
+    }, 0);
+    return () => clearTimeout(timer);
+  }, [fetchCases]);
 
   useEffect(() => {
     fetch('/api/v1/admin/users?role=MANAGER&limit=100')

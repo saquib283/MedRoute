@@ -1,8 +1,7 @@
 import { NextResponse } from 'next/server';
-import { PrismaClient, AppointmentStatus, AppointmentType } from '@prisma/client';
+import { AppointmentStatus, AppointmentType } from '@prisma/client';
 import { z } from 'zod';
-
-const prisma = new PrismaClient();
+import prisma from '@/lib/prisma';
 
 const createAppointmentSchema = z.object({
   caseId: z.string(),
@@ -25,7 +24,7 @@ export async function GET(request: Request) {
     const userId = request.headers.get('x-user-id');
     const userRole = request.headers.get('x-user-role');
 
-    if (!userId || (userRole !== 'MANAGER' && userRole !== 'ADMIN' && userRole !== 'ADMIN')) {
+    if (!userId || (userRole !== 'MANAGER' && userRole !== 'ADMIN')) {
       return NextResponse.json({ error: 'Unauthorized role' }, { status: 403 });
     }
 
@@ -113,7 +112,7 @@ export async function POST(request: Request) {
     const userId = request.headers.get('x-user-id');
     const userRole = request.headers.get('x-user-role');
 
-    if (!userId || (userRole !== 'MANAGER' && userRole !== 'ADMIN' && userRole !== 'ADMIN')) {
+    if (!userId || (userRole !== 'MANAGER' && userRole !== 'ADMIN')) {
       return NextResponse.json({ error: 'Unauthorized role' }, { status: 403 });
     }
 
@@ -130,8 +129,28 @@ export async function POST(request: Request) {
       where: { id: caseId },
     });
 
-    if (!caseRecord || caseRecord.managerId !== userId) {
+    if (!caseRecord || (userRole === 'MANAGER' && caseRecord.managerId !== userId)) {
       return NextResponse.json({ error: 'Case not found or unauthorized' }, { status: 404 });
+    }
+
+    if (caseRecord.patientId !== patientId) {
+      return NextResponse.json({ error: 'Case does not belong to the specified patient' }, { status: 400 });
+    }
+
+    if (caseRecord.status === 'CLOSED') {
+      return NextResponse.json({ error: 'Cannot schedule an appointment for a closed case' }, { status: 400 });
+    }
+
+    const [doctor, hospital] = await Promise.all([
+      prisma.doctor.findUnique({ where: { id: doctorId } }),
+      prisma.hospital.findUnique({ where: { id: hospitalId } }),
+    ]);
+
+    if (!doctor || !hospital || !doctor.isActive || !hospital.isActive || doctor.hospitalId !== hospitalId) {
+      return NextResponse.json(
+        { error: 'Selected doctor or hospital is inactive or mismatched' },
+        { status: 400 }
+      );
     }
 
     const appointment = await prisma.appointment.create({
@@ -163,7 +182,7 @@ export async function PUT(request: Request) {
     const userId = request.headers.get('x-user-id');
     const userRole = request.headers.get('x-user-role');
 
-    if (!userId || (userRole !== 'MANAGER' && userRole !== 'ADMIN' && userRole !== 'ADMIN')) {
+    if (!userId || (userRole !== 'MANAGER' && userRole !== 'ADMIN')) {
       return NextResponse.json({ error: 'Unauthorized role' }, { status: 403 });
     }
 

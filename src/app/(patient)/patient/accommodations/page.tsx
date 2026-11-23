@@ -79,10 +79,6 @@ export default function PatientAccommodationsPage() {
   const [numGuests, setNumGuests] = useState('2');
   const [specialRequests, setSpecialRequests] = useState('Ground floor suite preferred. Wheelchair access and Arabic halal meal plan requested.');
 
-  useEffect(() => {
-    fetchData();
-  }, []);
-
   const fetchData = async () => {
     try {
       const [hotelsRes, bookingsRes] = await Promise.all([
@@ -102,6 +98,13 @@ export default function PatientAccommodationsPage() {
       setIsLoading(false);
     }
   };
+
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      void fetchData();
+    }, 0);
+    return () => clearTimeout(timer);
+  }, []);
 
   const handleOpenBookingModal = (hotel: Hotel) => {
     setSelectedHotel(hotel);

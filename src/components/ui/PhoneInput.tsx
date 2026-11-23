@@ -585,7 +585,7 @@ export function PhoneInput({
                   })
                 ) : (
                   <div className="p-4 text-center text-xs text-surface-400 italic">
-                    No country matches "{searchTerm}"
+                    No country matches &ldquo;{searchTerm}&rdquo;
                   </div>
                 )}
               </div>

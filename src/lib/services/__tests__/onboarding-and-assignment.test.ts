@@ -19,7 +19,7 @@ jest.mock('@/lib/prisma', () => ({
       findUnique: (...args: unknown[]) => mockUserFindUnique(...args),
       findMany: (...args: unknown[]) => mockUserFindMany(...args),
     },
-    $transaction: async (fn: (tx: any) => Promise<any>) =>
+    $transaction: async <T>(fn: (tx: Record<string, unknown>) => Promise<T>) =>
       fn({
         user: { create: mockTxUserCreate },
         patient: {

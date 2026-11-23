@@ -84,7 +84,10 @@ export default function AdminAppointmentsPage() {
   }, [search, statusFilter, typeFilter, hospitalFilter]);
 
   useEffect(() => {
-    fetchAppointments();
+    const timer = setTimeout(() => {
+      void fetchAppointments();
+    }, 0);
+    return () => clearTimeout(timer);
   }, [fetchAppointments]);
 
   useEffect(() => {

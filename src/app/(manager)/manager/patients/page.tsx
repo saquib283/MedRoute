@@ -25,11 +25,29 @@ interface Case {
   createdAt: string;
 }
 
+interface MedicationEntry {
+  name?: string;
+  dosage?: string;
+  frequency?: string;
+}
+
+interface SurgeryEntry {
+  name?: string;
+  date?: string;
+  notes?: string;
+}
+
+interface EmergencyContact {
+  name?: string;
+  relation?: string;
+  phone?: string;
+}
+
 interface MedicalProfile {
   id: string;
   allergies: string[] | string | null;
-  medications: any[] | string | null;
-  surgeries: any[] | string | null;
+  medications: MedicationEntry[] | string | null;
+  surgeries: SurgeryEntry[] | string | null;
   chronicConditions: string[] | string | null;
   specialisationsRequired: string[] | string | null;
 }
@@ -43,7 +61,7 @@ interface Patient {
   medicalCondition: string | null;
   urgencyLevel: string;
   primaryLanguage: string | null;
-  emergencyContact: any;
+  emergencyContact: EmergencyContact | null;
   user: {
     fullName: string;
     email: string;
@@ -76,13 +94,13 @@ export default function PatientsRoster() {
     loadPatients();
   }, []);
 
-  const formatJSONList = (field: any): string[] => {
+  const formatJSONList = (field: unknown): string[] => {
     if (!field) return [];
-    if (Array.isArray(field)) return field;
+    if (Array.isArray(field)) return field.map(String);
     try {
       if (typeof field === 'string') {
-        const parsed = JSON.parse(field);
-        return Array.isArray(parsed) ? parsed : [];
+        const parsed: unknown = JSON.parse(field);
+        return Array.isArray(parsed) ? parsed.map(String) : [];
       }
     } catch {
       // ignore
@@ -90,13 +108,13 @@ export default function PatientsRoster() {
     return [];
   };
 
-  const formatJSONMedications = (field: any): any[] => {
+  const formatJSONMedications = (field: unknown): MedicationEntry[] => {
     if (!field) return [];
-    if (Array.isArray(field)) return field;
+    if (Array.isArray(field)) return field as MedicationEntry[];
     try {
       if (typeof field === 'string') {
-        const parsed = JSON.parse(field);
-        return Array.isArray(parsed) ? parsed : [];
+        const parsed: unknown = JSON.parse(field);
+        return Array.isArray(parsed) ? (parsed as MedicationEntry[]) : [];
       }
     } catch {
       // ignore
@@ -231,13 +249,13 @@ export default function PatientsRoster() {
                 {selectedPatient.emergencyContact ? (
                   <div className="p-3.5 bg-surface-50 rounded-xl border border-surface-200/60 text-xs space-y-1">
                     <p className="font-semibold text-surface-900">
-                      {selectedPatient.emergencyContact.name || (selectedPatient.emergencyContact as any).name || '—'}
+                      {selectedPatient.emergencyContact.name || '—'}
                     </p>
                     <p className="text-surface-600">
-                      Relation: {selectedPatient.emergencyContact.relation || (selectedPatient.emergencyContact as any).relation || '—'}
+                      Relation: {selectedPatient.emergencyContact.relation || '—'}
                     </p>
                     <p className="text-surface-600 font-mono">
-                      Phone: {selectedPatient.emergencyContact.phone || (selectedPatient.emergencyContact as any).phone || '—'}
+                      Phone: {selectedPatient.emergencyContact.phone || '—'}
                     </p>
                   </div>
                 ) : (

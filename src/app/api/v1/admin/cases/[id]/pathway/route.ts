@@ -5,6 +5,7 @@
  */
 
 import { NextRequest } from 'next/server';
+import type { CaseStatus } from '@prisma/client';
 import prisma from '@/lib/prisma';
 import { requireAuth } from '@/lib/api/auth-helper';
 import { apiSuccess, apiError } from '@/lib/api/response';
@@ -94,7 +95,7 @@ export async function POST(
       if (caseStatus) {
         await tx.case.update({
           where: { id: caseId },
-          data: { status: caseStatus as any },
+          data: { status: caseStatus as CaseStatus },
         });
       }
     });

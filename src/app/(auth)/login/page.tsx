@@ -129,7 +129,10 @@ export default function LoginPage() {
 
   useEffect(() => {
     if (step === '2fa-setup' && tempSessionId) {
-      fetch2FASecret();
+      const timer = setTimeout(() => {
+        void fetch2FASecret();
+      }, 0);
+      return () => clearTimeout(timer);
     }
   }, [step, tempSessionId]);
 

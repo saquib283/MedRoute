@@ -11,6 +11,20 @@ import { apiSuccess, apiError } from '@/lib/api/response';
 import { ERROR_CODES } from '@/lib/api/errors';
 import { bookAppointmentSchema } from '@/lib/validation/schemas';
 
+interface HospitalOption {
+  id: string;
+  name: string;
+  city: string;
+  departments: unknown;
+}
+
+interface DoctorOption {
+  id: string;
+  fullName: string;
+  hospitalId: string;
+  availableDays: unknown;
+}
+
 export async function GET(request: NextRequest) {
   try {
     const { user: authUser, error } = requireAuth(request);
@@ -49,8 +63,8 @@ export async function GET(request: NextRequest) {
     });
 
     // 2. Fetch metadata if requested (to populate dropdowns for new bookings)
-    let hospitals: any[] = [];
-    let doctors: any[] = [];
+    let hospitals: HospitalOption[] = [];
+    let doctors: DoctorOption[] = [];
     let activeCaseId: string | null = null;
 
     if (fetchMeta) {
@@ -110,6 +124,29 @@ export async function POST(request: NextRequest) {
     }
 
     const { caseId, hospitalId, doctorId, appointmentType, scheduledAt } = result.data;
+
+    // Verify case ownership and active status
+    const caseRecord = await prisma.case.findUnique({ where: { id: caseId } });
+    if (!caseRecord || caseRecord.patientId !== patient.id) {
+      return apiError(ERROR_CODES.FORBIDDEN, 'Invalid case for patient', 403);
+    }
+    if (caseRecord.status === 'CLOSED') {
+      return apiError(ERROR_CODES.BAD_REQUEST, 'Cannot request an appointment for a closed case', 400);
+    }
+
+    // Verify doctor & hospital are active and match
+    const [doctor, hospital] = await Promise.all([
+      prisma.doctor.findUnique({ where: { id: doctorId } }),
+      prisma.hospital.findUnique({ where: { id: hospitalId } }),
+    ]);
+
+    if (!doctor || !hospital || !doctor.isActive || !hospital.isActive || doctor.hospitalId !== hospitalId) {
+      return apiError(
+        ERROR_CODES.BAD_REQUEST,
+        'Selected doctor or hospital is inactive or mismatched',
+        400
+      );
+    }
 
     // Create the appointment record
     const appointment = await prisma.appointment.create({

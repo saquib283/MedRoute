@@ -90,10 +90,6 @@ export default function DocumentVaultPage() {
   const [dragActive, setDragActive] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  useEffect(() => {
-    fetchDocuments();
-  }, []);
-
   const fetchDocuments = async () => {
     try {
       const res = await fetch('/api/v1/patient/documents');
@@ -108,6 +104,13 @@ export default function DocumentVaultPage() {
       setIsLoading(false);
     }
   };
+
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      void fetchDocuments();
+    }, 0);
+    return () => clearTimeout(timer);
+  }, []);
 
   const handleDrag = (e: React.DragEvent) => {
     e.preventDefault();

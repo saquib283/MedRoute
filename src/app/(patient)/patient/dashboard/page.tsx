@@ -61,7 +61,8 @@ export default function PatientDashboard() {
         const appData = await appRes.json();
         if (appData.success && appData.data?.appointments) {
           const upcoming = appData.data.appointments.filter(
-            (a: any) => new Date(a.scheduledAt) > new Date() && a.status !== 'CANCELLED'
+            (a: { scheduledAt: string; status: string }) =>
+              new Date(a.scheduledAt) > new Date() && a.status !== 'CANCELLED'
           );
           setAppointmentsCount(upcoming.length);
         }

@@ -38,7 +38,14 @@ export default function AdminHospitalsPage() {
   const [activeTab, setActiveTab] = useState<'hospitals' | 'overrides'>('hospitals');
 
   // Overrides State
-  const [overrides, setOverrides] = useState<any[]>([]);
+  interface HospitalOverrideItem {
+    id: string;
+    rate: number;
+    startDate: string;
+    endDate: string;
+    notes?: string | null;
+  }
+  const [overrides, setOverrides] = useState<HospitalOverrideItem[]>([]);
   const [selectedHospitalId, setSelectedHospitalId] = useState('');
   const [loadingOverrides, setLoadingOverrides] = useState(false);
   const [savingOverride, setSavingOverride] = useState(false);
@@ -102,9 +109,11 @@ export default function AdminHospitalsPage() {
   }, []);
 
   useEffect(() => {
-    if (selectedHospitalId) {
-      fetchOverrides(selectedHospitalId);
-    }
+    if (!selectedHospitalId) return;
+    const timer = setTimeout(() => {
+      void fetchOverrides(selectedHospitalId);
+    }, 0);
+    return () => clearTimeout(timer);
   }, [selectedHospitalId, fetchOverrides]);
 
   const handleAddOverride = async (e: React.FormEvent) => {
@@ -182,7 +191,10 @@ export default function AdminHospitalsPage() {
   }, [search, cityFilter]);
 
   useEffect(() => {
-    fetchHospitals();
+    const timer = setTimeout(() => {
+      void fetchHospitals();
+    }, 0);
+    return () => clearTimeout(timer);
   }, [fetchHospitals]);
 
   const openCreate = () => {
@@ -492,7 +504,7 @@ export default function AdminHospitalsPage() {
                           <td className="px-4 py-3 font-mono font-bold text-primary-700">{Number(o.rate)}%</td>
                           <td className="px-4 py-3 text-surface-600">{new Date(o.startDate).toLocaleDateString()}</td>
                           <td className="px-4 py-3 text-surface-600">{new Date(o.endDate).toLocaleDateString()}</td>
-                          <td className="px-4 py-3 text-surface-500 italic max-w-[150px] truncate" title={o.notes}>{o.notes || '—'}</td>
+                          <td className="px-4 py-3 text-surface-500 italic max-w-[150px] truncate" title={o.notes || undefined}>{o.notes || '—'}</td>
                           <td className="px-4 py-3 text-right">
                             <button
                               type="button"
