@@ -1,18 +1,30 @@
 ﻿/**
  * Afzal Healthcare — Patient Documents API Endpoint
  * GET /api/v1/patient/documents — List all documents
- * POST /api/v1/patient/documents — Upload new document (saves to public/uploads)
+ * POST /api/v1/patient/documents — Upload new document (validated & stored privately)
  * DELETE /api/v1/patient/documents?id=... — Delete a document
  */
 
 import { NextRequest } from 'next/server';
 import prisma from '@/lib/prisma';
-import { requireAuth } from '@/lib/api/auth-helper';
+import { getClientIP, requireAuth } from '@/lib/api/auth-helper';
 import { apiSuccess, apiError } from '@/lib/api/response';
 import { ERROR_CODES } from '@/lib/api/errors';
-import { promises as fs } from 'fs';
-import path from 'path';
+import { AUDIT_ACTIONS, createAuditLog } from '@/lib/api/audit-logger';
+import {
+  removeStoredFile,
+  saveValidatedUpload,
+} from '@/lib/services/document-storage.service';
 import type { DocumentCategory } from '@prisma/client';
+
+const PATIENT_UPLOAD_CATEGORIES = [
+  'PASSPORT',
+  'VISA',
+  'MEDICAL_REPORT',
+  'PRESCRIPTION',
+  'INSURANCE',
+  'FRRO_REGISTRATION',
+] as const;
 
 export async function GET(request: NextRequest) {
   try {
@@ -57,49 +69,47 @@ export async function POST(request: NextRequest) {
     // Parse form data
     const formData = await request.formData();
     const file = formData.get('file') as File | null;
-    const category = formData.get('category') as DocumentCategory | null;
+    const categoryRaw = formData.get('category') as string | null;
 
-    if (!file || !category) {
+    if (!file || !categoryRaw) {
       return apiError(ERROR_CODES.BAD_REQUEST, 'File and category are required', 400);
     }
 
-    // Validate file size (e.g. 25MB limit)
-    const MAX_SIZE = 25 * 1024 * 1024;
-    if (file.size > MAX_SIZE) {
-      return apiError(ERROR_CODES.BAD_REQUEST, 'File size exceeds 25MB limit', 400);
+    if (
+      !(PATIENT_UPLOAD_CATEGORIES as readonly string[]).includes(categoryRaw)
+    ) {
+      return apiError(ERROR_CODES.BAD_REQUEST, 'Invalid document category', 400);
     }
 
-    // Write file to local disk under private storage/uploads
-    const arrayBuffer = await file.arrayBuffer();
-    const buffer = Buffer.from(arrayBuffer);
+    const category = categoryRaw as DocumentCategory;
 
-    // Sanitize and create safe filename
-    const timestamp = Date.now();
-    const safeName = file.name.replace(/[^a-zA-Z0-9.-]/g, '_');
-    const filename = `${timestamp}_${safeName}`;
-    const uploadDir = path.join(process.cwd(), 'storage', 'uploads');
+    const saved = await saveValidatedUpload(file, 'doc');
+    if (!saved.ok) {
+      return apiError(ERROR_CODES.BAD_REQUEST, saved.message, 400);
+    }
 
-    // Ensure directory exists
-    await fs.mkdir(uploadDir, { recursive: true });
+    // Create database document record preserving storageKey
+    let document;
+    try {
+      document = await prisma.document.create({
+        data: {
+          patientId: patient.id,
+          uploadedBy: authUser!.userId,
+          category,
+          fileUrl: '',
+          storageKey: saved.storageKey,
+          fileName: file.name,
+          fileSize: saved.fileSize,
+          mimeType: saved.canonicalMime,
+        },
+      });
+    } catch (dbErr) {
+      await removeStoredFile(saved.storageKey);
+      throw dbErr;
+    }
 
-    const filePath = path.join(uploadDir, filename);
-    await fs.writeFile(filePath, buffer);
-
-    // Create database document record (temporary placeholder for fileUrl)
-    const document = await prisma.document.create({
-      data: {
-        patientId: patient.id,
-        uploadedBy: authUser!.userId,
-        category,
-        fileUrl: `/uploads/${filename}`,
-        fileName: file.name,
-        fileSize: file.size,
-        mimeType: file.type || 'application/octet-stream',
-      },
-    });
-
-    // Update fileUrl to point to authenticated download API
-    const downloadUrl = `/api/v1/patient/documents/download?id=${document.id}`;
+    // Update fileUrl to point to unified authenticated download API
+    const downloadUrl = `/api/v1/documents/${document.id}/download`;
     const updatedDocument = await prisma.document.update({
       where: { id: document.id },
       data: { fileUrl: downloadUrl },
@@ -136,25 +146,48 @@ export async function DELETE(request: NextRequest) {
       return apiError(ERROR_CODES.NOT_FOUND, 'Document not found', 404);
     }
 
-    // Check ownership (only the patient who owns the file, or their assigned manager/admin can delete)
-    if (document.patient.userId !== authUser!.userId && authUser!.role === 'PATIENT') {
+    // Enforce strict role & ownership checks
+    if (authUser!.role === 'PATIENT') {
+      if (document.patient.userId !== authUser!.userId) {
+        return apiError(ERROR_CODES.FORBIDDEN, 'Unauthorized access to document', 403);
+      }
+      if (
+        document.verificationStatus === 'VERIFIED' ||
+        document.verificationStatus === 'ISSUED_BY_HOSPITAL'
+      ) {
+        return apiError(
+          ERROR_CODES.FORBIDDEN,
+          'Verified or hospital-issued documents cannot be deleted',
+          403
+        );
+      }
+    } else if (authUser!.role === 'MANAGER') {
+      if (document.patient.assignedManagerId !== authUser!.userId) {
+        return apiError(ERROR_CODES.FORBIDDEN, 'Unauthorized access to document', 403);
+      }
+    } else if (authUser!.role !== 'ADMIN') {
       return apiError(ERROR_CODES.FORBIDDEN, 'Unauthorized access to document', 403);
     }
 
-    // Delete physical file on disk (check storage/uploads and legacy public/uploads)
-    try {
-      const filename = path.basename(document.fileUrl);
-      const storagePath = path.join(process.cwd(), 'storage', 'uploads', filename);
-      const publicPath = path.join(process.cwd(), 'public', 'uploads', filename);
-
-      await fs.unlink(storagePath).catch(() => fs.unlink(publicPath).catch(() => {}));
-    } catch (err) {
-      console.warn('Physical file not found or failed to delete', err);
-    }
+    // Delete physical file on disk
+    await removeStoredFile(document.storageKey, document.fileUrl);
 
     // Delete database record
     await prisma.document.delete({
       where: { id },
+    });
+
+    void createAuditLog({
+      actorId: authUser!.userId,
+      action: AUDIT_ACTIONS.DELETE,
+      entityType: 'Document',
+      entityId: document.id,
+      oldValue: {
+        fileName: document.fileName,
+        category: document.category,
+        verificationStatus: document.verificationStatus,
+      },
+      ipAddress: getClientIP(request),
     });
 
     return apiSuccess({ message: 'Document deleted successfully' });

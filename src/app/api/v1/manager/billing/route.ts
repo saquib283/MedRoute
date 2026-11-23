@@ -9,8 +9,7 @@ import prisma from '@/lib/prisma';
 import { requireAuth } from '@/lib/api/auth-helper';
 import { apiSuccess, apiError } from '@/lib/api/response';
 import { ERROR_CODES } from '@/lib/api/errors';
-import { promises as fs } from 'fs';
-import path from 'path';
+import { saveValidatedUpload } from '@/lib/services/document-storage.service';
 
 export async function GET(request: NextRequest) {
   try {
@@ -71,7 +70,9 @@ export async function POST(request: NextRequest) {
     let notes: string | null = null;
     let itemsRaw: any[] = [];
     let fileUrl: string | null = null;
+    let savedStorageKey: string | null = null;
     let fileName: string | null = null;
+    let uploadFile: File | null = null;
 
     if (contentType.includes('multipart/form-data')) {
       const formData = await request.formData();
@@ -93,21 +94,7 @@ export async function POST(request: NextRequest) {
         } catch {}
       }
 
-      const file = formData.get('file') as File | null;
-      if (file && file.size > 0) {
-        const arrayBuffer = await file.arrayBuffer();
-        const buffer = Buffer.from(arrayBuffer);
-        const timestamp = Date.now();
-        const safeName = file.name.replace(/[^a-zA-Z0-9.-]/g, '_');
-        const filename = `${timestamp}_${safeName}`;
-        const uploadDir = path.join(process.cwd(), 'storage', 'uploads');
-
-        await fs.mkdir(uploadDir, { recursive: true });
-        await fs.writeFile(path.join(uploadDir, filename), buffer);
-
-        fileUrl = `/api/v1/patient/documents/download?file=${filename}`;
-        fileName = file.name;
-      }
+      uploadFile = formData.get('file') as File | null;
     } else {
       const body = await request.json();
       caseId = body.caseId;
@@ -125,6 +112,15 @@ export async function POST(request: NextRequest) {
 
     if (!caseId || !patientId || !title) {
       return apiError(ERROR_CODES.BAD_REQUEST, 'caseId, patientId, and title are required', 400);
+    }
+
+    if (uploadFile && uploadFile.size > 0) {
+      const saved = await saveValidatedUpload(uploadFile, 'bill');
+      if (!saved.ok) {
+        return apiError(ERROR_CODES.BAD_REQUEST, saved.message, 400);
+      }
+      savedStorageKey = saved.storageKey;
+      fileName = uploadFile.name;
     }
 
     // Auto-generate bill number if not specified
@@ -163,6 +159,7 @@ export async function POST(request: NextRequest) {
         status,
         dueDate,
         fileUrl,
+        storageKey: savedStorageKey,
         fileName,
         notes,
         createdBy: authUser!.userId,
@@ -180,7 +177,22 @@ export async function POST(request: NextRequest) {
       },
     });
 
-    return apiSuccess({ bill: newBill });
+    const finalBill = savedStorageKey
+      ? await prisma.medicalBill.update({
+          where: { id: newBill.id },
+          data: { fileUrl: `/api/v1/documents/bill/${newBill.id}/download` },
+          include: {
+            items: true,
+            patient: {
+              include: {
+                user: { select: { fullName: true } },
+              },
+            },
+          },
+        })
+      : newBill;
+
+    return apiSuccess({ bill: finalBill });
   } catch (err) {
     console.error('[Manager Billing POST Error]', err);
     return apiError(ERROR_CODES.INTERNAL_ERROR, 'Failed to create medical bill', 500);
