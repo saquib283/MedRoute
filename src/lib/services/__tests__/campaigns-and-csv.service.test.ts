@@ -17,6 +17,7 @@ jest.mock('@/lib/prisma', () => ({
       findMany: jest.fn(),
       create: jest.fn(),
       update: jest.fn(),
+      updateMany: jest.fn(),
       count: jest.fn(),
     },
     user: {
@@ -40,6 +41,7 @@ import {
   POST as postCampaign,
   PATCH as patchCampaigns,
 } from '@/app/api/v1/admin/email-campaigns/route';
+import { processQueuedCampaigns } from '@/lib/services/email-campaign.service';
 
 const mockedPrisma = prisma as unknown as Record<string, Record<string, jest.Mock>>;
 
@@ -259,6 +261,7 @@ describe('Task 3: Email Campaign Sanitizer, Placeholder Interpolation & CSV Hard
         },
       },
     ]);
+    mockedPrisma.emailCampaign.updateMany.mockResolvedValueOnce({ count: 1 });
     mockedPrisma.user.findMany.mockResolvedValueOnce([
       {
         id: 'u-2',
@@ -289,6 +292,10 @@ describe('Task 3: Email Campaign Sanitizer, Placeholder Interpolation & CSV Hard
     const procJson = await procRes.json();
     expect(procRes.status).toBe(200);
     expect(procJson.data).toEqual({ processedCampaigns: 1, notificationsCreated: 1 });
+    expect(mockedPrisma.emailCampaign.updateMany).toHaveBeenCalledWith({
+      where: { id: 'camp-q1', status: 'QUEUED' },
+      data: { status: 'SENT', sentAt: expect.any(Date) },
+    });
     expect(mockedPrisma.notification.createMany).toHaveBeenLastCalledWith({
       data: [
         expect.objectContaining({
@@ -297,6 +304,55 @@ describe('Task 3: Email Campaign Sanitizer, Placeholder Interpolation & CSV Hard
           body: '<p>Reach concierge@afzalhealthcare.in</p>',
         }),
       ],
+    });
+  });
+
+  it('skips queued campaigns already claimed concurrently and rolls back status to FAILED on dispatch error', async () => {
+    const dueCampaign = {
+      id: 'camp-race',
+      name: 'Concurrent Queued',
+      targetRole: 'PATIENT',
+      template: {
+        id: 'tpl-1',
+        name: 'Welcome',
+        subject: 'Hello {{fullName}}',
+        body: '<p>Hi {{fullName}}</p>',
+      },
+    };
+
+    // Case 1: another worker already claimed the campaign (count: 0)
+    mockedPrisma.emailCampaign.findMany.mockResolvedValueOnce([dueCampaign]);
+    mockedPrisma.emailCampaign.updateMany.mockResolvedValueOnce({ count: 0 });
+
+    const skippedSummary = await processQueuedCampaigns(new Date('2026-11-23T12:00:00Z'));
+    expect(skippedSummary).toEqual({ processedCampaigns: 0, notificationsCreated: 0 });
+    expect(mockedPrisma.user.findMany).not.toHaveBeenCalled();
+    expect(mockedPrisma.notification.createMany).not.toHaveBeenCalled();
+
+    // Case 2: claimed by this worker (count: 1) but notification insert fails -> rollback to FAILED
+    mockedPrisma.emailCampaign.findMany.mockResolvedValueOnce([dueCampaign]);
+    mockedPrisma.emailCampaign.updateMany.mockResolvedValueOnce({ count: 1 });
+    mockedPrisma.user.findMany.mockResolvedValueOnce([
+      {
+        id: 'u-3',
+        fullName: 'Layla Hassan',
+        email: 'layla@example.com',
+        role: 'PATIENT',
+        patient: null,
+      },
+    ]);
+    mockedPrisma.notification.createMany.mockRejectedValueOnce(new Error('DB write error'));
+    mockedPrisma.emailCampaign.update.mockResolvedValueOnce({
+      id: 'camp-race',
+      status: 'FAILED',
+    });
+
+    await expect(
+      processQueuedCampaigns(new Date('2026-11-23T12:00:00Z'))
+    ).rejects.toThrow('DB write error');
+    expect(mockedPrisma.emailCampaign.update).toHaveBeenCalledWith({
+      where: { id: 'camp-race' },
+      data: { status: 'FAILED' },
     });
   });
 

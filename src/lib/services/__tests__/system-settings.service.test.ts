@@ -57,6 +57,7 @@ import {
 import { assignPatientCoordinator } from '@/lib/services/case-assignment.service';
 import { POST as postHospital } from '@/app/api/v1/admin/hospitals/route';
 import { POST as postAccommodation } from '@/app/api/v1/accommodations/route';
+import { POST as postRegister } from '@/app/api/v1/auth/register/route';
 import proxy from '@/proxy';
 import { signAccessToken } from '@/lib/auth/jwt';
 
@@ -350,5 +351,28 @@ describe('Task 1: SystemConfig Governance Service & Runtime Enforcement', () => 
     const hotelJson = await hotelRes.json();
     expect(hotelRes.status).toBe(201);
     expect(hotelJson.data.hotel.commissionPercent).toBe(17.5);
+  });
+
+  it('blocks public patient registration with 503 MAINTENANCE_MODE when maintenance is active', async () => {
+    mockedPrisma.systemConfig.findMany.mockResolvedValue([
+      { key: 'maintenanceMode', value: 'true' },
+    ]);
+
+    const regReq = new NextRequest('http://localhost/api/v1/auth/register', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({
+        email: 'patient@example.com',
+        password: 'Password@123',
+        fullName: 'Test Patient',
+        nationality: 'Oman',
+        passportNo: 'OM123456',
+        dob: '1990-01-01',
+      }),
+    });
+    const regRes = await postRegister(regReq);
+    const regJson = await regRes.json();
+    expect(regRes.status).toBe(503);
+    expect(regJson.error.code).toBe('MAINTENANCE_MODE');
   });
 });

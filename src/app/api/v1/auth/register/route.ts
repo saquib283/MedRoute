@@ -1,4 +1,4 @@
-﻿/**
+/**
  * Afzal Healthcare — POST /api/v1/auth/register
  * Patient self-registration via transactional onboarding service.
  */
@@ -10,10 +10,20 @@ import { registerSchema } from '@/lib/validation/schemas';
 import { apiSuccess, apiError, badRequest, validationError } from '@/lib/api/response';
 import { ERROR_CODES } from '@/lib/api/errors';
 import { getClientIP, setAuthCookies } from '@/lib/api/auth-helper';
+import { checkMaintenanceActive } from '@/lib/api/settings-helper';
 import { onboardPatient } from '@/lib/services/onboarding.service';
 
 export async function POST(request: NextRequest) {
   try {
+    const isMaintenance = await checkMaintenanceActive('PATIENT');
+    if (isMaintenance) {
+      return apiError(
+        ERROR_CODES.MAINTENANCE_MODE,
+        'System is currently undergoing scheduled maintenance. Please try again later.',
+        503
+      );
+    }
+
     let body: unknown;
     try {
       body = await request.json();

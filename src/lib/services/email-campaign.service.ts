@@ -183,23 +183,43 @@ export async function processQueuedCampaigns(
     include: { template: true },
   });
 
+  let processedCampaigns = 0;
   let notificationsCreated = 0;
 
   for (const camp of queued) {
-    const dispatched = await dispatchCampaignToRecipients(
-      camp.id,
-      camp.template,
-      camp.targetRole,
-      now
-    );
-    notificationsCreated += dispatched.notificationsCreated;
-    console.log(
-      `[Scheduled Email Campaign] Campaign "${camp.name}" processed and sent to ${dispatched.notificationsCreated} users.`
-    );
+    const claimed = await prisma.emailCampaign.updateMany({
+      where: { id: camp.id, status: 'QUEUED' },
+      data: { status: 'SENT', sentAt: now },
+    });
+    if (claimed.count === 0) continue;
+
+    try {
+      const dispatched = await dispatchCampaignToRecipients(
+        camp.id,
+        camp.template,
+        camp.targetRole,
+        now
+      );
+      processedCampaigns += 1;
+      notificationsCreated += dispatched.notificationsCreated;
+      console.log(
+        `[Scheduled Email Campaign] Campaign "${camp.name}" processed and sent to ${dispatched.notificationsCreated} users.`
+      );
+    } catch (err) {
+      try {
+        await prisma.emailCampaign.update({
+          where: { id: camp.id },
+          data: { status: 'FAILED' },
+        });
+      } catch {
+        // Preserve original dispatch error if rollback fails
+      }
+      throw err;
+    }
   }
 
   return {
-    processedCampaigns: queued.length,
+    processedCampaigns,
     notificationsCreated,
   };
 }

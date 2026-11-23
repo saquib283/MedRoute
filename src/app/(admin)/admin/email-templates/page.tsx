@@ -315,7 +315,7 @@ export default function EmailTemplatesPage() {
 
               <div className="space-y-1.5">
                 <label className="block text-xs font-semibold text-surface-700">Tracked Placeholders (comma-separated)</label>
-                <input type="text" value={form.placeholders} onChange={(e) => setForm({ ...form, placeholders: e.target.value })} className="w-full p-2.5 border border-surface-200 rounded-xl text-sm focus:border-primary-600 focus:outline-none" placeholder="fullName, email, appointmentDate" />
+                <input type="text" value={form.placeholders} onChange={(e) => setForm({ ...form, placeholders: e.target.value })} className="w-full p-2.5 border border-surface-200 rounded-xl text-sm focus:border-primary-600 focus:outline-none" placeholder="fullName, email, caseStatus, portalUrl" />
               </div>
 
               <div className="flex gap-3 pt-2">
