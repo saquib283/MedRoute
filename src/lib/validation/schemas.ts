@@ -84,9 +84,10 @@ export const patientProfileSchema = z.object({
   primaryLanguage: z.string().optional(),
   emergencyContact: z
     .object({
-      name: z.string().min(2),
-      phone: z.string().regex(/^\+?[1-9]\d{7,14}$/),
-      relation: z.string().min(2),
+      name: z.string().trim().min(2),
+      countryCode: z.string().regex(/^\+\d{1,4}$/).optional(),
+      phone: z.string().trim().regex(/^\+?[0-9\s-]{6,16}$/),
+      relation: z.string().trim().min(2),
     })
     .optional(),
 });

@@ -10,6 +10,7 @@ import { DocumentCategory, Prisma, PrismaClient } from '@prisma/client';
 import bcrypt from 'bcryptjs';
 import { encrypt } from '../src/lib/auth/crypto';
 import { encryptMedicalProfile } from '../src/lib/api/phi-encryption';
+import { DEFAULT_SYSTEM_SETTINGS } from '../src/lib/services/system-settings.service';
 
 const prisma = new PrismaClient();
 
@@ -634,6 +635,20 @@ async function main() {
   });
 
   console.log(`  ✓ 3 partner hotels & 1 accommodation booking ($105 USD partner commission) created\n`);
+
+  // ─── 9. Platform System Governance Defaults ───────────────────────
+  console.log('Seeding default SystemConfig governance settings...');
+  for (const [key, value] of Object.entries(DEFAULT_SYSTEM_SETTINGS)) {
+    await prisma.systemConfig.upsert({
+      where: { key },
+      update: {},
+      create: {
+        key,
+        value: JSON.stringify(value),
+      },
+    });
+  }
+  console.log(`  ✓ ${Object.keys(DEFAULT_SYSTEM_SETTINGS).length} SystemConfig defaults seeded\n`);
 
   console.log('✅ Database seeded successfully!\n');
   console.log('Test credentials:');

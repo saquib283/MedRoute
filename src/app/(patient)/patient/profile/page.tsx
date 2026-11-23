@@ -147,6 +147,7 @@ export default function PatientProfilePage() {
 
           if (pat.emergencyContact) {
             setEmergencyName(pat.emergencyContact.name || '');
+            setEmergencyCountryCode(pat.emergencyContact.countryCode || '+971');
             setEmergencyPhone(pat.emergencyContact.phone || '');
             setEmergencyRelation(pat.emergencyContact.relation || '');
           }
@@ -203,17 +204,27 @@ export default function PatientProfilePage() {
     setErrorMsg('');
 
     try {
+      const hasEmergencyContact =
+        Boolean(emergencyName.trim()) ||
+        Boolean(emergencyPhone.trim()) ||
+        Boolean(emergencyRelation.trim());
+
       const res = await fetch('/api/v1/patient/profile', {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          bloodGroup,
-          primaryLanguage,
-          emergencyContact: {
-            name: emergencyName,
-            phone: emergencyPhone,
-            relation: emergencyRelation,
-          },
+          bloodGroup: bloodGroup || undefined,
+          primaryLanguage: primaryLanguage.trim() || undefined,
+          ...(hasEmergencyContact
+            ? {
+                emergencyContact: {
+                  name: emergencyName.trim(),
+                  countryCode: emergencyCountryCode,
+                  phone: emergencyPhone.trim(),
+                  relation: emergencyRelation.trim(),
+                },
+              }
+            : {}),
           allergies,
           medications,
           surgeries,

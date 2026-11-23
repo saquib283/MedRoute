@@ -1,4 +1,4 @@
-﻿/**
+/**
  * Afzal Healthcare — Patient Profile API Endpoint
  * GET /api/v1/patient/profile — Fetch current patient and medical data
  * PUT /api/v1/patient/profile — Update patient and medical data
@@ -12,6 +12,7 @@ import { ERROR_CODES } from '@/lib/api/errors';
 import { createAuditLog } from '@/lib/api/audit-logger';
 import { encryptMedicalProfile, decryptMedicalProfile } from '@/lib/api/phi-encryption';
 import { decrypt } from '@/lib/auth/crypto';
+import { patientProfileSchema } from '@/lib/validation/schemas';
 import { Prisma } from '@prisma/client';
 
 
@@ -78,6 +79,51 @@ export async function PUT(request: NextRequest) {
       specialisationsRequired,
     } = body;
 
+    const normalizedBloodGroup = bloodGroup === '' ? undefined : bloodGroup;
+    if (normalizedBloodGroup !== undefined) {
+      const bgParsed = patientProfileSchema.shape.bloodGroup.safeParse(normalizedBloodGroup);
+      if (!bgParsed.success) {
+        return apiError(ERROR_CODES.VALIDATION_ERROR, 'Invalid blood group', 400);
+      }
+    }
+
+    const normalizedPrimaryLanguage =
+      typeof primaryLanguage === 'string' && primaryLanguage.trim() === ''
+        ? undefined
+        : primaryLanguage;
+
+    let validatedEmergencyContact:
+      | { name: string; countryCode?: string; phone: string; relation: string }
+      | undefined;
+
+    if (emergencyContact !== undefined && emergencyContact !== null) {
+      const rawEc =
+        typeof emergencyContact === 'object' ? (emergencyContact as Record<string, unknown>) : null;
+      const isAllBlank =
+        rawEc !== null &&
+        !String(rawEc.name ?? '').trim() &&
+        !String(rawEc.phone ?? '').trim() &&
+        !String(rawEc.relation ?? '').trim();
+
+      if (!isAllBlank) {
+        const ecParsed = patientProfileSchema.shape.emergencyContact.safeParse(emergencyContact);
+        if (!ecParsed.success || !ecParsed.data) {
+          return apiError(
+            ERROR_CODES.VALIDATION_ERROR,
+            'Invalid emergency contact details',
+            400,
+            ecParsed.success ? undefined : ecParsed.error.flatten().fieldErrors
+          );
+        }
+        validatedEmergencyContact = {
+          name: ecParsed.data.name,
+          ...(ecParsed.data.countryCode ? { countryCode: ecParsed.data.countryCode } : {}),
+          phone: ecParsed.data.phone,
+          relation: ecParsed.data.relation,
+        };
+      }
+    }
+
     // Find the patient ID corresponding to the user ID
     const patient = await prisma.patient.findFirst({
       where: { userId: authUser!.userId },
@@ -101,9 +147,13 @@ export async function PUT(request: NextRequest) {
       const pat = await tx.patient.update({
         where: { id: patient.id },
         data: {
-          bloodGroup: bloodGroup !== undefined ? bloodGroup : undefined,
-          primaryLanguage: primaryLanguage !== undefined ? primaryLanguage : undefined,
-          emergencyContact: emergencyContact !== undefined ? (emergencyContact as Prisma.InputJsonValue) : undefined,
+          bloodGroup: normalizedBloodGroup !== undefined ? normalizedBloodGroup : undefined,
+          primaryLanguage:
+            normalizedPrimaryLanguage !== undefined ? normalizedPrimaryLanguage : undefined,
+          emergencyContact:
+            validatedEmergencyContact !== undefined
+              ? (validatedEmergencyContact as Prisma.InputJsonValue)
+              : undefined,
         },
       });
 

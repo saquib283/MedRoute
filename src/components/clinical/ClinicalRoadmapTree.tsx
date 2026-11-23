@@ -8,27 +8,16 @@
 import React, { useState, useMemo } from 'react';
 import Link from 'next/link';
 import {
-  CheckCircle2,
-  Clock,
-  AlertCircle,
-  FileText,
-  Activity,
   Plane,
   ShieldCheck,
-  Stethoscope,
   ChevronDown,
   ChevronUp,
-  HeartPulse,
   Award,
-  Bed,
   CalendarCheck,
-  Sparkles,
   GitBranch,
-  GitCommit,
   Download,
   CreditCard,
   UploadCloud,
-  FileCheck,
   Check,
   CornerDownRight,
   FolderTree,
@@ -63,14 +52,6 @@ interface ClinicalRoadmapTreeProps {
   fitToFly?: FitToFlyData | null;
   currentStatus: string;
 }
-
-const CATEGORY_ICONS: Record<string, React.ComponentType<{ className?: string }>> = {
-  PRE_OP: Stethoscope,
-  TREATMENT: HeartPulse,
-  POST_OP: Bed,
-  DISCHARGE: Plane,
-  REHAB: Activity,
-};
 
 const BRANCH_LABELS: Record<string, { label: string; style: string }> = {
   APPROVED_FOR_SURGERY: { label: 'MDT Board Cleared', style: 'bg-emerald-100 text-emerald-800 border-emerald-200' },
@@ -252,7 +233,6 @@ export function ClinicalRoadmapTree({ steps, fitToFly, currentStatus }: Clinical
           const totalInGroup = stageGroup.steps.length;
           const isStageComplete = totalInGroup > 0 && completedInGroup === totalInGroup;
           const isStageActive = stageGroup.steps.some((s) => s.status === 'IN_PROGRESS' || s.status === 'ACTION_REQUIRED');
-          const CategoryIcon = CATEGORY_ICONS[stageGroup.steps[0]?.category] || Stethoscope;
 
           return (
             <div key={stageIdx} className="relative">
@@ -342,7 +322,6 @@ export function ClinicalRoadmapTree({ steps, fitToFly, currentStatus }: Clinical
                       {stageGroup.steps.map((step, stepIdx) => {
                         const isCompleted = step.status === 'COMPLETED';
                         const isInProgress = step.status === 'IN_PROGRESS' || step.status === 'ACTION_REQUIRED';
-                        const isLastBranch = stepIdx === stageGroup.steps.length - 1;
                         const branchInfo = step.decisionBranch ? BRANCH_LABELS[step.decisionBranch] : null;
 
                         return (

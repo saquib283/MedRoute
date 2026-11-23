@@ -36,6 +36,7 @@ export default function ChatCenter() {
   const [loadingMessages, setLoadingMessages] = useState(false);
   
   const chatEndRef = useRef<HTMLDivElement>(null);
+  const lastMessageIdRef = useRef<string | null>(null);
 
   // Poll for thread changes and message logs
   useEffect(() => {
@@ -81,10 +82,21 @@ export default function ChatCenter() {
   }, [selectedThread]);
 
   useEffect(() => {
-    chatEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+    lastMessageIdRef.current = null;
+  }, [selectedThread?.patientUserId]);
+
+  useEffect(() => {
+    const latestId = messages.length > 0 ? messages[messages.length - 1].id : null;
+    if (latestId !== lastMessageIdRef.current) {
+      lastMessageIdRef.current = latestId;
+      if (latestId) {
+        chatEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+      }
+    }
   }, [messages]);
 
   const handleSelectThread = async (t: ChatThread) => {
+    lastMessageIdRef.current = null;
     setSelectedThread(t);
     setLoadingMessages(true);
     try {

@@ -11,7 +11,6 @@ import { Button } from '@/components/ui/Button';
 import {
   Calendar,
   Plane,
-  Home,
   FileSearch,
   Lock,
   RefreshCw,
@@ -53,6 +52,7 @@ export default function SecureMessagesPage() {
   const [isRefreshing, setIsRefreshing] = useState(false);
 
   const feedRef = useRef<HTMLDivElement>(null);
+  const lastMessageIdRef = useRef<string | null>(null);
 
   useEffect(() => {
     const fetchMe = async () => {
@@ -99,8 +99,12 @@ export default function SecureMessagesPage() {
   }, []);
 
   useEffect(() => {
-    if (feedRef.current) {
-      feedRef.current.scrollTop = feedRef.current.scrollHeight;
+    const latestId = messages.length > 0 ? messages[messages.length - 1].id : null;
+    if (latestId !== lastMessageIdRef.current) {
+      lastMessageIdRef.current = latestId;
+      if (latestId && feedRef.current) {
+        feedRef.current.scrollTop = feedRef.current.scrollHeight;
+      }
     }
   }, [messages]);
 

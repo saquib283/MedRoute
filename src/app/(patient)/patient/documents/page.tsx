@@ -8,7 +8,6 @@
 import { useState, useEffect, useMemo, useRef } from 'react';
 import { Card } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
-import { Badge } from '@/components/ui/Badge';
 import { Select, SelectOption } from '@/components/ui/Select';
 import { toast } from '@/components/ui/Toast';
 import { DOCUMENT_CATEGORY_LABELS } from '@/lib/constants';
@@ -19,24 +18,19 @@ import {
 import {
   UploadCloud,
   FileText,
-  Lock,
   Search,
   LayoutGrid,
   Table,
   Download,
   Trash2,
-  HardDrive,
   ShieldCheck,
   CheckCircle2,
   AlertCircle,
-  FileCode,
   Plane,
   Building2,
   Clock,
-  Award,
   FileCheck,
   FolderLock,
-  HelpCircle,
   XCircle,
 } from 'lucide-react';
 
@@ -59,6 +53,7 @@ const CATEGORY_FILTERS = [
   { id: 'HOSPITAL_OFFICIAL', label: 'Hospital-Issued Certificates' },
   { id: 'DIAGNOSTICS', label: 'Medical Diagnostics & Imaging' },
   { id: 'PRESCRIPTION', label: 'Prescriptions' },
+  { id: 'INSURANCE', label: 'Travel Insurance' },
 ];
 
 const UPLOAD_CATEGORY_OPTIONS: SelectOption[] = [

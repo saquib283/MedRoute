@@ -5,7 +5,7 @@
  * Accessible custom dropdown UI with search filtering, Lucide icons, and keyboard support.
  */
 
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, useId } from 'react';
 import { ChevronDown, Check, Search, X } from 'lucide-react';
 
 export interface SelectOption {
@@ -47,6 +47,7 @@ export function Select({
   const [isOpen, setIsOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const containerRef = useRef<HTMLDivElement>(null);
+  const listboxId = useId();
 
   const selectedOption = options.find((opt) => opt.value === value);
 
@@ -101,6 +102,7 @@ export function Select({
           disabled={disabled}
           role="combobox"
           aria-expanded={isOpen}
+          aria-controls={listboxId}
           aria-haspopup="listbox"
           className={`
             w-full min-h-[46px] px-3.5 py-2.5 rounded-xl border text-xs font-medium text-left flex items-center justify-between gap-2 transition-all
@@ -161,7 +163,7 @@ export function Select({
             )}
 
             {/* Options List */}
-            <div className="overflow-y-auto p-1.5 space-y-0.5" role="listbox">
+            <div id={listboxId} className="overflow-y-auto p-1.5 space-y-0.5" role="listbox">
               {filteredOptions.length > 0 ? (
                 filteredOptions.map((opt) => {
                   const isSelected = opt.value === value;
