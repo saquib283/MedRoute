@@ -20,6 +20,7 @@ export function SessionTimeoutProvider({ children }: { children: React.ReactNode
 
   const lastActivityRef = useRef<number>(Date.now());
   const lastRefreshRef = useRef<number>(Date.now());
+  const isRefreshingRef = useRef<boolean>(false);
   const warningTimerRef = useRef<NodeJS.Timeout | null>(null);
   const logoutTimerRef = useRef<NodeJS.Timeout | null>(null);
   const countdownIntervalRef = useRef<NodeJS.Timeout | null>(null);
@@ -32,6 +33,8 @@ export function SessionTimeoutProvider({ children }: { children: React.ReactNode
     pathname === '/';
 
   const refreshSession = useCallback(async (): Promise<boolean> => {
+    if (isRefreshingRef.current) return false;
+    isRefreshingRef.current = true;
     try {
       const res = await fetch('/api/v1/auth/refresh', { method: 'POST' });
       if (!res.ok) {
@@ -43,6 +46,8 @@ export function SessionTimeoutProvider({ children }: { children: React.ReactNode
       return true;
     } catch {
       return false;
+    } finally {
+      isRefreshingRef.current = false;
     }
   }, [router]);
 
@@ -106,8 +111,7 @@ export function SessionTimeoutProvider({ children }: { children: React.ReactNode
     const handleUserActivity = () => {
       const now = Date.now();
       // Proactively refresh the 15-min access token before expiry while user is active
-      if (now - lastRefreshRef.current > 11 * 60 * 1000) {
-        lastRefreshRef.current = now;
+      if (!isRefreshingRef.current && now - lastRefreshRef.current > 11 * 60 * 1000) {
         void refreshSession();
       }
       // Throttle activity updates to once per 5 seconds
