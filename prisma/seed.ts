@@ -4,15 +4,20 @@
  * Run with: npx tsx prisma/seed.ts
  */
 
-import { PrismaClient } from '@prisma/client';
+import fs from 'fs/promises';
+import path from 'path';
+import { DocumentCategory, Prisma, PrismaClient } from '@prisma/client';
 import bcrypt from 'bcryptjs';
+import { encrypt } from '../src/lib/auth/crypto';
+import { encryptMedicalProfile } from '../src/lib/api/phi-encryption';
 
 const prisma = new PrismaClient();
 
 const BCRYPT_ROUNDS = 12;
+const SAMPLE_PDF_BUFFER = Buffer.from('%PDF-1.4\n1 0 obj<<>>endobj\ntrailer<<>>\n%%EOF\n');
 
 async function main() {
-  console.log('ðŸŒ± Seeding database...\n');
+  console.log('🌱 Seeding database...\n');
 
   // ─── 1. Specialisations ───────────────────────────────────────────
   console.log('Creating specialisations...');
@@ -76,6 +81,24 @@ async function main() {
   });
   console.log(`  ✓ Manager: manager@afzalhealthcare.in / Manager@123`);
 
+  // Doctor
+  const doctorPasswordHash = await bcrypt.hash('Doctor@123', BCRYPT_ROUNDS);
+  const doctorUser = await prisma.user.upsert({
+    where: { email: 'doctor@afzalhealthcare.in' },
+    update: {
+      role: 'DOCTOR',
+      fullName: 'Dr. Ashok Seth',
+    },
+    create: {
+      email: 'doctor@afzalhealthcare.in',
+      passwordHash: doctorPasswordHash,
+      role: 'DOCTOR',
+      fullName: 'Dr. Ashok Seth',
+      phone: '+919876543212',
+    },
+  });
+  console.log(`  ✓ Doctor: doctor@afzalhealthcare.in / Doctor@123`);
+
   // Patient
   const patientPasswordHash = await bcrypt.hash('Patient@123', BCRYPT_ROUNDS);
   const patientUser = await prisma.user.upsert({
@@ -90,14 +113,17 @@ async function main() {
     },
   });
 
-  // Create patient profile
+  // Create patient profile (encrypt ePHI fields)
+  const encryptedPassportNo = encrypt('A12345678');
   const patient = await prisma.patient.upsert({
     where: { userId: patientUser.id },
-    update: {},
+    update: {
+      passportNo: encryptedPassportNo,
+    },
     create: {
       userId: patientUser.id,
       nationality: 'UAE',
-      passportNo: 'A12345678',
+      passportNo: encryptedPassportNo,
       dob: new Date('1984-03-15'),
       bloodGroup: 'O+',
       medicalCondition: 'Cardiac evaluation required — suspected coronary artery disease',
@@ -112,37 +138,34 @@ async function main() {
     },
   });
 
-  // Create medical profile
+  // Create medical profile (encrypt ePHI fields)
+  const encryptedMedicalProfile = encryptMedicalProfile({
+    allergies: ['Penicillin', 'Sulfa drugs'],
+    medications: [{ name: 'Aspirin', dosage: '81mg', frequency: 'Daily' }],
+    surgeries: [{ name: 'Appendectomy', date: '2015-06-20', notes: 'Laparoscopic' }],
+    chronicConditions: ['Hypertension', 'Type 2 Diabetes'],
+    specialisationsRequired: ['Cardiology'],
+  });
+
+  const medicalProfileData = {
+    allergies: encryptedMedicalProfile.allergies as Prisma.InputJsonValue,
+    medications: encryptedMedicalProfile.medications as Prisma.InputJsonValue,
+    surgeries: encryptedMedicalProfile.surgeries as Prisma.InputJsonValue,
+    chronicConditions: encryptedMedicalProfile.chronicConditions as Prisma.InputJsonValue,
+    specialisationsRequired: ['Cardiology'] as Prisma.InputJsonValue,
+  };
+
   await prisma.patientMedicalProfile.upsert({
     where: { patientId: patient.id },
-    update: {},
+    update: medicalProfileData,
     create: {
       patientId: patient.id,
-      allergies: JSON.parse('["Penicillin", "Sulfa drugs"]'),
-      medications: JSON.parse('[{"name": "Aspirin", "dosage": "81mg", "frequency": "Daily"}]'),
-      surgeries: JSON.parse('[{"name": "Appendectomy", "date": "2015-06-20", "notes": "Laparoscopic"}]'),
-      chronicConditions: JSON.parse('["Hypertension", "Type 2 Diabetes"]'),
-      specialisationsRequired: ['Cardiology'],
+      ...medicalProfileData,
     },
   });
   console.log(`  ✓ Patient: patient@afzalhealthcare.in / Patient@123\n`);
 
-  // ─── 3. Sample Case ──────────────────────────────────────────────
-  console.log('Creating sample case...');
-  await prisma.case.upsert({
-    where: { id: 'seed-case-001' },
-    update: {},
-    create: {
-      id: 'seed-case-001',
-      patientId: patient.id,
-      managerId: manager.id,
-      status: 'UNDER_REVIEW',
-      notes: 'Patient requires cardiac evaluation. Reports uploaded. Awaiting hospital slot confirmation.',
-    },
-  });
-  console.log('  ✓ Sample case created\n');
-
-  // ─── 4. Hospitals ─────────────────────────────────────────────────
+  // ─── 3. Hospitals ─────────────────────────────────────────────────
   console.log('Creating hospitals...');
 
   const cardiologySpec = await prisma.specialisation.findUnique({
@@ -184,15 +207,18 @@ async function main() {
 
   console.log(`  ✓ 2 hospitals created\n`);
 
-  // ─── 5. Doctors ───────────────────────────────────────────────────
+  // ─── 4. Doctors ───────────────────────────────────────────────────
   console.log('Creating doctors...');
 
   if (cardiologySpec) {
     await prisma.doctor.upsert({
       where: { id: 'seed-doctor-001' },
-      update: {},
+      update: {
+        userId: doctorUser.id,
+      },
       create: {
         id: 'seed-doctor-001',
+        userId: doctorUser.id,
         hospitalId: hospital1.id,
         fullName: 'Dr. Ashok Seth',
         specialisationId: cardiologySpec.id,
@@ -238,7 +264,7 @@ async function main() {
 
   console.log(`  ✓ 3 doctors created\n`);
 
-  // ─── 6. Sample Case & Clinical Workflow Steps ─────────────────────
+  // ─── 5. Sample Case & Clinical Workflow Steps ─────────────────────
   console.log('Creating sample clinical case & treatment steps...');
   const sampleCase = await prisma.case.upsert({
     where: { id: 'seed-case-001' },
@@ -254,6 +280,8 @@ async function main() {
       isUrgent: false,
     },
   });
+
+  await prisma.clinicalStep.deleteMany({ where: { caseId: sampleCase.id } });
 
   const clinicalStepsData = [
     {
@@ -349,12 +377,38 @@ async function main() {
     },
   });
 
-  // ─── 7. Sample Verification & Hospital-Issued Documents ──────────
-  const sampleDocs = [
+  // ─── 6. Sample Verification & Hospital-Issued Documents ──────────
+  const uploadDir = path.join(process.cwd(), 'storage', 'uploads');
+  await fs.mkdir(uploadDir, { recursive: true });
+
+  const samplePdfFiles = [
+    'VIL_Sample.pdf',
+    'Invoice_Sample.pdf',
+    'Passport_Sample.pdf',
+    'Angio_Report.pdf',
+  ];
+  for (const filename of samplePdfFiles) {
+    await fs.writeFile(path.join(uploadDir, filename), SAMPLE_PDF_BUFFER);
+  }
+
+  await prisma.document.deleteMany({ where: { patientId: patient.id } });
+
+  const sampleDocs: Array<{
+    category: DocumentCategory;
+    fileName: string;
+    storageKey: string;
+    fileSize: number;
+    mimeType: string;
+    verificationStatus: string;
+    uploadedBy: string;
+    verifiedBy?: string;
+    verificationNotes: string;
+    verifiedAt: Date;
+  }> = [
     {
       category: 'VISA_INVITATION_LETTER',
       fileName: 'Official_Visa_Invitation_Letter_Fortis_Escorts.pdf',
-      fileUrl: '/api/v1/patient/documents/download?file=VIL_Sample.pdf',
+      storageKey: 'VIL_Sample.pdf',
       fileSize: 245000,
       mimeType: 'application/pdf',
       verificationStatus: 'ISSUED_BY_HOSPITAL',
@@ -365,7 +419,7 @@ async function main() {
     {
       category: 'PROFORMA_INVOICE',
       fileName: 'Treatment_Cost_Estimate_Proforma_Invoice.pdf',
-      fileUrl: '/api/v1/patient/documents/download?file=Invoice_Sample.pdf',
+      storageKey: 'Invoice_Sample.pdf',
       fileSize: 180000,
       mimeType: 'application/pdf',
       verificationStatus: 'ISSUED_BY_HOSPITAL',
@@ -376,7 +430,7 @@ async function main() {
     {
       category: 'PASSPORT',
       fileName: 'International_Passport_UAE_Patient.pdf',
-      fileUrl: '/api/v1/patient/documents/download?file=Passport_Sample.pdf',
+      storageKey: 'Passport_Sample.pdf',
       fileSize: 520000,
       mimeType: 'application/pdf',
       verificationStatus: 'VERIFIED',
@@ -388,7 +442,7 @@ async function main() {
     {
       category: 'MEDICAL_REPORT',
       fileName: 'Coronary_Angiography_Diagnostics_2026.pdf',
-      fileUrl: '/api/v1/patient/documents/download?file=Angio_Report.pdf',
+      storageKey: 'Angio_Report.pdf',
       fileSize: 1240000,
       mimeType: 'application/pdf',
       verificationStatus: 'VERIFIED',
@@ -400,12 +454,13 @@ async function main() {
   ];
 
   for (const doc of sampleDocs) {
-    await prisma.document.create({
+    const createdDoc = await prisma.document.create({
       data: {
         patientId: patient.id,
-        category: doc.category as any,
+        category: doc.category,
         fileName: doc.fileName,
-        fileUrl: doc.fileUrl,
+        fileUrl: doc.storageKey,
+        storageKey: doc.storageKey,
         fileSize: doc.fileSize,
         mimeType: doc.mimeType,
         verificationStatus: doc.verificationStatus,
@@ -415,13 +470,20 @@ async function main() {
         verifiedAt: doc.verifiedAt || null,
       },
     });
+
+    await prisma.document.update({
+      where: { id: createdDoc.id },
+      data: { fileUrl: `/api/v1/documents/${createdDoc.id}/download` },
+    });
   }
 
-  // ─── 8. Sample Medical Bills & Itemized Breakdowns ──────────────
+  // ─── 7. Sample Medical Bills & Itemized Breakdowns ──────────────
   console.log('Creating sample medical bills & itemized breakdowns...');
-  const sampleBill = await prisma.medicalBill.upsert({
+  const sampleBillRecord = await prisma.medicalBill.upsert({
     where: { billNumber: 'INV-2026-0042' },
-    update: {},
+    update: {
+      storageKey: 'Invoice_Sample.pdf',
+    },
     create: {
       billNumber: 'INV-2026-0042',
       caseId: sampleCase.id,
@@ -434,12 +496,22 @@ async function main() {
       currency: 'USD',
       status: 'PARTIALLY_PAID',
       dueDate: new Date(Date.now() + 10 * 86400000),
-      fileUrl: '/api/v1/patient/documents/download?file=Invoice_Sample.pdf',
+      fileUrl: 'Invoice_Sample.pdf',
+      storageKey: 'Invoice_Sample.pdf',
       fileName: 'Hospital_Final_Tax_Invoice_INV0042.pdf',
       notes: 'Initial $2,000 deposit paid prior to cardiac catheterization lab admission. Balance due upon discharge.',
       createdBy: manager.id,
     },
   });
+
+  const sampleBill = await prisma.medicalBill.update({
+    where: { id: sampleBillRecord.id },
+    data: {
+      fileUrl: `/api/v1/documents/bill/${sampleBillRecord.id}/download`,
+    },
+  });
+
+  await prisma.billItem.deleteMany({ where: { billId: sampleBill.id } });
 
   const billItemsData = [
     { description: 'Cardiac Catheterization Lab & Operating Suite Charges', quantity: 1, unitPrice: 1800.00, amount: 1800.00, category: 'SURGERY_OT' },
@@ -567,10 +639,13 @@ async function main() {
   console.log('Test credentials:');
   console.log('  Super Admin: admin@afzalhealthcare.in / Admin@123');
   console.log('  Manager:     manager@afzalhealthcare.in / Manager@123');
+  console.log('  Doctor:      doctor@afzalhealthcare.in / Doctor@123');
   console.log('  Patient:     patient@afzalhealthcare.in / Patient@123');
-  
+
   // Suppress unused variable warnings
   void admin;
+  void hotel2;
+  void hotel3;
 }
 
 main()
