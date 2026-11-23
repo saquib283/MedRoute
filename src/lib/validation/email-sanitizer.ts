@@ -31,11 +31,17 @@ function decodeBasicEntities(value: string): string {
   return value
     .replace(/&#x([0-9a-f]+);?/gi, (_, hex: string) => {
       const code = parseInt(hex, 16);
-      return Number.isFinite(code) && code > 0 ? String.fromCodePoint(code) : '';
+      if (Number.isFinite(code) && code > 0 && code <= 0x10ffff) {
+        return String.fromCodePoint(code);
+      }
+      return code > 0x10ffff ? '\uFFFD' : '';
     })
     .replace(/&#(\d+);?/g, (_, dec: string) => {
       const code = parseInt(dec, 10);
-      return Number.isFinite(code) && code > 0 ? String.fromCodePoint(code) : '';
+      if (Number.isFinite(code) && code > 0 && code <= 0x10ffff) {
+        return String.fromCodePoint(code);
+      }
+      return code > 0x10ffff ? '\uFFFD' : '';
     })
     .replace(/&(tab|newline|colon|quot|apos|amp|lt|gt);/gi, (_, name: string) => {
       return NAMED_ENTITIES[name.toLowerCase()] ?? '';
@@ -65,6 +71,33 @@ function isDangerousStyle(rawStyle: string): boolean {
   );
 }
 
+function replaceAttributeMatches(
+  input: string,
+  pattern: RegExp,
+  transform: (prefix: string, attr: string, value: string) => string | null
+): string {
+  const re = new RegExp(pattern.source, 'gi');
+  let out = '';
+  let cursor = 0;
+  let match: RegExpExecArray | null;
+
+  while ((match = re.exec(input)) !== null) {
+    const [full, prefix, attr, doubleQuoted, singleQuoted, unquoted] = match;
+    const value = doubleQuoted ?? singleQuoted ?? unquoted ?? '';
+    const replacement = transform(prefix, attr, value);
+
+    if (replacement !== null) {
+      out += input.slice(cursor, match.index) + replacement;
+      cursor = match.index + full.length;
+    } else if (full.endsWith('"') || full.endsWith("'")) {
+      // Step back 1 char so a quote-adjacent following attribute still sees its leading quote
+      re.lastIndex = Math.max(match.index + 1, re.lastIndex - 1);
+    }
+  }
+
+  return out + input.slice(cursor);
+}
+
 /**
  * Deterministically strip dangerous HTML containers, inline event handlers,
  * unsafe style expressions, and javascript:/vbscript:/data:text/html URIs.
@@ -88,52 +121,41 @@ export function sanitizeEmailHtml(html: string): string {
     );
   }
 
-  // Strip all inline event-handler attributes (quoted, single-quoted, or unquoted)
+  // Strip all inline event-handler attributes (quoted, single-quoted, unquoted, or quote-adjacent)
   prev = '';
   while (sanitized !== prev) {
     prev = sanitized;
     sanitized = sanitized.replace(
-      /(^|[\s/])on[a-z]+\s*=\s*(?:"[^"]*"|'[^']*'|[^\s>]+)/gi,
+      /(^|[\s/"'])on[a-z]+\s*=\s*(?:"[^"]*"|'[^']*'|[^\s>]+)/gi,
       '$1'
     );
   }
 
   // Neutralize dangerous URI schemes inside href, src, xlink:href, action, and formaction
-  sanitized = sanitized.replace(
-    /([\s/])(href|src|xlink:href|action|formaction)\s*=\s*(?:"([^"]*)"|'([^']*)'|([^\s>]+))/gi,
-    (
-      match,
-      prefix: string,
-      attr: string,
-      doubleQuoted?: string,
-      singleQuoted?: string,
-      unquoted?: string
-    ) => {
-      const value = doubleQuoted ?? singleQuoted ?? unquoted ?? '';
-      if (isDangerousUri(value)) {
-        return `${prefix}${attr}="#"`;
+  prev = '';
+  while (sanitized !== prev) {
+    prev = sanitized;
+    sanitized = replaceAttributeMatches(
+      sanitized,
+      /(^|[\s/"'])(href|src|xlink:href|action|formaction)\s*=\s*(?:"([^"]*)"|'([^']*)'|([^\s>]+))/gi,
+      (prefix, attr, value) => {
+        if (!isDangerousUri(value)) return null;
+        const sep = prefix === '"' || prefix === "'" ? `${prefix} ` : prefix;
+        return `${sep}${attr}="#"`;
       }
-      return match;
-    }
-  );
+    );
+  }
 
   // Strip inline style attributes containing expression(...) or script URIs
-  sanitized = sanitized.replace(
-    /([\s/])style\s*=\s*(?:"([^"]*)"|'([^']*)'|([^\s>]+))/gi,
-    (
-      match,
-      prefix: string,
-      doubleQuoted?: string,
-      singleQuoted?: string,
-      unquoted?: string
-    ) => {
-      const value = doubleQuoted ?? singleQuoted ?? unquoted ?? '';
-      if (isDangerousStyle(value)) {
-        return prefix;
-      }
-      return match;
-    }
-  );
+  prev = '';
+  while (sanitized !== prev) {
+    prev = sanitized;
+    sanitized = replaceAttributeMatches(
+      sanitized,
+      /(^|[\s/"'])(style)\s*=\s*(?:"([^"]*)"|'([^']*)'|([^\s>]+))/gi,
+      (prefix, _attr, value) => (isDangerousStyle(value) ? prefix : null)
+    );
+  }
 
   return sanitized;
 }

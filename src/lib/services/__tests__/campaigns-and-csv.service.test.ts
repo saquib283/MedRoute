@@ -77,6 +77,31 @@ describe('Task 3: Email Campaign Sanitizer, Placeholder Interpolation & CSV Hard
     expect(clean).toContain('href="#"');
   });
 
+  it('strips quote-adjacent XSS attributes and handles out-of-range numeric HTML entities without throwing', () => {
+    const quoteAdjacent = [
+      '<img src="x"onerror="alert(1)">',
+      "<img src='x'onload='alert(1)'onclick='alert(2)'>",
+      '<a title="x"href="javascript:alert(1)">link</a>',
+      '<a href="https://safe.example"action="javascript:alert(1)">chained</a>',
+      '<p title="x"style="width:expression(alert(1))">styled</p>',
+    ].join('');
+
+    const cleanAdjacent = sanitizeEmailHtml(quoteAdjacent);
+    expect(cleanAdjacent).toContain('<img src="x">');
+    expect(cleanAdjacent).toContain("<img src='x'>");
+    expect(cleanAdjacent).toContain('href="#"');
+    expect(cleanAdjacent).toContain('href="https://safe.example"');
+    expect(cleanAdjacent).toContain('action="#"');
+    expect(cleanAdjacent).not.toMatch(/onerror|onload|onclick|javascript:|expression\s*\(/i);
+
+    expect(() =>
+      sanitizeEmailHtml('<a href="&#9999999;&#x110000;">x</a>')
+    ).not.toThrow();
+    expect(sanitizeEmailHtml('<a href="&#9999999;&#x110000;">x</a>')).toContain(
+      'href="&#9999999;&#x110000;"'
+    );
+  });
+
   it('interpolates all 7 placeholders in subject and HTML-escapes recipient fields in body', () => {
     const ctx = {
       fullName: 'Sara <script>alert(1)</script>',
