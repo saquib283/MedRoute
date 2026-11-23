@@ -3,7 +3,8 @@
 /**
  * Afzal Healthcare — Admin Advanced Analytics
  * Rich data visualization with CSS-based charts, trend analysis,
- * nationality distribution, hospital & doctor leaderboards, and case lifecycle.
+ * nationality distribution, hospital & doctor leaderboards, case lifecycle,
+ * and financial / commission override intelligence.
  */
 
 import { useState, useEffect } from 'react';
@@ -23,10 +24,34 @@ interface AnalyticsData {
   nationalityDistribution: { nationality: string; count: number }[];
   monthlyRegistrations: { month: string; patients: number; managers: number; doctors: number; admins: number; total: number }[];
   appointmentTypeBreakdown: { type: string; count: number }[];
-  hospitalUtilization: { id: string; name: string; city: string; appointments: number; doctors: number; commissionRate: number }[];
+  hospitalUtilization: {
+    id: string;
+    name: string;
+    city: string;
+    appointments: number;
+    doctors: number;
+    commissionRate: number;
+    effectiveCommissionRate: number;
+    hasActiveOverride: boolean;
+  }[];
   doctorLeaderboard: { id: string; name: string; specialisation: string; hospital: string; appointments: number }[];
   caseLifecycle: { totalCases: number; closedCases: number; completionRate: number; avgDurationDays: number };
-  revenueEstimates: { completedAppointments: number; avgCommissionRate: number };
+  revenueEstimates: {
+    completedAppointments: number;
+    avgCommissionRate: number;
+    activeCommissionOverrides: number;
+    medicalBilling: {
+      totalInvoiced: number;
+      totalCollected: number;
+      totalOutstanding: number;
+      estimatedHospitalCommission: number;
+    };
+    accommodations: {
+      activeBookings: number;
+      grossRevenueUsd: number;
+      partnerCommissionUsd: number;
+    };
+  };
 }
 
 const APPT_TYPE_LABELS: Record<string, string> = {
@@ -42,6 +67,14 @@ const APPT_TYPE_COLORS: Record<string, string> = {
   SURGERY: '#ef4444',
   POST_OP_REVIEW: '#8b5cf6',
 };
+
+function formatUsd(amount: number): string {
+  return new Intl.NumberFormat('en-US', {
+    style: 'currency',
+    currency: 'USD',
+    maximumFractionDigits: 2,
+  }).format(amount);
+}
 
 export default function AnalyticsPage() {
   const [data, setData] = useState<AnalyticsData | null>(null);
@@ -92,11 +125,16 @@ export default function AnalyticsPage() {
   if (!data) return null;
 
   const p = data.platformTotals;
+  const rev = data.revenueEstimates;
   const maxMonthly = Math.max(...data.monthlyRegistrations.map((m) => m.total), 1);
   const maxNationality = data.nationalityDistribution[0]?.count || 1;
   const totalApptTypes = data.appointmentTypeBreakdown.reduce((s, a) => s + a.count, 0) || 1;
   const maxHospAppt = data.hospitalUtilization[0]?.appointments || 1;
   const maxDocAppt = data.doctorLeaderboard[0]?.appointments || 1;
+  const collectionPct =
+    rev.medicalBilling.totalInvoiced > 0
+      ? Math.min(100, Math.round((rev.medicalBilling.totalCollected / rev.medicalBilling.totalInvoiced) * 100))
+      : 0;
 
   return (
     <div className="max-w-7xl mx-auto space-y-8 animate-fade-in">
@@ -106,7 +144,7 @@ export default function AnalyticsPage() {
           <h1 className="text-2xl font-bold text-surface-900 tracking-tight">Advanced Analytics</h1>
           <span className="px-2.5 py-0.5 rounded-full text-xs font-bold uppercase tracking-wider bg-primary-50 text-primary-700 border border-primary-200">Admin</span>
         </div>
-        <p className="text-sm text-surface-500">Deep platform insights, trends, and operational intelligence.</p>
+        <p className="text-sm text-surface-500">Deep platform insights, trends, financial settlement, and operational intelligence.</p>
       </div>
 
       {/* Platform Totals - Compact Grid */}
@@ -134,6 +172,91 @@ export default function AnalyticsPage() {
             </Card>
           );
         })}
+      </div>
+
+      {/* Financial & Commission Intelligence */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <Card className="p-6 bg-white border border-surface-200 lg:col-span-2">
+          <div className="flex flex-wrap items-center justify-between gap-2 mb-4">
+            <div>
+              <h2 className="text-sm font-bold text-surface-900">Financial &amp; Commission Intelligence</h2>
+              <p className="text-xs text-surface-500 mt-0.5">
+                Non-cancelled MedicalBill settlement totals &amp; date-bound hospital commission estimates
+              </p>
+            </div>
+            <span className="px-2.5 py-1 rounded-full text-xs font-semibold bg-amber-50 text-amber-800 border border-amber-200">
+              {rev.activeCommissionOverrides} Active Override{rev.activeCommissionOverrides === 1 ? '' : 's'}
+            </span>
+          </div>
+
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-4">
+            <div className="p-3.5 rounded-xl bg-surface-50 border border-surface-200">
+              <p className="text-xs font-semibold text-surface-500 uppercase tracking-wider">Total Invoiced</p>
+              <p className="text-lg font-extrabold text-surface-900 mt-1">
+                {formatUsd(rev.medicalBilling.totalInvoiced)}
+              </p>
+            </div>
+            <div className="p-3.5 rounded-xl bg-success-50 border border-success-200">
+              <p className="text-xs font-semibold text-success-700 uppercase tracking-wider">Collected</p>
+              <p className="text-lg font-extrabold text-success-800 mt-1">
+                {formatUsd(rev.medicalBilling.totalCollected)}
+              </p>
+            </div>
+            <div className="p-3.5 rounded-xl bg-warning-50 border border-warning-200">
+              <p className="text-xs font-semibold text-warning-700 uppercase tracking-wider">Outstanding</p>
+              <p className="text-lg font-extrabold text-warning-800 mt-1">
+                {formatUsd(rev.medicalBilling.totalOutstanding)}
+              </p>
+            </div>
+            <div className="p-3.5 rounded-xl bg-primary-50 border border-primary-200">
+              <p className="text-xs font-semibold text-primary-700 uppercase tracking-wider">Hospital Comm.</p>
+              <p className="text-lg font-extrabold text-primary-800 mt-1">
+                {formatUsd(rev.medicalBilling.estimatedHospitalCommission)}
+              </p>
+            </div>
+          </div>
+
+          <div className="space-y-1.5">
+            <div className="flex items-center justify-between text-xs">
+              <span className="font-semibold text-surface-600">Medical Billing Collection Rate</span>
+              <span className="font-bold text-surface-800">{collectionPct}%</span>
+            </div>
+            <div className="h-2 bg-surface-100 rounded-full overflow-hidden">
+              <div
+                className="h-full rounded-full bg-gradient-to-r from-primary-500 to-success-500 transition-all duration-700"
+                style={{ width: `${collectionPct}%` }}
+              />
+            </div>
+          </div>
+        </Card>
+
+        <Card className="p-6 bg-white border border-surface-200 flex flex-col justify-between">
+          <div>
+            <h2 className="text-sm font-bold text-surface-900">Partner Hotel Revenue</h2>
+            <p className="text-xs text-surface-500 mt-0.5">
+              Confirmed, checked-in, and completed accommodations
+            </p>
+          </div>
+
+          <div className="space-y-3 my-4">
+            <div className="flex items-center justify-between p-3 rounded-xl bg-surface-50 border border-surface-200">
+              <span className="text-xs font-semibold text-surface-600 uppercase tracking-wider">Active Bookings</span>
+              <span className="text-lg font-extrabold text-surface-900">{rev.accommodations.activeBookings}</span>
+            </div>
+            <div className="flex items-center justify-between p-3 rounded-xl bg-surface-50 border border-surface-200">
+              <span className="text-xs font-semibold text-surface-600 uppercase tracking-wider">Gross Volume</span>
+              <span className="text-lg font-extrabold text-surface-900">
+                {formatUsd(rev.accommodations.grossRevenueUsd)}
+              </span>
+            </div>
+            <div className="flex items-center justify-between p-3 rounded-xl bg-primary-50 border border-primary-200">
+              <span className="text-xs font-semibold text-primary-700 uppercase tracking-wider">Partner Commission</span>
+              <span className="text-lg font-extrabold text-primary-800">
+                {formatUsd(rev.accommodations.partnerCommissionUsd)}
+              </span>
+            </div>
+          </div>
+        </Card>
       </div>
 
       {/* Row 1: Monthly Registrations + Appointment Types */}
@@ -248,12 +371,12 @@ export default function AnalyticsPage() {
             <h3 className="text-xs font-bold text-surface-700 uppercase tracking-wider mb-3">Revenue Indicators</h3>
             <div className="grid grid-cols-2 gap-3">
               <div className="p-3 bg-surface-50 rounded-lg">
-                <p className="text-lg font-bold text-surface-900">{data.revenueEstimates.completedAppointments}</p>
+                <p className="text-lg font-bold text-surface-900">{rev.completedAppointments}</p>
                 <p className="text-xs text-surface-600 font-semibold">Completed Appts</p>
               </div>
               <div className="p-3 bg-surface-50 rounded-lg">
-                <p className="text-lg font-bold text-surface-900">{data.revenueEstimates.avgCommissionRate}%</p>
-                <p className="text-xs text-surface-600 font-semibold">Avg Commission</p>
+                <p className="text-lg font-bold text-surface-900">{rev.avgCommissionRate}%</p>
+                <p className="text-xs text-surface-600 font-semibold">Avg Base Commission</p>
               </div>
             </div>
           </div>
@@ -271,14 +394,25 @@ export default function AnalyticsPage() {
           <div className="divide-y divide-surface-100">
             {data.hospitalUtilization.map((h, i) => {
               const pct = Math.round((h.appointments / maxHospAppt) * 100);
+              const displayRate = h.effectiveCommissionRate ?? h.commissionRate;
               return (
                 <div key={h.id} className="px-6 py-3.5 hover:bg-surface-50 transition-colors">
                   <div className="flex items-center justify-between mb-1.5">
                     <div className="flex items-center gap-2.5">
                       <span className="w-6 h-6 rounded-full bg-primary-100 text-primary-700 flex items-center justify-center text-xs font-bold">{i + 1}</span>
                       <div>
-                        <p className="text-sm font-semibold text-surface-900">{h.name}</p>
-                        <p className="text-xs text-surface-500">{h.city} • {h.doctors} doctors • {h.commissionRate}% comm.</p>
+                        <div className="flex flex-wrap items-center gap-2">
+                          <p className="text-sm font-semibold text-surface-900">{h.name}</p>
+                          {h.hasActiveOverride && (
+                            <span className="px-2 py-0.5 rounded-full text-[11px] font-bold bg-amber-100 text-amber-800 border border-amber-200">
+                              Override Active
+                            </span>
+                          )}
+                        </div>
+                        <p className="text-xs text-surface-500">
+                          {h.city} • {h.doctors} doctors • {displayRate}% comm.
+                          {h.hasActiveOverride ? ` (base ${h.commissionRate}%)` : ''}
+                        </p>
                       </div>
                     </div>
                     <span className="text-sm font-bold text-surface-700">{h.appointments}</span>
@@ -359,4 +493,3 @@ function CampaignIcon(p: React.SVGProps<SVGSVGElement>) {
 function TemplateIcon(p: React.SVGProps<SVGSVGElement>) {
   return <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2} {...p}><path strokeLinecap="round" strokeLinejoin="round" d="M4 5a1 1 0 011-1h14a1 1 0 011 1v2a1 1 0 01-1 1H5a1 1 0 01-1-1V5zM4 13a1 1 0 011-1h6a1 1 0 011 1v6a1 1 0 01-1 1H5a1 1 0 01-1-1v-6zM16 13a1 1 0 011-1h2a1 1 0 011 1v6a1 1 0 01-1 1h-2a1 1 0 01-1-1v-6z" /></svg>;
 }
-
