@@ -232,6 +232,28 @@ describe('Task 1: Doctor RBAC, Provisioning & Appointment Lifecycle', () => {
     const cancelRes = await cancelPatientAppointment(cancelReq);
     expect(cancelRes.status).toBe(200);
 
+    // Block patient self-cancellation when appointment is IN_PROGRESS -> 400
+    mockedPrisma.appointment.findUnique.mockResolvedValueOnce({
+      id: 'appt-in-progress',
+      patientId: 'pat-1',
+      status: 'IN_PROGRESS',
+    });
+    const inProgressCancelReq = new NextRequest('http://localhost/api/v1/patient/appointments', {
+      method: 'PUT',
+      headers: {
+        'content-type': 'application/json',
+        'x-user-id': 'u-pat-1',
+        'x-user-email': 'p@example.com',
+        'x-user-role': 'PATIENT',
+      },
+      body: JSON.stringify({
+        appointmentId: 'appt-in-progress',
+        cancellationReason: 'Running late',
+      }),
+    });
+    const inProgressCancelRes = await cancelPatientAppointment(inProgressCancelReq);
+    expect(inProgressCancelRes.status).toBe(400);
+
     // Admin updating an appointment whose case belongs to a different manager
     mockedPrisma.appointment.findUnique.mockResolvedValueOnce({
       id: 'appt-2',

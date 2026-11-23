@@ -117,7 +117,6 @@ const DOCTOR_ISSUE_CATEGORIES = [
   { value: 'MEDICAL_OPINION', label: 'Hospital Medical Opinion' },
   { value: 'PRESCRIPTION', label: 'Doctor Prescription' },
   { value: 'MEDICAL_REPORT', label: 'Medical Diagnostic Report' },
-  { value: 'FIT_TO_FLY_CERTIFICATE', label: 'Fit-to-Fly Certificate' },
 ];
 
 function formatProfileItem(item: unknown): string {
@@ -352,9 +351,7 @@ export default function DoctorCaseWorkspacePage({
       }
 
       syncFitToFlyForm(json.data?.fitToFlyClearance ?? null);
-      if (json.data?.certificateDocument) {
-        setCertificateDoc(json.data.certificateDocument);
-      }
+      setCertificateDoc(json.data?.certificateDocument ?? null);
       setFitToFlyFile(null);
       if (fitToFlyFileInputRef.current) {
         fitToFlyFileInputRef.current.value = '';
@@ -727,7 +724,7 @@ export default function DoctorCaseWorkspacePage({
                     <span className="font-semibold">Restrictions:</span> {fitToFly.restrictions}
                   </p>
                 )}
-                {certificateDoc?.fileUrl && (
+                {fitToFly?.isCleared && certificateDoc?.fileUrl && (
                   <div className="pt-2">
                     <a
                       href={certificateDoc.fileUrl}

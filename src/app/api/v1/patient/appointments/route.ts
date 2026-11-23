@@ -1,4 +1,4 @@
-﻿/**
+/**
  * Afzal Healthcare — Patient Appointments API Endpoint
  * GET /api/v1/patient/appointments — List appointments & available metadata
  * POST /api/v1/patient/appointments — Request/book a new consultation
@@ -230,10 +230,10 @@ export async function PUT(request: NextRequest) {
       return apiError(ERROR_CODES.APPOINTMENT_NOT_FOUND, 'Appointment not found', 404);
     }
 
-    if (appointment.status === 'CANCELLED' || appointment.status === 'COMPLETED') {
+    if (!['SCHEDULED', 'CONFIRMED', 'RESCHEDULED'].includes(appointment.status)) {
       return apiError(
         ERROR_CODES.BAD_REQUEST,
-        'Cancelled or completed appointments cannot be cancelled',
+        'Only scheduled, confirmed, or rescheduled appointments can be cancelled',
         400
       );
     }

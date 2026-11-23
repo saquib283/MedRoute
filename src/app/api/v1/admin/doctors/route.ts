@@ -1,4 +1,4 @@
-﻿/**
+/**
  * Afzal Healthcare — /api/v1/admin/doctors
  * CRUD for doctor management with portal account provisioning/linking and audit logging.
  */

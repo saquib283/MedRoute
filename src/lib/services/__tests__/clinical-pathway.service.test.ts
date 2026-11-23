@@ -256,6 +256,50 @@ describe('Task 2: Clinical Pathway Service & Multi-Role Authorization', () => {
     });
     expect(docOnMgrStep.ok).toBe(false);
     if (!docOnMgrStep.ok) expect(docOnMgrStep.status).toBe(403);
+
+    // Treating doctor blocked from completing ADMIN-required step
+    mockedPrisma.clinicalStep.findUnique.mockResolvedValueOnce({
+      id: 'step-admin',
+      caseId: 'case-1',
+      title: 'Admin Governance Sign-Off',
+      status: 'PENDING',
+      requiredRole: 'ADMIN',
+    });
+    const docOnAdminStep = await updateSinglePathwayStep({
+      caseId: 'case-1',
+      stepId: 'step-admin',
+      status: 'COMPLETED',
+      actor: { userId: 'doc-user-1', role: 'DOCTOR' },
+    });
+    expect(docOnAdminStep.ok).toBe(false);
+    if (!docOnAdminStep.ok) expect(docOnAdminStep.status).toBe(403);
+  });
+
+  it('rejects invalid completedAt date strings with 400 in replaceCasePathway', async () => {
+    mockedPrisma.case.findUnique.mockResolvedValueOnce(baseCase);
+
+    const invalidRes = await replaceCasePathway({
+      caseId: 'case-1',
+      steps: [
+        {
+          stageName: 'Stage 1',
+          stageOrder: 1,
+          stepOrder: 1,
+          title: 'Step with invalid date',
+          category: 'PRE_OP',
+          status: 'COMPLETED',
+          completedAt: 'not-a-valid-date',
+        },
+      ],
+      actor: { userId: 'mgr-1', role: 'MANAGER' },
+    });
+
+    expect(invalidRes.ok).toBe(false);
+    if (!invalidRes.ok) {
+      expect(invalidRes.status).toBe(400);
+      expect(invalidRes.code).toBe('BAD_REQUEST');
+    }
+    expect(mockedPrisma.$transaction).not.toHaveBeenCalled();
   });
 
   it('preserves omitted decisionBranch/doctorNotes on partial step PATCH and rejects empty updates', async () => {

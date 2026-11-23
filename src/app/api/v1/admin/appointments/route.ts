@@ -1,4 +1,4 @@
-﻿/**
+/**
  * Afzal Healthcare — /api/v1/admin/appointments
  * Platform-wide appointment listing with enhanced filters and cancel/reschedule.
  */

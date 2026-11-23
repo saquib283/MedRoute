@@ -359,6 +359,36 @@ const optionalRequiredRole = z
   .optional()
   .transform((val) => (val && val.length > 0 ? val : null));
 
+const optionalCompletedAt = z
+  .union([z.string(), z.date()])
+  .nullable()
+  .optional()
+  .transform((val, ctx) => {
+    if (val === undefined) return undefined;
+    if (val === null) return null;
+    if (val instanceof Date) {
+      if (Number.isNaN(val.getTime())) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: 'Invalid completedAt date',
+        });
+        return z.NEVER;
+      }
+      return val;
+    }
+    const trimmed = val.trim();
+    if (!trimmed) return null;
+    const parsedDate = new Date(trimmed);
+    if (Number.isNaN(parsedDate.getTime())) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: 'Invalid completedAt date',
+      });
+      return z.NEVER;
+    }
+    return parsedDate;
+  });
+
 const clinicalStepInputSchema = z.object({
   stageName: z.string().trim().min(1, 'stageName is required'),
   stageOrder: z.coerce.number().int().min(1),
@@ -371,7 +401,7 @@ const clinicalStepInputSchema = z.object({
   actionType: optionalNullableString,
   requiredRole: optionalRequiredRole,
   actionUrl: optionalNullableString,
-  completedAt: z.union([z.string(), z.date()]).nullable().optional(),
+  completedAt: optionalCompletedAt,
 });
 
 const replacePathwaySchema = z.object({
@@ -725,14 +755,11 @@ export async function updateSinglePathwayStep(
     };
   }
 
-  if (
-    params.actor.role === 'DOCTOR' &&
-    (step.requiredRole === 'MANAGER' || step.requiredRole === 'PATIENT')
-  ) {
+  if (params.actor.role === 'DOCTOR' && step.requiredRole && step.requiredRole !== 'DOCTOR') {
     return {
       ok: false,
       code: ERROR_CODES.FORBIDDEN,
-      message: 'Doctors cannot sign off coordinator or patient milestones',
+      message: `Doctors cannot sign off milestones assigned to ${step.requiredRole}`,
       status: 403,
     };
   }

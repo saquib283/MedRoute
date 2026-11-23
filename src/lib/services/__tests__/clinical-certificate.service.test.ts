@@ -456,4 +456,85 @@ describe('Task 3: Clinical Certificate PDF Generator, Document Verification & Fi
     expect(mockedPrisma.case.update).not.toHaveBeenCalled();
     expect(mockedPrisma.auditLog.create).not.toHaveBeenCalled();
   });
+
+  it('reverts FIT_TO_FLY_CLEARED case to OUTPATIENT_RECUPERATION, marks SIGN_FIT_TO_FLY ACTION_REQUIRED, and omits certificateDocument when isCleared=false', async () => {
+    const clearedCase = {
+      ...activeCase,
+      status: 'FIT_TO_FLY_CLEARED',
+      fitToFlyClearance: {
+        id: 'ftf-1',
+        caseId: 'case-1',
+        isCleared: true,
+        clearedBy: 'Dr. Ashok Seth',
+      },
+    };
+    mockedPrisma.case.findUnique.mockResolvedValueOnce(clearedCase);
+    mockedPrisma.doctor.findUnique.mockResolvedValueOnce({
+      id: 'doc-1',
+      userId: 'doc-u-1',
+      fullName: 'Ashok Seth',
+      isActive: true,
+    });
+    mockedPrisma.appointment.findFirst.mockResolvedValueOnce({ id: 'appt-1' });
+    mockedPrisma.fitToFlyClearance.upsert.mockResolvedValueOnce({
+      id: 'ftf-1',
+      caseId: 'case-1',
+      isCleared: false,
+      clearedBy: 'Dr. Ashok Seth',
+      clearanceDate: null,
+      restrictions: 'Post-op fever; hold travel.',
+    });
+    mockedPrisma.clinicalStep.updateMany.mockResolvedValueOnce({ count: 1 });
+    mockedPrisma.case.update.mockResolvedValueOnce({
+      ...clearedCase,
+      status: 'OUTPATIENT_RECUPERATION',
+    });
+
+    const holdRes = await upsertCaseFitToFly({
+      caseId: 'case-1',
+      isCleared: false,
+      restrictions: 'Post-op fever; hold travel.',
+      reEvalDate: '2026-12-05',
+      actor: { userId: 'doc-u-1', role: 'DOCTOR' },
+    });
+
+    expect(holdRes.ok).toBe(true);
+    if (holdRes.ok) {
+      expect(holdRes.data.caseStatus).toBe('OUTPATIENT_RECUPERATION');
+      expect(holdRes.data.certificateDocument).toBeNull();
+    }
+    expect(mockedPrisma.clinicalStep.updateMany).toHaveBeenCalledWith({
+      where: {
+        caseId: 'case-1',
+        actionType: 'SIGN_FIT_TO_FLY',
+      },
+      data: {
+        status: 'ACTION_REQUIRED',
+        decisionBranch: null,
+        completedAt: null,
+      },
+    });
+    expect(mockedPrisma.case.update).toHaveBeenCalledWith({
+      where: { id: 'case-1' },
+      data: { status: 'OUTPATIENT_RECUPERATION' },
+    });
+
+    // getCaseFitToFly must return certificateDocument: null when isCleared === false
+    mockedPrisma.case.findUnique.mockResolvedValueOnce({
+      ...activeCase,
+      status: 'OUTPATIENT_RECUPERATION',
+      fitToFlyClearance: {
+        id: 'ftf-1',
+        caseId: 'case-1',
+        isCleared: false,
+        clearedBy: 'Dr. Ashok Seth',
+      },
+    });
+    const getHoldRes = await getCaseFitToFly('case-1', { userId: 'pat-u-1', role: 'PATIENT' });
+    expect(getHoldRes.ok).toBe(true);
+    if (getHoldRes.ok) {
+      expect(getHoldRes.data.certificateDocument).toBeNull();
+    }
+    expect(mockedPrisma.document.findFirst).not.toHaveBeenCalled();
+  });
 });

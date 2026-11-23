@@ -588,18 +588,21 @@ export async function getCaseFitToFly(
   const access = await authorizeCaseClinicalAccess(caseId, actor);
   if (!access.ok) return access;
 
-  const certificateDocument = await prisma.document.findFirst({
-    where: {
-      patientId: access.targetCase.patientId,
-      category: 'FIT_TO_FLY_CERTIFICATE',
-    },
-    orderBy: { createdAt: 'desc' },
-  });
+  const fitToFlyClearance = access.targetCase.fitToFlyClearance ?? null;
+  const certificateDocument = fitToFlyClearance?.isCleared
+    ? await prisma.document.findFirst({
+        where: {
+          patientId: access.targetCase.patientId,
+          category: 'FIT_TO_FLY_CERTIFICATE',
+        },
+        orderBy: { createdAt: 'desc' },
+      })
+    : null;
 
   return {
     ok: true,
     data: {
-      fitToFlyClearance: access.targetCase.fitToFlyClearance ?? null,
+      fitToFlyClearance,
       certificateDocument: certificateDocument ?? null,
     },
   };
@@ -732,6 +735,26 @@ export async function upsertCaseFitToFly(
       const updatedCase = await prisma.case.update({
         where: { id: params.caseId },
         data: { status: 'FIT_TO_FLY_CLEARED' },
+      });
+      caseStatus = updatedCase.status;
+    }
+  } else {
+    await prisma.clinicalStep.updateMany({
+      where: {
+        caseId: params.caseId,
+        actionType: 'SIGN_FIT_TO_FLY',
+      },
+      data: {
+        status: 'ACTION_REQUIRED',
+        decisionBranch: null,
+        completedAt: null,
+      },
+    });
+
+    if (access.targetCase.status === 'FIT_TO_FLY_CLEARED') {
+      const updatedCase = await prisma.case.update({
+        where: { id: params.caseId },
+        data: { status: 'OUTPATIENT_RECUPERATION' },
       });
       caseStatus = updatedCase.status;
     }
