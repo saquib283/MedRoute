@@ -4,6 +4,7 @@
  */
 
 import React from 'react';
+import { CASE_STATUS_LABELS } from '@/lib/constants';
 
 type BadgeVariant =
   | 'default'
@@ -74,19 +75,23 @@ export function Badge({
 // ─── Preset badges for common statuses ──────────────────────────
 
 export function CaseStatusBadge({ status }: { status: string }) {
-  const config: Record<string, { variant: BadgeVariant; label: string }> = {
-    INQUIRY_RECEIVED: { variant: 'info', label: 'Inquiry Received' },
-    UNDER_REVIEW: { variant: 'warning', label: 'Under Review' },
-    PLAN_CONFIRMED: { variant: 'primary', label: 'Plan Confirmed' },
-    IN_TREATMENT: { variant: 'warning', label: 'In Treatment' },
-    POST_TREATMENT: { variant: 'success', label: 'Post-Treatment' },
-    CLOSED: { variant: 'default', label: 'Closed' },
+  const variantMap: Record<string, BadgeVariant> = {
+    INQUIRY_RECEIVED: 'info',
+    UNDER_REVIEW: 'warning',
+    PRE_OP_CLEARANCE: 'info',
+    PLAN_CONFIRMED: 'primary',
+    IN_TREATMENT: 'warning',
+    ICU_RECOVERY: 'danger',
+    WARD_RECOVERY: 'warning',
+    POST_TREATMENT: 'success',
+    OUTPATIENT_RECUPERATION: 'info',
+    FIT_TO_FLY_CLEARED: 'success',
+    REMOTE_REHAB: 'primary',
+    CLOSED: 'default',
   };
 
-  const { variant, label } = config[status] || {
-    variant: 'default' as BadgeVariant,
-    label: status,
-  };
+  const variant = variantMap[status] || 'default';
+  const label = CASE_STATUS_LABELS[status] || status;
 
   return (
     <Badge variant={variant} dot>

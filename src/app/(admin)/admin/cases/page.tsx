@@ -27,10 +27,20 @@ interface AdminCase {
 
 interface ManagerOption { id: string; fullName: string; }
 
-const STATUS_OPTIONS = ['INQUIRY_RECEIVED', 'UNDER_REVIEW', 'PLAN_CONFIRMED', 'IN_TREATMENT', 'POST_TREATMENT', 'CLOSED'];
-const STATUS_BADGE: Record<string, 'primary' | 'warning' | 'success' | 'danger' | 'default'> = {
-  INQUIRY_RECEIVED: 'primary', UNDER_REVIEW: 'warning', PLAN_CONFIRMED: 'primary',
-  IN_TREATMENT: 'warning', POST_TREATMENT: 'success', CLOSED: 'default',
+const STATUS_OPTIONS = CASE_STATUS_ORDER;
+const STATUS_BADGE: Record<string, 'primary' | 'warning' | 'success' | 'danger' | 'info' | 'default'> = {
+  INQUIRY_RECEIVED: 'info',
+  UNDER_REVIEW: 'warning',
+  PRE_OP_CLEARANCE: 'info',
+  PLAN_CONFIRMED: 'primary',
+  IN_TREATMENT: 'warning',
+  ICU_RECOVERY: 'danger',
+  WARD_RECOVERY: 'warning',
+  POST_TREATMENT: 'success',
+  OUTPATIENT_RECUPERATION: 'info',
+  FIT_TO_FLY_CLEARED: 'success',
+  REMOTE_REHAB: 'primary',
+  CLOSED: 'default',
 };
 
 export default function AdminCasesPage() {
@@ -237,7 +247,7 @@ export default function AdminCasesPage() {
               <div className="grid grid-cols-2 gap-4">
                 <div><p className="text-xs font-bold text-surface-600 uppercase">Patient</p><p className="text-sm font-semibold text-surface-900 mt-0.5">{selectedCase.patient.user.fullName}</p></div>
                 <div><p className="text-xs font-bold text-surface-600 uppercase">Manager</p><p className="text-sm text-surface-600 mt-0.5">{selectedCase.manager?.fullName || 'Unassigned'}</p></div>
-                <div><p className="text-xs font-bold text-surface-600 uppercase">Status</p><p className="mt-0.5"><Badge variant={STATUS_BADGE[selectedCase.status] || 'default'}>{CASE_STATUS_LABELS[selectedCase.status]}</Badge></p></div>
+                <div><p className="text-xs font-bold text-surface-600 uppercase">Status</p><p className="mt-0.5"><Badge variant={STATUS_BADGE[selectedCase.status] || 'default'}>{CASE_STATUS_LABELS[selectedCase.status] || selectedCase.status}</Badge></p></div>
                 <div><p className="text-xs font-bold text-surface-600 uppercase">Appointments</p><p className="text-sm text-surface-600 mt-0.5">{selectedCase._count.appointments}</p></div>
               </div>
 

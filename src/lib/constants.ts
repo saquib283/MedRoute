@@ -19,29 +19,61 @@ export type UserRoleType = (typeof USER_ROLES)[keyof typeof USER_ROLES];
 export const CASE_STATUSES = {
   INQUIRY_RECEIVED: 'INQUIRY_RECEIVED',
   UNDER_REVIEW: 'UNDER_REVIEW',
+  PRE_OP_CLEARANCE: 'PRE_OP_CLEARANCE',
   PLAN_CONFIRMED: 'PLAN_CONFIRMED',
   IN_TREATMENT: 'IN_TREATMENT',
+  ICU_RECOVERY: 'ICU_RECOVERY',
+  WARD_RECOVERY: 'WARD_RECOVERY',
   POST_TREATMENT: 'POST_TREATMENT',
+  OUTPATIENT_RECUPERATION: 'OUTPATIENT_RECUPERATION',
+  FIT_TO_FLY_CLEARED: 'FIT_TO_FLY_CLEARED',
+  REMOTE_REHAB: 'REMOTE_REHAB',
   CLOSED: 'CLOSED',
 } as const;
 
 export const CASE_STATUS_ORDER = [
   CASE_STATUSES.INQUIRY_RECEIVED,
   CASE_STATUSES.UNDER_REVIEW,
+  CASE_STATUSES.PRE_OP_CLEARANCE,
   CASE_STATUSES.PLAN_CONFIRMED,
   CASE_STATUSES.IN_TREATMENT,
+  CASE_STATUSES.ICU_RECOVERY,
+  CASE_STATUSES.WARD_RECOVERY,
   CASE_STATUSES.POST_TREATMENT,
+  CASE_STATUSES.OUTPATIENT_RECUPERATION,
+  CASE_STATUSES.FIT_TO_FLY_CLEARED,
+  CASE_STATUSES.REMOTE_REHAB,
   CASE_STATUSES.CLOSED,
 ] as const;
 
 export const CASE_STATUS_LABELS: Record<string, string> = {
   INQUIRY_RECEIVED: 'Inquiry Received',
   UNDER_REVIEW: 'Under Review',
+  PRE_OP_CLEARANCE: 'Pre-Op Clearance',
   PLAN_CONFIRMED: 'Plan Confirmed',
   IN_TREATMENT: 'In Treatment',
+  ICU_RECOVERY: 'ICU / CCU Recovery',
+  WARD_RECOVERY: 'Ward Recovery',
   POST_TREATMENT: 'Post-Treatment',
+  OUTPATIENT_RECUPERATION: 'Outpatient Recuperation',
+  FIT_TO_FLY_CLEARED: 'Fit-to-Fly Cleared',
+  REMOTE_REHAB: 'Remote Tele-Rehab',
   CLOSED: 'Closed',
 };
+
+export const CASE_PHASE_GROUPS = [
+  { key: 'INQUIRY', label: 'Inquiry & Triage', desc: 'Medical inquiry & coordinator assessment', statuses: ['INQUIRY_RECEIVED', 'UNDER_REVIEW'] },
+  { key: 'PRE_OP', label: 'Pre-Op & Plan', desc: 'MDT clearance & confirmed treatment plan', statuses: ['PRE_OP_CLEARANCE', 'PLAN_CONFIRMED'] },
+  { key: 'TREATMENT', label: 'In Treatment', desc: 'Active surgical or clinical intervention', statuses: ['IN_TREATMENT'] },
+  { key: 'RECOVERY', label: 'Hospital Recovery', desc: 'ICU, inpatient ward & post-op monitoring', statuses: ['ICU_RECOVERY', 'WARD_RECOVERY', 'POST_TREATMENT'] },
+  { key: 'DISCHARGE', label: 'Discharge & Rehab', desc: 'Outpatient care, Fit-to-Fly & tele-rehab', statuses: ['OUTPATIENT_RECUPERATION', 'FIT_TO_FLY_CLEARED', 'REMOTE_REHAB'] },
+  { key: 'CLOSED', label: 'Closed', desc: 'Medical journey concluded', statuses: ['CLOSED'] },
+] as const;
+
+export function getCasePhaseIndex(status: string): number {
+  const idx = CASE_PHASE_GROUPS.findIndex((g) => (g.statuses as readonly string[]).includes(status));
+  return idx >= 0 ? idx : 0;
+}
 
 // ─── Appointment Types ──────────────────────────────────────────────
 

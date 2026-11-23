@@ -24,6 +24,7 @@ import {
 } from 'lucide-react';
 
 import { ClinicalRoadmapTree, ClinicalStepData, FitToFlyData } from '@/components/clinical/ClinicalRoadmapTree';
+import { CASE_PHASE_GROUPS, CASE_STATUS_LABELS, getCasePhaseIndex } from '@/lib/constants';
 
 interface Coordinator {
   fullName: string;
@@ -40,15 +41,6 @@ interface Case {
   clinicalSteps?: ClinicalStepData[];
   fitToFlyClearance?: FitToFlyData | null;
 }
-
-const STATUS_STEPS = [
-  { status: 'INQUIRY_RECEIVED', label: 'Inquiry Received', desc: 'Consultation request filed' },
-  { status: 'UNDER_REVIEW', label: 'Under Review', desc: 'Medical files in coordinator assessment' },
-  { status: 'PLAN_CONFIRMED', label: 'Plan Confirmed', desc: 'Travel & clinical roadmap confirmed' },
-  { status: 'IN_TREATMENT', label: 'In Treatment', desc: 'Admitted to partner medical center' },
-  { status: 'POST_TREATMENT', label: 'Post-Treatment', desc: 'Discharged & recuperation monitoring' },
-  { status: 'CLOSED', label: 'Closed', desc: 'Journey concluded successfully' },
-];
 
 export default function PatientDashboard() {
   const [activeCase, setActiveCase] = useState<Case | null>(null);
@@ -90,12 +82,11 @@ export default function PatientDashboard() {
 
   const activeIndex = useMemo(() => {
     if (!activeCase) return 0;
-    const idx = STATUS_STEPS.findIndex((s) => s.status === activeCase.status);
-    return idx >= 0 ? idx : 0;
+    return getCasePhaseIndex(activeCase.status);
   }, [activeCase]);
 
   const progressPercentage = useMemo(() => {
-    return Math.round(((activeIndex + 1) / STATUS_STEPS.length) * 100);
+    return Math.round(((activeIndex + 1) / CASE_PHASE_GROUPS.length) * 100);
   }, [activeIndex]);
 
   if (isLoading) {
@@ -205,26 +196,12 @@ export default function PatientDashboard() {
             />
           </div>
           <span className="text-xs text-surface-600 font-medium">
-            Phase {activeIndex + 1} of {STATUS_STEPS.length}: {STATUS_STEPS[activeIndex]?.label}
+            Phase {activeIndex + 1} of {CASE_PHASE_GROUPS.length}: {activeCase ? (CASE_STATUS_LABELS[activeCase.status] || activeCase.status) : CASE_PHASE_GROUPS[0].label}
           </span>
         </Card>
       </div>
 
       {/* ─── Treatment Roadmap & Case Stepper ─────────────────────────────── */}
-      {activeCase && (
-        <div className="flex items-center justify-end">
-          <Link href={`/manager/cases/${activeCase.id}/pathway`}>
-            <button
-              type="button"
-              className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-primary-50 hover:bg-primary-100 text-primary-800 border border-primary-200 rounded-xl text-xs font-bold transition-colors shadow-2xs"
-            >
-              <Stethoscope className="w-3.5 h-3.5 text-primary-600" />
-              <span>Configure Pathway in Admin/Manager Panel</span>
-            </button>
-          </Link>
-        </div>
-      )}
-
       {activeCase?.clinicalSteps && activeCase.clinicalSteps.length > 0 ? (
         <ClinicalRoadmapTree
           steps={activeCase.clinicalSteps}
@@ -243,7 +220,7 @@ export default function PatientDashboard() {
               <div className="flex items-center gap-2">
                 <span className="text-xs font-semibold text-surface-500">Current Phase:</span>
                 <Badge variant={activeCase.status === 'CLOSED' ? 'default' : 'primary'} dot>
-                  {STATUS_STEPS[activeIndex]?.label || activeCase.status}
+                  {CASE_STATUS_LABELS[activeCase.status] || activeCase.status}
                 </Badge>
               </div>
             )}
@@ -255,13 +232,13 @@ export default function PatientDashboard() {
               <div className="sm:hidden absolute left-3.5 top-4 bottom-4 w-0.5 bg-surface-200" />
 
               <div className="grid grid-cols-1 sm:grid-cols-6 gap-6 sm:gap-3">
-                {STATUS_STEPS.map((step, idx) => {
+                {CASE_PHASE_GROUPS.map((step, idx) => {
                   const isPassed = idx < activeIndex;
                   const isActive = idx === activeIndex;
 
                   return (
                     <div
-                      key={step.status}
+                      key={step.key}
                       className="flex sm:flex-col sm:items-center sm:text-center gap-3.5 sm:gap-2.5 relative"
                     >
                       <div

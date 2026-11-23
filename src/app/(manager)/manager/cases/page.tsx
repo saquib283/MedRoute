@@ -9,21 +9,14 @@ import { useState, useEffect } from 'react';
 import { Card } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { Select } from '@/components/ui/Select';
-
-enum CaseStatus {
-  INQUIRY_RECEIVED = 'INQUIRY_RECEIVED',
-  UNDER_REVIEW = 'UNDER_REVIEW',
-  PLAN_CONFIRMED = 'PLAN_CONFIRMED',
-  IN_TREATMENT = 'IN_TREATMENT',
-  POST_TREATMENT = 'POST_TREATMENT',
-  CLOSED = 'CLOSED',
-}
+import { CaseStatusBadge } from '@/components/ui/Badge';
+import { CASE_STATUS_ORDER, CASE_STATUS_LABELS, CASE_PHASE_GROUPS } from '@/lib/constants';
 
 interface Case {
   id: string;
   patientId: string;
   managerId: string | null;
-  status: CaseStatus;
+  status: string;
   notes: string | null;
   isUrgent: boolean;
   escalationNote: string | null;
@@ -42,15 +35,16 @@ interface Case {
 export default function CasesPipeline() {
   const [cases, setCases] = useState<Case[]>([]);
   const [loading, setLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState<CaseStatus>(CaseStatus.INQUIRY_RECEIVED);
+  const [activeTab, setActiveTab] = useState<string>('ALL');
   const [editingCase, setEditingCase] = useState<Case | null>(null);
   
   // Form fields
   const [caseNotes, setCaseNotes] = useState('');
   const [isUrgent, setIsUrgent] = useState(false);
   const [escalationNote, setEscalationNote] = useState('');
-  const [targetStatus, setTargetStatus] = useState<CaseStatus>(CaseStatus.INQUIRY_RECEIVED);
+  const [targetStatus, setTargetStatus] = useState<string>('INQUIRY_RECEIVED');
   const [submitting, setSubmitting] = useState(false);
+  const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
   useEffect(() => {
     async function loadCases() {
@@ -75,12 +69,14 @@ export default function CasesPipeline() {
     setIsUrgent(c.isUrgent);
     setEscalationNote(c.escalationNote || '');
     setTargetStatus(c.status);
+    setErrorMsg(null);
   };
 
   const handleUpdateCase = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!editingCase) return;
     setSubmitting(true);
+    setErrorMsg(null);
 
     try {
       const res = await fetch('/api/v1/manager/cases', {
@@ -95,31 +91,37 @@ export default function CasesPipeline() {
         }),
       });
 
+      const data = await res.json();
       if (res.ok) {
-        const data = await res.json();
         // Update local state
         setCases((prev) =>
           prev.map((c) => (c.id === editingCase.id ? { ...c, ...data.case } : c))
         );
         setEditingCase(null);
+      } else {
+        setErrorMsg(data.error || 'Failed to update case file');
       }
     } catch (err) {
       console.error('Failed to update case file:', err);
+      setErrorMsg('Failed to update case file');
     } finally {
       setSubmitting(false);
     }
   };
 
-  const tabs: { label: string; value: CaseStatus }[] = [
-    { label: 'Inquiry Received', value: CaseStatus.INQUIRY_RECEIVED },
-    { label: 'Under Review', value: CaseStatus.UNDER_REVIEW },
-    { label: 'Plan Confirmed', value: CaseStatus.PLAN_CONFIRMED },
-    { label: 'In Treatment', value: CaseStatus.IN_TREATMENT },
-    { label: 'Post Treatment', value: CaseStatus.POST_TREATMENT },
-    { label: 'Closed', value: CaseStatus.CLOSED },
+  const tabs: { key: string; label: string; statuses: readonly string[] | null }[] = [
+    { key: 'ALL', label: 'All Cases', statuses: null },
+    ...CASE_PHASE_GROUPS.map((g) => ({
+      key: g.key,
+      label: g.label,
+      statuses: g.statuses,
+    })),
   ];
 
-  const filteredCases = cases.filter((c) => c.status === activeTab);
+  const activePhase = CASE_PHASE_GROUPS.find((g) => g.key === activeTab);
+  const filteredCases = activePhase
+    ? cases.filter((c) => (activePhase.statuses as readonly string[]).includes(c.status))
+    : cases;
 
   if (loading) {
     return (
@@ -142,20 +144,22 @@ export default function CasesPipeline() {
       {/* Tabs navigation */}
       <div className="border-b border-surface-200 bg-white rounded-t-lg overflow-x-auto flex">
         {tabs.map((tab) => {
-          const count = cases.filter((c) => c.status === tab.value).length;
+          const count = tab.statuses
+            ? cases.filter((c) => tab.statuses!.includes(c.status)).length
+            : cases.length;
           return (
             <button
-              key={tab.value}
+              key={tab.key}
               className={`px-5 py-4 text-xs font-bold uppercase tracking-wider whitespace-nowrap border-b-2 transition-all flex items-center gap-2 ${
-                activeTab === tab.value
+                activeTab === tab.key
                   ? 'border-primary-600 text-primary-700 bg-primary-50/20'
                   : 'border-transparent text-surface-500 hover:text-surface-800 hover:bg-surface-50'
               }`}
-              onClick={() => setActiveTab(tab.value)}
+              onClick={() => setActiveTab(tab.key)}
             >
               {tab.label}
               <span className={`px-2 py-0.5 text-xs rounded-full font-bold ${
-                activeTab === tab.value ? 'bg-primary-100 text-primary-800' : 'bg-surface-100 text-surface-600'
+                activeTab === tab.key ? 'bg-primary-100 text-primary-800' : 'bg-surface-100 text-surface-600'
               }`}>
                 {count}
               </span>
@@ -185,8 +189,9 @@ export default function CasesPipeline() {
                 >
                   <div className="flex justify-between items-start gap-4">
                     <div>
-                      <div className="flex items-center gap-2">
+                      <div className="flex items-center flex-wrap gap-2">
                         <h3 className="font-bold text-surface-900 text-base">{c.patient.user.fullName}</h3>
+                        <CaseStatusBadge status={c.status} />
                         {c.isUrgent && (
                           <span className="bg-red-50 text-red-700 border border-red-200 text-xs px-2 py-0.5 rounded-md font-bold uppercase">
                             Urgent
@@ -266,15 +271,11 @@ export default function CasesPipeline() {
                 <Select
                   label="Pipeline Stage"
                   value={targetStatus}
-                  onChange={(val) => setTargetStatus(val as CaseStatus)}
-                  options={[
-                    { value: CaseStatus.INQUIRY_RECEIVED, label: 'Inquiry Received' },
-                    { value: CaseStatus.UNDER_REVIEW, label: 'Under Review' },
-                    { value: CaseStatus.PLAN_CONFIRMED, label: 'Plan Confirmed' },
-                    { value: CaseStatus.IN_TREATMENT, label: 'In Treatment' },
-                    { value: CaseStatus.POST_TREATMENT, label: 'Post Treatment' },
-                    { value: CaseStatus.CLOSED, label: 'Closed' }
-                  ]}
+                  onChange={(val) => setTargetStatus(val)}
+                  options={CASE_STATUS_ORDER.map((s) => ({
+                    value: s,
+                    label: CASE_STATUS_LABELS[s] || s,
+                  }))}
                   required
                 />
 
@@ -317,6 +318,12 @@ export default function CasesPipeline() {
                     onChange={(e) => setEscalationNote(e.target.value)}
                   />
                 </div>
+
+                {errorMsg && (
+                  <div className="p-3 rounded-xl bg-red-50 border border-red-200 text-red-700 text-xs font-medium">
+                    {errorMsg}
+                  </div>
+                )}
 
                 <div className="pt-2">
                   <Button className="w-full" type="submit" disabled={submitting}>

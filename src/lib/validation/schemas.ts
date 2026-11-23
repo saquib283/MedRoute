@@ -4,6 +4,7 @@
  */
 
 import { z } from 'zod';
+import { CASE_STATUS_ORDER } from '@/lib/constants';
 
 // ─── Auth Schemas ───────────────────────────────────────────────────
 
@@ -121,14 +122,7 @@ export const createCaseSchema = z.object({
 });
 
 export const updateCaseStatusSchema = z.object({
-  status: z.enum([
-    'INQUIRY_RECEIVED',
-    'UNDER_REVIEW',
-    'PLAN_CONFIRMED',
-    'IN_TREATMENT',
-    'POST_TREATMENT',
-    'CLOSED',
-  ]),
+  status: z.enum(CASE_STATUS_ORDER),
   notes: z.string().max(5000).optional(),
 });
 

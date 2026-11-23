@@ -37,18 +37,30 @@ interface DashboardData {
 const STATUS_LABELS: Record<string, string> = {
   INQUIRY_RECEIVED: 'Inquiry',
   UNDER_REVIEW: 'Review',
+  PRE_OP_CLEARANCE: 'Pre-Op',
   PLAN_CONFIRMED: 'Confirmed',
   IN_TREATMENT: 'Treatment',
+  ICU_RECOVERY: 'ICU / CCU',
+  WARD_RECOVERY: 'Ward',
   POST_TREATMENT: 'Post-Tx',
+  OUTPATIENT_RECUPERATION: 'Outpatient',
+  FIT_TO_FLY_CLEARED: 'Fit-to-Fly',
+  REMOTE_REHAB: 'Tele-Rehab',
   CLOSED: 'Closed',
 };
 
 const STATUS_COLORS: Record<string, { bg: string; text: string; hex: string }> = {
   INQUIRY_RECEIVED: { bg: 'bg-blue-50', text: 'text-blue-700', hex: '#3b82f6' },
   UNDER_REVIEW: { bg: 'bg-warning-50', text: 'text-warning-700', hex: '#f59e0b' },
+  PRE_OP_CLEARANCE: { bg: 'bg-sky-50', text: 'text-sky-700', hex: '#0ea5e9' },
   PLAN_CONFIRMED: { bg: 'bg-primary-50', text: 'text-primary-700', hex: '#0d9488' },
   IN_TREATMENT: { bg: 'bg-violet-50', text: 'text-violet-700', hex: '#8b5cf6' },
+  ICU_RECOVERY: { bg: 'bg-red-50', text: 'text-red-700', hex: '#ef4444' },
+  WARD_RECOVERY: { bg: 'bg-amber-50', text: 'text-amber-700', hex: '#d97706' },
   POST_TREATMENT: { bg: 'bg-success-50', text: 'text-success-700', hex: '#22c55e' },
+  OUTPATIENT_RECUPERATION: { bg: 'bg-cyan-50', text: 'text-cyan-700', hex: '#06b6d4' },
+  FIT_TO_FLY_CLEARED: { bg: 'bg-emerald-50', text: 'text-emerald-700', hex: '#10b981' },
+  REMOTE_REHAB: { bg: 'bg-indigo-50', text: 'text-indigo-700', hex: '#6366f1' },
   CLOSED: { bg: 'bg-surface-200', text: 'text-surface-600', hex: '#94a3b8' },
 };
 
@@ -213,7 +225,7 @@ export default function AdminDashboardPage() {
               <div className="grid grid-cols-2 gap-3.5">
                 {data?.statusDistribution.map((d) => {
                   const pct = Math.round((d.count / statusTotal) * 100);
-                  const style = STATUS_COLORS[d.status] || { bg: 'bg-surface-200', text: 'text-surface-700' };
+                  const style = STATUS_COLORS[d.status] || { bg: 'bg-surface-200', text: 'text-surface-700', hex: '#94a3b8' };
                   return (
                     <div key={d.status} className="flex items-center justify-between p-2.5 rounded-lg border border-surface-100 bg-surface-50/50">
                       <div className="flex items-center gap-2">

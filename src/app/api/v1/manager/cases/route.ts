@@ -1,23 +1,24 @@
-import { NextResponse } from 'next/server';
-import { PrismaClient, CaseStatus } from '@prisma/client';
+import { NextRequest, NextResponse } from 'next/server';
+import { CaseStatus } from '@prisma/client';
+import prisma from '@/lib/prisma';
+import { getClientIP } from '@/lib/api/auth-helper';
+import { createAuditLog, AUDIT_ACTIONS } from '@/lib/api/audit-logger';
 import { z } from 'zod';
-
-const prisma = new PrismaClient();
 
 const updateCaseSchema = z.object({
   caseId: z.string(),
   status: z.nativeEnum(CaseStatus).optional(),
   notes: z.string().optional(),
   isUrgent: z.boolean().optional(),
-  escalationNote: z.string().optional(),
+  escalationNote: z.string().nullable().optional(),
 });
 
-export async function GET(request: Request) {
+export async function GET(request: NextRequest) {
   try {
     const userId = request.headers.get('x-user-id');
     const userRole = request.headers.get('x-user-role');
 
-    if (!userId || (userRole !== 'MANAGER' && userRole !== 'ADMIN' && userRole !== 'ADMIN')) {
+    if (!userId || (userRole !== 'MANAGER' && userRole !== 'ADMIN')) {
       return NextResponse.json({ error: 'Unauthorized role' }, { status: 403 });
     }
 
@@ -50,12 +51,12 @@ export async function GET(request: Request) {
   }
 }
 
-export async function PUT(request: Request) {
+export async function PUT(request: NextRequest) {
   try {
     const userId = request.headers.get('x-user-id');
     const userRole = request.headers.get('x-user-role');
 
-    if (!userId || (userRole !== 'MANAGER' && userRole !== 'ADMIN' && userRole !== 'ADMIN')) {
+    if (!userId || (userRole !== 'MANAGER' && userRole !== 'ADMIN')) {
       return NextResponse.json({ error: 'Unauthorized role' }, { status: 403 });
     }
 
@@ -76,13 +77,24 @@ export async function PUT(request: Request) {
       return NextResponse.json({ error: 'Case not found or unauthorized' }, { status: 404 });
     }
 
+    if (caseRecord.status === 'CLOSED' && status && status !== 'CLOSED') {
+      return NextResponse.json({ error: 'Cannot reopen a closed case' }, { status: 400 });
+    }
+
+    const normalizedEscalation =
+      escalationNote !== undefined
+        ? escalationNote?.trim()
+          ? escalationNote.trim()
+          : null
+        : undefined;
+
     const updatedCase = await prisma.case.update({
       where: { id: caseId },
       data: {
         ...(status !== undefined && { status }),
         ...(notes !== undefined && { notes }),
         ...(isUrgent !== undefined && { isUrgent }),
-        ...(escalationNote !== undefined && { escalationNote }),
+        ...(normalizedEscalation !== undefined && { escalationNote: normalizedEscalation }),
       },
       include: {
         patient: {
@@ -95,6 +107,25 @@ export async function PUT(request: Request) {
           },
         },
       },
+    });
+
+    await createAuditLog({
+      actorId: userId,
+      action: status ? AUDIT_ACTIONS.STATUS_CHANGE : AUDIT_ACTIONS.UPDATE,
+      entityType: 'Case',
+      entityId: caseId,
+      oldValue: {
+        status: caseRecord.status,
+        isUrgent: caseRecord.isUrgent,
+        escalationNote: caseRecord.escalationNote,
+      },
+      newValue: {
+        ...(status !== undefined && { status }),
+        ...(notes !== undefined && { notes }),
+        ...(isUrgent !== undefined && { isUrgent }),
+        ...(normalizedEscalation !== undefined && { escalationNote: normalizedEscalation }),
+      },
+      ipAddress: getClientIP(request),
     });
 
     return NextResponse.json({ success: true, case: updatedCase });

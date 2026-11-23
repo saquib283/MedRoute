@@ -9,9 +9,10 @@ import { requireAuth, getClientIP } from '@/lib/api/auth-helper';
 import { apiSuccess, apiError } from '@/lib/api/response';
 import { ERROR_CODES } from '@/lib/api/errors';
 import { createAuditLog, AUDIT_ACTIONS } from '@/lib/api/audit-logger';
+import { CASE_STATUS_ORDER } from '@/lib/constants';
 import { z } from 'zod';
 
-const VALID_STATUSES = ['INQUIRY_RECEIVED', 'UNDER_REVIEW', 'PLAN_CONFIRMED', 'IN_TREATMENT', 'POST_TREATMENT', 'CLOSED'] as const;
+const VALID_STATUSES = CASE_STATUS_ORDER;
 
 const updateCaseSchema = z.object({
   id: z.string().min(1),
