@@ -51,6 +51,7 @@ describe('document-storage.service', () => {
     expect(validateUploadBuffer(oversized, 'huge.pdf', 'application/pdf').valid).toBe(false);
 
     const pdfBuf = Buffer.from('%PDF-1.7\n1 0 obj<<>>endobj');
+    expect(validateUploadBuffer(pdfBuf, 'report.pdf', '').valid).toBe(false);
     expect(validateUploadBuffer(pdfBuf, 'report.pdf', 'text/html').valid).toBe(false);
     expect(validateUploadBuffer(pdfBuf, 'report.jpg', 'image/jpeg').valid).toBe(false);
   });
@@ -72,3 +73,4 @@ describe('document-storage.service', () => {
     expect(canUserAccessPatientDocument({ userId: 'adm-1', role: 'ADMIN', email: 'ad@b.c' }, docContext)).toBe(true);
   });
 });
+

@@ -9,7 +9,10 @@ import prisma from '@/lib/prisma';
 import { requireAuth } from '@/lib/api/auth-helper';
 import { apiSuccess, apiError } from '@/lib/api/response';
 import { ERROR_CODES } from '@/lib/api/errors';
-import { saveValidatedUpload } from '@/lib/services/document-storage.service';
+import {
+  removeStoredFile,
+  saveValidatedUpload,
+} from '@/lib/services/document-storage.service';
 
 export async function GET(request: NextRequest) {
   try {
@@ -145,52 +148,60 @@ export async function POST(request: NextRequest) {
 
     const dueDate = dueDateStr ? new Date(dueDateStr) : null;
 
-    const newBill = await prisma.medicalBill.create({
-      data: {
-        billNumber,
-        caseId,
-        patientId,
-        hospitalId,
-        title,
-        category,
-        totalAmount: calculatedTotal,
-        paidAmount,
-        currency,
-        status,
-        dueDate,
-        fileUrl,
-        storageKey: savedStorageKey,
-        fileName,
-        notes,
-        createdBy: authUser!.userId,
-        items: {
-          create: processedItems,
-        },
-      },
-      include: {
-        items: true,
-        patient: {
-          include: {
-            user: { select: { fullName: true } },
+    let finalBill;
+    try {
+      const newBill = await prisma.medicalBill.create({
+        data: {
+          billNumber,
+          caseId,
+          patientId,
+          hospitalId,
+          title,
+          category,
+          totalAmount: calculatedTotal,
+          paidAmount,
+          currency,
+          status,
+          dueDate,
+          fileUrl,
+          storageKey: savedStorageKey,
+          fileName,
+          notes,
+          createdBy: authUser!.userId,
+          items: {
+            create: processedItems,
           },
         },
-      },
-    });
-
-    const finalBill = savedStorageKey
-      ? await prisma.medicalBill.update({
-          where: { id: newBill.id },
-          data: { fileUrl: `/api/v1/documents/bill/${newBill.id}/download` },
-          include: {
-            items: true,
-            patient: {
-              include: {
-                user: { select: { fullName: true } },
-              },
+        include: {
+          items: true,
+          patient: {
+            include: {
+              user: { select: { fullName: true } },
             },
           },
-        })
-      : newBill;
+        },
+      });
+
+      finalBill = savedStorageKey
+        ? await prisma.medicalBill.update({
+            where: { id: newBill.id },
+            data: { fileUrl: `/api/v1/documents/bill/${newBill.id}/download` },
+            include: {
+              items: true,
+              patient: {
+                include: {
+                  user: { select: { fullName: true } },
+                },
+              },
+            },
+          })
+        : newBill;
+    } catch (dbErr) {
+      if (savedStorageKey) {
+        await removeStoredFile(savedStorageKey);
+      }
+      throw dbErr;
+    }
 
     return apiSuccess({ bill: finalBill });
   } catch (err) {

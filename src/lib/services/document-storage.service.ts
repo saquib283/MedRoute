@@ -66,7 +66,7 @@ export function validateUploadBuffer(
 
   const normalizedMime = (mimeType || '').toLowerCase().trim();
   if (
-    normalizedMime &&
+    !normalizedMime ||
     !(ALLOWED_MIME_TYPES as readonly string[]).includes(normalizedMime)
   ) {
     return {
@@ -404,3 +404,4 @@ export async function streamBillInvoiceById(
     displayName
   );
 }
+
