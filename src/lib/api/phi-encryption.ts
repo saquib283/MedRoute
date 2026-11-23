@@ -3,7 +3,7 @@
  * Application-level AES-256-GCM encryption for clinical fields per HIPAA § 164.312(a)(2)(iv).
  */
 
-import { encrypt, decrypt } from '@/lib/auth/crypto';
+import { encrypt, decrypt, DecryptionTamperError } from '@/lib/auth/crypto';
 
 /**
  * Encrypt a field value if it exists and is a string or JSON object.
@@ -15,8 +15,8 @@ export function encryptField(value: unknown): string | null {
   const textToEncrypt =
     typeof value === 'string' ? value : JSON.stringify(value);
 
-  if (!textToEncrypt || textToEncrypt === '""' || textToEncrypt === '[]') {
-    return textToEncrypt;
+  if (!textToEncrypt || textToEncrypt === '""') {
+    return '';
   }
 
   return encrypt(textToEncrypt);
@@ -30,13 +30,21 @@ export function decryptField<T = unknown>(ciphertext: unknown): T | null {
     return ciphertext as T;
   }
 
-  const decrypted = decrypt(ciphertext);
-  if (!decrypted) return null;
-
   try {
-    return JSON.parse(decrypted) as T;
-  } catch {
-    return decrypted as unknown as T;
+    const decrypted = decrypt(ciphertext);
+    if (!decrypted) return null;
+
+    try {
+      return JSON.parse(decrypted) as T;
+    } catch {
+      return decrypted as unknown as T;
+    }
+  } catch (err) {
+    if (err instanceof DecryptionTamperError) {
+      console.error('[ePHI Tamper Alert] Refusing to return tampered ciphertext');
+      return null;
+    }
+    throw err;
   }
 }
 
@@ -52,24 +60,29 @@ export function encryptMedicalProfile(profileData: {
 }) {
   return {
     ...profileData,
-    allergies: profileData.allergies ? encryptField(profileData.allergies) : undefined,
-    medications: profileData.medications ? encryptField(profileData.medications) : undefined,
-    surgeries: profileData.surgeries ? encryptField(profileData.surgeries) : undefined,
-    chronicConditions: profileData.chronicConditions ? encryptField(profileData.chronicConditions) : undefined,
+    allergies: profileData.allergies !== undefined ? encryptField(profileData.allergies) : undefined,
+    medications: profileData.medications !== undefined ? encryptField(profileData.medications) : undefined,
+    surgeries: profileData.surgeries !== undefined ? encryptField(profileData.surgeries) : undefined,
+    chronicConditions: profileData.chronicConditions !== undefined ? encryptField(profileData.chronicConditions) : undefined,
   };
 }
 
 /**
  * Decrypt medical profile JSON fields before returning to client.
  */
-export function decryptMedicalProfile<T extends Record<string, unknown>>(profile: T | null): T | null {
+export function decryptMedicalProfile<T extends Record<string, unknown>>(profile: T | null | undefined): T | null {
   if (!profile) return null;
+
+  const allergies = decryptField(profile.allergies);
+  const medications = decryptField(profile.medications);
+  const surgeries = decryptField(profile.surgeries);
+  const chronicConditions = decryptField(profile.chronicConditions);
 
   return {
     ...profile,
-    allergies: profile.allergies ? decryptField(profile.allergies) : [],
-    medications: profile.medications ? decryptField(profile.medications) : [],
-    surgeries: profile.surgeries ? decryptField(profile.surgeries) : [],
-    chronicConditions: profile.chronicConditions ? decryptField(profile.chronicConditions) : [],
+    allergies: Array.isArray(allergies) ? allergies : [],
+    medications: Array.isArray(medications) ? medications : [],
+    surgeries: Array.isArray(surgeries) ? surgeries : [],
+    chronicConditions: Array.isArray(chronicConditions) ? chronicConditions : [],
   };
 }

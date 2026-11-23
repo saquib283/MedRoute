@@ -8,10 +8,18 @@ import crypto from 'crypto';
 const ALGORITHM = 'aes-256-gcm';
 const IV_LENGTH = 12;
 const AUTH_TAG_LENGTH = 16;
+const HEX_RE = /^[0-9a-fA-F]+$/;
+
+export class DecryptionTamperError extends Error {
+  constructor(message = 'Encrypted field failed GCM authentication check') {
+    super(message);
+    this.name = 'DecryptionTamperError';
+  }
+}
 
 function getEncryptionKey(): Buffer {
   let keyHex = process.env.ENCRYPTION_KEY;
-  
+
   // Fallback for dev / testing environments
   if (!keyHex && process.env.NODE_ENV !== 'production') {
     keyHex = '0000000000000000000000000000000000000000000000000000000000000000';
@@ -34,59 +42,60 @@ function getEncryptionKey(): Buffer {
  */
 export function encrypt(text: unknown): string {
   if (text === null || text === undefined || text === '') return '';
-  
+
   const textToEncrypt = typeof text === 'string' ? text : JSON.stringify(text);
-  if (!textToEncrypt || textToEncrypt === '""' || textToEncrypt === '[]') return '';
+  if (!textToEncrypt || textToEncrypt === '""') return '';
 
   const key = getEncryptionKey();
   const iv = crypto.randomBytes(IV_LENGTH);
   const cipher = crypto.createCipheriv(ALGORITHM, key, iv);
-  
+
   let encrypted = cipher.update(textToEncrypt, 'utf8', 'hex');
   encrypted += cipher.final('hex');
-  
+
   const authTag = cipher.getAuthTag().toString('hex');
-  
+
   return `${iv.toString('hex')}:${authTag}:${encrypted}`;
 }
 
 /**
  * Decrypt an AES-256-GCM encrypted string.
- * Supports legacy unencrypted values by returning the original string if parsing or decryption fails.
+ * Supports legacy unencrypted values by returning the original string if the input is not formatted as iv:authTag:ciphertext.
+ * Throws DecryptionTamperError when a properly formatted ciphertext fails GCM authentication.
  */
 export function decrypt(ciphertext: unknown): string {
   if (!ciphertext) return '';
   if (typeof ciphertext !== 'string') {
     return String(ciphertext);
   }
-  
+
   const parts = ciphertext.split(':');
   if (parts.length !== 3) {
     // Return original if it doesn't match iv:authTag:ciphertext format
     return ciphertext;
   }
-  
+
   const [ivHex, authTagHex, encryptedHex] = parts;
-  
+  if (
+    ivHex.length !== IV_LENGTH * 2 ||
+    authTagHex.length !== AUTH_TAG_LENGTH * 2 ||
+    !HEX_RE.test(ivHex) ||
+    !HEX_RE.test(authTagHex) ||
+    (encryptedHex.length > 0 && !HEX_RE.test(encryptedHex))
+  ) {
+    return ciphertext;
+  }
+
   try {
     const key = getEncryptionKey();
-    const iv = Buffer.from(ivHex, 'hex');
-    const authTag = Buffer.from(authTagHex, 'hex');
-    const encrypted = Buffer.from(encryptedHex, 'hex');
-    
-    if (iv.length !== IV_LENGTH || authTag.length !== AUTH_TAG_LENGTH) {
-      return ciphertext;
-    }
+    const decipher = crypto.createDecipheriv(ALGORITHM, key, Buffer.from(ivHex, 'hex'));
+    decipher.setAuthTag(Buffer.from(authTagHex, 'hex'));
 
-    const decipher = crypto.createDecipheriv(ALGORITHM, key, iv);
-    decipher.setAuthTag(authTag);
-    
-    const decryptedUpdate = decipher.update(encrypted);
+    const decryptedUpdate = decipher.update(Buffer.from(encryptedHex, 'hex'));
     const decryptedFinal = decipher.final();
-    
+
     return Buffer.concat([decryptedUpdate, decryptedFinal]).toString('utf8');
-  } catch (err) {
-    console.error('[Decryption Error] Failed to decrypt value. Returning raw ciphertext.', err);
-    return ciphertext;
+  } catch {
+    throw new DecryptionTamperError();
   }
 }

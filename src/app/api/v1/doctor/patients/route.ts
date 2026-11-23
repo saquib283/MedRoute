@@ -5,26 +5,34 @@
 
 import { NextRequest } from 'next/server';
 import prisma from '@/lib/prisma';
-import { requireAuth } from '@/lib/api/auth-helper';
+import { requireAuth, getClientIP } from '@/lib/api/auth-helper';
 import { apiSuccess, apiError } from '@/lib/api/response';
 import { ERROR_CODES } from '@/lib/api/errors';
+import { createAuditLog, AUDIT_ACTIONS } from '@/lib/api/audit-logger';
+import { formatPatientForViewer } from '@/lib/services/phi.service';
 
 export async function GET(request: NextRequest) {
   try {
     const { user: authUser, error } = requireAuth(request);
     if (error) return error;
+    if (authUser!.role !== 'DOCTOR') {
+      return apiError(ERROR_CODES.FORBIDDEN, 'Doctor access required', 403);
+    }
 
     const doctorProfile = await prisma.doctor.findUnique({
       where: { userId: authUser!.userId },
     });
 
-    if (!doctorProfile) {
-      return apiError(ERROR_CODES.USER_NOT_FOUND, 'Doctor profile not found', 404);
+    if (!doctorProfile || !doctorProfile.isActive) {
+      return apiError(ERROR_CODES.USER_NOT_FOUND, 'Active doctor profile not found', 404);
     }
 
-    // Get unique patient IDs who have an appointment with this doctor
+    // Get unique patient IDs who have an active (non-cancelled) appointment with this doctor
     const distinctAppointments = await prisma.appointment.findMany({
-      where: { doctorId: doctorProfile.id },
+      where: {
+        doctorId: doctorProfile.id,
+        status: { not: 'CANCELLED' },
+      },
       select: { patientId: true },
       distinct: ['patientId'],
     });
@@ -44,7 +52,20 @@ export async function GET(request: NextRequest) {
       },
     });
 
-    return apiSuccess({ patients });
+    const formattedPatients = patients.map((p) =>
+      formatPatientForViewer(p, { maskPassport: true })
+    );
+
+    void createAuditLog({
+      actorId: authUser!.userId,
+      action: AUDIT_ACTIONS.VIEW_PATIENT,
+      entityType: 'Patient',
+      entityId: 'doctor-cohort',
+      newValue: { count: formattedPatients.length },
+      ipAddress: getClientIP(request),
+    });
+
+    return apiSuccess({ patients: formattedPatients });
   } catch (err) {
     console.error('[Doctor Patients GET Error]', err);
     return apiError(ERROR_CODES.INTERNAL_ERROR, 'Failed to fetch patients', 500);

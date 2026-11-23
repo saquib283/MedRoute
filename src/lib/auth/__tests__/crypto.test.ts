@@ -1,4 +1,4 @@
-﻿import { encrypt, decrypt } from '../crypto';
+﻿import { encrypt, decrypt, DecryptionTamperError } from '../crypto';
 
 describe('Crypto Module AES-256-GCM', () => {
   const originalEnv = process.env.ENCRYPTION_KEY;
@@ -55,5 +55,20 @@ describe('Crypto Module AES-256-GCM', () => {
     // Passing non-string directly to decrypt returns stringified version or raw value
     expect(decrypt(mockArray)).toBe(String(mockArray));
     expect(decrypt(mockObject)).toBe(String(mockObject));
+  });
+
+  describe('AES-256-GCM Tamper & Empty Array Safety', () => {
+    it('throws DecryptionTamperError instead of returning raw ciphertext when authTag is tampered', () => {
+      const ct = encrypt('Penicillin Allergy');
+      const [iv, tag, body] = ct.split(':');
+      const flippedTag = (tag[0] === 'a' ? 'b' : 'a') + tag.slice(1);
+      expect(() => decrypt(`${iv}:${flippedTag}:${body}`)).toThrow(DecryptionTamperError);
+    });
+
+    it('encrypts and decrypts empty JSON arrays cleanly', () => {
+      const ct = encrypt([]);
+      expect(ct.split(':')).toHaveLength(3);
+      expect(decrypt(ct)).toBe('[]');
+    });
   });
 });

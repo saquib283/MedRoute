@@ -9,6 +9,7 @@ import { requireAuth, getClientIP } from '@/lib/api/auth-helper';
 import { apiSuccess, apiError } from '@/lib/api/response';
 import { ERROR_CODES } from '@/lib/api/errors';
 import { createAuditLog, AUDIT_ACTIONS } from '@/lib/api/audit-logger';
+import { formatPatientForViewer } from '@/lib/services/phi.service';
 import { z } from 'zod';
 
 const updatePatientSchema = z.object({
@@ -57,7 +58,7 @@ export async function GET(request: NextRequest) {
         where,
         include: {
           user: { select: { fullName: true, email: true, phone: true, isActive: true, createdAt: true } },
-          assignedManager: { select: { fullName: true } },
+          assignedManager: { select: { id: true, fullName: true, email: true } },
           _count: { select: { cases: true, documents: true, appointments: true } },
         },
         orderBy: { createdAt: 'desc' },
@@ -67,7 +68,20 @@ export async function GET(request: NextRequest) {
       prisma.patient.count({ where }),
     ]);
 
-    return apiSuccess({ patients, pagination: { page, limit, total, totalPages: Math.ceil(total / limit) } });
+    const formattedPatients = patients.map((p) =>
+      formatPatientForViewer(p, { maskPassport: true })
+    );
+
+    void createAuditLog({
+      actorId: authUser!.userId,
+      action: AUDIT_ACTIONS.VIEW_PATIENT,
+      entityType: 'Patient',
+      entityId: 'admin-cohort',
+      newValue: { count: formattedPatients.length, page, limit },
+      ipAddress: getClientIP(request),
+    });
+
+    return apiSuccess({ patients: formattedPatients, pagination: { page, limit, total, totalPages: Math.ceil(total / limit) } });
   } catch (err) {
     console.error('[Admin Patients GET Error]', err);
     return apiError(ERROR_CODES.INTERNAL_ERROR, 'Failed to fetch patients', 500);
