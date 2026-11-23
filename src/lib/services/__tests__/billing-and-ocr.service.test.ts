@@ -286,6 +286,60 @@ describe('Task 1: Billing Service, Dual Settlement & Real PDF Stream OCR', () =>
     if (!invalidHospitalRes.ok) expect(invalidHospitalRes.status).toBe(400);
   });
 
+  it('completes pending SETTLE_BILL steps when cancelling the last remaining unpaid bill on a case with an existing PAID bill', async () => {
+    const unpaidBill = {
+      id: 'bill-unpaid',
+      caseId: 'case-1',
+      patientId: 'pat-1',
+      totalAmount: 1200,
+      paidAmount: 0,
+      status: 'PENDING',
+      notes: null,
+      dueDate: null,
+      hospitalId: null,
+      case: { id: 'case-1', managerId: 'mgr-1' },
+      patient: { id: 'pat-1', assignedManagerId: 'mgr-1' },
+    };
+
+    const txUpdateMock = jest.fn().mockResolvedValue({
+      ...unpaidBill,
+      status: 'CANCELLED',
+    });
+    const stepUpdateMany = jest.fn().mockResolvedValue({ count: 1 });
+
+    mockedPrisma.$transaction.mockImplementationOnce(async (fn: (tx: unknown) => unknown) =>
+      fn({
+        medicalBill: {
+          findUnique: jest.fn().mockResolvedValue(unpaidBill),
+          update: txUpdateMock,
+          count: jest
+            .fn()
+            .mockResolvedValueOnce(0) // remaining unpaid non-cancelled count
+            .mockResolvedValueOnce(1), // existing PAID bill count
+        },
+        clinicalStep: { updateMany: stepUpdateMany },
+      })
+    );
+
+    const cancelRes = await updateMedicalBill({
+      billId: 'bill-unpaid',
+      status: 'CANCELLED',
+      actor: { userId: 'mgr-1', role: 'MANAGER' },
+    });
+
+    expect(cancelRes.ok).toBe(true);
+    expect(stepUpdateMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: expect.objectContaining({
+          caseId: 'case-1',
+          actionType: 'SETTLE_BILL',
+          status: { not: 'COMPLETED' },
+        }),
+        data: expect.objectContaining({ status: 'COMPLETED' }),
+      })
+    );
+  });
+
   it('allows owning PATIENT to pay partial or full balance via payPatientMedicalBill inside $transaction and blocks other patients', async () => {
     mockedPrisma.patient.findFirst.mockResolvedValue({ id: 'pat-1', userId: 'u-pat-1' });
 

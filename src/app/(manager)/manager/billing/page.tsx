@@ -138,7 +138,6 @@ export default function ManagerBillingPage() {
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   // Form State
-  const [selectedPatientId, setSelectedPatientId] = useState('');
   const [selectedCaseId, setSelectedCaseId] = useState('');
   const [selectedHospitalId, setSelectedHospitalId] = useState('');
   const [billTitle, setBillTitle] = useState('');
@@ -260,12 +259,9 @@ export default function ManagerBillingPage() {
       setHospitals(rawHospitals);
 
       if (opts.length > 0) {
-        setSelectedCaseId((prev) => {
-          const existing = opts.find((o) => o.caseId === prev);
-          const chosen = existing || opts[0];
-          setSelectedPatientId(chosen.patientId);
-          return chosen.caseId;
-        });
+        setSelectedCaseId((prev) =>
+          opts.some((o) => o.caseId === prev) ? prev : opts[0].caseId
+        );
       }
     } catch (err) {
       console.error('Failed to load billing workspace', err);
@@ -386,10 +382,13 @@ export default function ManagerBillingPage() {
     return lineItems.reduce((acc, item) => acc + (item.amount || 0), 0);
   }, [lineItems]);
 
+  const selectedPatientId = useMemo(
+    () => caseOptions.find((opt) => opt.caseId === selectedCaseId)?.patientId ?? '',
+    [caseOptions, selectedCaseId]
+  );
+
   const handleCaseSelectChange = (caseIdVal: string) => {
     setSelectedCaseId(caseIdVal);
-    const matched = caseOptions.find((opt) => opt.caseId === caseIdVal);
-    if (matched) setSelectedPatientId(matched.patientId);
   };
 
   const handleFormSubmit = async (e: React.FormEvent) => {
@@ -452,8 +451,9 @@ export default function ManagerBillingPage() {
 
   // Metrics
   const metrics = useMemo(() => {
-    const totalRev = bills.reduce((acc, b) => acc + (Number(b.totalAmount) || 0), 0);
-    const paidRev = bills.reduce((acc, b) => acc + (Number(b.paidAmount) || 0), 0);
+    const activeBills = bills.filter((b) => b.status !== 'CANCELLED');
+    const totalRev = activeBills.reduce((acc, b) => acc + (Number(b.totalAmount) || 0), 0);
+    const paidRev = activeBills.reduce((acc, b) => acc + (Number(b.paidAmount) || 0), 0);
     const pendingCount = bills.filter((b) => b.status === 'PENDING').length;
     const partialCount = bills.filter((b) => b.status === 'PARTIALLY_PAID').length;
     return { totalRev, paidRev, pendingCount, partialCount };
@@ -759,6 +759,7 @@ export default function ManagerBillingPage() {
               </div>
               <button
                 type="button"
+                aria-label="Close bill details modal"
                 onClick={() => setSelectedBillForDetails(null)}
                 className="p-1.5 text-surface-400 hover:text-surface-700 hover:bg-surface-100 rounded-lg"
               >
@@ -955,6 +956,7 @@ export default function ManagerBillingPage() {
               </div>
               <button
                 type="button"
+                aria-label="Close create bill modal"
                 onClick={() => setIsModalOpen(false)}
                 className="p-1.5 text-surface-400 hover:text-surface-700 hover:bg-surface-100 rounded-lg"
               >

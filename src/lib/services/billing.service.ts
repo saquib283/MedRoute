@@ -386,7 +386,7 @@ export async function updateMedicalBill(
       },
     });
 
-    if (nextStatus === 'PAID') {
+    if (nextStatus === 'PAID' || nextStatus === 'CANCELLED') {
       await syncCaseSettleBillSteps(tx, bill.caseId);
     }
 
