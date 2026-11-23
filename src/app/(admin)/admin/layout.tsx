@@ -12,6 +12,8 @@ import Image from 'next/image';
 import logoImg from '../../../../public/assets/logo.png';
 import { usePathname, useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/Button';
+import { GlobalAlertBanner } from '@/components/ui/GlobalAlertBanner';
+import { NotificationBell } from '@/components/notifications/NotificationBell';
 import {
   LayoutDashboard,
   Briefcase,
@@ -44,31 +46,47 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
   const [alertBannerText, setAlertBannerText] = useState('');
 
   useEffect(() => {
+    let cancelled = false;
+
     async function loadUserData() {
       try {
         const res = await fetch('/api/v1/auth/me');
+        if (res.status === 503) {
+          if (!cancelled) router.push('/login?reason=maintenance');
+          return;
+        }
         if (res.ok) {
           const data = await res.json();
           const role = data.data?.user?.role;
-          if (role !== 'ADMIN' && role !== 'ADMIN') {
-            router.push('/login');
+          if (role !== 'ADMIN') {
+            if (!cancelled) router.push('/login');
             return;
           }
-          setUserName(data.data?.user?.fullName || 'Admin');
-          setUserEmail(data.data?.user?.email);
-          setUserRole(role);
-          setAlertBannerText(data.data?.alertBannerText || '');
+          if (!cancelled) {
+            setUserName(data.data?.user?.fullName || 'Admin');
+            setUserEmail(data.data?.user?.email);
+            setUserRole(role);
+            setAlertBannerText(data.data?.alertBannerText || '');
+          }
         } else {
-          router.push('/login');
+          if (!cancelled) router.push('/login');
         }
       } catch (err) {
         console.error('Failed to load admin info:', err);
-        router.push('/login');
+        if (!cancelled) router.push('/login');
       } finally {
-        setLoading(false);
+        if (!cancelled) setLoading(false);
       }
     }
-    loadUserData();
+
+    const timer = setTimeout(() => {
+      void loadUserData();
+    }, 0);
+
+    return () => {
+      cancelled = true;
+      clearTimeout(timer);
+    };
   }, [router]);
 
   // Fetch escalation count for badge
@@ -150,18 +168,6 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
 
   return (
     <div className="min-h-screen bg-surface-50 flex flex-col lg:flex-row">
-      {/* Mobile Header */}
-      <div className="lg:hidden flex items-center justify-between p-4 bg-white border-b border-surface-200">
-        <Image src={logoImg} alt="Afzal Logo" width={96} height={48} className="object-contain" priority />
-        <button
-          onClick={() => setIsSidebarOpen(!isSidebarOpen)}
-          className="p-2 -mr-2 text-surface-500 hover:text-surface-700 hover:bg-surface-100 rounded-lg"
-          aria-label="Toggle navigation menu"
-        >
-          <Menu className="w-6 h-6" />
-        </button>
-      </div>
-
       {/* Sidebar */}
       <aside
         className={`fixed inset-y-0 left-0 z-40 w-[280px] bg-white border-r border-surface-200 transform transition-transform duration-300 ease-in-out lg:static lg:translate-x-0 lg:sticky lg:top-0 lg:h-screen lg:shrink-0 flex flex-col ${
@@ -230,19 +236,42 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
       </aside>
 
       {/* Main Content */}
-      <main className="flex-1 min-w-0 flex flex-col min-h-screen">
-        {alertBannerText && (
-          <div className="bg-warning-500 text-white px-4 py-2.5 text-center text-xs font-bold flex items-center justify-center gap-2 shadow-sm shrink-0 border-b border-warning-600 animate-slide-down">
-            <svg className="w-4 h-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
-              <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
-            </svg>
-            <span>{alertBannerText}</span>
+      <div className="flex-1 min-w-0 flex flex-col min-h-screen">
+        <header className="h-16 bg-white border-b border-surface-200 flex items-center justify-between px-4 lg:px-8 z-10 shrink-0">
+          <div className="flex items-center gap-3">
+            <button
+              type="button"
+              onClick={() => setIsSidebarOpen(!isSidebarOpen)}
+              className="lg:hidden p-2 -ml-2 text-surface-500 hover:text-surface-700 hover:bg-surface-100 rounded-lg"
+              aria-label="Toggle navigation menu"
+            >
+              <Menu className="w-6 h-6" />
+            </button>
+            <Image src={logoImg} alt="Afzal Logo" width={96} height={36} className="h-8 w-auto object-contain lg:hidden" priority />
+            <div className="hidden lg:block">
+              <span className="text-[11px] font-bold text-primary-700 uppercase tracking-wider block">
+                Admin Console
+              </span>
+              <p className="text-sm font-bold text-surface-900 tracking-tight">
+                Platform Governance &amp; Operations
+              </p>
+            </div>
           </div>
-        )}
-        <div className="flex-1 p-4 lg:p-8 overflow-y-auto">
+
+          <div className="flex items-center gap-3">
+            <span className="hidden sm:inline-flex items-center px-2.5 py-1 rounded-full bg-primary-50 text-primary-700 border border-primary-200 text-xs font-bold uppercase tracking-wide">
+              Admin
+            </span>
+            <NotificationBell />
+          </div>
+        </header>
+
+        <GlobalAlertBanner text={alertBannerText} />
+
+        <main className="flex-1 p-4 lg:p-8 overflow-y-auto">
           {children}
-        </div>
-      </main>
+        </main>
+      </div>
 
       {/* Mobile Overlay */}
       {isSidebarOpen && (

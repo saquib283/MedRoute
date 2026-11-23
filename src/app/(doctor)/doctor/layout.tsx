@@ -19,6 +19,8 @@ import {
   Menu,
 } from 'lucide-react';
 import { formatDoctorDisplayName } from '@/lib/validation/booking-helpers';
+import { GlobalAlertBanner } from '@/components/ui/GlobalAlertBanner';
+import { NotificationBell } from '@/components/notifications/NotificationBell';
 
 interface NavItem {
   label: string;
@@ -36,6 +38,7 @@ export default function DoctorLayout({
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [userName, setUserName] = useState('');
   const [userEmail, setUserEmail] = useState('');
+  const [alertBannerText, setAlertBannerText] = useState('');
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -44,6 +47,10 @@ export default function DoctorLayout({
     async function loadUserData() {
       try {
         const res = await fetch('/api/v1/auth/me');
+        if (res.status === 503) {
+          if (!cancelled) router.push('/login?reason=maintenance');
+          return;
+        }
         if (!res.ok) {
           if (!cancelled) router.push('/login');
           return;
@@ -57,6 +64,7 @@ export default function DoctorLayout({
         if (!cancelled) {
           setUserName(formatDoctorDisplayName(user.fullName || 'Doctor'));
           setUserEmail(user.email || '');
+          setAlertBannerText(data.data?.alertBannerText || '');
         }
       } catch (err) {
         console.error('Failed to load doctor info:', err);
@@ -270,13 +278,16 @@ export default function DoctorLayout({
             </div>
           </div>
 
-          <div className="hidden sm:flex items-center gap-3 text-xs text-surface-500">
-            <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200 font-semibold">
+          <div className="flex items-center gap-3 text-xs text-surface-500">
+            <span className="hidden sm:inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200 font-semibold">
               <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
               Attending Specialist
             </span>
+            <NotificationBell />
           </div>
         </header>
+
+        <GlobalAlertBanner text={alertBannerText} />
 
         <main className="flex-1 p-4 sm:p-6 lg:p-8">{children}</main>
       </div>

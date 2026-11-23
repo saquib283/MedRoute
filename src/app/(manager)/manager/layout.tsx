@@ -11,6 +11,8 @@ import Image from 'next/image';
 import logoImg from '../../../../public/assets/logo.png';
 import { usePathname, useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/Button';
+import { GlobalAlertBanner } from '@/components/ui/GlobalAlertBanner';
+import { NotificationBell } from '@/components/notifications/NotificationBell';
 import {
   LayoutDashboard,
   Users,
@@ -42,33 +44,51 @@ export default function ManagerLayout({
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [userName, setUserName] = useState('');
   const [userEmail, setUserEmail] = useState('');
+  const [alertBannerText, setAlertBannerText] = useState('');
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    let cancelled = false;
+
     async function loadUserData() {
       try {
         const res = await fetch('/api/v1/auth/me');
+        if (res.status === 503) {
+          if (!cancelled) router.push('/login?reason=maintenance');
+          return;
+        }
         if (res.ok) {
           const data = await res.json();
           // Authenticate role
           const role = data.data?.user?.role;
-          if (role !== 'MANAGER' && role !== 'ADMIN' && role !== 'ADMIN') {
-            router.push('/login');
+          if (role !== 'MANAGER' && role !== 'ADMIN') {
+            if (!cancelled) router.push('/login');
             return;
           }
-          setUserName(data.data?.user?.fullName || 'Manager');
-          setUserEmail(data.data?.user?.email);
+          if (!cancelled) {
+            setUserName(data.data?.user?.fullName || 'Manager');
+            setUserEmail(data.data?.user?.email);
+            setAlertBannerText(data.data?.alertBannerText || '');
+          }
         } else {
-          router.push('/login');
+          if (!cancelled) router.push('/login');
         }
       } catch (err) {
         console.error('Failed to load manager info:', err);
-        router.push('/login');
+        if (!cancelled) router.push('/login');
       } finally {
-        setLoading(false);
+        if (!cancelled) setLoading(false);
       }
     }
-    loadUserData();
+
+    const timer = setTimeout(() => {
+      void loadUserData();
+    }, 0);
+
+    return () => {
+      cancelled = true;
+      clearTimeout(timer);
+    };
   }, [router]);
 
   const handleLogout = async () => {
@@ -356,7 +376,8 @@ export default function ManagerLayout({
             )}
           </div>
 
-          <div className="flex items-center gap-4">
+          <div className="flex items-center gap-3 sm:gap-4">
+            <NotificationBell />
             <Link href="/manager/appointments">
               <Button size="sm">
                 Book Appointment
@@ -364,6 +385,8 @@ export default function ManagerLayout({
             </Link>
           </div>
         </header>
+
+        <GlobalAlertBanner text={alertBannerText} />
 
         {/* Main Content Area */}
         <main className="flex-1 p-4 sm:p-6 lg:p-8">

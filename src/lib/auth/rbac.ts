@@ -143,6 +143,7 @@ export const ROUTE_ROLES: Record<string, UserRole[]> = {
   '/doctor': ['DOCTOR'],
   '/manager': ['MANAGER', 'ADMIN'],
   '/admin': ['ADMIN'],
+  '/notifications': ['PATIENT', 'MANAGER', 'DOCTOR', 'ADMIN'],
 };
 
 /**

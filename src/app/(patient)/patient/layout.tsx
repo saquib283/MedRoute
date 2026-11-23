@@ -11,6 +11,8 @@ import Image from 'next/image';
 import logoImg from '../../../../public/assets/logo.png';
 import { usePathname, useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/Button';
+import { GlobalAlertBanner } from '@/components/ui/GlobalAlertBanner';
+import { NotificationBell } from '@/components/notifications/NotificationBell';
 import {
   LayoutDashboard,
   User,
@@ -37,23 +39,40 @@ export default function PatientLayout({
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [userName, setUserName] = useState('Patient');
   const [userEmail, setUserEmail] = useState('');
+  const [alertBannerText, setAlertBannerText] = useState('');
 
   useEffect(() => {
+    let cancelled = false;
+
     // Fetch profile details to populate layout header
     const fetchProfile = async () => {
       try {
         const res = await fetch('/api/v1/auth/me');
+        if (res.status === 503) {
+          if (!cancelled) router.push('/login?reason=maintenance');
+          return;
+        }
+        if (!res.ok) return;
         const data = await res.json();
-        if (data.success && data.data?.user) {
+        if (!cancelled && data.success && data.data?.user) {
           setUserName(data.data.user.fullName);
           setUserEmail(data.data.user.email);
+          setAlertBannerText(data.data?.alertBannerText || '');
         }
       } catch (err) {
         console.error('Failed to load profile in layout', err);
       }
     };
-    fetchProfile();
-  }, []);
+
+    const timer = setTimeout(() => {
+      void fetchProfile();
+    }, 0);
+
+    return () => {
+      cancelled = true;
+      clearTimeout(timer);
+    };
+  }, [router]);
 
   const handleLogout = async () => {
     try {
@@ -333,7 +352,8 @@ export default function PatientLayout({
             )}
           </div>
 
-          <div className="flex items-center gap-4">
+          <div className="flex items-center gap-3 sm:gap-4">
+            <NotificationBell />
             {/* Quick action button for dashboard */}
             <Link href="/patient/appointments">
               <Button size="sm">
@@ -342,6 +362,8 @@ export default function PatientLayout({
             </Link>
           </div>
         </header>
+
+        <GlobalAlertBanner text={alertBannerText} />
 
         {/* Main Content Area */}
         <main className="flex-1 p-4 sm:p-6 lg:p-8">
