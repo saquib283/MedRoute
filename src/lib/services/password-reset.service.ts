@@ -1,6 +1,6 @@
 /**
  * Afzal Healthcare — Password Reset Service
- * DB-backed OTP password recovery with rate limiting and brute-force lockout.
+ * DB-backed OTP password recovery with uniform rate limiting and atomic token consumption.
  */
 
 import crypto from 'crypto';
@@ -13,6 +13,39 @@ const OTP_TTL_MS = 5 * 60 * 1000;
 const RATE_WINDOW_MS = 15 * 60 * 1000;
 const MAX_REQUESTS_PER_WINDOW = 3;
 const MAX_VERIFY_ATTEMPTS = 5;
+
+const rateLimitStore = new Map<string, number[]>();
+
+/**
+ * Clear the in-memory rate-limit store (for unit tests only).
+ */
+export function resetRateLimitStoreForTests(): void {
+  rateLimitStore.clear();
+}
+
+/**
+ * Dispatch a password reset OTP via configured webhook, or log safely per environment.
+ */
+async function sendPasswordResetEmail(email: string, otp: string): Promise<void> {
+  const webhookUrl = process.env.PASSWORD_RESET_WEBHOOK_URL;
+  if (webhookUrl) {
+    await fetch(webhookUrl, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ to: email, otp, purpose: 'PASSWORD_RESET' }),
+    });
+    return;
+  }
+
+  if (process.env.NODE_ENV === 'development') {
+    console.info(`[DEV OTP] Password reset code for ${email}: ${otp}`);
+    return;
+  }
+
+  if (process.env.NODE_ENV === 'production') {
+    console.warn('[PasswordReset] No PASSWORD_RESET_WEBHOOK_URL configured; OTP email not dispatched');
+  }
+}
 
 /**
  * Compute a user-salted SHA-256 hex digest for a password reset OTP.
@@ -32,10 +65,26 @@ export function verifyResetOtpHash(userId: string, otp: string, expectedHash: st
 }
 
 /**
- * Issue a 6-digit password reset OTP if the user exists, is active, and is under the rate limit.
+ * Issue a 6-digit password reset OTP with uniform sliding-window rate limiting across all emails.
  */
 export async function requestPasswordResetOtp(email: string): Promise<{ rateLimited: boolean }> {
-  const user = await prisma.user.findUnique({ where: { email: email.toLowerCase().trim() } });
+  const normalizedEmail = email.toLowerCase().trim();
+  const now = Date.now();
+  const windowStart = now - RATE_WINDOW_MS;
+
+  const recentTimestamps = (rateLimitStore.get(normalizedEmail) ?? []).filter(
+    (timestamp) => timestamp > windowStart
+  );
+
+  if (recentTimestamps.length >= MAX_REQUESTS_PER_WINDOW) {
+    rateLimitStore.set(normalizedEmail, recentTimestamps);
+    return { rateLimited: true };
+  }
+
+  recentTimestamps.push(now);
+  rateLimitStore.set(normalizedEmail, recentTimestamps);
+
+  const user = await prisma.user.findUnique({ where: { email: normalizedEmail } });
   if (!user || !user.isActive) {
     return { rateLimited: false };
   }
@@ -43,7 +92,7 @@ export async function requestPasswordResetOtp(email: string): Promise<{ rateLimi
   const recentCount = await prisma.passwordResetToken.count({
     where: {
       userId: user.id,
-      createdAt: { gt: new Date(Date.now() - RATE_WINDOW_MS) },
+      createdAt: { gt: new Date(windowStart) },
     },
   });
 
@@ -63,20 +112,18 @@ export async function requestPasswordResetOtp(email: string): Promise<{ rateLimi
       data: {
         userId: user.id,
         otpHash,
-        expiresAt: new Date(Date.now() + OTP_TTL_MS),
+        expiresAt: new Date(now + OTP_TTL_MS),
       },
     }),
   ]);
 
-  if (process.env.NODE_ENV !== 'production') {
-    console.info(`[DEV OTP] Password reset code for ${user.email}: ${otp}`);
-  }
+  await sendPasswordResetEmail(user.email, otp);
 
   return { rateLimited: false };
 }
 
 /**
- * Verify a password reset OTP, update the user's password, revoke active refresh tokens, and audit-log the reset.
+ * Verify a password reset OTP atomically, update the password hash, revoke refresh tokens, and log the audit event.
  */
 export async function completePasswordReset(input: {
   email: string;
@@ -103,16 +150,16 @@ export async function completePasswordReset(input: {
   }
 
   if (tokenRecord.attempts >= MAX_VERIFY_ATTEMPTS) {
-    await prisma.passwordResetToken.update({
-      where: { id: tokenRecord.id },
+    await prisma.passwordResetToken.updateMany({
+      where: { id: tokenRecord.id, usedAt: null },
       data: { usedAt: new Date() },
     });
     return { ok: false, code: ERROR_CODES.OTP_EXPIRED, message: 'Too many invalid attempts. Request a new code.', status: 401 };
   }
 
   if (!verifyResetOtpHash(user.id, input.otp, tokenRecord.otpHash)) {
-    await prisma.passwordResetToken.update({
-      where: { id: tokenRecord.id },
+    await prisma.passwordResetToken.updateMany({
+      where: { id: tokenRecord.id, usedAt: null },
       data: { attempts: { increment: 1 } },
     });
     return { ok: false, code: ERROR_CODES.OTP_INVALID, message: 'Invalid verification code', status: 401 };
@@ -120,11 +167,33 @@ export async function completePasswordReset(input: {
 
   const passwordHash = await hashPassword(input.newPassword);
 
-  await prisma.$transaction([
-    prisma.user.update({ where: { id: user.id }, data: { passwordHash } }),
-    prisma.passwordResetToken.update({ where: { id: tokenRecord.id }, data: { usedAt: new Date() } }),
-    prisma.refreshToken.updateMany({ where: { userId: user.id, revokedAt: null }, data: { revokedAt: new Date() } }),
-  ]);
+  const wasConsumed = await prisma.$transaction(async (tx) => {
+    const now = new Date();
+    const consumed = await tx.passwordResetToken.updateMany({
+      where: {
+        id: tokenRecord.id,
+        usedAt: null,
+        attempts: { lt: MAX_VERIFY_ATTEMPTS },
+        expiresAt: { gt: now },
+      },
+      data: { usedAt: now },
+    });
+
+    if (consumed.count !== 1) {
+      return false;
+    }
+
+    await tx.user.update({ where: { id: user.id }, data: { passwordHash } });
+    await tx.refreshToken.updateMany({
+      where: { userId: user.id, revokedAt: null },
+      data: { revokedAt: now },
+    });
+    return true;
+  });
+
+  if (!wasConsumed) {
+    return { ok: false, code: ERROR_CODES.OTP_EXPIRED, message: 'Verification code expired or not found', status: 401 };
+  }
 
   await createAuditLog({
     actorId: user.id,
