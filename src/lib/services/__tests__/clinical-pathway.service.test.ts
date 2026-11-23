@@ -257,4 +257,51 @@ describe('Task 2: Clinical Pathway Service & Multi-Role Authorization', () => {
     expect(docOnMgrStep.ok).toBe(false);
     if (!docOnMgrStep.ok) expect(docOnMgrStep.status).toBe(403);
   });
+
+  it('preserves omitted decisionBranch/doctorNotes on partial step PATCH and rejects empty updates', async () => {
+    mockedPrisma.case.findUnique.mockResolvedValue(baseCase);
+    mockedPrisma.clinicalStep.findUnique.mockResolvedValue({
+      id: 'step-1',
+      caseId: 'case-1',
+      title: 'Step 1',
+      status: 'IN_PROGRESS',
+      requiredRole: 'MANAGER',
+      decisionBranch: 'APPROVED_FOR_SURGERY',
+      doctorNotes: 'Existing note',
+    });
+    mockedPrisma.clinicalStep.update.mockResolvedValue({
+      id: 'step-1',
+      caseId: 'case-1',
+      status: 'COMPLETED',
+      decisionBranch: 'APPROVED_FOR_SURGERY',
+      doctorNotes: 'Existing note',
+    });
+
+    const partialRes = await updateSinglePathwayStep({
+      caseId: 'case-1',
+      stepId: 'step-1',
+      status: 'COMPLETED',
+      actor: { userId: 'mgr-1', role: 'MANAGER' },
+    });
+
+    expect(partialRes.ok).toBe(true);
+    const updateArg = mockedPrisma.clinicalStep.update.mock.calls[0][0] as {
+      data: Record<string, unknown>;
+    };
+    expect(updateArg.data).toHaveProperty('status', 'COMPLETED');
+    expect(updateArg.data).not.toHaveProperty('decisionBranch');
+    expect(updateArg.data).not.toHaveProperty('doctorNotes');
+
+    const emptyRes = await updateSinglePathwayStep({
+      caseId: 'case-1',
+      stepId: 'step-1',
+      actor: { userId: 'mgr-1', role: 'MANAGER' },
+    });
+
+    expect(emptyRes.ok).toBe(false);
+    if (!emptyRes.ok) {
+      expect(emptyRes.status).toBe(400);
+      expect(emptyRes.code).toBe('BAD_REQUEST');
+    }
+  });
 });

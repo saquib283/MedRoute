@@ -348,7 +348,10 @@ const optionalNullableString = z
   .trim()
   .nullable()
   .optional()
-  .transform((val) => (val && val.length > 0 ? val : null));
+  .transform((val) => {
+    if (val === undefined) return undefined;
+    return val && val.length > 0 ? val : null;
+  });
 
 const optionalRequiredRole = z
   .union([z.enum(REQUIRED_ROLES), z.literal('')])
