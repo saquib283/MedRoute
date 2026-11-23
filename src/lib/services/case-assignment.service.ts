@@ -144,23 +144,23 @@ export async function assignPatientCoordinator({
       select: { id: true, patientId: true, managerId: true, status: true },
     });
 
-    if (cases.length === 0) {
+    const openCases = cases.filter((c) => c.status !== 'CLOSED');
+    if (openCases.length === 0) {
       return {
         ok: false as const,
-        code: ERROR_CODES.CASE_NOT_FOUND,
-        message: 'Case not found',
-        status: 404,
+        code: ERROR_CODES.CASE_ALREADY_CLOSED,
+        message: 'Cannot reassign closed or missing cases',
+        status: 400,
       };
     }
 
-    const foundCaseIds = cases.map((c) => c.id);
+    const foundCaseIds = openCases.map((c) => c.id);
+    const uniquePatientIds = Array.from(new Set(openCases.map((c) => c.patientId)));
 
     await tx.case.updateMany({
-      where: { id: { in: foundCaseIds } },
+      where: { patientId: { in: uniquePatientIds }, status: { not: 'CLOSED' } },
       data: { managerId },
     });
-
-    const uniquePatientIds = Array.from(new Set(cases.map((c) => c.patientId)));
     const notifications: Array<{
       userId: string;
       channel: 'IN_APP';
@@ -204,7 +204,7 @@ export async function assignPatientCoordinator({
       });
     }
 
-    for (const c of cases) {
+    for (const c of openCases) {
       await tx.auditLog.create({
         data: {
           actorId,
@@ -229,3 +229,4 @@ export async function assignPatientCoordinator({
     };
   });
 }
+

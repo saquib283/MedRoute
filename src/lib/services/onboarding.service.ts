@@ -3,7 +3,7 @@
  * Transactional patient account + profile + initial case creation with ePHI encryption.
  */
 
-import type { UrgencyLevel } from '@prisma/client';
+import type { UrgencyLevel, UserRole } from '@prisma/client';
 import prisma from '@/lib/prisma';
 import { encrypt } from '@/lib/auth/crypto';
 import { hashPassword } from '@/lib/auth/password';
@@ -209,11 +209,13 @@ export interface CreateCaseForPatientInput {
   isUrgent?: boolean;
   managerId?: string | null;
   actorId: string;
+  callerRole?: UserRole;
   ipAddress?: string;
 }
 
 /**
- * Create a new INQUIRY_RECEIVED Case for an existing Patient, syncing Patient.assignedManagerId if unset.
+ * Create a new INQUIRY_RECEIVED Case for an existing Patient, keeping Patient.assignedManagerId
+ * and all non-CLOSED Case.managerId fields strictly synchronized.
  */
 export async function createCaseForPatient(input: CreateCaseForPatientInput) {
   let explicitManagerId: string | null | undefined = input.managerId;
@@ -247,10 +249,35 @@ export async function createCaseForPatient(input: CreateCaseForPatientInput) {
       };
     }
 
+    if (
+      input.callerRole === 'MANAGER' &&
+      patient.assignedManagerId &&
+      patient.assignedManagerId !== input.actorId
+    ) {
+      return {
+        ok: false as const,
+        code: ERROR_CODES.FORBIDDEN,
+        message: 'Patient is assigned to another coordinator',
+        status: 403,
+      };
+    }
+
     const resolvedManagerId =
       explicitManagerId !== undefined
         ? explicitManagerId
         : patient.assignedManagerId;
+
+    if (resolvedManagerId !== patient.assignedManagerId) {
+      await tx.patient.update({
+        where: { id: patient.id },
+        data: { assignedManagerId: resolvedManagerId ?? null },
+      });
+
+      await tx.case.updateMany({
+        where: { patientId: patient.id, status: { not: 'CLOSED' } },
+        data: { managerId: resolvedManagerId ?? null },
+      });
+    }
 
     const createdCase = await tx.case.create({
       data: {
@@ -280,13 +307,6 @@ export async function createCaseForPatient(input: CreateCaseForPatientInput) {
       },
     });
 
-    if (!patient.assignedManagerId && resolvedManagerId) {
-      await tx.patient.update({
-        where: { id: patient.id },
-        data: { assignedManagerId: resolvedManagerId },
-      });
-    }
-
     await tx.auditLog.create({
       data: {
         actorId: input.actorId,
@@ -309,3 +329,4 @@ export async function createCaseForPatient(input: CreateCaseForPatientInput) {
     };
   });
 }
+

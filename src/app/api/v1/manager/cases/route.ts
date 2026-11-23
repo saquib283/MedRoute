@@ -80,6 +80,7 @@ export async function POST(request: NextRequest) {
       isUrgent: parsed.data.isUrgent,
       managerId: userRole === 'MANAGER' ? userId : parsed.data.managerId,
       actorId: userId,
+      callerRole: userRole,
       ipAddress: getClientIP(request),
     });
 

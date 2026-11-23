@@ -126,7 +126,31 @@ describe('Onboarding & Atomic Coordinator Assignment', () => {
       where: { id: 'pat-1' },
       data: { assignedManagerId: 'mgr-1' },
     });
+    expect(mockTxCaseUpdateMany).toHaveBeenCalledWith({
+      where: { patientId: 'pat-1', status: { not: 'CLOSED' } },
+      data: { managerId: 'mgr-1' },
+    });
     expect(mockTxAuditCreate).toHaveBeenCalledTimes(1);
+  });
+
+  it('createCaseForPatient blocks MANAGER from creating a case for a patient assigned to another coordinator', async () => {
+    mockUserFindUnique.mockResolvedValue({ id: 'mgr-1', fullName: 'Coord One', role: 'MANAGER', isActive: true });
+    mockTxPatientFindUnique.mockResolvedValue({ id: 'pat-1', userId: 'u-pat-1', assignedManagerId: 'mgr-other' });
+
+    const res = await createCaseForPatient({
+      patientId: 'pat-1',
+      managerId: 'mgr-1',
+      actorId: 'mgr-1',
+      callerRole: 'MANAGER',
+    });
+
+    expect(res.ok).toBe(false);
+    if (!res.ok) {
+      expect(res.status).toBe(403);
+      expect(res.code).toBe('FORBIDDEN');
+    }
+    expect(mockTxCaseCreate).not.toHaveBeenCalled();
+    expect(mockTxPatientUpdate).not.toHaveBeenCalled();
   });
 
   it('assignPatientCoordinator updates BOTH Patient.assignedManagerId and open Case.managerId', async () => {
@@ -153,7 +177,7 @@ describe('Onboarding & Atomic Coordinator Assignment', () => {
     expect(mockTxNotificationCreateMany).toHaveBeenCalledTimes(1);
   });
 
-  it('assignPatientCoordinator with caseIds updates target cases AND syncs affected Patient.assignedManagerId', async () => {
+  it('assignPatientCoordinator with caseIds updates sibling non-CLOSED cases AND syncs affected Patient.assignedManagerId', async () => {
     mockUserFindUnique.mockResolvedValue({ id: 'mgr-3', fullName: 'Coord Three', role: 'MANAGER', isActive: true });
     mockTxCaseFindMany.mockResolvedValue([
       { id: 'case-10', patientId: 'pat-10', managerId: 'mgr-1', status: 'INQUIRY_RECEIVED' },
@@ -174,7 +198,7 @@ describe('Onboarding & Atomic Coordinator Assignment', () => {
       expect(res.reassignedCount).toBe(2);
     }
     expect(mockTxCaseUpdateMany).toHaveBeenCalledWith({
-      where: { id: { in: ['case-10', 'case-11'] } },
+      where: { patientId: { in: ['pat-10', 'pat-11'] }, status: { not: 'CLOSED' } },
       data: { managerId: 'mgr-3' },
     });
     expect(mockTxPatientUpdate).toHaveBeenCalledWith({
@@ -185,6 +209,27 @@ describe('Onboarding & Atomic Coordinator Assignment', () => {
       where: { id: 'pat-11' },
       data: { assignedManagerId: 'mgr-3' },
     });
+  });
+
+  it('assignPatientCoordinator with caseIds rejects when all target cases are CLOSED or missing', async () => {
+    mockUserFindUnique.mockResolvedValue({ id: 'mgr-3', fullName: 'Coord Three', role: 'MANAGER', isActive: true });
+    mockTxCaseFindMany.mockResolvedValue([
+      { id: 'case-closed', patientId: 'pat-10', managerId: 'mgr-1', status: 'CLOSED' },
+    ]);
+
+    const res = await assignPatientCoordinator({
+      caseIds: ['case-closed'],
+      managerId: 'mgr-3',
+      actorId: 'admin-1',
+    });
+
+    expect(res.ok).toBe(false);
+    if (!res.ok) {
+      expect(res.status).toBe(400);
+      expect(res.code).toBe('CASE_ALREADY_CLOSED');
+    }
+    expect(mockTxCaseUpdateMany).not.toHaveBeenCalled();
+    expect(mockTxPatientUpdate).not.toHaveBeenCalled();
   });
 
   it('assignPatientCoordinator rejects inactive or missing target manager', async () => {
@@ -203,3 +248,4 @@ describe('Onboarding & Atomic Coordinator Assignment', () => {
     expect(mockTxPatientUpdate).not.toHaveBeenCalled();
   });
 });
+
