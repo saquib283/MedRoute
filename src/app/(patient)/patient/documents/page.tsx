@@ -13,6 +13,10 @@ import { Select, SelectOption } from '@/components/ui/Select';
 import { toast } from '@/components/ui/Toast';
 import { DOCUMENT_CATEGORY_LABELS } from '@/lib/constants';
 import {
+  matchesPatientDocumentCategoryFilter,
+  canPatientDeleteDocument,
+} from '@/lib/validation/document-vault-helpers';
+import {
   UploadCloud,
   FileText,
   Lock,
@@ -209,19 +213,8 @@ export default function DocumentVaultPage() {
   // Filtered Documents
   const filteredDocuments = useMemo(() => {
     return documents.filter((doc) => {
-      // Category filter
-      if (activeCategoryFilter === 'TRAVEL_VERIFICATION') {
-        if (!['PASSPORT', 'VISA', 'VISA_INVITATION_LETTER', 'PROFORMA_INVOICE', 'FRRO_REGISTRATION'].includes(doc.category)) {
-          return false;
-        }
-      } else if (activeCategoryFilter === 'HOSPITAL_OFFICIAL') {
-        if (!['VISA_INVITATION_LETTER', 'PROFORMA_INVOICE', 'MEDICAL_OPINION', 'FIT_TO_FLY_CERTIFICATE'].includes(doc.category)) {
-          return false;
-        }
-      } else if (activeCategoryFilter === 'DIAGNOSTICS') {
-        if (doc.category !== 'MEDICAL_REPORT') return false;
-      } else if (activeCategoryFilter !== 'ALL') {
-        if (doc.category !== activeCategoryFilter) return false;
+      if (!matchesPatientDocumentCategoryFilter(doc.category, activeCategoryFilter)) {
+        return false;
       }
 
       // Search Query
@@ -594,7 +587,7 @@ export default function DocumentVaultPage() {
                     <span>Download</span>
                   </a>
 
-                  {doc.verificationStatus !== 'ISSUED_BY_HOSPITAL' && (
+                  {canPatientDeleteDocument(doc.verificationStatus) && (
                     <button
                       type="button"
                       onClick={() => handleDelete(doc.id, doc.fileName)}
@@ -646,7 +639,7 @@ export default function DocumentVaultPage() {
                           >
                             <Download className="w-4 h-4" />
                           </a>
-                          {doc.verificationStatus !== 'ISSUED_BY_HOSPITAL' && (
+                          {canPatientDeleteDocument(doc.verificationStatus) && (
                             <button
                               type="button"
                               onClick={() => handleDelete(doc.id, doc.fileName)}

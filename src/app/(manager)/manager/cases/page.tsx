@@ -6,10 +6,12 @@
  */
 
 import { useState, useEffect } from 'react';
+import Link from 'next/link';
 import { Card } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { Select } from '@/components/ui/Select';
 import { CaseStatusBadge } from '@/components/ui/Badge';
+import { CaseDocumentsManagerPanel } from '@/components/clinical/CaseDocumentsManagerPanel';
 import { CASE_STATUS_ORDER, CASE_STATUS_LABELS, CASE_PHASE_GROUPS } from '@/lib/constants';
 
 interface Case {
@@ -234,11 +236,20 @@ export default function CasesPipeline() {
                     </div>
                   )}
 
-                  <div className="flex justify-between items-center mt-4 pt-3.5 border-t border-surface-100 text-xs">
+                  <div className="flex justify-between items-center mt-4 pt-3.5 border-t border-surface-100 text-xs gap-2 flex-wrap">
                     <span className="text-surface-400 font-mono">Case ID: {c.id}</span>
-                    <Button size="sm" variant="ghost">
-                      Manage Step & Notes
-                    </Button>
+                    <div className="flex items-center gap-2">
+                      <Link
+                        href={`/manager/cases/${c.id}/pathway`}
+                        onClick={(e) => e.stopPropagation()}
+                        className="inline-flex items-center justify-center px-3 py-1.5 text-xs font-semibold rounded-lg bg-primary-50 text-primary-700 hover:bg-primary-100 border border-primary-200 transition-colors"
+                      >
+                        Configure Pathway
+                      </Link>
+                      <Button size="sm" variant="ghost">
+                        Manage Step & Notes
+                      </Button>
+                    </div>
                   </div>
                 </Card>
               </div>
@@ -247,91 +258,103 @@ export default function CasesPipeline() {
         </div>
 
         {/* Case Actions Form panel */}
-        <div className="xl:col-span-1">
+        <div className="xl:col-span-1 space-y-6">
           {editingCase ? (
-            <Card className="bg-white border border-surface-200/80 p-6 space-y-6 sticky top-6 animate-slide-up">
-              <div className="flex justify-between items-center pb-3 border-b border-surface-100">
-                <h3 className="font-bold text-surface-900 text-base">Modify Case File</h3>
-                <button
-                  onClick={() => setEditingCase(null)}
-                  className="text-surface-400 hover:text-surface-600 text-sm font-semibold"
-                >
-                  Clear Selection
-                </button>
-              </div>
-
-              <form onSubmit={handleUpdateCase} className="space-y-4 text-xs">
-                {/* Patient Name banner */}
-                <div className="bg-surface-50 p-3.5 rounded-xl border border-surface-200/60">
-                  <p className="text-surface-400 font-medium">Patient</p>
-                  <p className="text-sm font-bold text-surface-900 mt-0.5">{editingCase.patient.user.fullName}</p>
+            <>
+              <Card className="bg-white border border-surface-200/80 p-6 space-y-6 animate-slide-up">
+                <div className="flex justify-between items-center pb-3 border-b border-surface-100">
+                  <h3 className="font-bold text-surface-900 text-base">Modify Case File</h3>
+                  <button
+                    onClick={() => setEditingCase(null)}
+                    className="text-surface-400 hover:text-surface-600 text-sm font-semibold"
+                  >
+                    Clear Selection
+                  </button>
                 </div>
 
-                {/* Case Status Dropdown */}
-                <Select
-                  label="Pipeline Stage"
-                  value={targetStatus}
-                  onChange={(val) => setTargetStatus(val)}
-                  options={CASE_STATUS_ORDER.map((s) => ({
-                    value: s,
-                    label: CASE_STATUS_LABELS[s] || s,
-                  }))}
-                  required
-                />
-
-                {/* notes */}
-                <div className="space-y-1">
-                  <label htmlFor="notes" className="font-semibold text-surface-700">Case Assessment Notes</label>
-                  <textarea
-                    id="notes"
-                    rows={4}
-                    className="w-full p-3 rounded-xl border border-surface-200 font-medium focus:border-primary-600 focus:outline-none"
-                    placeholder="Enter diagnostic review, partner response status, flight details, or notes..."
-                    value={caseNotes}
-                    onChange={(e) => setCaseNotes(e.target.value)}
-                  />
-                </div>
-
-                {/* Urgent Checkbox */}
-                <div className="flex items-center gap-2 py-1">
-                  <input
-                    type="checkbox"
-                    id="isUrgent"
-                    className="w-4 h-4 accent-primary-600"
-                    checked={isUrgent}
-                    onChange={(e) => setIsUrgent(e.target.checked)}
-                  />
-                  <label htmlFor="isUrgent" className="font-semibold text-surface-800 cursor-pointer">
-                    Flag case file as URGENT
-                  </label>
-                </div>
-
-                {/* Escalation Note */}
-                <div className="space-y-1">
-                  <label htmlFor="escalation" className="font-semibold text-surface-700 text-red-700">Escalation Tag Notes (Optional)</label>
-                  <textarea
-                    id="escalation"
-                    rows={2}
-                    className="w-full p-3 rounded-xl border border-red-200 bg-red-50/40 font-medium text-red-800 focus:border-red-400 focus:outline-none"
-                    placeholder="Explain emergency conditions, critical treatment delays..."
-                    value={escalationNote}
-                    onChange={(e) => setEscalationNote(e.target.value)}
-                  />
-                </div>
-
-                {errorMsg && (
-                  <div className="p-3 rounded-xl bg-red-50 border border-red-200 text-red-700 text-xs font-medium">
-                    {errorMsg}
+                <form onSubmit={handleUpdateCase} className="space-y-4 text-xs">
+                  {/* Patient Name banner */}
+                  <div className="bg-surface-50 p-3.5 rounded-xl border border-surface-200/60 flex items-center justify-between gap-3">
+                    <div>
+                      <p className="text-surface-400 font-medium">Patient</p>
+                      <p className="text-sm font-bold text-surface-900 mt-0.5">{editingCase.patient.user.fullName}</p>
+                    </div>
+                    <Link
+                      href={`/manager/cases/${editingCase.id}/pathway`}
+                      className="inline-flex items-center justify-center px-3 py-1.5 text-xs font-semibold rounded-lg bg-primary-50 text-primary-700 hover:bg-primary-100 border border-primary-200 transition-colors shrink-0"
+                    >
+                      Configure Pathway
+                    </Link>
                   </div>
-                )}
 
-                <div className="pt-2">
-                  <Button className="w-full" type="submit" disabled={submitting}>
-                    {submitting ? 'Saving modifications...' : 'Save Case File'}
-                  </Button>
-                </div>
-              </form>
-            </Card>
+                  {/* Case Status Dropdown */}
+                  <Select
+                    label="Pipeline Stage"
+                    value={targetStatus}
+                    onChange={(val) => setTargetStatus(val)}
+                    options={CASE_STATUS_ORDER.map((s) => ({
+                      value: s,
+                      label: CASE_STATUS_LABELS[s] || s,
+                    }))}
+                    required
+                  />
+
+                  {/* notes */}
+                  <div className="space-y-1">
+                    <label htmlFor="notes" className="font-semibold text-surface-700">Case Assessment Notes</label>
+                    <textarea
+                      id="notes"
+                      rows={4}
+                      className="w-full p-3 rounded-xl border border-surface-200 font-medium focus:border-primary-600 focus:outline-none"
+                      placeholder="Enter diagnostic review, partner response status, flight details, or notes..."
+                      value={caseNotes}
+                      onChange={(e) => setCaseNotes(e.target.value)}
+                    />
+                  </div>
+
+                  {/* Urgent Checkbox */}
+                  <div className="flex items-center gap-2 py-1">
+                    <input
+                      type="checkbox"
+                      id="isUrgent"
+                      className="w-4 h-4 accent-primary-600"
+                      checked={isUrgent}
+                      onChange={(e) => setIsUrgent(e.target.checked)}
+                    />
+                    <label htmlFor="isUrgent" className="font-semibold text-surface-800 cursor-pointer">
+                      Flag case file as URGENT
+                    </label>
+                  </div>
+
+                  {/* Escalation Note */}
+                  <div className="space-y-1">
+                    <label htmlFor="escalation" className="font-semibold text-surface-700 text-red-700">Escalation Tag Notes (Optional)</label>
+                    <textarea
+                      id="escalation"
+                      rows={2}
+                      className="w-full p-3 rounded-xl border border-red-200 bg-red-50/40 font-medium text-red-800 focus:border-red-400 focus:outline-none"
+                      placeholder="Explain emergency conditions, critical treatment delays..."
+                      value={escalationNote}
+                      onChange={(e) => setEscalationNote(e.target.value)}
+                    />
+                  </div>
+
+                  {errorMsg && (
+                    <div className="p-3 rounded-xl bg-red-50 border border-red-200 text-red-700 text-xs font-medium">
+                      {errorMsg}
+                    </div>
+                  )}
+
+                  <div className="pt-2">
+                    <Button className="w-full" type="submit" disabled={submitting}>
+                      {submitting ? 'Saving modifications...' : 'Save Case File'}
+                    </Button>
+                  </div>
+                </form>
+              </Card>
+
+              <CaseDocumentsManagerPanel caseId={editingCase.id} canVerify />
+            </>
           ) : (
             <Card className="bg-surface-50/50 border border-dashed border-surface-300 text-center py-20 px-6 rounded-2xl sticky top-6">
               <svg className="w-10 h-10 text-surface-300 mx-auto mb-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>

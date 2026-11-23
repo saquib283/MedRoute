@@ -6,11 +6,13 @@
  */
 
 import { useState, useEffect, useCallback } from 'react';
+import Link from 'next/link';
 import { Card } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { Badge } from '@/components/ui/Badge';
 import { Select } from '@/components/ui/Select';
 import { toast } from '@/components/ui/Toast';
+import { CaseDocumentsManagerPanel } from '@/components/clinical/CaseDocumentsManagerPanel';
 import { CASE_STATUS_LABELS, CASE_STATUS_ORDER } from '@/lib/constants';
 
 interface AdminCase {
@@ -235,7 +237,7 @@ export default function AdminCasesPage() {
       {/* Case Detail Drawer */}
       {selectedCase && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-surface-900/40 backdrop-blur-xs">
-          <div className="bg-white rounded-2xl shadow-2xl border border-surface-200 w-full max-w-lg animate-scale-up max-h-[90vh] overflow-y-auto">
+          <div className="bg-white rounded-2xl shadow-2xl border border-surface-200 w-full max-w-2xl animate-scale-up max-h-[90vh] overflow-y-auto">
             <div className="px-6 py-4 border-b border-surface-100 flex items-center justify-between sticky top-0 bg-white z-10">
               <h3 className="text-sm font-bold text-surface-900">Case Details</h3>
               <button
@@ -291,6 +293,21 @@ export default function AdminCasesPage() {
                   placeholder="Select Manager"
                   disabled={updating}
                 />
+              </div>
+
+              {/* Clinical Pathway Navigation */}
+              <div className="pt-3 border-t border-surface-100">
+                <Link
+                  href={`/admin/cases/${selectedCase.id}/pathway`}
+                  className="inline-flex items-center justify-center w-full px-4 py-2 text-xs font-semibold rounded-lg bg-primary-50 text-primary-700 hover:bg-primary-100 border border-primary-200 transition-colors"
+                >
+                  Configure Clinical Pathway
+                </Link>
+              </div>
+
+              {/* Case Documents Verification & Official Certificate Issuance */}
+              <div className="pt-3 border-t border-surface-100">
+                <CaseDocumentsManagerPanel caseId={selectedCase.id} canVerify />
               </div>
             </div>
           </div>
