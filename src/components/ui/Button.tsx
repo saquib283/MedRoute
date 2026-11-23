@@ -1,6 +1,6 @@
-﻿/**
+/**
  * Afzal Healthcare — Button Component
- * Clinical design system button with consistent variants and 44px min touch target.
+ * Clinical design system button with consistent variants, tactile feedback, and 44px min touch target.
  */
 
 import React from 'react';
@@ -10,24 +10,25 @@ interface ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
   size?: 'sm' | 'md' | 'lg';
   isLoading?: boolean;
   fullWidth?: boolean;
+  staticMotion?: boolean;
   children: React.ReactNode;
 }
 
 const variantStyles: Record<string, string> = {
   primary:
-    'bg-primary-600 hover:bg-primary-700 text-white',
+    'bg-primary-600 hover:bg-primary-700 text-white shadow-2xs',
   secondary:
     'bg-white hover:bg-surface-100 text-surface-700 border border-surface-300 hover:border-surface-400',
   ghost:
     'bg-transparent hover:bg-surface-200 text-surface-600 hover:text-surface-800',
   danger:
-    'bg-danger-600 hover:bg-danger-700 text-white',
+    'bg-danger-600 hover:bg-danger-700 text-white shadow-2xs',
 };
 
 const sizeStyles: Record<string, string> = {
-  sm: 'px-3 py-1.5 text-sm min-h-[36px]',
+  sm: 'px-3.5 py-2 text-xs min-h-[44px]',
   md: 'px-5 py-2.5 text-sm min-h-[44px]',
-  lg: 'px-7 py-3.5 text-base min-h-[48px]',
+  lg: 'px-6 py-3 text-sm min-h-[48px]',
 };
 
 export function Button({
@@ -35,6 +36,7 @@ export function Button({
   size = 'md',
   isLoading = false,
   fullWidth = false,
+  staticMotion = false,
   children,
   className = '',
   disabled,
@@ -44,8 +46,9 @@ export function Button({
     <button
       className={`
         inline-flex items-center justify-center gap-2
-        font-semibold rounded-lg
-        transition-colors duration-150 ease-out
+        font-semibold rounded-xl
+        transition-[color,background-color,border-color,transform] duration-150 ease-out
+        ${staticMotion ? '' : 'active:scale-[0.96] disabled:active:scale-100'}
         focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-500
         disabled:opacity-50 disabled:cursor-not-allowed
         ${variantStyles[variant]}
@@ -58,10 +61,11 @@ export function Button({
     >
       {isLoading && (
         <svg
-          className="animate-spin h-4 w-4"
+          className="animate-spin h-4 w-4 shrink-0"
           xmlns="http://www.w3.org/2000/svg"
           fill="none"
           viewBox="0 0 24 24"
+          aria-hidden="true"
         >
           <circle
             className="opacity-25"

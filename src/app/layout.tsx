@@ -6,7 +6,7 @@ import { GlobalProviders } from "@/components/GlobalProviders";
 const plusJakartaSans = Plus_Jakarta_Sans({
   subsets: ["latin"],
   display: "swap",
-  variable: "--font-sans",
+  variable: "--font-jakarta",
 });
 
 export const metadata: Metadata = {

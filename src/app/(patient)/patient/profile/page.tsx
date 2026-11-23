@@ -1,11 +1,13 @@
 'use client';
 
 /**
- * Afzal Healthcare — Patient Medical Profile Page
- * Tabbed clinical profile manager with Lucide icons and custom Select dropdown.
+ * Afzal Healthcare — Patient Medical Profile
+ * Accessible tabbed clinical profile with forced-colors-safe tab selection indicator,
+ * mobile scroll-fade affordance, passport-identity correction guidance, and 44px touch targets.
  */
 
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useRef } from 'react';
+import Link from 'next/link';
 import { Card } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
@@ -37,6 +39,9 @@ import {
   Lock,
   Globe,
   Smile,
+  MessageSquare,
+  AlertCircle,
+  RefreshCw,
 } from 'lucide-react';
 
 interface Medication {
@@ -84,16 +89,20 @@ const SECTIONS = [
   { id: 'demographics', label: 'Demographics', icon: User },
   { id: 'emergency', label: 'Emergency Contact', icon: PhoneCall },
   { id: 'conditions', label: 'Allergies & Conditions', icon: AlertTriangle },
-  { id: 'medications', label: 'Meds & Surgeries', icon: Pill },
+  { id: 'medications', label: 'Medications & Surgeries', icon: Pill },
   { id: 'specialties', label: 'Care Specialties', icon: Stethoscope },
 ];
 
 export default function PatientProfilePage() {
   const [activeTab, setActiveTab] = useState('demographics');
   const [isLoading, setIsLoading] = useState(true);
+  const [loadError, setLoadError] = useState<string | null>(null);
   const [isSaving, setIsSaving] = useState(false);
   const [successMsg, setSuccessMsg] = useState('');
   const [errorMsg, setErrorMsg] = useState('');
+
+  const tablistRef = useRef<HTMLDivElement>(null);
+  const tabButtonRefs = useRef<Record<string, HTMLButtonElement | null>>({});
 
   // Form State
   const [fullName, setFullName] = useState('');
@@ -128,51 +137,117 @@ export default function PatientProfilePage() {
 
   const [selectedSpecs, setSelectedSpecs] = useState<string[]>([]);
 
-  useEffect(() => {
-    const loadProfile = async () => {
-      try {
-        const res = await fetch('/api/v1/patient/profile');
-        const data = await res.json();
+  const loadProfile = async () => {
+    setIsLoading(true);
+    setLoadError(null);
+    try {
+      const res = await fetch('/api/v1/patient/profile');
+      const data = await res.json();
 
-        if (data.success && data.data?.patient) {
-          const pat = data.data.patient;
-          setFullName(pat.user.fullName || '');
-          setEmail(pat.user.email || '');
-          setPhone(pat.user.phone || '');
-          setNationality(pat.nationality || '');
-          setDob(pat.dob ? new Date(pat.dob).toISOString().split('T')[0] : '');
+      if (res.ok && data.success && data.data?.patient) {
+        const pat = data.data.patient;
+        setFullName(pat.user.fullName || '');
+        setEmail(pat.user.email || '');
+        setPhone(pat.user.phone || '');
+        setNationality(pat.nationality || '');
+        setDob(pat.dob ? new Date(pat.dob).toISOString().split('T')[0] : '');
 
-          setBloodGroup(pat.bloodGroup || '');
-          setPrimaryLanguage(pat.primaryLanguage || '');
+        setBloodGroup(pat.bloodGroup || '');
+        setPrimaryLanguage(pat.primaryLanguage || '');
 
-          if (pat.emergencyContact) {
-            setEmergencyName(pat.emergencyContact.name || '');
-            setEmergencyCountryCode(pat.emergencyContact.countryCode || '+971');
-            setEmergencyPhone(pat.emergencyContact.phone || '');
-            setEmergencyRelation(pat.emergencyContact.relation || '');
-          }
-
-          if (pat.medicalProfile) {
-            const med = pat.medicalProfile;
-            setAllergies(Array.isArray(med.allergies) ? med.allergies : []);
-            setConditions(Array.isArray(med.chronicConditions) ? med.chronicConditions : []);
-            setMedications(Array.isArray(med.medications) ? med.medications : []);
-            setSurgeries(Array.isArray(med.surgeries) ? med.surgeries : []);
-            setSelectedSpecs(
-              Array.isArray(med.specialisationsRequired)
-                ? med.specialisationsRequired
-                : []
-            );
-          }
+        if (pat.emergencyContact) {
+          setEmergencyName(pat.emergencyContact.name || '');
+          setEmergencyCountryCode(pat.emergencyContact.countryCode || '+971');
+          setEmergencyPhone(pat.emergencyContact.phone || '');
+          setEmergencyRelation(pat.emergencyContact.relation || '');
         }
-      } catch (err) {
-        console.error('Failed to load profile details', err);
-      } finally {
-        setIsLoading(false);
+
+        if (pat.medicalProfile) {
+          const med = pat.medicalProfile;
+          setAllergies(Array.isArray(med.allergies) ? med.allergies : []);
+          setConditions(Array.isArray(med.chronicConditions) ? med.chronicConditions : []);
+          setMedications(Array.isArray(med.medications) ? med.medications : []);
+          setSurgeries(Array.isArray(med.surgeries) ? med.surgeries : []);
+          setSelectedSpecs(
+            Array.isArray(med.specialisationsRequired) ? med.specialisationsRequired : []
+          );
+        }
+      } else {
+        setLoadError(data?.error?.message || 'Unable to load your medical profile.');
       }
-    };
-    loadProfile();
+    } catch (err) {
+      console.error('Failed to load profile details', err);
+      setLoadError('Could not connect to load your medical profile. Please retry.');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      void loadProfile();
+    }, 0);
+    return () => clearTimeout(timer);
   }, []);
+
+  // IntersectionObserver fallback for edge-fade scroll hints on browsers without scroll-driven animations
+  useEffect(() => {
+    const scroller = tablistRef.current;
+    if (!scroller) return;
+    if (typeof CSS !== 'undefined' && CSS.supports('animation-timeline', 'scroll()')) {
+      return;
+    }
+
+    const first = scroller.firstElementChild;
+    const last = scroller.lastElementChild;
+    if (!first || !last) return;
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        for (const { target, intersectionRatio } of entries) {
+          scroller.classList.toggle(
+            target === first ? 'more-start' : 'more-end',
+            intersectionRatio < 1
+          );
+        }
+      },
+      { root: scroller, threshold: 1, rootMargin: '1px' }
+    );
+
+    observer.observe(first);
+    observer.observe(last);
+    return () => observer.disconnect();
+  }, [isLoading]);
+
+  const selectTab = (tabId: string, focusButton = false) => {
+    setActiveTab(tabId);
+    const btn = tabButtonRefs.current[tabId];
+    if (btn) {
+      if (focusButton) btn.focus();
+      btn.scrollIntoView({ block: 'nearest', inline: 'nearest' });
+    }
+  };
+
+  const handleTabKeyDown = (e: React.KeyboardEvent<HTMLDivElement>) => {
+    const currentIdx = SECTIONS.findIndex((s) => s.id === activeTab);
+    if (currentIdx < 0) return;
+
+    if (e.key === 'ArrowRight') {
+      e.preventDefault();
+      const next = SECTIONS[(currentIdx + 1) % SECTIONS.length];
+      selectTab(next.id, true);
+    } else if (e.key === 'ArrowLeft') {
+      e.preventDefault();
+      const prev = SECTIONS[(currentIdx - 1 + SECTIONS.length) % SECTIONS.length];
+      selectTab(prev.id, true);
+    } else if (e.key === 'Home') {
+      e.preventDefault();
+      selectTab(SECTIONS[0].id, true);
+    } else if (e.key === 'End') {
+      e.preventDefault();
+      selectTab(SECTIONS[SECTIONS.length - 1].id, true);
+    }
+  };
 
   const completionPercentage = useMemo(() => {
     let score = 0;
@@ -235,8 +310,8 @@ export default function PatientProfilePage() {
 
       const data = await res.json();
       if (data.success) {
-        setSuccessMsg('Your medical profile has been encrypted and saved successfully.');
-        toast.success('Your medical profile has been encrypted and saved successfully.', 'Profile Saved');
+        setSuccessMsg('Your medical profile changes have been saved securely.');
+        toast.success('Your medical profile changes have been saved securely.', 'Profile Updated');
         window.scrollTo({ top: 0, behavior: 'smooth' });
       } else {
         const errMsg = data.error?.message || 'Failed to save medical profile.';
@@ -311,115 +386,183 @@ export default function PatientProfilePage() {
 
   if (isLoading) {
     return (
-      <div className="flex flex-col items-center justify-center min-h-[400px] gap-4">
-        <div className="w-10 h-10 border-4 border-primary-600 border-t-transparent rounded-full animate-spin" />
-        <p className="text-sm font-medium text-surface-600">Loading your encrypted medical profile...</p>
+      <div className="max-w-5xl mx-auto space-y-6 py-2">
+        <div className="h-44 rounded-3xl bg-white border border-surface-200 animate-pulse" />
+        <div className="h-12 rounded-2xl bg-surface-200/70 animate-pulse" />
+        <div className="h-80 rounded-3xl bg-white border border-surface-200 animate-pulse" />
       </div>
     );
   }
 
   return (
-    <form onSubmit={handleSave} className="space-y-8 max-w-5xl mx-auto pb-16 animate-fade-in">
-      {/* Hero Header */}
-      <div className="bg-white p-6 rounded-2xl border border-surface-200 shadow-sm space-y-6">
+    <form onSubmit={handleSave} className="space-y-8 max-w-5xl mx-auto pb-24 animate-fade-in">
+      {/* ─── Patient Identity Summary Card ──────────────────────────────── */}
+      <div className="bg-white p-6 rounded-3xl border border-surface-200 shadow-xs space-y-6">
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-          <div className="flex items-center gap-4">
-            <div className="w-14 h-14 rounded-2xl bg-primary-100 text-primary-800 border border-primary-200 flex items-center justify-center font-bold text-xl shadow-xs">
+          <div className="flex items-center gap-4 min-w-0">
+            <div className="w-14 h-14 rounded-2xl bg-primary-100 text-primary-800 border border-primary-200 flex items-center justify-center font-bold text-xl shadow-2xs shrink-0">
               {fullName ? fullName.charAt(0) : 'P'}
             </div>
-            <div>
-              <div className="flex items-center gap-2">
-                <h1 className="text-2xl font-bold text-surface-900 tracking-tight">{fullName || 'Patient Profile'}</h1>
-                <Badge variant="primary">{nationality || 'International'}</Badge>
+            <div className="min-w-0">
+              <div className="flex items-center gap-2.5 flex-wrap">
+                <h1 className="text-2xl font-extrabold text-surface-900 tracking-tight">
+                  {fullName || 'Medical Profile'}
+                </h1>
+                <Badge variant="primary">{nationality || 'International Patient'}</Badge>
               </div>
-              <p className="text-xs text-surface-500 mt-1">{email} • {phone || 'Phone not provided'}</p>
+              <p className="text-xs text-surface-600 mt-1 truncate tabular-nums">
+                {email} • {phone || 'Phone not provided'}
+              </p>
             </div>
           </div>
 
-          <div className="flex items-center gap-2 bg-success-50 border border-success-200 px-3.5 py-2 rounded-xl text-xs font-semibold text-success-800 self-start md:self-auto">
-            <ShieldCheck className="w-4 h-4 text-success-600 shrink-0" />
-            <span>AES-256-GCM Encrypted ePHI Record</span>
+          <div className="inline-flex items-center gap-2 bg-success-50 border border-success-200 px-3.5 py-2 rounded-xl text-xs font-semibold text-success-800 self-start md:self-auto shrink-0">
+            <ShieldCheck className="w-4 h-4 text-success-600 shrink-0" aria-hidden="true" />
+            <span>Encrypted Medical Record</span>
           </div>
         </div>
 
-        {/* Completion Progress Bar */}
+        {/* Profile Completion Bar */}
         <div className="border-t border-surface-100 pt-4 flex flex-col md:flex-row md:items-center justify-between gap-3">
           <div className="flex-1 max-w-md">
             <div className="flex justify-between text-xs mb-1.5">
-              <span className="font-semibold text-surface-600">Clinical Profile Completion</span>
-              <span className="font-bold text-primary-700">{completionPercentage}%</span>
+              <span className="font-semibold text-surface-700">Medical Readiness</span>
+              <span className="font-bold text-primary-700 tabular-nums">
+                {completionPercentage}%
+              </span>
             </div>
             <div className="w-full bg-surface-100 h-2.5 rounded-full overflow-hidden">
               <div
-                className="bg-primary-600 h-full rounded-full transition-all duration-500"
+                className="bg-primary-600 h-full rounded-full transition-[width] duration-300"
                 style={{ width: `${completionPercentage}%` }}
               />
             </div>
           </div>
-          <p className="text-[11px] text-surface-400">
-            Completing your medical profile ensures accurate doctor consultations.
+          <p className="text-xs text-surface-500">
+            Sharing complete clinical details helps your doctors prepare safely before you travel.
           </p>
         </div>
       </div>
 
-      {/* Alerts */}
+      {/* ─── Alerts & Error Recovery ────────────────────────────────────── */}
+      {loadError && (
+        <div
+          role="alert"
+          className="p-5 rounded-2xl bg-danger-50 border border-danger-200 text-danger-900 flex flex-col sm:flex-row sm:items-center justify-between gap-4"
+        >
+          <div className="flex items-start gap-3">
+            <AlertCircle className="w-5 h-5 text-danger-600 shrink-0 mt-0.5" aria-hidden="true" />
+            <div>
+              <h2 className="text-sm font-bold">Unable to load your medical profile</h2>
+              <p className="text-xs text-danger-800 mt-0.5">{loadError}</p>
+            </div>
+          </div>
+          <Button type="button" variant="secondary" size="sm" onClick={() => void loadProfile()}>
+            <RefreshCw className="w-4 h-4" aria-hidden="true" />
+            <span>Retry</span>
+          </Button>
+        </div>
+      )}
+
       {successMsg && (
-        <div className="bg-success-50 border border-success-200 text-success-800 p-4 rounded-2xl text-xs font-semibold flex items-center gap-2 animate-slide-down">
-          <CheckCircle2 className="w-5 h-5 text-success-600 shrink-0" />
+        <div
+          role="status"
+          className="bg-success-50 border border-success-200 text-success-800 p-4 rounded-2xl text-xs font-semibold flex items-center gap-2 animate-slide-down"
+        >
+          <CheckCircle2 className="w-5 h-5 text-success-600 shrink-0" aria-hidden="true" />
           <span>{successMsg}</span>
         </div>
       )}
 
       {errorMsg && (
-        <div className="bg-danger-50 border border-danger-200 text-danger-800 p-4 rounded-2xl text-xs font-semibold flex items-center gap-2 animate-slide-down">
-          <AlertTriangle className="w-5 h-5 text-danger-600 shrink-0" />
+        <div
+          role="alert"
+          className="bg-danger-50 border border-danger-200 text-danger-800 p-4 rounded-2xl text-xs font-semibold flex items-center gap-2 animate-slide-down"
+        >
+          <AlertTriangle className="w-5 h-5 text-danger-600 shrink-0" aria-hidden="true" />
           <span>{errorMsg}</span>
         </div>
       )}
 
-      {/* Navigation Tabs */}
-      <div className="flex items-center gap-2 overflow-x-auto pb-1 border-b border-surface-200 scrollbar-none">
+      {/* ─── Accessible Edge-Faded Tablist ──────────────────────────────── */}
+      <div
+        ref={tablistRef}
+        role="tablist"
+        aria-label="Medical profile sections"
+        onKeyDown={handleTabKeyDown}
+        {...({ focusgroup: 'tablist nomemory' } as Record<string, unknown>)}
+        className="edge-fade-scroller flex items-center gap-2 pb-2 border-b border-surface-200"
+      >
         {SECTIONS.map((sec) => {
           const IconComp = sec.icon;
+          const isSelected = activeTab === sec.id;
           return (
             <button
               key={sec.id}
+              ref={(el) => {
+                tabButtonRefs.current[sec.id] = el;
+              }}
+              id={`profile-tab-${sec.id}`}
               type="button"
-              onClick={() => setActiveTab(sec.id)}
-              className={`px-4 py-2.5 rounded-xl text-xs font-bold whitespace-nowrap transition-all flex items-center gap-2 ${
-                activeTab === sec.id
-                  ? 'bg-primary-600 text-white shadow-xs'
-                  : 'bg-white text-surface-600 hover:bg-surface-100 border border-surface-200'
-              }`}
+              role="tab"
+              aria-selected={isSelected}
+              tabIndex={isSelected ? 0 : -1}
+              onClick={() => selectTab(sec.id)}
+              className="clinical-tab flex-none min-h-11 px-4 rounded-xl border border-surface-200 bg-white hover:bg-surface-50 text-surface-700 text-xs font-semibold whitespace-nowrap transition-colors flex items-center gap-2 scroll-snap-align-start"
             >
-              <IconComp className="w-4 h-4" />
+              <IconComp
+                className={`w-4 h-4 shrink-0 ${
+                  isSelected ? 'text-primary-700' : 'text-surface-500'
+                }`}
+                aria-hidden="true"
+              />
               <span>{sec.label}</span>
             </button>
           );
         })}
       </div>
 
-      {/* TAB 1: Demographics */}
-      {activeTab === 'demographics' && (
-        <div className="space-y-6 animate-fade-in">
-          <Card className="p-6 rounded-2xl shadow-xs border border-surface-200 space-y-4">
-            <div className="border-b border-surface-100 pb-3">
-              <h2 className="text-xs font-bold text-surface-800 uppercase tracking-wider">Identity Information (Immutable)</h2>
+      {/* ─── TAB PANEL 1: Demographics ──────────────────────────────────── */}
+      <div
+        role="tabpanel"
+        aria-labelledby="profile-tab-demographics"
+        hidden={activeTab !== 'demographics'}
+      >
+        <div className="space-y-6">
+          <Card className="p-6 rounded-3xl shadow-xs border border-surface-200 space-y-4">
+            <div className="border-b border-surface-100 pb-3 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+              <div>
+                <h2 className="text-sm font-bold text-surface-900">Passport &amp; Account Identity</h2>
+                <p className="text-xs text-surface-600 mt-0.5">
+                  Locked to match your passport for official Visa Invitation Letters and hospital admission.
+                </p>
+              </div>
+              <Link
+                href="/patient/messages"
+                className="inline-flex items-center gap-1.5 min-h-11 px-3.5 rounded-xl bg-primary-50 hover:bg-primary-100 text-primary-800 border border-primary-200 text-xs font-semibold transition-colors self-start sm:self-auto shrink-0"
+              >
+                <MessageSquare className="w-3.5 h-3.5" aria-hidden="true" />
+                <span>Request Correction</span>
+              </Link>
             </div>
+
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <Input label="Full Name" type="text" value={fullName} disabled />
+              <Input label="Full Name (as on Passport)" type="text" value={fullName} disabled />
               <Input label="Email Address" type="email" value={email} disabled />
               <Input label="Phone Number" type="text" value={phone} disabled />
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <Input label="Nationality" type="text" value={nationality} disabled />
                 <Input label="Date of Birth" type="text" value={dob} disabled />
               </div>
             </div>
           </Card>
 
-          <Card className="p-6 rounded-2xl shadow-xs border border-surface-200 space-y-4">
+          <Card className="p-6 rounded-3xl shadow-xs border border-surface-200 space-y-4">
             <div className="border-b border-surface-100 pb-3">
-              <h2 className="text-xs font-bold text-surface-800 uppercase tracking-wider">Editable Clinical Demographics</h2>
+              <h2 className="text-sm font-bold text-surface-900">Clinical &amp; Language Details</h2>
+              <p className="text-xs text-surface-600 mt-0.5">
+                Used to arrange hospital blood-bank readiness and medical interpreter support.
+              </p>
             </div>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <Select
@@ -431,7 +574,7 @@ export default function PatientProfilePage() {
                 icon={<Activity className="w-4 h-4 text-primary-600" />}
               />
               <Input
-                label="Primary Language"
+                label="Preferred Language for Care"
                 type="text"
                 placeholder="e.g. Arabic, English, French"
                 value={primaryLanguage}
@@ -441,63 +584,84 @@ export default function PatientProfilePage() {
             </div>
           </Card>
         </div>
-      )}
+      </div>
 
-      {/* TAB 2: Emergency Contact */}
-      {activeTab === 'emergency' && (
-        <Card className="p-6 rounded-2xl shadow-xs border border-surface-200 space-y-4 animate-fade-in">
-          <div className="border-b border-surface-100 pb-3">
-            <h2 className="text-xs font-bold text-surface-800 uppercase tracking-wider">Primary Emergency Contact</h2>
-            <p className="text-[11px] text-surface-400 mt-0.5">Contact details for your designated next of kin during treatment in India.</p>
-          </div>
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-            <Input
-              label="Contact Full Name"
-              type="text"
-              placeholder="e.g. Sarah Mansoor"
-              value={emergencyName}
-              onChange={(e) => setEmergencyName(e.target.value)}
-            />
-            <PhoneInput
-              label="Contact Phone"
-              countryCode={emergencyCountryCode}
-              onCountryCodeChange={setEmergencyCountryCode}
-              phoneNumber={emergencyPhone}
-              onPhoneNumberChange={setEmergencyPhone}
-              placeholder="50 123 4567"
-            />
-            <Input
-              label="Relationship"
-              type="text"
-              placeholder="e.g. Spouse / Sibling"
-              value={emergencyRelation}
-              onChange={(e) => setEmergencyRelation(e.target.value)}
-            />
-          </div>
-        </Card>
-      )}
-
-      {/* TAB 3: Allergies & Conditions */}
-      {activeTab === 'conditions' && (
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 animate-fade-in">
-          <Card className="p-6 rounded-2xl shadow-xs border border-surface-200 space-y-4">
+      {/* ─── TAB PANEL 2: Emergency Contact ─────────────────────────────── */}
+      <div
+        role="tabpanel"
+        aria-labelledby="profile-tab-emergency"
+        hidden={activeTab !== 'emergency'}
+      >
+        <div>
+          <Card className="p-6 rounded-3xl shadow-xs border border-surface-200 space-y-4">
             <div className="border-b border-surface-100 pb-3">
-              <h2 className="text-xs font-bold text-danger-700 uppercase tracking-wider flex items-center gap-2">
-                <AlertTriangle className="w-4 h-4 text-danger-600" /> Known Allergies
+              <h2 className="text-sm font-bold text-surface-900">Emergency Contact</h2>
+              <p className="text-xs text-surface-600 mt-0.5">
+                Designated family member or travel companion we should reach in an emergency while you are in India.
+              </p>
+            </div>
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+              <Input
+                label="Contact Full Name"
+                type="text"
+                placeholder="e.g. Sarah Mansoor"
+                value={emergencyName}
+                onChange={(e) => setEmergencyName(e.target.value)}
+              />
+              <PhoneInput
+                label="Contact Phone"
+                countryCode={emergencyCountryCode}
+                onCountryCodeChange={setEmergencyCountryCode}
+                phoneNumber={emergencyPhone}
+                onPhoneNumberChange={setEmergencyPhone}
+                placeholder="50 123 4567"
+              />
+              <Input
+                label="Relationship"
+                type="text"
+                placeholder="e.g. Spouse / Sibling"
+                value={emergencyRelation}
+                onChange={(e) => setEmergencyRelation(e.target.value)}
+              />
+            </div>
+          </Card>
+        </div>
+      </div>
+
+      {/* ─── TAB PANEL 3: Allergies & Conditions ────────────────────────── */}
+      <div
+        role="tabpanel"
+        aria-labelledby="profile-tab-conditions"
+        hidden={activeTab !== 'conditions'}
+      >
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+          <Card className="p-6 rounded-3xl shadow-xs border border-surface-200 space-y-4">
+            <div className="border-b border-surface-100 pb-3">
+              <h2 className="text-sm font-bold text-danger-800 flex items-center gap-2">
+                <AlertTriangle className="w-4 h-4 text-danger-600" aria-hidden="true" />
+                <span>Known Drug or Food Allergies</span>
               </h2>
             </div>
             <div className="space-y-3">
-              <div className="flex gap-2">
-                <Input
-                  label="Add Allergy Tag"
-                  type="text"
-                  placeholder="e.g. Penicillin, Latex"
-                  value={allergyInput}
-                  onChange={(e) => setAllergyInput(e.target.value)}
-                  className="flex-1"
-                />
-                <Button type="button" onClick={addAllergy} className="mt-[22px] px-4 shrink-0">
-                  <Plus className="w-4 h-4 mr-1" /> Add
+              <div className="flex items-end gap-2">
+                <div className="flex-1 min-w-0">
+                  <Input
+                    label="Add Allergy"
+                    type="text"
+                    placeholder="e.g. Penicillin, Latex"
+                    value={allergyInput}
+                    onChange={(e) => setAllergyInput(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') {
+                        e.preventDefault();
+                        addAllergy();
+                      }
+                    }}
+                  />
+                </div>
+                <Button type="button" onClick={addAllergy} className="shrink-0">
+                  <Plus className="w-4 h-4" aria-hidden="true" />
+                  <span>Add</span>
                 </Button>
               </div>
 
@@ -505,44 +669,53 @@ export default function PatientProfilePage() {
                 {allergies.map((allergy, idx) => (
                   <span
                     key={idx}
-                    className="inline-flex items-center gap-1.5 bg-danger-50 border border-danger-200 text-danger-800 text-xs px-3 py-1.5 rounded-xl font-semibold"
+                    className="inline-flex items-center gap-1.5 bg-danger-50 border border-danger-200 text-danger-900 text-xs pl-3.5 pr-1.5 min-h-11 rounded-xl font-semibold"
                   >
-                    {allergy}
+                    <span>{allergy}</span>
                     <button
                       type="button"
                       onClick={() => removeAllergy(idx)}
                       aria-label={`Remove allergy ${allergy}`}
-                      className="text-danger-400 hover:text-danger-700 ml-1 p-0.5 rounded"
+                      className="inline-flex items-center justify-center w-8 h-8 text-danger-600 hover:text-danger-800 hover:bg-danger-100 rounded-lg transition-colors"
                     >
-                      <X className="w-3.5 h-3.5" />
+                      <X className="w-3.5 h-3.5" aria-hidden="true" />
                     </button>
                   </span>
                 ))}
                 {allergies.length === 0 && (
-                  <p className="text-xs text-surface-400 italic">No allergies recorded.</p>
+                  <p className="text-xs text-surface-500">No known allergies recorded.</p>
                 )}
               </div>
             </div>
           </Card>
 
-          <Card className="p-6 rounded-2xl shadow-xs border border-surface-200 space-y-4">
+          <Card className="p-6 rounded-3xl shadow-xs border border-surface-200 space-y-4">
             <div className="border-b border-surface-100 pb-3">
-              <h2 className="text-xs font-bold text-warning-700 uppercase tracking-wider flex items-center gap-2">
-                <Stethoscope className="w-4 h-4 text-warning-600" /> Chronic Conditions
+              <h2 className="text-sm font-bold text-warning-800 flex items-center gap-2">
+                <Stethoscope className="w-4 h-4 text-warning-600" aria-hidden="true" />
+                <span>Chronic Medical Conditions</span>
               </h2>
             </div>
             <div className="space-y-3">
-              <div className="flex gap-2">
-                <Input
-                  label="Add Condition Tag"
-                  type="text"
-                  placeholder="e.g. Hypertension, Asthma"
-                  value={conditionInput}
-                  onChange={(e) => setConditionInput(e.target.value)}
-                  className="flex-1"
-                />
-                <Button type="button" onClick={addCondition} className="mt-[22px] px-4 shrink-0">
-                  <Plus className="w-4 h-4 mr-1" /> Add
+              <div className="flex items-end gap-2">
+                <div className="flex-1 min-w-0">
+                  <Input
+                    label="Add Condition"
+                    type="text"
+                    placeholder="e.g. Hypertension, Type 2 Diabetes"
+                    value={conditionInput}
+                    onChange={(e) => setConditionInput(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') {
+                        e.preventDefault();
+                        addCondition();
+                      }
+                    }}
+                  />
+                </div>
+                <Button type="button" onClick={addCondition} className="shrink-0">
+                  <Plus className="w-4 h-4" aria-hidden="true" />
+                  <span>Add</span>
                 </Button>
               </div>
 
@@ -550,53 +723,86 @@ export default function PatientProfilePage() {
                 {conditions.map((cond, idx) => (
                   <span
                     key={idx}
-                    className="inline-flex items-center gap-1.5 bg-warning-50 border border-warning-200 text-warning-800 text-xs px-3 py-1.5 rounded-xl font-semibold"
+                    className="inline-flex items-center gap-1.5 bg-warning-50 border border-warning-200 text-warning-900 text-xs pl-3.5 pr-1.5 min-h-11 rounded-xl font-semibold"
                   >
-                    {cond}
+                    <span>{cond}</span>
                     <button
                       type="button"
                       onClick={() => removeCondition(idx)}
                       aria-label={`Remove condition ${cond}`}
-                      className="text-warning-400 hover:text-warning-700 ml-1 p-0.5 rounded"
+                      className="inline-flex items-center justify-center w-8 h-8 text-warning-700 hover:text-warning-900 hover:bg-warning-100 rounded-lg transition-colors"
                     >
-                      <X className="w-3.5 h-3.5" />
+                      <X className="w-3.5 h-3.5" aria-hidden="true" />
                     </button>
                   </span>
                 ))}
                 {conditions.length === 0 && (
-                  <p className="text-xs text-surface-400 italic">No chronic conditions recorded.</p>
+                  <p className="text-xs text-surface-500">No chronic conditions recorded.</p>
                 )}
               </div>
             </div>
           </Card>
         </div>
-      )}
+      </div>
 
-      {/* TAB 4: Medications & Surgeries */}
-      {activeTab === 'medications' && (
-        <div className="space-y-6 animate-fade-in">
-          <Card className="p-6 rounded-2xl shadow-xs border border-surface-200 space-y-5">
+      {/* ─── TAB PANEL 4: Medications & Surgeries ───────────────────────── */}
+      <div
+        role="tabpanel"
+        aria-labelledby="profile-tab-medications"
+        hidden={activeTab !== 'medications'}
+      >
+        <div className="space-y-6">
+          <Card className="p-6 rounded-3xl shadow-xs border border-surface-200 space-y-5">
             <div className="border-b border-surface-100 pb-3">
-              <h2 className="text-xs font-bold text-surface-800 uppercase tracking-wider">Current Prescribed Medications</h2>
+              <h2 className="text-sm font-bold text-surface-900">Current Medications</h2>
             </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-4 gap-3 items-end">
-              <Input label="Medication Name" placeholder="e.g. Metformin" value={medName} onChange={(e) => setMedName(e.target.value)} />
-              <Input label="Dosage" placeholder="e.g. 500mg" value={medDosage} onChange={(e) => setMedDosage(e.target.value)} />
-              <Input label="Frequency" placeholder="e.g. Twice daily" value={medFreq} onChange={(e) => setMedFreq(e.target.value)} />
-              <Button type="button" onClick={addMedication} className="w-full">
-                <Plus className="w-4 h-4 mr-1" /> Add Med
+              <Input
+                label="Medication Name"
+                placeholder="e.g. Metformin"
+                value={medName}
+                onChange={(e) => setMedName(e.target.value)}
+              />
+              <Input
+                label="Dosage"
+                placeholder="e.g. 500 mg"
+                value={medDosage}
+                onChange={(e) => setMedDosage(e.target.value)}
+              />
+              <Input
+                label="Schedule"
+                placeholder="e.g. Twice daily"
+                value={medFreq}
+                onChange={(e) => setMedFreq(e.target.value)}
+              />
+              <Button type="button" onClick={addMedication} fullWidth>
+                <Plus className="w-4 h-4" aria-hidden="true" />
+                <span>Add Medication</span>
               </Button>
             </div>
 
-            <div className="border border-surface-200 rounded-xl overflow-hidden text-xs bg-white">
+            <div
+              tabIndex={0}
+              role="region"
+              aria-label="Current medications table"
+              className="border border-surface-200 rounded-2xl overflow-x-auto text-xs bg-white"
+            >
               <table className="w-full text-left border-collapse">
                 <thead>
                   <tr className="bg-surface-50 border-b border-surface-200 text-surface-600 font-semibold uppercase tracking-wider">
-                    <th className="p-3.5">Medication</th>
-                    <th className="p-3.5">Dosage</th>
-                    <th className="p-3.5">Frequency</th>
-                    <th className="p-3.5 text-right">Action</th>
+                    <th scope="col" className="p-3.5">
+                      Medication
+                    </th>
+                    <th scope="col" className="p-3.5">
+                      Dosage
+                    </th>
+                    <th scope="col" className="p-3.5">
+                      Schedule
+                    </th>
+                    <th scope="col" className="p-3.5 text-right">
+                      Action
+                    </th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-surface-100 text-surface-700">
@@ -609,16 +815,19 @@ export default function PatientProfilePage() {
                         <button
                           type="button"
                           onClick={() => removeMedication(idx)}
-                          className="text-danger-600 hover:text-danger-700 font-semibold flex items-center gap-1 justify-end ml-auto"
+                          className="inline-flex items-center justify-center gap-1 min-h-11 px-3 rounded-xl text-danger-700 hover:bg-danger-50 font-semibold transition-colors"
                         >
-                          <Trash2 className="w-3.5 h-3.5" /> Delete
+                          <Trash2 className="w-3.5 h-3.5" aria-hidden="true" />
+                          <span>Remove</span>
                         </button>
                       </td>
                     </tr>
                   ))}
                   {medications.length === 0 && (
                     <tr>
-                      <td colSpan={4} className="p-6 text-center text-surface-400">No active medications logged.</td>
+                      <td colSpan={4} className="p-6 text-center text-surface-500">
+                        No ongoing medications listed.
+                      </td>
                     </tr>
                   )}
                 </tbody>
@@ -626,50 +835,82 @@ export default function PatientProfilePage() {
             </div>
           </Card>
 
-          <Card className="p-6 rounded-2xl shadow-xs border border-surface-200 space-y-5">
+          <Card className="p-6 rounded-3xl shadow-xs border border-surface-200 space-y-5">
             <div className="border-b border-surface-100 pb-3">
-              <h2 className="text-xs font-bold text-surface-800 uppercase tracking-wider">Past Surgical History</h2>
+              <h2 className="text-sm font-bold text-surface-900">Previous Surgeries</h2>
             </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-4 gap-3 items-end">
-              <Input label="Surgery Name" placeholder="e.g. Knee Replacement" value={surgName} onChange={(e) => setSurgName(e.target.value)} />
-              <DatePicker label="Surgery Date" value={surgDate} onChange={setSurgDate} placeholder="Select surgery date" />
-              <Input label="Notes" placeholder="e.g. Left knee" value={surgNotes} onChange={(e) => setSurgNotes(e.target.value)} />
-              <Button type="button" onClick={addSurgery} className="w-full">
-                <Plus className="w-4 h-4 mr-1" /> Add Surgery
+              <Input
+                label="Procedure Name"
+                placeholder="e.g. Knee Arthroscopy"
+                value={surgName}
+                onChange={(e) => setSurgName(e.target.value)}
+              />
+              <DatePicker
+                label="Date"
+                value={surgDate}
+                onChange={setSurgDate}
+                placeholder="Select surgery date"
+              />
+              <Input
+                label="Notes"
+                placeholder="e.g. Left knee, full recovery"
+                value={surgNotes}
+                onChange={(e) => setSurgNotes(e.target.value)}
+              />
+              <Button type="button" onClick={addSurgery} fullWidth>
+                <Plus className="w-4 h-4" aria-hidden="true" />
+                <span>Add Surgery</span>
               </Button>
             </div>
 
-            <div className="border border-surface-200 rounded-xl overflow-hidden text-xs bg-white">
+            <div
+              tabIndex={0}
+              role="region"
+              aria-label="Previous surgeries table"
+              className="border border-surface-200 rounded-2xl overflow-x-auto text-xs bg-white"
+            >
               <table className="w-full text-left border-collapse">
                 <thead>
                   <tr className="bg-surface-50 border-b border-surface-200 text-surface-600 font-semibold uppercase tracking-wider">
-                    <th className="p-3.5">Surgery Procedure</th>
-                    <th className="p-3.5">Date</th>
-                    <th className="p-3.5">Clinical Notes</th>
-                    <th className="p-3.5 text-right">Action</th>
+                    <th scope="col" className="p-3.5">
+                      Procedure
+                    </th>
+                    <th scope="col" className="p-3.5">
+                      Date
+                    </th>
+                    <th scope="col" className="p-3.5">
+                      Notes
+                    </th>
+                    <th scope="col" className="p-3.5 text-right">
+                      Action
+                    </th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-surface-100 text-surface-700">
                   {surgeries.map((surg, idx) => (
                     <tr key={idx} className="hover:bg-surface-50">
                       <td className="p-3.5 font-bold text-surface-900">{surg.name}</td>
-                      <td className="p-3.5 whitespace-nowrap">{surg.date || '—'}</td>
+                      <td className="p-3.5 whitespace-nowrap tabular-nums">{surg.date || '—'}</td>
                       <td className="p-3.5">{surg.notes || '—'}</td>
                       <td className="p-3.5 text-right">
                         <button
                           type="button"
                           onClick={() => removeSurgery(idx)}
-                          className="text-danger-600 hover:text-danger-700 font-semibold flex items-center gap-1 justify-end ml-auto"
+                          className="inline-flex items-center justify-center gap-1 min-h-11 px-3 rounded-xl text-danger-700 hover:bg-danger-50 font-semibold transition-colors"
                         >
-                          <Trash2 className="w-3.5 h-3.5" /> Delete
+                          <Trash2 className="w-3.5 h-3.5" aria-hidden="true" />
+                          <span>Remove</span>
                         </button>
                       </td>
                     </tr>
                   ))}
                   {surgeries.length === 0 && (
                     <tr>
-                      <td colSpan={4} className="p-6 text-center text-surface-400">No surgical history logged.</td>
+                      <td colSpan={4} className="p-6 text-center text-surface-500">
+                        No previous surgeries listed.
+                      </td>
                     </tr>
                   )}
                 </tbody>
@@ -677,51 +918,63 @@ export default function PatientProfilePage() {
             </div>
           </Card>
         </div>
-      )}
+      </div>
 
-      {/* TAB 5: Care Specialties */}
-      {activeTab === 'specialties' && (
-        <Card className="p-6 rounded-2xl shadow-xs border border-surface-200 space-y-4 animate-fade-in">
-          <div className="border-b border-surface-100 pb-3">
-            <h2 className="text-xs font-bold text-surface-800 uppercase tracking-wider">Required Medical Specialties</h2>
-            <p className="text-[11px] text-surface-400 mt-0.5">Select the medical specialties required for your treatment itinerary in India.</p>
-          </div>
+      {/* ─── TAB PANEL 5: Care Specialties ──────────────────────────────── */}
+      <div
+        role="tabpanel"
+        aria-labelledby="profile-tab-specialties"
+        hidden={activeTab !== 'specialties'}
+      >
+        <div>
+          <Card className="p-6 rounded-3xl shadow-xs border border-surface-200 space-y-4">
+            <div className="border-b border-surface-100 pb-3">
+              <h2 className="text-sm font-bold text-surface-900">Medical Specialties Needed</h2>
+              <p className="text-xs text-surface-600 mt-0.5">
+                Select all specialties relevant to your upcoming evaluation or procedure.
+              </p>
+            </div>
 
-          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
-            {SPECIALISATION_OPTIONS.map((spec) => {
-              const isChecked = selectedSpecs.includes(spec.name);
-              const IconComponent = spec.icon;
-              return (
-                <button
-                  key={spec.name}
-                  type="button"
-                  onClick={() => toggleSpecialisation(spec.name)}
-                  className={`
-                    flex items-center gap-3 p-3 rounded-xl border text-xs font-semibold transition-all text-left ${
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
+              {SPECIALISATION_OPTIONS.map((spec) => {
+                const isChecked = selectedSpecs.includes(spec.name);
+                const IconComponent = spec.icon;
+                return (
+                  <button
+                    key={spec.name}
+                    type="button"
+                    aria-pressed={isChecked}
+                    onClick={() => toggleSpecialisation(spec.name)}
+                    className={`flex items-center gap-3 px-3.5 min-h-12 rounded-xl border text-xs font-semibold transition-colors text-left ${
                       isChecked
-                        ? 'border-primary-500 bg-primary-50/40 text-primary-800 shadow-2xs'
+                        ? 'border-primary-600 bg-primary-50 text-primary-900 shadow-2xs'
                         : 'border-surface-200 bg-white text-surface-700 hover:border-surface-300 hover:bg-surface-50'
-                    }
-                  `}
-                >
-                  <IconComponent className={`w-4 h-4 ${isChecked ? 'text-primary-600' : 'text-surface-400'}`} />
-                  <span className="truncate">{spec.name}</span>
-                </button>
-              );
-            })}
-          </div>
-        </Card>
-      )}
+                    }`}
+                  >
+                    <IconComponent
+                      className={`w-4 h-4 shrink-0 ${
+                        isChecked ? 'text-primary-700' : 'text-surface-400'
+                      }`}
+                      aria-hidden="true"
+                    />
+                    <span className="truncate">{spec.name}</span>
+                  </button>
+                );
+              })}
+            </div>
+          </Card>
+        </div>
+      </div>
 
-      {/* Floating Submit Bar */}
-      <div className="sticky bottom-4 z-40 bg-white/95 backdrop-blur-md p-4 rounded-2xl border border-surface-200 shadow-md flex items-center justify-between gap-4">
-        <div className="flex items-center gap-2 text-xs text-surface-600 font-medium">
-          <Lock className="w-4 h-4 text-success-600 shrink-0" />
-          <span>All changes encrypted before database write</span>
+      {/* ─── Sticky Save Bar ────────────────────────────────────────────── */}
+      <div className="sticky bottom-3 z-30 bg-white/95 backdrop-blur-md p-3 sm:p-4 rounded-2xl border border-surface-200 shadow-md flex items-center justify-between gap-3">
+        <div className="hidden sm:flex items-center gap-2 text-xs text-surface-600 font-medium">
+          <Lock className="w-4 h-4 text-success-600 shrink-0" aria-hidden="true" />
+          <span>Protected with end-to-end clinical encryption</span>
         </div>
 
-        <Button type="submit" isLoading={isSaving} size="lg">
-          {isSaving ? 'Encrypting & Saving...' : 'Save Medical Profile'}
+        <Button type="submit" isLoading={isSaving} size="lg" className="w-full sm:w-auto">
+          {isSaving ? 'Saving Changes…' : 'Save Medical Profile'}
         </Button>
       </div>
     </form>

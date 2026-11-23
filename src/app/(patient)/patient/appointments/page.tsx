@@ -1,17 +1,20 @@
 'use client';
 
 /**
- * Afzal Healthcare — Patient Appointments Page
- * Appointments timeline, status filters, booking wizard modal, and self-cancellation modal.
+ * Afzal Healthcare — Consultations & Care Schedule
+ * Accessible appointment timeline, 44px filter & view controls, keyboard-scrollable table,
+ * and native <dialog> booking and cancellation flows.
  */
 
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useCallback } from 'react';
 import { Card } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { Badge } from '@/components/ui/Badge';
+import { Modal } from '@/components/ui/Modal';
 import { Select, SelectOption } from '@/components/ui/Select';
 import { DatePicker } from '@/components/ui/DatePicker';
-import { APPOINTMENT_TYPE_LABELS } from '@/lib/constants';
+import { toast } from '@/components/ui/Toast';
+import { APPOINTMENT_STATUS_LABELS, APPOINTMENT_TYPE_LABELS } from '@/lib/constants';
 import { formatDoctorDisplayName } from '@/lib/validation/booking-helpers';
 import {
   Calendar,
@@ -23,7 +26,7 @@ import {
   Clock,
   AlertCircle,
   Stethoscope,
-  X,
+  RefreshCw,
 } from 'lucide-react';
 
 interface Hospital {
@@ -63,9 +66,21 @@ const STATUS_FILTERS = [
 ];
 
 const APPOINTMENT_TYPE_OPTIONS: SelectOption[] = [
-  { value: 'CONSULTATION', label: 'Consultation', description: 'General specialist assessment' },
-  { value: 'PRE_OP_ASSESSMENT', label: 'Pre-op Assessment', description: 'Surgeon pre-operation check' },
-  { value: 'POST_OP_REVIEW', label: 'Post-op Review', description: 'Follow-up discharge check' },
+  {
+    value: 'CONSULTATION',
+    label: 'Specialist Consultation',
+    description: 'Initial clinical assessment and treatment review',
+  },
+  {
+    value: 'PRE_OP_ASSESSMENT',
+    label: 'Pre-Procedure Assessment',
+    description: 'Anesthesia & surgical readiness clearance',
+  },
+  {
+    value: 'POST_OP_REVIEW',
+    label: 'Post-Procedure Follow-Up',
+    description: 'Recovery checkup and Fit-to-Fly evaluation',
+  },
 ];
 
 export default function AppointmentsPage() {
@@ -75,6 +90,7 @@ export default function AppointmentsPage() {
   const [activeCaseId, setActiveCaseId] = useState<string | null>(null);
 
   const [isLoading, setIsLoading] = useState(true);
+  const [loadError, setLoadError] = useState<string | null>(null);
   const [isSubmitLoading, setIsSubmitLoading] = useState(false);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [selectedFilter, setSelectedFilter] = useState('ALL');
@@ -93,43 +109,48 @@ export default function AppointmentsPage() {
   const [cancelError, setCancelError] = useState('');
   const [isCancelLoading, setIsCancelLoading] = useState(false);
 
-  const fetchAppointments = async () => {
+  const fetchAppointments = useCallback(async () => {
+    setIsLoading(true);
+    setLoadError(null);
     try {
       const res = await fetch('/api/v1/patient/appointments?meta=true');
       const data = await res.json();
 
-      if (data.success && data.data) {
+      if (res.ok && data.success && data.data) {
         setAppointments(data.data.appointments || []);
         if (data.data.metadata) {
           setHospitals(data.data.metadata.hospitals || []);
           setDoctors(data.data.metadata.doctors || []);
           setActiveCaseId(data.data.metadata.activeCaseId || null);
         }
+      } else {
+        setLoadError(data?.error?.message || 'Unable to load your consultation schedule.');
       }
     } catch (err) {
       console.error('Failed to load appointments data', err);
+      setLoadError('Could not connect to the scheduling service. Please check your connection and retry.');
     } finally {
       setIsLoading(false);
     }
-  };
+  }, []);
 
   useEffect(() => {
     const timer = setTimeout(() => {
       void fetchAppointments();
     }, 0);
     return () => clearTimeout(timer);
-  }, []);
+  }, [fetchAppointments]);
 
   const handleBook = async (e: React.FormEvent) => {
     e.preventDefault();
     setErrorMsg('');
 
     if (!activeCaseId) {
-      setErrorMsg('No active care case found. Please contact your coordinator first.');
+      setErrorMsg('No active care case found. Please message your coordinator first.');
       return;
     }
     if (!selectedHospital || !selectedDoctor || !scheduledAt) {
-      setErrorMsg('Please complete all form fields.');
+      setErrorMsg('Please select a hospital, specialist, and preferred date & time.');
       return;
     }
 
@@ -149,17 +170,21 @@ export default function AppointmentsPage() {
 
       const data = await res.json();
       if (data.success) {
+        toast.success(
+          'Your consultation request has been sent. Your care coordinator will confirm the slot shortly.',
+          'Consultation Requested'
+        );
         setIsModalOpen(false);
         setSelectedHospital('');
         setSelectedDoctor('');
         setSelectedType('CONSULTATION');
         setScheduledAt('');
-        fetchAppointments();
+        void fetchAppointments();
       } else {
-        setErrorMsg(data.error?.message || 'Failed to book appointment.');
+        setErrorMsg(data.error?.message || 'Failed to request appointment.');
       }
     } catch {
-      setErrorMsg('Network error booking appointment. Please try again.');
+      setErrorMsg('Network error requesting appointment. Please try again.');
     } finally {
       setIsSubmitLoading(false);
     }
@@ -171,7 +196,7 @@ export default function AppointmentsPage() {
     setCancelError('');
 
     if (cancelReason.trim().length < 3) {
-      setCancelError('Please provide a brief cancellation reason (at least 3 characters).');
+      setCancelError('Please share a brief reason (at least 3 characters) so your coordinator can assist.');
       return;
     }
 
@@ -188,9 +213,13 @@ export default function AppointmentsPage() {
 
       const data = await res.json();
       if (data.success) {
+        toast.success(
+          'Appointment cancelled and your care coordinator has been notified.',
+          'Appointment Cancelled'
+        );
         setCancelTarget(null);
         setCancelReason('');
-        fetchAppointments();
+        void fetchAppointments();
       } else {
         setCancelError(data.error?.message || 'Failed to cancel appointment.');
       }
@@ -216,7 +245,9 @@ export default function AppointmentsPage() {
     }));
 
   const upcomingAppointments = useMemo(() => {
-    return appointments.filter((app) => new Date(app.scheduledAt) >= new Date());
+    return appointments.filter(
+      (app) => new Date(app.scheduledAt) >= new Date() && app.status !== 'CANCELLED'
+    );
   }, [appointments]);
 
   const pastAppointments = useMemo(() => {
@@ -226,7 +257,9 @@ export default function AppointmentsPage() {
   const filteredAppointmentsList = useMemo(() => {
     return appointments.filter((app) => {
       if (selectedFilter === 'ALL') return true;
-      if (selectedFilter === 'UPCOMING') return new Date(app.scheduledAt) >= new Date();
+      if (selectedFilter === 'UPCOMING') {
+        return new Date(app.scheduledAt) >= new Date() && app.status !== 'CANCELLED';
+      }
       return app.status === selectedFilter;
     });
   }, [appointments, selectedFilter]);
@@ -248,91 +281,136 @@ export default function AppointmentsPage() {
 
   if (isLoading) {
     return (
-      <div className="flex flex-col items-center justify-center min-h-[400px] gap-4">
-        <div className="w-10 h-10 border-4 border-primary-600 border-t-transparent rounded-full animate-spin" />
-        <p className="text-sm font-medium text-surface-600">Loading your appointments timeline...</p>
+      <div className="max-w-7xl mx-auto space-y-6 py-2">
+        <div className="h-24 rounded-3xl bg-white border border-surface-200 animate-pulse" />
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+          {[0, 1, 2, 3].map((idx) => (
+            <div
+              key={idx}
+              className="h-24 rounded-2xl bg-white border border-surface-200 animate-pulse"
+            />
+          ))}
+        </div>
+        <div className="h-64 rounded-3xl bg-white border border-surface-200 animate-pulse" />
       </div>
     );
   }
 
   return (
-    <div className="space-y-8 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 animate-fade-in">
-      {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white p-6 rounded-2xl border border-surface-200 shadow-sm">
-        <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-xl bg-primary-50 text-primary-600 border border-primary-100 flex items-center justify-center shrink-0">
-            <Calendar className="w-6 h-6" />
-          </div>
-          <div>
-            <h1 className="text-2xl font-bold text-surface-900 tracking-tight">Appointments Timeline</h1>
-            <p className="text-xs text-surface-500 mt-0.5">
-              Review scheduled clinical sessions, surgeon consults, and hospital visits.
-            </p>
-          </div>
+    <div className="space-y-8 max-w-7xl mx-auto pb-12 animate-fade-in">
+      {/* Single Authoritative Page Header */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div>
+          <h1 className="text-2xl sm:text-3xl font-extrabold text-surface-900 tracking-tight">
+            Consultations &amp; Care Schedule
+          </h1>
+          <p className="text-xs sm:text-sm text-surface-600 mt-1">
+            Review specialist appointments, pre-procedure assessments, and follow-up hospital visits.
+          </p>
         </div>
 
-        <Button size="lg" onClick={() => setIsModalOpen(true)} className="shadow-xs self-start sm:self-auto">
-          <Plus className="w-4 h-4 mr-1.5" /> Request Consultation
+        <Button
+          type="button"
+          size="md"
+          onClick={() => setIsModalOpen(true)}
+          className="self-start sm:self-auto"
+        >
+          <Plus className="w-4 h-4" aria-hidden="true" />
+          <span>Request Consultation</span>
         </Button>
       </div>
 
-      {/* Analytics Cards */}
+      {/* Error Recovery Banner */}
+      {loadError && (
+        <div
+          role="alert"
+          className="p-5 rounded-2xl bg-danger-50 border border-danger-200 text-danger-900 flex flex-col sm:flex-row sm:items-center justify-between gap-4"
+        >
+          <div className="flex items-start gap-3">
+            <AlertCircle className="w-5 h-5 text-danger-600 shrink-0 mt-0.5" aria-hidden="true" />
+            <div>
+              <h2 className="text-sm font-bold">Unable to load your schedule</h2>
+              <p className="text-xs text-danger-800 mt-0.5">{loadError}</p>
+            </div>
+          </div>
+          <Button
+            type="button"
+            variant="secondary"
+            size="sm"
+            onClick={() => void fetchAppointments()}
+          >
+            <RefreshCw className="w-4 h-4" aria-hidden="true" />
+            <span>Retry</span>
+          </Button>
+        </div>
+      )}
+
+      {/* Summary Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         <div className="bg-white p-5 rounded-2xl border border-surface-200 shadow-xs flex items-center gap-4">
-          <div className="w-12 h-12 rounded-2xl bg-primary-50 text-primary-600 flex items-center justify-center font-bold text-xl shrink-0">
+          <div className="w-12 h-12 rounded-2xl bg-primary-50 text-primary-700 border border-primary-200 flex items-center justify-center font-bold text-xl tabular-nums shrink-0">
             {upcomingAppointments.length}
           </div>
           <div>
-            <p className="text-xs font-medium text-surface-500 uppercase tracking-wider">Upcoming Sessions</p>
-            <p className="text-base font-bold text-surface-900">
-              {upcomingAppointments.length > 0 ? 'Next Session Active' : 'No Pending Sessions'}
+            <p className="text-xs font-semibold text-surface-500">Upcoming</p>
+            <p className="text-sm font-bold text-surface-900 mt-0.5">
+              {upcomingAppointments.length > 0 ? 'Scheduled Visits' : 'No Upcoming Visits'}
             </p>
           </div>
         </div>
 
         <div className="bg-white p-5 rounded-2xl border border-surface-200 shadow-xs flex items-center gap-4">
-          <div className="w-12 h-12 rounded-2xl bg-success-50 text-success-600 flex items-center justify-center font-bold text-xl shrink-0">
-            {appointments.filter((a) => a.status === 'CONFIRMED' || a.status === 'COMPLETED').length}
+          <div className="w-12 h-12 rounded-2xl bg-success-50 text-success-700 border border-success-200 flex items-center justify-center font-bold text-xl tabular-nums shrink-0">
+            {
+              appointments.filter(
+                (a) => a.status === 'CONFIRMED' || a.status === 'COMPLETED'
+              ).length
+            }
           </div>
           <div>
-            <p className="text-xs font-medium text-surface-500 uppercase tracking-wider">Confirmed & Done</p>
-            <p className="text-base font-bold text-surface-900">Verified Schedule</p>
+            <p className="text-xs font-semibold text-surface-500">Confirmed &amp; Completed</p>
+            <p className="text-sm font-bold text-surface-900 mt-0.5">Hospital Confirmed</p>
           </div>
         </div>
 
         <div className="bg-white p-5 rounded-2xl border border-surface-200 shadow-xs flex items-center gap-4">
-          <div className="w-12 h-12 rounded-2xl bg-info-50 text-info-600 flex items-center justify-center font-bold text-xl shrink-0">
+          <div className="w-12 h-12 rounded-2xl bg-info-50 text-info-700 border border-info-200 flex items-center justify-center font-bold text-xl tabular-nums shrink-0">
             {hospitals.length}
           </div>
           <div>
-            <p className="text-xs font-medium text-surface-500 uppercase tracking-wider">Hospital Network</p>
-            <p className="text-base font-bold text-surface-900">Accredited Centers</p>
+            <p className="text-xs font-semibold text-surface-500">Partner Hospitals</p>
+            <p className="text-sm font-bold text-surface-900 mt-0.5">Accredited Centers</p>
           </div>
         </div>
 
         <div className="bg-white p-5 rounded-2xl border border-surface-200 shadow-xs flex items-center gap-4">
-          <div className="w-12 h-12 rounded-2xl bg-warning-50 text-warning-600 flex items-center justify-center font-bold text-xl shrink-0">
+          <div className="w-12 h-12 rounded-2xl bg-warning-50 text-warning-700 border border-warning-200 flex items-center justify-center font-bold text-xl tabular-nums shrink-0">
             {pastAppointments.length}
           </div>
           <div>
-            <p className="text-xs font-medium text-surface-500 uppercase tracking-wider">Past Consults</p>
-            <p className="text-base font-bold text-surface-900">Completed History</p>
+            <p className="text-xs font-semibold text-surface-500">Past Visits</p>
+            <p className="text-sm font-bold text-surface-900 mt-0.5">Clinical History</p>
           </div>
         </div>
       </div>
 
-      {/* Controls Bar */}
-      <div className="bg-white p-4 rounded-2xl border border-surface-200 shadow-xs flex flex-col sm:flex-row items-center justify-between gap-4">
-        <div className="flex items-center gap-1.5 overflow-x-auto w-full sm:w-auto pb-1 sm:pb-0 scrollbar-none">
+      {/* Filter & View Switcher Bar */}
+      <div className="bg-white p-3.5 rounded-2xl border border-surface-200 shadow-xs flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+        <div
+          role="group"
+          aria-label="Filter appointments by status"
+          className="edge-fade-scroller flex items-center gap-1.5 w-full sm:w-auto"
+        >
           {STATUS_FILTERS.map((filter) => (
             <button
               key={filter.id}
               type="button"
+              aria-pressed={selectedFilter === filter.id}
               onClick={() => setSelectedFilter(filter.id)}
-              className={`px-3.5 py-2 rounded-xl text-xs font-bold whitespace-nowrap transition-all ${
+              className={`min-h-11 px-4 rounded-xl text-xs font-semibold whitespace-nowrap shrink-0 transition-colors ${
                 selectedFilter === filter.id
-                  ? 'bg-primary-600 text-white shadow-xs'
-                  : 'bg-surface-100 text-surface-600 hover:bg-surface-200'
+                  ? 'bg-primary-600 text-white shadow-2xs'
+                  : 'bg-surface-100 text-surface-700 hover:bg-surface-200'
               }`}
             >
               {filter.label}
@@ -340,78 +418,96 @@ export default function AppointmentsPage() {
           ))}
         </div>
 
-        <div className="flex items-center bg-surface-100 p-1 rounded-xl border border-surface-200 self-end sm:self-auto">
+        <div
+          role="group"
+          aria-label="Appointment display layout"
+          className="flex items-center bg-surface-100 p-1 rounded-xl border border-surface-200 self-end sm:self-auto shrink-0"
+        >
           <button
             type="button"
+            aria-pressed={viewMode === 'cards'}
             onClick={() => setViewMode('cards')}
-            className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all flex items-center gap-1.5 ${
+            className={`min-h-11 px-3.5 rounded-lg text-xs font-semibold transition-colors flex items-center gap-1.5 ${
               viewMode === 'cards'
-                ? 'bg-white text-surface-900 shadow-xs'
-                : 'text-surface-500 hover:text-surface-900'
+                ? 'bg-white text-surface-900 shadow-2xs'
+                : 'text-surface-600 hover:text-surface-900'
             }`}
           >
-            <LayoutGrid className="w-4 h-4" />
-            <span>Timeline Cards</span>
+            <LayoutGrid className="w-4 h-4" aria-hidden="true" />
+            <span>Cards</span>
           </button>
           <button
             type="button"
+            aria-pressed={viewMode === 'table'}
             onClick={() => setViewMode('table')}
-            className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all flex items-center gap-1.5 ${
+            className={`min-h-11 px-3.5 rounded-lg text-xs font-semibold transition-colors flex items-center gap-1.5 ${
               viewMode === 'table'
-                ? 'bg-white text-surface-900 shadow-xs'
-                : 'text-surface-500 hover:text-surface-900'
+                ? 'bg-white text-surface-900 shadow-2xs'
+                : 'text-surface-600 hover:text-surface-900'
             }`}
           >
-            <Table className="w-4 h-4" />
-            <span>Detailed Table</span>
+            <Table className="w-4 h-4" aria-hidden="true" />
+            <span>Table</span>
           </button>
         </div>
       </div>
 
-      {/* View 1: Timeline Cards View */}
-      {viewMode === 'cards' && (
+      {/* View 1: Cards */}
+      {viewMode === 'cards' && filteredAppointmentsList.length > 0 && (
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           {filteredAppointmentsList.map((app) => (
-            <Card key={app.id} className="p-6 rounded-2xl shadow-xs hover:shadow-md transition-all border border-surface-200 flex flex-col justify-between space-y-5 group">
+            <Card
+              key={app.id}
+              className="p-6 rounded-3xl shadow-xs hover:shadow-md transition-shadow border border-surface-200 flex flex-col justify-between space-y-5"
+            >
               <div className="flex items-start justify-between gap-3">
-                <div className="flex items-center gap-3">
-                  <div className="w-12 h-12 rounded-2xl bg-primary-100 text-primary-800 border border-primary-200 flex items-center justify-center font-bold text-base shadow-xs shrink-0">
+                <div className="flex items-center gap-3 min-w-0">
+                  <div className="w-12 h-12 rounded-2xl bg-primary-100 text-primary-800 border border-primary-200 flex items-center justify-center font-bold text-sm shadow-2xs shrink-0">
                     Dr
                   </div>
-                  <div>
-                    <span className="text-xs text-primary-700 font-bold uppercase tracking-wider bg-primary-50 px-2.5 py-0.5 rounded-md border border-primary-200 inline-block">
+                  <div className="min-w-0">
+                    <span className="text-xs text-primary-800 font-semibold bg-primary-50 px-2.5 py-0.5 rounded-md border border-primary-200 inline-block">
                       {APPOINTMENT_TYPE_LABELS[app.appointmentType] || app.appointmentType}
                     </span>
-                    <h3 className="text-base font-bold text-surface-900 mt-1 group-hover:text-primary-600 transition-colors">
+                    <h2 className="text-base font-bold text-surface-900 mt-1 truncate">
                       {formatDoctorDisplayName(app.doctor.fullName)}
-                    </h3>
+                    </h2>
                     {app.doctor.qualification && (
-                      <p className="text-xs text-surface-500">{app.doctor.qualification}</p>
+                      <p className="text-xs text-surface-500 truncate">{app.doctor.qualification}</p>
                     )}
                   </div>
                 </div>
 
                 <Badge variant={getStatusBadgeVariant(app.status)} dot>
-                  {app.status}
+                  {APPOINTMENT_STATUS_LABELS[app.status] || app.status}
                 </Badge>
               </div>
 
-              <div className="bg-surface-50/70 p-4 rounded-xl border border-surface-100 space-y-2 text-xs text-surface-700">
+              <div className="bg-surface-50 p-4 rounded-2xl border border-surface-200/80 space-y-2 text-xs text-surface-700">
                 <div className="flex items-center gap-2">
-                  <Building2 className="w-4 h-4 text-primary-600 shrink-0" />
+                  <Building2 className="w-4 h-4 text-primary-600 shrink-0" aria-hidden="true" />
                   <span className="font-semibold text-surface-900">{app.hospital.name}</span>
-                  <span className="text-surface-400">({app.hospital.city})</span>
+                  <span className="text-surface-500">({app.hospital.city})</span>
                 </div>
 
-                <div className="flex items-center gap-2 font-medium">
-                  <Clock className="w-4 h-4 text-primary-600 shrink-0" />
-                  <span>{new Date(app.scheduledAt).toLocaleString(undefined, { weekday: 'short', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}</span>
+                <div className="flex items-center gap-2 font-medium tabular-nums">
+                  <Clock className="w-4 h-4 text-primary-600 shrink-0" aria-hidden="true" />
+                  <span>
+                    {new Date(app.scheduledAt).toLocaleString('en-US', {
+                      weekday: 'short',
+                      month: 'short',
+                      day: 'numeric',
+                      year: 'numeric',
+                      hour: '2-digit',
+                      minute: '2-digit',
+                    })}
+                  </span>
                 </div>
               </div>
 
               {app.status === 'CANCELLED' && app.cancellationReason && (
-                <div className="p-3 bg-danger-50 border border-danger-200 rounded-xl text-xs text-danger-800">
-                  <span className="font-bold">Cancellation Reason: </span>
+                <div className="p-3.5 bg-danger-50 border border-danger-200 rounded-2xl text-xs text-danger-800">
+                  <span className="font-bold">Cancellation Note: </span>
                   {app.cancellationReason}
                 </div>
               )}
@@ -422,14 +518,14 @@ export default function AppointmentsPage() {
                     type="button"
                     variant="secondary"
                     size="sm"
-                    className="text-danger-600 hover:bg-danger-50 border-danger-200"
+                    className="text-danger-700 hover:bg-danger-50 border-danger-200"
                     onClick={() => {
                       setCancelTarget(app);
                       setCancelReason('');
                       setCancelError('');
                     }}
                   >
-                    Cancel
+                    Cancel or Reschedule
                   </Button>
                 </div>
               )}
@@ -438,38 +534,67 @@ export default function AppointmentsPage() {
         </div>
       )}
 
-      {/* View 2: Detailed Table View */}
-      {viewMode === 'table' && (
-        <Card className="p-0 rounded-2xl overflow-hidden border border-surface-200 shadow-xs">
-          <div className="overflow-x-auto">
+      {/* View 2: Table */}
+      {viewMode === 'table' && filteredAppointmentsList.length > 0 && (
+        <Card className="p-0 rounded-3xl overflow-hidden border border-surface-200 shadow-xs">
+          <div
+            tabIndex={0}
+            role="region"
+            aria-label="Scheduled consultations table"
+            className="overflow-x-auto"
+          >
             <table className="w-full text-left border-collapse text-xs">
               <thead>
                 <tr className="bg-surface-50 border-b border-surface-200 text-surface-600 font-semibold uppercase tracking-wider">
-                  <th className="p-4">Date & Time</th>
-                  <th className="p-4">Medical Specialist</th>
-                  <th className="p-4">Accredited Hospital</th>
-                  <th className="p-4">Consultation Type</th>
-                  <th className="p-4">Status</th>
-                  <th className="p-4 text-right">Actions</th>
+                  <th scope="col" className="p-4">
+                    Date &amp; Time
+                  </th>
+                  <th scope="col" className="p-4">
+                    Specialist
+                  </th>
+                  <th scope="col" className="p-4">
+                    Hospital
+                  </th>
+                  <th scope="col" className="p-4">
+                    Session Type
+                  </th>
+                  <th scope="col" className="p-4">
+                    Status
+                  </th>
+                  <th scope="col" className="p-4 text-right">
+                    Actions
+                  </th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-surface-100 text-surface-700">
                 {filteredAppointmentsList.map((app) => (
                   <tr key={app.id} className="hover:bg-surface-50 transition-colors">
-                    <td className="p-4 whitespace-nowrap font-bold text-surface-900">
-                      {new Date(app.scheduledAt).toLocaleString()}
+                    <td className="p-4 whitespace-nowrap font-bold text-surface-900 tabular-nums">
+                      {new Date(app.scheduledAt).toLocaleString('en-US', {
+                        month: 'short',
+                        day: 'numeric',
+                        year: 'numeric',
+                        hour: '2-digit',
+                        minute: '2-digit',
+                      })}
                     </td>
                     <td className="p-4">
-                      <div className="font-bold text-surface-900">{formatDoctorDisplayName(app.doctor.fullName)}</div>
-                      {app.doctor.qualification && <div className="text-[11px] text-surface-500">{app.doctor.qualification}</div>}
+                      <div className="font-bold text-surface-900">
+                        {formatDoctorDisplayName(app.doctor.fullName)}
+                      </div>
+                      {app.doctor.qualification && (
+                        <div className="text-[11px] text-surface-500">{app.doctor.qualification}</div>
+                      )}
                     </td>
-                    <td className="p-4 font-medium">{app.hospital.name} ({app.hospital.city})</td>
+                    <td className="p-4 font-medium">
+                      {app.hospital.name} ({app.hospital.city})
+                    </td>
                     <td className="p-4 font-medium">
                       {APPOINTMENT_TYPE_LABELS[app.appointmentType] || app.appointmentType}
                     </td>
                     <td className="p-4">
                       <Badge variant={getStatusBadgeVariant(app.status)}>
-                        {app.status}
+                        {APPOINTMENT_STATUS_LABELS[app.status] || app.status}
                       </Badge>
                     </td>
                     <td className="p-4 text-right">
@@ -478,7 +603,7 @@ export default function AppointmentsPage() {
                           type="button"
                           variant="ghost"
                           size="sm"
-                          className="text-danger-600 hover:text-danger-700"
+                          className="text-danger-700 hover:text-danger-800 hover:bg-danger-50"
                           onClick={() => {
                             setCancelTarget(app);
                             setCancelReason('');
@@ -498,174 +623,167 @@ export default function AppointmentsPage() {
       )}
 
       {/* Empty State */}
-      {filteredAppointmentsList.length === 0 && (
-        <div className="bg-white p-12 rounded-2xl border border-surface-200 text-center space-y-3 shadow-xs">
-          <div className="w-14 h-14 rounded-2xl bg-surface-100 text-surface-400 flex items-center justify-center mx-auto">
-            <Calendar className="w-7 h-7" />
+      {!loadError && filteredAppointmentsList.length === 0 && (
+        <div className="bg-white p-12 rounded-3xl border border-surface-200 text-center space-y-3 shadow-xs">
+          <div className="w-14 h-14 rounded-2xl bg-surface-100 text-surface-500 flex items-center justify-center mx-auto">
+            <Calendar className="w-7 h-7" aria-hidden="true" />
           </div>
-          <h3 className="text-base font-bold text-surface-900">No Consultations Scheduled</h3>
-          <p className="text-xs text-surface-500 max-w-sm mx-auto">
-            No session records match your selected status filter. Request a consultation with a specialist physician.
+          <h2 className="text-base font-bold text-surface-900">No Consultations Found</h2>
+          <p className="text-xs text-surface-600 max-w-sm mx-auto">
+            {selectedFilter === 'ALL'
+              ? 'Request a video or in-person consultation with an accredited specialist.'
+              : 'No consultations match this filter. Try viewing all sessions or request a new consultation.'}
           </p>
-          <Button size="md" onClick={() => setIsModalOpen(true)}>
+          <Button type="button" size="md" onClick={() => setIsModalOpen(true)}>
             Request Consultation
           </Button>
         </div>
       )}
 
-      {/* Booking Modal Dialog using Custom Select & DatePicker */}
-      {isModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-surface-900/40 backdrop-blur-xs">
-          <div className="bg-white rounded-2xl border border-surface-200 shadow-2xl max-w-md w-full overflow-hidden animate-scale-in">
-            <div className="px-6 py-4 border-b border-surface-100 flex items-center justify-between bg-surface-50">
-              <h3 className="text-sm font-bold text-surface-900 flex items-center gap-2">
-                <Stethoscope className="w-4 h-4 text-primary-600" /> Request Care Consultation
-              </h3>
-              <button
-                type="button"
-                onClick={() => setIsModalOpen(false)}
-                className="w-8 h-8 rounded-lg text-surface-400 hover:text-surface-700 hover:bg-surface-200 flex items-center justify-center transition-all font-bold"
+      {/* Native <dialog> Booking Modal */}
+      <Modal
+        open={isModalOpen}
+        onClose={() => setIsModalOpen(false)}
+        preventClose={isSubmitLoading}
+        title="Request Specialist Consultation"
+        subtitle="Your care coordinator will confirm hospital availability and notify you once scheduled."
+        icon={<Stethoscope className="w-5 h-5" />}
+      >
+        <form onSubmit={handleBook} className="space-y-4 text-xs">
+          {errorMsg && (
+            <div
+              role="alert"
+              className="bg-danger-50 border border-danger-200 text-danger-800 p-3 rounded-xl flex items-center gap-2"
+            >
+              <AlertCircle className="w-4 h-4 text-danger-600 shrink-0" aria-hidden="true" />
+              <span>{errorMsg}</span>
+            </div>
+          )}
+
+          <Select
+            label="Partner Hospital"
+            options={hospitalSelectOptions}
+            value={selectedHospital}
+            onChange={(val) => {
+              setSelectedHospital(val);
+              setSelectedDoctor('');
+            }}
+            placeholder="Choose accredited hospital..."
+            searchable
+            icon={<Building2 className="w-4 h-4" />}
+            required
+          />
+
+          <Select
+            label="Attending Specialist"
+            options={filteredDoctorOptions}
+            value={selectedDoctor}
+            onChange={setSelectedDoctor}
+            placeholder={selectedHospital ? 'Select specialist...' : 'Select a hospital first'}
+            disabled={!selectedHospital}
+            searchable
+            icon={<UserCheck className="w-4 h-4" />}
+            required
+          />
+
+          <Select
+            label="Session Type"
+            options={APPOINTMENT_TYPE_OPTIONS}
+            value={selectedType}
+            onChange={setSelectedType}
+            placeholder="Select consultation type..."
+            required
+          />
+
+          <DatePicker
+            label="Preferred Date & Time"
+            value={scheduledAt}
+            onChange={setScheduledAt}
+            placeholder="Select preferred date & time..."
+            includeTime
+            required
+          />
+
+          <div className="flex items-center justify-end gap-3 pt-4 border-t border-surface-100">
+            <Button
+              type="button"
+              variant="secondary"
+              onClick={() => setIsModalOpen(false)}
+              disabled={isSubmitLoading}
+            >
+              Cancel
+            </Button>
+            <Button type="submit" isLoading={isSubmitLoading}>
+              Submit Request
+            </Button>
+          </div>
+        </form>
+      </Modal>
+
+      {/* Native <dialog> Self-Cancellation Modal */}
+      <Modal
+        open={Boolean(cancelTarget)}
+        onClose={() => setCancelTarget(null)}
+        preventClose={isCancelLoading}
+        title="Cancel or Reschedule Consultation"
+        subtitle="Your care coordinator will be notified immediately and can arrange a new slot if needed."
+      >
+        {cancelTarget && (
+          <form onSubmit={handleSelfCancel} className="space-y-4 text-xs">
+            <p className="text-surface-700 leading-relaxed">
+              Cancel your{' '}
+              <strong className="font-bold text-surface-900">
+                {APPOINTMENT_TYPE_LABELS[cancelTarget.appointmentType] ||
+                  cancelTarget.appointmentType}
+              </strong>{' '}
+              with{' '}
+              <strong className="font-bold text-surface-900">
+                {formatDoctorDisplayName(cancelTarget.doctor.fullName)}
+              </strong>
+              ?
+            </p>
+
+            {cancelError && (
+              <div
+                role="alert"
+                className="bg-danger-50 border border-danger-200 text-danger-800 p-3 rounded-xl flex items-center gap-2"
               >
-                <X className="w-4 h-4" />
-              </button>
+                <AlertCircle className="w-4 h-4 text-danger-600 shrink-0" aria-hidden="true" />
+                <span>{cancelError}</span>
+              </div>
+            )}
+
+            <div className="space-y-1.5">
+              <label htmlFor="patient-cancel-reason" className="block font-bold text-surface-700">
+                Note for Your Coordinator
+              </label>
+              <textarea
+                id="patient-cancel-reason"
+                rows={3}
+                required
+                value={cancelReason}
+                onChange={(e) => setCancelReason(e.target.value)}
+                placeholder="e.g. Flight schedule changed — requesting afternoon slot next Tuesday..."
+                className="w-full p-3.5 border border-surface-300 rounded-xl text-xs text-surface-900 focus:outline-none focus:border-primary-600"
+              />
             </div>
 
-            <form onSubmit={handleBook} className="p-6 space-y-4 text-xs">
-              {errorMsg && (
-                <div className="bg-danger-50 border border-danger-200 text-danger-800 p-3 rounded-xl flex items-center gap-2">
-                  <AlertCircle className="w-4 h-4 text-danger-600 shrink-0" />
-                  <span>{errorMsg}</span>
-                </div>
-              )}
-
-              {/* Hospital Dropdown */}
-              <Select
-                label="Select Accredited Hospital"
-                options={hospitalSelectOptions}
-                value={selectedHospital}
-                onChange={(val) => {
-                  setSelectedHospital(val);
-                  setSelectedDoctor('');
-                }}
-                placeholder="Choose hospital center..."
-                searchable
-                icon={<Building2 className="w-4 h-4" />}
-                required
-              />
-
-              {/* Doctor Dropdown */}
-              <Select
-                label="Choose Medical Specialist"
-                options={filteredDoctorOptions}
-                value={selectedDoctor}
-                onChange={setSelectedDoctor}
-                placeholder={selectedHospital ? 'Select clinician...' : 'Select hospital first'}
-                disabled={!selectedHospital}
-                searchable
-                icon={<UserCheck className="w-4 h-4" />}
-                required
-              />
-
-              {/* Consultation Type Dropdown */}
-              <Select
-                label="Consultation Type"
-                options={APPOINTMENT_TYPE_OPTIONS}
-                value={selectedType}
-                onChange={setSelectedType}
-                placeholder="Select consultation type..."
-                required
-              />
-
-              {/* DatePicker UI Component */}
-              <DatePicker
-                label="Preferred Date & Time"
-                value={scheduledAt}
-                onChange={setScheduledAt}
-                placeholder="Pick consultation date..."
-                includeTime
-                required
-              />
-
-              <div className="flex items-center justify-end gap-3 pt-4 border-t border-surface-100">
-                <Button type="button" variant="secondary" onClick={() => setIsModalOpen(false)}>
-                  Cancel
-                </Button>
-                <Button type="submit" isLoading={isSubmitLoading}>
-                  Confirm Request
-                </Button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
-
-      {/* Self-Cancellation Modal */}
-      {cancelTarget && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-surface-900/40 backdrop-blur-xs">
-          <div className="bg-white rounded-2xl border border-surface-200 shadow-2xl max-w-md w-full overflow-hidden animate-scale-in">
-            <div className="px-6 py-4 border-b border-surface-100 flex items-center justify-between bg-surface-50">
-              <h3 className="text-sm font-bold text-surface-900">Cancel Appointment</h3>
-              <button
+            <div className="flex items-center justify-end gap-3 pt-3 border-t border-surface-100">
+              <Button
                 type="button"
+                variant="secondary"
                 onClick={() => setCancelTarget(null)}
-                className="w-8 h-8 rounded-lg text-surface-400 hover:text-surface-700 hover:bg-surface-200 flex items-center justify-center transition-all font-bold"
+                disabled={isCancelLoading}
               >
-                <X className="w-4 h-4" />
-              </button>
+                Keep Appointment
+              </Button>
+              <Button type="submit" variant="danger" isLoading={isCancelLoading}>
+                Confirm Cancellation
+              </Button>
             </div>
-
-            <form onSubmit={handleSelfCancel} className="p-6 space-y-4 text-xs">
-              <p className="text-surface-600">
-                Cancel your{' '}
-                <span className="font-semibold text-surface-900">
-                  {APPOINTMENT_TYPE_LABELS[cancelTarget.appointmentType] || cancelTarget.appointmentType}
-                </span>{' '}
-                with{' '}
-                <span className="font-semibold text-surface-900">
-                  {formatDoctorDisplayName(cancelTarget.doctor.fullName)}
-                </span>
-                ?
-              </p>
-
-              {cancelError && (
-                <div className="bg-danger-50 border border-danger-200 text-danger-800 p-3 rounded-xl flex items-center gap-2">
-                  <AlertCircle className="w-4 h-4 text-danger-600 shrink-0" />
-                  <span>{cancelError}</span>
-                </div>
-              )}
-
-              <div className="space-y-1.5">
-                <label htmlFor="patient-cancel-reason" className="block font-semibold text-surface-700">
-                  Reason for Cancellation
-                </label>
-                <textarea
-                  id="patient-cancel-reason"
-                  rows={3}
-                  required
-                  value={cancelReason}
-                  onChange={(e) => setCancelReason(e.target.value)}
-                  placeholder="e.g. Travel schedule changed, requesting reschedule..."
-                  className="w-full p-3 border border-surface-200 rounded-xl text-sm focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500"
-                />
-              </div>
-
-              <div className="flex items-center justify-end gap-3 pt-3 border-t border-surface-100">
-                <Button type="button" variant="secondary" onClick={() => setCancelTarget(null)}>
-                  Keep Appointment
-                </Button>
-                <Button
-                  type="submit"
-                  variant="primary"
-                  className="bg-danger-600 hover:bg-danger-700"
-                  isLoading={isCancelLoading}
-                >
-                  Confirm Cancellation
-                </Button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
+          </form>
+        )}
+      </Modal>
     </div>
   );
 }

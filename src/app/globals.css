@@ -1,6 +1,23 @@
 @import "tailwindcss";
 
+/* ─── Scroll-Driven Edge-Fade Custom Properties ─────────────────── */
+@property --fade-start {
+  syntax: "<length>";
+  inherits: false;
+  initial-value: 0px;
+}
+
+@property --fade-end {
+  syntax: "<length>";
+  inherits: false;
+  initial-value: 0px;
+}
+
 /* ─── Clinical Design System — Tailwind v4 CSS-first Config ──────── */
+@theme inline {
+  --font-sans: var(--font-jakarta), "Plus Jakarta Sans", ui-sans-serif, system-ui, sans-serif;
+}
+
 @theme {
   /* ── Primary (restrained teal — clinical, trustworthy) ─────────── */
   --color-primary-50: #f0fdfa;
@@ -12,12 +29,14 @@
   --color-primary-600: #0f766e;
   --color-primary-700: #115e59;
   --color-primary-800: #134e4a;
+  --color-primary-850: #0b3b38;
   --color-primary-900: #042f2e;
   --color-primary-950: #021c1b;
 
-  /* ── Surface (white → gray scale for light-mode canvas) ────────── */
+  /* ── Surface (white → cool-slate scale for light-mode canvas) ───── */
   --color-surface-50: #ffffff;
   --color-surface-100: #f8fafc;
+  --color-surface-150: #f4f7fa;
   --color-surface-200: #f1f5f9;
   --color-surface-300: #e2e8f0;
   --color-surface-400: #94a3b8;
@@ -32,43 +51,83 @@
   --color-danger-50: #fef2f2;
   --color-danger-100: #fee2e2;
   --color-danger-200: #fecaca;
+  --color-danger-300: #fca5a5;
+  --color-danger-400: #f87171;
   --color-danger-500: #ef4444;
   --color-danger-600: #dc2626;
   --color-danger-700: #b91c1c;
+  --color-danger-800: #991b1b;
+  --color-danger-900: #7f1d1d;
 
   /* ── Semantic — Success ────────────────────────────────────────── */
   --color-success-50: #f0fdf4;
   --color-success-100: #dcfce7;
+  --color-success-200: #bbf7d0;
+  --color-success-300: #86efac;
+  --color-success-400: #4ade80;
   --color-success-500: #22c55e;
   --color-success-600: #16a34a;
   --color-success-700: #15803d;
+  --color-success-800: #166534;
+  --color-success-900: #14532d;
 
   /* ── Semantic — Warning ────────────────────────────────────────── */
   --color-warning-50: #fffbeb;
   --color-warning-100: #fef3c7;
+  --color-warning-200: #fde68a;
+  --color-warning-300: #fcd34d;
+  --color-warning-400: #fbbf24;
   --color-warning-500: #f59e0b;
   --color-warning-600: #d97706;
   --color-warning-700: #b45309;
+  --color-warning-800: #92400e;
+  --color-warning-900: #78350f;
 
   /* ── Semantic — Info ───────────────────────────────────────────── */
   --color-info-50: #eff6ff;
   --color-info-100: #dbeafe;
+  --color-info-200: #bfdbfe;
+  --color-info-300: #93c5fd;
+  --color-info-400: #60a5fa;
   --color-info-500: #3b82f6;
   --color-info-600: #2563eb;
   --color-info-700: #1d4ed8;
+  --color-info-800: #1e40af;
+  --color-info-900: #1e3a8a;
 
-  --font-sans: var(--font-sans), "Plus Jakarta Sans", ui-sans-serif, system-ui, sans-serif;
-
-  /* ── Shadows — 3-level elevation system ────────────────────────── */
-  --shadow-xs: 0 1px 2px rgba(0, 0, 0, 0.05);
-  --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.08), 0 1px 2px rgba(0, 0, 0, 0.04);
-  --shadow-md: 0 4px 6px rgba(0, 0, 0, 0.06), 0 2px 4px rgba(0, 0, 0, 0.04);
+  /* ── Shadows — 3-level elevation system with soft offset blur ──── */
+  --shadow-2xs: 0 1px 2px rgba(15, 23, 42, 0.04);
+  --shadow-xs: 0 1px 2px rgba(15, 23, 42, 0.05);
+  --shadow-sm: 0 1px 3px rgba(15, 23, 42, 0.08), 0 1px 2px rgba(15, 23, 42, 0.04);
+  --shadow-md: 0 4px 10px rgba(15, 23, 42, 0.06), 0 2px 4px rgba(15, 23, 42, 0.04);
 
   /* ── Animation ─────────────────────────────────────────────────── */
-  --animate-fade-in: fade-in 0.4s ease-out;
-  --animate-slide-up: slide-up 0.4s ease-out;
-  --animate-slide-down: slide-down 0.25s ease-out;
-  --animate-scale-in: scale-in 0.2s ease-out;
+  --animate-fade-in: fade-in 0.22s cubic-bezier(0.2, 0, 0, 1);
+  --animate-slide-up: slide-up 0.25s cubic-bezier(0.2, 0, 0, 1);
+  --animate-slide-down: slide-down 0.2s cubic-bezier(0.2, 0, 0, 1);
+  --animate-scale-in: scale-in 0.18s cubic-bezier(0.2, 0, 0, 1);
+}
+
+/* ─── Base Border & Browser-Generated UI Defaults ───────────────── */
+@layer base {
+  *,
+  ::after,
+  ::before,
+  ::backdrop {
+    border-color: var(--color-surface-200);
+  }
+}
+
+:root {
+  color-scheme: light;
+  accent-color: var(--color-primary-600);
+  caret-color: var(--color-primary-600);
+  scrollbar-color: var(--color-surface-400) var(--color-surface-200);
+}
+
+::selection {
+  background-color: var(--color-primary-100);
+  color: var(--color-primary-900);
 }
 
 /* ─── Keyframes ─────────────────────────────────────────────────── */
@@ -85,7 +144,6 @@
   from {
     opacity: 0;
   }
-
   to {
     opacity: 1;
   }
@@ -94,9 +152,8 @@
 @keyframes slide-up {
   from {
     opacity: 0;
-    transform: translateY(10px);
+    transform: translateY(8px);
   }
-
   to {
     opacity: 1;
     transform: translateY(0);
@@ -108,7 +165,6 @@
     opacity: 0;
     transform: translateY(-6px);
   }
-
   to {
     opacity: 1;
     transform: translateY(0);
@@ -118,18 +174,31 @@
 @keyframes scale-in {
   from {
     opacity: 0;
-    transform: scale(0.97);
+    transform: scale(0.98);
   }
-
   to {
     opacity: 1;
     transform: scale(1);
   }
 }
 
-/* ─── Base Styles ───────────────────────────────────────────────── */
+@keyframes reveal-fade-start {
+  to {
+    --fade-start: var(--fade-size);
+  }
+}
+
+@keyframes hide-fade-end {
+  from {
+    --fade-end: var(--fade-size);
+  }
+}
+
+/* ─── Base Typography & Layout Hygiene ──────────────────────────── */
 html {
   scroll-behavior: smooth;
+  scroll-padding-top: 5rem;
+  scroll-padding-bottom: calc(6rem + env(safe-area-inset-bottom, 0px));
 }
 
 body,
@@ -144,28 +213,47 @@ body {
   background-color: var(--color-surface-100);
   color: var(--color-surface-900);
   min-height: 100vh;
+  overflow-wrap: break-word;
 }
 
-/* ─── Custom Scrollbar ──────────────────────────────────────────── */
-::-webkit-scrollbar {
-  width: 6px;
-  height: 6px;
+h1,
+h2,
+h3 {
+  text-wrap: balance;
 }
 
-::-webkit-scrollbar-track {
-  background: var(--color-surface-200);
+p,
+li {
+  text-wrap: pretty;
 }
 
-::-webkit-scrollbar-thumb {
-  background: var(--color-surface-400);
-  border-radius: 3px;
+a {
+  text-underline-offset: 3px;
 }
 
-::-webkit-scrollbar-thumb:hover {
-  background: var(--color-surface-500);
+textarea {
+  resize: vertical;
 }
 
-/* ─── Focus Ring & Input Normalization ────────────────────────────── */
+input:not([type="range"]):user-invalid,
+select:user-invalid,
+textarea:user-invalid {
+  border-color: var(--color-danger-500);
+}
+
+/* ─── Native Modal Dialog Scroll & Backdrop Containment ─────────── */
+dialog:modal {
+  overscroll-behavior: contain;
+}
+
+dialog::backdrop {
+  overflow: hidden;
+  overscroll-behavior: contain;
+  background-color: rgba(15, 23, 42, 0.5);
+  backdrop-filter: blur(4px);
+}
+
+/* ─── Focus Ring & Input Normalization ──────────────────────────── */
 *:focus-visible {
   outline: 2px solid var(--color-primary-500);
   outline-offset: 2px;
@@ -184,10 +272,132 @@ textarea:focus-visible {
   outline-offset: 1px;
 }
 
-/* ─── Touch Target (44x44 per WCAG / PRD) ───────────────────────── */
+/* ─── Touch Target (44x44 per WCAG 2.5.5 / PRD) ─────────────────── */
 .touch-target {
   min-height: 44px;
   min-width: 44px;
+}
+
+/* ─── Accessible Horizontal Scroller with Edge-Fade Affordance ──── */
+.edge-fade-scroller {
+  overflow-x: auto;
+  scrollbar-width: none;
+  scroll-snap-type: inline proximity;
+  --fade-size: 2.25rem;
+  --fade-dir: right;
+  --fade-start-pos: 0;
+  --fade-end-pos: 100%;
+  scroll-padding-inline: var(--fade-size);
+  mask:
+    linear-gradient(black, black) no-clip subtract,
+    linear-gradient(to var(--fade-dir), black, transparent) var(--fade-start-pos) 0 / var(--fade-start) 100% no-repeat no-clip,
+    linear-gradient(to var(--fade-dir), transparent, black) var(--fade-end-pos) 0 / var(--fade-end) 100% no-repeat no-clip;
+  animation: reveal-fade-start linear both, hide-fade-end linear both;
+  animation-timeline: scroll(self inline);
+  animation-range: 0 var(--fade-size), calc(100% - var(--fade-size)) 100%;
+  transition: --fade-start 0.2s ease-out, --fade-end 0.2s ease-out;
+}
+
+.edge-fade-scroller::-webkit-scrollbar {
+  display: none;
+}
+
+.edge-fade-scroller.more-start {
+  --fade-start: var(--fade-size);
+}
+
+.edge-fade-scroller.more-end {
+  --fade-end: var(--fade-size);
+}
+
+/* ─── Forced-Colors-Safe Accessible Tab Indicator ───────────────── */
+.clinical-tab {
+  position: relative;
+}
+
+.clinical-tab[aria-selected="true"] {
+  color: var(--color-primary-800);
+  background-color: var(--color-primary-50);
+  border-color: var(--color-primary-300);
+}
+
+.clinical-tab[aria-selected="true"]::after {
+  content: "";
+  position: absolute;
+  inset: auto 0.625rem 0;
+  border-block-end: 3px solid var(--color-primary-600);
+  border-radius: 999px;
+}
+
+/* ─── Container-Adaptive Responsive Invoice Breakdown Table ─────── */
+.invoice-table-region {
+  overflow-x: auto;
+  max-inline-size: 100%;
+  container-type: inline-size;
+}
+
+@container (width < 580px) {
+  .invoice-table-region table,
+  .invoice-table-region tbody,
+  .invoice-table-region tfoot,
+  .invoice-table-region tr,
+  .invoice-table-region th,
+  .invoice-table-region td {
+    display: block;
+    width: 100%;
+  }
+
+  .invoice-table-region thead {
+    display: none;
+  }
+
+  .invoice-table-region tbody tr {
+    padding: 0.875rem 1rem;
+    border-bottom: 1px solid var(--color-surface-200);
+  }
+
+  .invoice-table-region tbody tr:last-child {
+    border-bottom: none;
+  }
+
+  .invoice-table-region tbody th[scope="row"] {
+    padding: 0 0 0.5rem 0;
+    text-align: left;
+    border-bottom: 1px dashed var(--color-surface-200);
+    margin-bottom: 0.5rem;
+  }
+
+  .invoice-table-region tbody td {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.75rem;
+    padding: 0.25rem 0;
+    text-align: right;
+  }
+
+  .invoice-table-region tbody td::before {
+    content: attr(data-label);
+    font-weight: 700;
+    font-size: 0.6875rem;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    color: var(--color-surface-500);
+    text-align: left;
+  }
+
+  .invoice-table-region tfoot tr {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.75rem;
+    padding: 0.875rem 1rem;
+  }
+
+  .invoice-table-region tfoot td {
+    width: auto;
+    padding: 0;
+  }
 }
 
 /* ─── Status Colors ─────────────────────────────────────────────── */
@@ -215,7 +425,7 @@ textarea:focus-visible {
   color: var(--color-surface-500);
 }
 
-/* ─── Responsive Grid ──────────────────────────────────────────── */
+/* ─── Responsive Grid ───────────────────────────────────────────── */
 .dashboard-grid {
   display: grid;
   grid-template-columns: 1fr;
@@ -230,15 +440,14 @@ textarea:focus-visible {
 
 @media (min-width: 1024px) {
   .dashboard-grid {
-    grid-template-columns: repeat(4, 1fr);
+    grid-template-columns: repeat(3, 1fr);
   }
 }
 
-/* ─── Reduced Motion (A11y AAA) ─────────────────────────────────── */
 @media (prefers-reduced-motion: reduce) {
   *,
-  ::before,
-  ::after {
+  *::before,
+  *::after {
     animation-duration: 0.01ms !important;
     animation-iteration-count: 1 !important;
     transition-duration: 0.01ms !important;

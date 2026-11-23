@@ -68,12 +68,12 @@ function getChannelBadge(channel: string) {
     case 'SMS':
       return {
         label: 'SMS',
-        className: 'bg-warning-50 text-warning-700 border-warning-100',
+        className: 'bg-warning-50 text-warning-800 border-warning-200',
         Icon: MessageSquare,
       };
     default:
       return {
-        label: 'IN_APP',
+        label: 'Portal',
         className: 'bg-primary-50 text-primary-700 border-primary-200',
         Icon: BellRing,
       };
@@ -216,11 +216,11 @@ export function NotificationBell() {
         aria-label="Notifications"
         aria-expanded={isOpen}
         aria-haspopup="dialog"
-        className="relative inline-flex items-center justify-center w-9 h-9 rounded-xl border border-surface-200 bg-white text-surface-600 hover:text-surface-900 hover:bg-surface-50 transition-colors focus:outline-none focus:ring-2 focus:ring-primary-500/30"
+        className="relative inline-flex items-center justify-center w-11 h-11 rounded-xl border border-surface-200 bg-white text-surface-600 hover:text-surface-900 hover:bg-surface-50 active:scale-[0.96] transition-[color,background-color,transform] duration-150 focus:outline-none focus:ring-2 focus:ring-primary-500/30"
       >
         <Bell className="w-4 h-4" aria-hidden="true" />
         {unreadCount > 0 && (
-          <span className="absolute -top-1.5 -right-1.5 min-w-[18px] h-[18px] px-1 rounded-full bg-danger-600 text-white text-[10px] font-bold leading-none flex items-center justify-center shadow-xs">
+          <span className="absolute -top-1 -right-1 min-w-[18px] h-[18px] px-1 rounded-full bg-danger-600 text-white text-[10px] font-bold tabular-nums leading-none flex items-center justify-center shadow-xs">
             {badgeLabel}
           </span>
         )}
@@ -232,11 +232,11 @@ export function NotificationBell() {
           aria-label="Notifications drawer"
           className="absolute right-0 mt-2 w-[min(24rem,calc(100vw-2rem))] bg-white rounded-2xl border border-surface-200 shadow-md z-50 overflow-hidden animate-scale-in"
         >
-          <div className="flex items-center justify-between px-4 py-3 border-b border-surface-200 bg-surface-50/70">
+          <div className="flex items-center justify-between px-4 py-2.5 border-b border-surface-200 bg-surface-50/70">
             <div className="flex items-center gap-2">
               <h3 className="text-sm font-bold text-surface-900">Notifications</h3>
               {unreadCount > 0 && (
-                <span className="px-2 py-0.5 rounded-full bg-primary-50 text-primary-700 border border-primary-200 text-[11px] font-bold">
+                <span className="px-2 py-0.5 rounded-full bg-primary-50 text-primary-700 border border-primary-200 text-[11px] font-bold tabular-nums">
                   {badgeLabel} unread
                 </span>
               )}
@@ -245,7 +245,7 @@ export function NotificationBell() {
               type="button"
               onClick={() => void handleMarkAllRead()}
               disabled={unreadCount === 0 || markingAll}
-              className="inline-flex items-center gap-1 text-xs font-semibold text-primary-700 hover:text-primary-800 disabled:text-surface-400 disabled:cursor-not-allowed transition-colors"
+              className="inline-flex items-center gap-1 min-h-11 px-2.5 rounded-lg text-xs font-semibold text-primary-700 hover:text-primary-800 hover:bg-primary-50 disabled:text-surface-400 disabled:hover:bg-transparent disabled:cursor-not-allowed transition-colors"
             >
               <CheckCheck className="w-3.5 h-3.5" aria-hidden="true" />
               <span>Mark all read</span>

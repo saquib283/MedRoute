@@ -1,13 +1,16 @@
 'use client';
 
 /**
- * Afzal Healthcare — Patient Billing & Itemized Receipts Overview
- * Allows patients to view medical bills, inspect itemized sub-charge breakdowns, and download official PDF tax invoices.
+ * Afzal Healthcare — Patient Medical Billing & Receipts
+ * Container-adaptive responsive invoice breakdown, humanized clinical charge categories,
+ * accessible native <dialog> payment flow, and beneficiary wire-transfer instructions.
  */
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { Card } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
+import { Modal } from '@/components/ui/Modal';
+import { Select, SelectOption } from '@/components/ui/Select';
 import { toast } from '@/components/ui/Toast';
 import {
   Receipt,
@@ -20,8 +23,10 @@ import {
   ShieldCheck,
   CreditCard,
   Percent,
-  X,
   Ban,
+  Landmark,
+  FileCheck,
+  RefreshCw,
 } from 'lucide-react';
 
 interface BillItem {
@@ -56,9 +61,53 @@ interface MedicalBill {
 
 type PaymentMethodOption = 'CARD' | 'WIRE_TRANSFER' | 'INSURANCE_DIRECT';
 
+const BILL_CATEGORY_LABELS: Record<string, string> = {
+  SURGERY_OT: 'Surgery & Operating Theatre',
+  BED_RENT: 'Hospital Room & Nursing',
+  ICU_CARE: 'ICU & Critical Monitoring',
+  CONSULTATION: 'Specialist Consultation',
+  DIAGNOSTICS: 'Diagnostics & Imaging',
+  LABS: 'Laboratory Diagnostics',
+  PHARMACY: 'Pharmacy & Medications',
+  IMPLANT: 'Medical Implants & Devices',
+  ANESTHESIA: 'Anesthesia Care',
+  REHAB: 'Physiotherapy & Rehab',
+  ACCOMMODATION: 'Recovery Stay',
+  GENERAL: 'Hospital Care',
+};
+
+function formatBillCategory(raw?: string | null): string {
+  if (!raw) return 'Hospital Care';
+  if (BILL_CATEGORY_LABELS[raw]) return BILL_CATEGORY_LABELS[raw];
+  return raw
+    .toLowerCase()
+    .split('_')
+    .map((part) => (part ? part.charAt(0).toUpperCase() + part.slice(1) : ''))
+    .join(' ');
+}
+
+const PAYMENT_METHOD_OPTIONS: SelectOption[] = [
+  {
+    value: 'CARD',
+    label: 'International Card (Credit / Debit)',
+    description: 'Visa, Mastercard, or Amex settlement',
+  },
+  {
+    value: 'WIRE_TRANSFER',
+    label: 'Bank Wire Transfer (SWIFT / IBAN)',
+    description: 'International bank transfer to hospital escrow',
+  },
+  {
+    value: 'INSURANCE_DIRECT',
+    label: 'Insurance Direct Settlement',
+    description: 'Pre-authorized insurer guarantee letter',
+  },
+];
+
 export default function PatientBillingPage() {
   const [bills, setBills] = useState<MedicalBill[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [loadError, setLoadError] = useState<string | null>(null);
 
   // Payment Modal State
   const [paymentModalBill, setPaymentModalBill] = useState<MedicalBill | null>(null);
@@ -68,29 +117,34 @@ export default function PatientBillingPage() {
   const [referenceNo, setReferenceNo] = useState('');
   const [isPaying, setIsPaying] = useState(false);
 
-  const fetchPatientBills = async () => {
+  const fetchPatientBills = useCallback(async () => {
+    setIsLoading(true);
+    setLoadError(null);
     try {
       const res = await fetch('/api/v1/patient/billing');
       const data = await res.json();
-      if (data.success) {
+      if (res.ok && data.success) {
         setBills(data.data.bills || []);
       } else {
+        const msg = data?.error?.message || 'Unable to load your hospital invoices.';
+        setLoadError(msg);
         toast.apiError(data, 'Failed to fetch medical bills', 'Fetch Error');
       }
     } catch (err) {
       console.error('Error loading patient bills', err);
+      setLoadError('Could not connect to the billing service. Please check your connection and retry.');
       toast.apiError(err, 'Failed to connect to billing server', 'Connection Error');
     } finally {
       setIsLoading(false);
     }
-  };
+  }, []);
 
   useEffect(() => {
     const timer = setTimeout(() => {
       void fetchPatientBills();
     }, 0);
     return () => clearTimeout(timer);
-  }, []);
+  }, [fetchPatientBills]);
 
   const openPaymentModal = (bill: MedicalBill) => {
     const total = Number(bill.totalAmount) || 0;
@@ -118,7 +172,10 @@ export default function PatientBillingPage() {
     }
 
     if (amount > remainingDue + 0.005) {
-      toast.error(`Payment amount cannot exceed remaining balance ($${remainingDue.toFixed(2)}).`, 'Validation Error');
+      toast.error(
+        `Payment amount cannot exceed remaining balance ($${remainingDue.toFixed(2)}).`,
+        'Validation Error'
+      );
       return;
     }
 
@@ -137,7 +194,7 @@ export default function PatientBillingPage() {
       const data = await res.json();
       if (res.ok && data.success) {
         toast.success(
-          `Payment of $${amount.toFixed(2)} ${paymentModalBill.currency} applied to ${paymentModalBill.billNumber}.`,
+          `Payment of $${amount.toFixed(2)} ${paymentModalBill.currency} recorded for ${paymentModalBill.billNumber}.`,
           'Payment Recorded'
         );
         setPaymentModalBill(null);
@@ -156,32 +213,37 @@ export default function PatientBillingPage() {
     switch (status) {
       case 'PAID':
         return (
-          <span className="inline-flex items-center gap-1 bg-emerald-100 text-emerald-800 border border-emerald-200 px-3 py-1 rounded-lg text-xs font-extrabold">
-            <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" /> Settled in Full
+          <span className="inline-flex items-center gap-1.5 bg-success-50 text-success-800 border border-success-200 px-3 py-1 rounded-full text-xs font-semibold">
+            <CheckCircle2 className="w-3.5 h-3.5 text-success-600" aria-hidden="true" />
+            Settled in Full
           </span>
         );
       case 'PARTIALLY_PAID':
         return (
-          <span className="inline-flex items-center gap-1 bg-sky-100 text-sky-800 border border-sky-200 px-3 py-1 rounded-lg text-xs font-extrabold">
-            <Percent className="w-3.5 h-3.5 text-sky-600" /> Deposit Received
+          <span className="inline-flex items-center gap-1.5 bg-info-50 text-info-800 border border-info-200 px-3 py-1 rounded-full text-xs font-semibold">
+            <Percent className="w-3.5 h-3.5 text-info-600" aria-hidden="true" />
+            Deposit Received
           </span>
         );
       case 'OVERDUE':
         return (
-          <span className="inline-flex items-center gap-1 bg-rose-100 text-rose-800 border border-rose-200 px-3 py-1 rounded-lg text-xs font-extrabold">
-            <AlertCircle className="w-3.5 h-3.5 text-rose-600" /> Payment Overdue
+          <span className="inline-flex items-center gap-1.5 bg-danger-50 text-danger-800 border border-danger-200 px-3 py-1 rounded-full text-xs font-semibold">
+            <AlertCircle className="w-3.5 h-3.5 text-danger-600" aria-hidden="true" />
+            Payment Overdue
           </span>
         );
       case 'CANCELLED':
         return (
-          <span className="inline-flex items-center gap-1 bg-surface-100 text-surface-700 border border-surface-200 px-3 py-1 rounded-lg text-xs font-extrabold">
-            <Ban className="w-3.5 h-3.5 text-surface-500" /> Cancelled
+          <span className="inline-flex items-center gap-1.5 bg-surface-100 text-surface-700 border border-surface-300 px-3 py-1 rounded-full text-xs font-semibold">
+            <Ban className="w-3.5 h-3.5 text-surface-500" aria-hidden="true" />
+            Cancelled
           </span>
         );
       default:
         return (
-          <span className="inline-flex items-center gap-1 bg-amber-100 text-amber-800 border border-amber-200 px-3 py-1 rounded-lg text-xs font-extrabold">
-            <Clock className="w-3.5 h-3.5 text-amber-600" /> Pending Payment
+          <span className="inline-flex items-center gap-1.5 bg-warning-50 text-warning-800 border border-warning-200 px-3 py-1 rounded-full text-xs font-semibold">
+            <Clock className="w-3.5 h-3.5 text-warning-600" aria-hidden="true" />
+            Pending Payment
           </span>
         );
     }
@@ -189,34 +251,59 @@ export default function PatientBillingPage() {
 
   if (isLoading) {
     return (
-      <div className="flex flex-col items-center justify-center min-h-[400px] gap-4">
-        <div className="w-10 h-10 border-4 border-primary-600 border-t-transparent rounded-full animate-spin" />
-        <p className="text-sm font-medium text-surface-600">Loading your medical bills & receipts...</p>
+      <div className="max-w-6xl mx-auto space-y-6 py-2">
+        <div className="h-16 w-72 rounded-2xl bg-surface-200/70 animate-pulse" />
+        <div className="h-96 rounded-3xl bg-white border border-surface-200 animate-pulse" />
       </div>
     );
   }
 
+  const modalTotal = paymentModalBill ? Number(paymentModalBill.totalAmount) || 0 : 0;
+  const modalPaid = paymentModalBill ? Number(paymentModalBill.paidAmount) || 0 : 0;
+  const modalDue = Math.max(0, Math.round((modalTotal - modalPaid) * 100) / 100);
+
   return (
     <div className="space-y-8 animate-fade-in max-w-6xl mx-auto pb-12">
-      {/* Page Header */}
+      {/* Single Authoritative Page Header */}
       <div>
-        <h1 className="text-2xl font-extrabold text-surface-900 tracking-tight flex items-center gap-2">
-          <Receipt className="w-7 h-7 text-primary-600" />
-          Patient Medical Billing & Itemized Receipts
+        <h1 className="text-2xl sm:text-3xl font-extrabold text-surface-900 tracking-tight">
+          Medical Billing &amp; Receipts
         </h1>
-        <p className="text-xs text-surface-500 mt-1">
-          Review official hospital invoices, verify itemized cost breakdowns, and download tax receipts for foreign currency exchange.
+        <p className="text-xs sm:text-sm text-surface-600 mt-1 max-w-2xl">
+          Review verified hospital invoices, inspect itemized care charges, and download official receipts for insurance or foreign-exchange clearance.
         </p>
       </div>
 
-      {bills.length === 0 ? (
-        <Card className="p-12 text-center space-y-3 rounded-2xl border border-surface-200">
-          <div className="w-12 h-12 rounded-2xl bg-surface-100 text-surface-400 flex items-center justify-center mx-auto">
-            <Receipt className="w-6 h-6" />
+      {loadError ? (
+        <div
+          role="alert"
+          className="p-5 rounded-2xl bg-danger-50 border border-danger-200 text-danger-900 flex flex-col sm:flex-row sm:items-center justify-between gap-4"
+        >
+          <div className="flex items-start gap-3">
+            <AlertCircle className="w-5 h-5 text-danger-600 shrink-0 mt-0.5" aria-hidden="true" />
+            <div>
+              <h2 className="text-sm font-bold">Could not load your invoices</h2>
+              <p className="text-xs text-danger-800 mt-0.5">{loadError}</p>
+            </div>
           </div>
-          <h3 className="text-sm font-bold text-surface-800">No medical bills generated yet</h3>
-          <p className="text-xs text-surface-500 max-w-sm mx-auto">
-            Your Case Manager will upload hospital invoices and cost breakdowns as your treatment progresses.
+          <Button
+            type="button"
+            variant="secondary"
+            size="sm"
+            onClick={() => void fetchPatientBills()}
+          >
+            <RefreshCw className="w-4 h-4" aria-hidden="true" />
+            <span>Retry</span>
+          </Button>
+        </div>
+      ) : bills.length === 0 ? (
+        <Card className="p-12 text-center space-y-3 rounded-3xl border border-surface-200">
+          <div className="w-12 h-12 rounded-2xl bg-surface-100 text-surface-500 flex items-center justify-center mx-auto">
+            <Receipt className="w-6 h-6" aria-hidden="true" />
+          </div>
+          <h2 className="text-base font-bold text-surface-900">No hospital invoices issued yet</h2>
+          <p className="text-xs text-surface-600 max-w-sm mx-auto">
+            Your case coordinator will post pro-forma cost estimates and itemized hospital bills here as your care plan is finalized.
           </p>
         </Card>
       ) : (
@@ -226,86 +313,151 @@ export default function PatientBillingPage() {
             const paid = Number(bill.paidAmount) || 0;
             const due = Math.max(0, total - paid);
             const paidPercent = total > 0 ? Math.min(100, Math.round((paid / total) * 100)) : 0;
+            const breakdownHeadingId = `invoice-breakdown-${bill.id}`;
 
             return (
-              <Card key={bill.id} className="p-6 rounded-3xl border border-surface-200 shadow-xs space-y-6">
+              <Card
+                key={bill.id}
+                className="p-5 sm:p-6 rounded-3xl border border-surface-200 shadow-xs space-y-6"
+              >
                 {/* Bill Header */}
-                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-surface-100 pb-5">
-                  <div className="space-y-1">
-                    <div className="flex items-center gap-2">
-                      <span className="text-xs font-black uppercase tracking-widest text-primary-700 bg-primary-50 border border-primary-100 px-2.5 py-0.5 rounded-md">
+                <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-4 border-b border-surface-100 pb-5">
+                  <div className="space-y-1.5">
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <span className="text-xs font-bold uppercase tracking-wider text-primary-800 bg-primary-50 border border-primary-200 px-2.5 py-0.5 rounded-lg tabular-nums">
                         {bill.billNumber}
                       </span>
                       {renderStatusBadge(bill.status)}
                     </div>
-                    <h2 className="text-lg font-extrabold text-surface-900 mt-1">{bill.title}</h2>
-                    <p className="text-xs text-surface-400">
-                      Issued: {new Date(bill.createdAt).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })}
+                    <h2 className="text-lg sm:text-xl font-bold text-surface-900">{bill.title}</h2>
+                    <p className="text-xs text-surface-500 tabular-nums">
+                      Issued{' '}
+                      {new Date(bill.createdAt).toLocaleDateString('en-US', {
+                        year: 'numeric',
+                        month: 'long',
+                        day: 'numeric',
+                      })}
                     </p>
                   </div>
 
-                  <div className="text-right sm:border-l sm:border-surface-100 sm:pl-6">
-                    <p className="text-xs uppercase font-bold tracking-wider text-surface-500">Total Invoice Amount</p>
-                    <p className="text-2xl font-black text-surface-900 mt-0.5">${total.toLocaleString('en-US', { minimumFractionDigits: 2 })} {bill.currency}</p>
+                  <div className="sm:text-right sm:border-l sm:border-surface-200 sm:pl-6">
+                    <p className="text-xs font-semibold text-surface-500">Total Invoice</p>
+                    <p className="text-2xl font-extrabold text-surface-900 mt-0.5 tabular-nums">
+                      ${total.toLocaleString('en-US', { minimumFractionDigits: 2 })} {bill.currency}
+                    </p>
                     {due > 0 ? (
-                      <p className="text-xs font-bold text-amber-600 mt-0.5">Remaining Balance: ${due.toLocaleString('en-US', { minimumFractionDigits: 2 })}</p>
+                      <p className="text-xs font-semibold text-warning-700 mt-0.5 tabular-nums">
+                        Balance due: ${due.toLocaleString('en-US', { minimumFractionDigits: 2 })}{' '}
+                        {bill.currency}
+                      </p>
                     ) : (
-                      <p className="text-xs font-bold text-emerald-600 mt-0.5">Paid in Full ($0 balance)</p>
+                      <p className="text-xs font-semibold text-success-700 mt-0.5 tabular-nums">
+                        Paid in full ($0.00 due)
+                      </p>
                     )}
                   </div>
                 </div>
 
-                {/* Payment Settlement Progress */}
+                {/* Settlement Progress */}
                 <div className="bg-surface-50 p-4 rounded-2xl border border-surface-200 space-y-2">
-                  <div className="flex items-center justify-between text-xs">
-                    <span className="font-bold text-surface-700">Payment Settlement Status</span>
-                    <span className="font-extrabold text-primary-800">{paidPercent}% Paid (${paid.toLocaleString('en-US', { minimumFractionDigits: 2 })} of ${total.toLocaleString('en-US', { minimumFractionDigits: 2 })})</span>
+                  <div className="flex items-center justify-between gap-2 flex-wrap text-xs">
+                    <span className="font-semibold text-surface-700">Settlement Progress</span>
+                    <span className="font-bold text-primary-800 tabular-nums">
+                      {paidPercent}% settled ($
+                      {paid.toLocaleString('en-US', { minimumFractionDigits: 2 })} of $
+                      {total.toLocaleString('en-US', { minimumFractionDigits: 2 })})
+                    </span>
                   </div>
-                  <div className="h-2 bg-surface-200 rounded-full overflow-hidden">
+                  <div className="h-2.5 bg-surface-200 rounded-full overflow-hidden">
                     <div
-                      className="h-full bg-emerald-500 rounded-full transition-all duration-500"
+                      className="h-full bg-success-600 rounded-full transition-[width] duration-300"
                       style={{ width: `${paidPercent}%` }}
                     />
                   </div>
                 </div>
 
-                {/* Itemized Breakdown Table */}
+                {/* Container-Adaptive Itemized Breakdown Table */}
                 <div className="space-y-3">
-                  <h3 className="text-xs font-extrabold uppercase tracking-wider text-surface-700 flex items-center gap-2">
-                    <Layers className="w-4 h-4 text-primary-600" /> Itemized Cost Breakdown
+                  <h3
+                    id={breakdownHeadingId}
+                    className="text-xs font-bold uppercase tracking-wider text-surface-700 flex items-center gap-2"
+                  >
+                    <Layers className="w-4 h-4 text-primary-600" aria-hidden="true" />
+                    <span>Itemized Charges</span>
                   </h3>
 
-                  <div className="border border-surface-200 rounded-2xl overflow-hidden">
+                  <div
+                    tabIndex={0}
+                    role="region"
+                    aria-labelledby={breakdownHeadingId}
+                    className="invoice-table-region border border-surface-200 rounded-2xl bg-white"
+                  >
                     <table className="w-full text-left text-xs">
-                      <thead className="bg-surface-50 border-b border-surface-200 text-surface-500 font-bold uppercase tracking-wider">
+                      <thead className="bg-surface-50 border-b border-surface-200 text-surface-600 font-semibold uppercase tracking-wider">
                         <tr>
-                          <th className="p-3.5">Sub-Item Description</th>
-                          <th className="p-3.5 text-center">Category</th>
-                          <th className="p-3.5 text-center">Qty</th>
-                          <th className="p-3.5 text-right">Unit Price</th>
-                          <th className="p-3.5 text-right">Amount</th>
+                          <th scope="col" className="p-3.5">
+                            Description
+                          </th>
+                          <th scope="col" className="p-3.5">
+                            Department / Category
+                          </th>
+                          <th scope="col" className="p-3.5 text-center">
+                            Qty
+                          </th>
+                          <th scope="col" className="p-3.5 text-right">
+                            Unit Rate
+                          </th>
+                          <th scope="col" className="p-3.5 text-right">
+                            Amount
+                          </th>
                         </tr>
                       </thead>
-                      <tbody className="divide-y divide-surface-100 font-medium">
+                      <tbody className="divide-y divide-surface-100">
                         {bill.items.map((item) => (
-                          <tr key={item.id} className="hover:bg-surface-50">
-                            <td className="p-3.5 font-extrabold text-surface-900">{item.description}</td>
-                            <td className="p-3.5 text-center">
-                              <span className="px-2 py-0.5 bg-surface-100 text-surface-700 rounded-md text-xs font-semibold">
-                                {item.category || 'GENERAL'}
+                          <tr key={item.id} className="hover:bg-surface-50/70">
+                            <th scope="row" className="p-3.5 font-bold text-surface-900">
+                              {item.description}
+                            </th>
+                            <td data-label="Category" className="p-3.5">
+                              <span className="inline-flex items-center px-2.5 py-0.5 bg-surface-100 text-surface-700 border border-surface-200 rounded-md text-xs font-medium">
+                                {formatBillCategory(item.category)}
                               </span>
                             </td>
-                            <td className="p-3.5 text-center font-bold">{item.quantity}</td>
-                            <td className="p-3.5 text-right font-medium">${Number(item.unitPrice).toFixed(2)}</td>
-                            <td className="p-3.5 text-right font-black text-surface-900">${Number(item.amount).toFixed(2)}</td>
+                            <td
+                              data-label="Quantity"
+                              className="p-3.5 text-center font-semibold text-surface-800 tabular-nums"
+                            >
+                              {item.quantity}
+                            </td>
+                            <td
+                              data-label="Unit Rate"
+                              className="p-3.5 text-right font-medium text-surface-700 tabular-nums"
+                            >
+                              ${Number(item.unitPrice).toLocaleString('en-US', {
+                                minimumFractionDigits: 2,
+                                maximumFractionDigits: 2,
+                              })}
+                            </td>
+                            <td
+                              data-label="Amount"
+                              className="p-3.5 text-right font-bold text-surface-900 tabular-nums"
+                            >
+                              ${Number(item.amount).toLocaleString('en-US', {
+                                minimumFractionDigits: 2,
+                                maximumFractionDigits: 2,
+                              })}
+                            </td>
                           </tr>
                         ))}
                       </tbody>
-                      <tfoot className="bg-surface-50/80 font-extrabold border-t border-surface-200">
+                      <tfoot className="bg-surface-50 font-bold border-t border-surface-200">
                         <tr>
-                          <td colSpan={4} className="p-3.5 text-right uppercase text-surface-500 text-xs">Net Invoiced Amount:</td>
-                          <td className="p-3.5 text-right text-sm text-primary-700 font-black">
-                            ${total.toFixed(2)} {bill.currency}
+                          <td colSpan={4} className="p-3.5 sm:text-right text-surface-600 text-xs">
+                            Net Invoiced Total
+                          </td>
+                          <td className="p-3.5 text-right text-sm text-primary-800 font-extrabold tabular-nums">
+                            ${total.toLocaleString('en-US', { minimumFractionDigits: 2 })}{' '}
+                            {bill.currency}
                           </td>
                         </tr>
                       </tfoot>
@@ -313,38 +465,41 @@ export default function PatientBillingPage() {
                   </div>
                 </div>
 
-                {/* Optional Hospital & Billing Note */}
+                {/* Hospital & Coordinator Note */}
                 {(bill.hospital || bill.notes) && (
-                  <div className="flex flex-wrap items-center justify-between gap-2 text-xs text-surface-600 bg-surface-50/70 px-4 py-2.5 rounded-xl border border-surface-200/80">
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 text-xs text-surface-700 bg-surface-50 px-4 py-3 rounded-2xl border border-surface-200">
                     {bill.hospital && (
-                      <span className="inline-flex items-center gap-1.5 font-semibold text-surface-700">
-                        <Building2 className="w-3.5 h-3.5 text-primary-600" />
-                        {bill.hospital.name} ({bill.hospital.city})
+                      <span className="inline-flex items-center gap-1.5 font-semibold text-surface-800">
+                        <Building2 className="w-4 h-4 text-primary-600 shrink-0" aria-hidden="true" />
+                        <span>
+                          {bill.hospital.name} ({bill.hospital.city})
+                        </span>
                       </span>
                     )}
                     {bill.notes && (
-                      <span className="text-surface-600 truncate max-w-full" title={bill.notes}>
-                        <strong>Note:</strong> {bill.notes}
-                      </span>
+                      <p className="text-surface-600">
+                        <strong className="text-surface-800">Billing Note:</strong> {bill.notes}
+                      </p>
                     )}
                   </div>
                 )}
 
-                {/* Footer Actions & Note */}
-                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pt-2">
-                  <div className="text-xs text-surface-500 flex items-center gap-1.5">
-                    <ShieldCheck className="w-4 h-4 text-emerald-600 shrink-0" />
-                    <span>Verified Hospital Invoice — Issued by Case Management Team</span>
+                {/* Footer Actions */}
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pt-1">
+                  <div className="text-xs text-surface-600 flex items-center gap-2">
+                    <ShieldCheck className="w-4 h-4 text-success-600 shrink-0" aria-hidden="true" />
+                    <span>Verified hospital statement — receipts update automatically after settlement</span>
                   </div>
 
                   <div className="flex flex-wrap items-center gap-2.5">
                     {bill.status !== 'CANCELLED' && due > 0 && (
                       <Button
                         type="button"
+                        size="md"
                         onClick={() => openPaymentModal(bill)}
-                        className="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-xl text-xs flex items-center gap-2 shadow-xs"
+                        className="bg-success-600 hover:bg-success-700 text-white"
                       >
-                        <CreditCard className="w-4 h-4" />
+                        <CreditCard className="w-4 h-4" aria-hidden="true" />
                         <span>Pay Balance</span>
                       </Button>
                     )}
@@ -354,9 +509,10 @@ export default function PatientBillingPage() {
                         href={bill.fileUrl}
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="px-5 py-2.5 bg-primary-600 hover:bg-primary-700 text-white font-bold rounded-xl text-xs flex items-center justify-center gap-2 transition-colors shadow-xs"
+                        className="inline-flex items-center justify-center gap-2 min-h-11 px-4 bg-primary-600 hover:bg-primary-700 active:scale-[0.96] text-white font-semibold rounded-xl text-xs transition-[background-color,transform] duration-150 shadow-2xs"
                       >
-                        <Download className="w-4 h-4" /> Download Official Tax PDF Invoice
+                        <Download className="w-4 h-4" aria-hidden="true" />
+                        <span>Download Tax Invoice PDF</span>
                       </a>
                     )}
                   </div>
@@ -367,158 +523,192 @@ export default function PatientBillingPage() {
         </div>
       )}
 
-      {/* Pay Medical Bill Modal */}
-      {paymentModalBill && (() => {
-        const modalTotal = Number(paymentModalBill.totalAmount) || 0;
-        const modalPaid = Number(paymentModalBill.paidAmount) || 0;
-        const modalDue = Math.max(0, Math.round((modalTotal - modalPaid) * 100) / 100);
+      {/* Accessible Native <dialog> Payment Modal */}
+      <Modal
+        open={Boolean(paymentModalBill)}
+        onClose={() => setPaymentModalBill(null)}
+        preventClose={isPaying}
+        title="Settle Hospital Invoice"
+        subtitle={
+          paymentModalBill
+            ? `${paymentModalBill.billNumber} • ${paymentModalBill.title}`
+            : undefined
+        }
+        icon={<CreditCard className="w-5 h-5" />}
+      >
+        {paymentModalBill && (
+          <form onSubmit={handlePaymentSubmit} className="space-y-5">
+            <div className="p-4 bg-surface-50 rounded-2xl border border-surface-200 flex items-center justify-between text-xs">
+              <span className="font-semibold text-surface-600">Remaining Balance Due</span>
+              <span className="text-base font-extrabold text-surface-900 tabular-nums">
+                ${modalDue.toLocaleString('en-US', { minimumFractionDigits: 2 })}{' '}
+                {paymentModalBill.currency}
+              </span>
+            </div>
 
-        return (
-          <div className="fixed inset-0 z-50 bg-surface-950/60 backdrop-blur-xs flex items-center justify-center p-4">
-            <div className="bg-white rounded-3xl max-w-lg w-full p-6 space-y-5 shadow-2xl border border-surface-200 animate-scale-in">
-              <div className="flex items-start justify-between border-b border-surface-100 pb-4">
-                <div>
-                  <span className="text-xs font-black uppercase tracking-wider text-primary-600">
-                    {paymentModalBill.billNumber}
-                  </span>
-                  <h3 className="text-lg font-extrabold text-surface-900 mt-0.5 flex items-center gap-2">
-                    <CreditCard className="w-5 h-5 text-emerald-600" />
-                    Pay Medical Bill
-                  </h3>
-                  <p className="text-xs text-surface-500 mt-0.5">{paymentModalBill.title}</p>
-                </div>
+            {/* Amount Selection */}
+            <fieldset className="space-y-2.5">
+              <legend className="text-xs font-bold text-surface-700">Payment Amount</legend>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
                 <button
                   type="button"
-                  onClick={() => setPaymentModalBill(null)}
-                  className="p-1.5 text-surface-400 hover:text-surface-700 hover:bg-surface-100 rounded-lg"
-                  aria-label="Close payment modal"
+                  onClick={() => {
+                    setPaymentMode('FULL');
+                    setCustomAmount(modalDue.toFixed(2));
+                  }}
+                  className={`min-h-14 p-3.5 rounded-2xl border text-left transition-colors ${
+                    paymentMode === 'FULL'
+                      ? 'border-primary-600 bg-primary-50 text-primary-950 ring-1 ring-primary-600'
+                      : 'border-surface-200 bg-white text-surface-700 hover:bg-surface-50'
+                  }`}
                 >
-                  <X className="w-5 h-5" />
+                  <span className="text-xs font-bold block">Full Remaining Balance</span>
+                  <span className="text-xs font-semibold text-primary-700 mt-0.5 block tabular-nums">
+                    ${modalDue.toFixed(2)} {paymentModalBill.currency}
+                  </span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => setPaymentMode('CUSTOM')}
+                  className={`min-h-14 p-3.5 rounded-2xl border text-left transition-colors ${
+                    paymentMode === 'CUSTOM'
+                      ? 'border-primary-600 bg-primary-50 text-primary-950 ring-1 ring-primary-600'
+                      : 'border-surface-200 bg-white text-surface-700 hover:bg-surface-50'
+                  }`}
+                >
+                  <span className="text-xs font-bold block">Custom Deposit</span>
+                  <span className="text-xs text-surface-500 mt-0.5 block">
+                    Enter partial installment
+                  </span>
                 </button>
               </div>
 
-              <form onSubmit={handlePaymentSubmit} className="space-y-5">
-                <div className="p-3.5 bg-surface-50 rounded-2xl border border-surface-200 flex items-center justify-between text-xs">
-                  <span className="font-bold text-surface-600">Remaining Balance Due:</span>
-                  <span className="text-base font-black text-surface-900">
-                    ${modalDue.toLocaleString('en-US', { minimumFractionDigits: 2 })} {paymentModalBill.currency}
-                  </span>
-                </div>
-
-                {/* Amount Selection */}
-                <div className="space-y-2.5">
-                  <label className="text-xs font-bold text-surface-700 block">Payment Amount</label>
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setPaymentMode('FULL');
-                        setCustomAmount(modalDue.toFixed(2));
-                      }}
-                      className={`p-3 rounded-xl border text-left transition-all ${
-                        paymentMode === 'FULL'
-                          ? 'border-emerald-500 bg-emerald-50 text-emerald-900 ring-1 ring-emerald-500'
-                          : 'border-surface-200 bg-white text-surface-700 hover:bg-surface-50'
-                      }`}
-                    >
-                      <span className="text-xs font-extrabold block">Full Remaining Balance</span>
-                      <span className="text-xs font-bold text-emerald-700 mt-0.5 block">
-                        ${modalDue.toFixed(2)} {paymentModalBill.currency}
-                      </span>
-                    </button>
-
-                    <button
-                      type="button"
-                      onClick={() => setPaymentMode('CUSTOM')}
-                      className={`p-3 rounded-xl border text-left transition-all ${
-                        paymentMode === 'CUSTOM'
-                          ? 'border-primary-600 bg-primary-50 text-primary-900 ring-1 ring-primary-600'
-                          : 'border-surface-200 bg-white text-surface-700 hover:bg-surface-50'
-                      }`}
-                    >
-                      <span className="text-xs font-extrabold block">Custom Deposit Amount</span>
-                      <span className="text-xs text-surface-500 mt-0.5 block">Partial installment</span>
-                    </button>
-                  </div>
-
-                  {paymentMode === 'CUSTOM' && (
-                    <div className="pt-1">
-                      <input
-                        type="number"
-                        step="0.01"
-                        min="0.01"
-                        max={modalDue.toFixed(2)}
-                        value={customAmount}
-                        onChange={(e) => setCustomAmount(e.target.value)}
-                        placeholder={`Enter amount up to ${modalDue.toFixed(2)}`}
-                        className="w-full h-11 px-3 bg-surface-50 border border-surface-300 rounded-xl text-xs font-bold text-surface-900 focus:outline-none focus:border-primary-600"
-                        required
-                      />
-                    </div>
-                  )}
-                </div>
-
-                {/* Payment Method */}
-                <div className="space-y-1.5">
-                  <label className="text-xs font-bold text-surface-700 block">Payment Method</label>
-                  <select
-                    value={paymentMethod}
-                    onChange={(e) => setPaymentMethod(e.target.value as PaymentMethodOption)}
-                    className="w-full h-11 px-3 bg-surface-50 border border-surface-300 rounded-xl text-xs font-bold text-surface-900 focus:outline-none focus:border-primary-600"
+              {paymentMode === 'CUSTOM' && (
+                <div className="pt-1">
+                  <label
+                    htmlFor="custom-payment-amount"
+                    className="block text-xs font-semibold text-surface-700 mb-1"
                   >
-                    <option value="CARD">Card (Credit / Debit)</option>
-                    <option value="WIRE_TRANSFER">Wire Transfer (SWIFT / IBAN)</option>
-                    <option value="INSURANCE_DIRECT">Insurance Direct Settlement</option>
-                  </select>
-                </div>
-
-                {/* Optional Reference No */}
-                <div className="space-y-1.5">
-                  <label className="text-xs font-bold text-surface-700 block">
-                    Payment Reference # (Optional)
+                    Installment Amount ({paymentModalBill.currency})
                   </label>
                   <input
-                    type="text"
-                    maxLength={120}
-                    value={referenceNo}
-                    onChange={(e) => setReferenceNo(e.target.value)}
-                    placeholder="e.g. SWIFT-882190, Auth Code, or Policy Claim #"
-                    className="w-full h-11 px-3 bg-surface-50 border border-surface-300 rounded-xl text-xs font-medium text-surface-900 focus:outline-none focus:border-primary-600"
+                    id="custom-payment-amount"
+                    type="number"
+                    step="0.01"
+                    min="0.01"
+                    max={modalDue.toFixed(2)}
+                    value={customAmount}
+                    onChange={(e) => setCustomAmount(e.target.value)}
+                    placeholder={`Up to ${modalDue.toFixed(2)}`}
+                    className="w-full min-h-11 px-3.5 bg-white border border-surface-300 rounded-xl text-xs font-bold text-surface-900 tabular-nums focus:outline-none focus:border-primary-600"
+                    required
                   />
                 </div>
+              )}
+            </fieldset>
 
-                <div className="flex items-center justify-end gap-3 pt-2">
-                  <Button
-                    type="button"
-                    variant="secondary"
-                    onClick={() => setPaymentModalBill(null)}
-                    className="px-4 py-2 text-xs font-bold rounded-xl"
-                  >
-                    Cancel
-                  </Button>
-                  <Button
-                    type="submit"
-                    disabled={isPaying}
-                    className="px-5 py-2 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-xl text-xs flex items-center gap-2"
-                  >
-                    {isPaying ? (
-                      <>
-                        <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                        <span>Processing...</span>
-                      </>
-                    ) : (
-                      <>
-                        <CheckCircle2 className="w-4 h-4" />
-                        <span>Submit Payment</span>
-                      </>
-                    )}
-                  </Button>
+            {/* Custom Select for Payment Method */}
+            <Select
+              label="Settlement Method"
+              options={PAYMENT_METHOD_OPTIONS}
+              value={paymentMethod}
+              onChange={(val) => setPaymentMethod(val as PaymentMethodOption)}
+              required
+            />
+
+            {/* Contextual Wire Transfer / Insurance Guidance */}
+            {paymentMethod === 'WIRE_TRANSFER' && (
+              <div className="p-4 rounded-2xl bg-info-50 border border-info-200 text-xs text-info-900 space-y-2">
+                <div className="flex items-center gap-2 font-bold">
+                  <Landmark className="w-4 h-4 text-info-700 shrink-0" aria-hidden="true" />
+                  <span>International Wire Beneficiary Details</span>
                 </div>
-              </form>
+                <dl className="grid grid-cols-1 sm:grid-cols-2 gap-x-4 gap-y-1.5 text-[11px]">
+                  <div>
+                    <dt className="text-info-700 font-medium">Beneficiary</dt>
+                    <dd className="font-bold text-surface-900">Afzal Healthcare Escrow</dd>
+                  </div>
+                  <div>
+                    <dt className="text-info-700 font-medium">Bank &amp; Branch</dt>
+                    <dd className="font-bold text-surface-900">HDFC Bank, Fort Mumbai</dd>
+                  </div>
+                  <div>
+                    <dt className="text-info-700 font-medium">SWIFT / BIC Code</dt>
+                    <dd className="font-mono font-bold text-surface-900">HDFCINBBXXX</dd>
+                  </div>
+                  <div>
+                    <dt className="text-info-700 font-medium">Escrow Account</dt>
+                    <dd className="font-mono font-bold text-surface-900 tabular-nums">
+                      50200078419204
+                    </dd>
+                  </div>
+                </dl>
+                <p className="text-[11px] text-info-800 pt-1 border-t border-info-200/70">
+                  Include invoice reference <strong>{paymentModalBill.billNumber}</strong> in the transfer memo, then enter your bank UTR/SWIFT reference below.
+                </p>
+              </div>
+            )}
+
+            {paymentMethod === 'INSURANCE_DIRECT' && (
+              <div className="p-3.5 rounded-2xl bg-primary-50 border border-primary-200 text-xs text-primary-900 flex items-start gap-2.5">
+                <FileCheck className="w-4 h-4 text-primary-700 shrink-0 mt-0.5" aria-hidden="true" />
+                <p className="leading-relaxed">
+                  Enter your insurer&apos;s Guarantee of Payment (GOP) or pre-authorization claim number below so hospital billing can reconcile coverage directly.
+                </p>
+              </div>
+            )}
+
+            {/* Payment Reference */}
+            <div className="space-y-1.5">
+              <label
+                htmlFor="payment-reference-input"
+                className="text-xs font-bold text-surface-700 block"
+              >
+                {paymentMethod === 'WIRE_TRANSFER'
+                  ? 'SWIFT / Bank Wire Reference'
+                  : paymentMethod === 'INSURANCE_DIRECT'
+                  ? 'Policy / Pre-Authorization Claim Number'
+                  : 'Payment Reference (Optional)'}
+              </label>
+              <input
+                id="payment-reference-input"
+                type="text"
+                maxLength={120}
+                value={referenceNo}
+                onChange={(e) => setReferenceNo(e.target.value)}
+                placeholder={
+                  paymentMethod === 'WIRE_TRANSFER'
+                    ? 'e.g. SWIFT-882190'
+                    : paymentMethod === 'INSURANCE_DIRECT'
+                    ? 'e.g. GOP-AXA-44109'
+                    : 'Optional card receipt or authorization code'
+                }
+                className="w-full min-h-11 px-3.5 bg-white border border-surface-300 rounded-xl text-xs font-medium text-surface-900 focus:outline-none focus:border-primary-600"
+              />
             </div>
-          </div>
-        );
-      })()}
+
+            <div className="flex items-center justify-end gap-3 pt-2 border-t border-surface-100">
+              <Button
+                type="button"
+                variant="secondary"
+                onClick={() => setPaymentModalBill(null)}
+                disabled={isPaying}
+              >
+                Cancel
+              </Button>
+              <Button
+                type="submit"
+                isLoading={isPaying}
+                className="bg-success-600 hover:bg-success-700 text-white"
+              >
+                <CheckCircle2 className="w-4 h-4" aria-hidden="true" />
+                <span>{isPaying ? 'Recording…' : 'Record Payment'}</span>
+              </Button>
+            </div>
+          </form>
+        )}
+      </Modal>
     </div>
   );
 }
