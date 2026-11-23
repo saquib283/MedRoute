@@ -7,10 +7,11 @@
 import { NextRequest } from 'next/server';
 import type { Prisma } from '@prisma/client';
 import prisma from '@/lib/prisma';
-import { requireAuth } from '@/lib/api/auth-helper';
+import { getClientIP, requireAuth } from '@/lib/api/auth-helper';
 import { apiSuccess, apiError } from '@/lib/api/response';
 import { ERROR_CODES } from '@/lib/api/errors';
 import { calculateHotelStayNights } from '@/lib/validation/booking-helpers';
+import { updateHotelBooking } from '@/lib/services/accommodations.service';
 
 export async function GET(request: NextRequest) {
   try {
@@ -216,5 +217,44 @@ export async function POST(request: NextRequest) {
   } catch (err) {
     console.error('[Hotel Bookings POST Error]', err);
     return apiError(ERROR_CODES.INTERNAL_ERROR, 'Failed to process hotel accommodation booking', 500);
+  }
+}
+
+export async function PATCH(request: NextRequest) {
+  try {
+    const { user: authUser, error } = requireAuth(request);
+    if (error) return error;
+
+    let body: Record<string, unknown>;
+    try {
+      body = (await request.json()) as Record<string, unknown>;
+    } catch {
+      return apiError(ERROR_CODES.BAD_REQUEST, 'Invalid JSON request body', 400);
+    }
+
+    const result = await updateHotelBooking({
+      bookingId: body.bookingId,
+      status: body.status,
+      checkInDate: body.checkInDate,
+      checkOutDate: body.checkOutDate,
+      roomType: body.roomType,
+      numGuests: body.numGuests,
+      specialRequests: body.specialRequests,
+      notes: body.notes,
+      actor: {
+        userId: authUser.userId,
+        role: authUser.role,
+        ipAddress: getClientIP(request),
+      },
+    });
+
+    if (!result.ok) {
+      return apiError(result.code, result.message, result.status);
+    }
+
+    return apiSuccess(result.data);
+  } catch (err) {
+    console.error('[Hotel Bookings PATCH Error]', err);
+    return apiError(ERROR_CODES.INTERNAL_ERROR, 'Failed to update hotel accommodation booking', 500);
   }
 }

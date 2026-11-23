@@ -18,6 +18,7 @@ import {
   Home,
   Calendar,
   MessageSquare,
+  Receipt,
 } from 'lucide-react';
 
 interface NavItem {
@@ -133,6 +134,11 @@ export default function ManagerLayout({
               <path strokeLinecap="round" strokeLinejoin="round" d="M9 14l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
             </svg>
           ),
+        },
+        {
+          label: 'Partner Hotels',
+          href: '/manager/accommodations',
+          icon: <Home className="w-5 h-5" />,
         },
       ],
     },
@@ -309,6 +315,30 @@ export default function ManagerLayout({
                 <div>
                   <span className="text-xs font-bold text-primary-700 uppercase tracking-wider block mb-0.5">Surgical Roster</span>
                   <h2 className="text-base font-bold text-surface-900 tracking-tight">Consultations & Surgery Schedule</h2>
+                </div>
+              </div>
+            )}
+
+            {pathname === '/manager/billing' && (
+              <div className="flex items-center gap-2.5">
+                <div className="w-8 h-8 rounded-xl bg-primary-50 text-primary-600 border border-primary-100 flex items-center justify-center font-bold">
+                  <Receipt className="w-4 h-4" />
+                </div>
+                <div>
+                  <span className="text-xs font-bold text-primary-700 uppercase tracking-wider block mb-0.5">Billing & Invoices</span>
+                  <h2 className="text-base font-bold text-surface-900 tracking-tight">Patient Billing & Settlement</h2>
+                </div>
+              </div>
+            )}
+
+            {pathname === '/manager/accommodations' && (
+              <div className="flex items-center gap-2.5">
+                <div className="w-8 h-8 rounded-xl bg-primary-50 text-primary-600 border border-primary-100 flex items-center justify-center font-bold">
+                  <Home className="w-4 h-4" />
+                </div>
+                <div>
+                  <span className="text-xs font-bold text-primary-700 uppercase tracking-wider block mb-0.5">Operations & Travel</span>
+                  <h2 className="text-base font-bold text-surface-900 tracking-tight">Partner Hotels & Stays</h2>
                 </div>
               </div>
             )}
