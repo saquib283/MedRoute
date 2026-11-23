@@ -2,14 +2,17 @@
  * Afzal Healthcare — Patient Appointments API Endpoint
  * GET /api/v1/patient/appointments — List appointments & available metadata
  * POST /api/v1/patient/appointments — Request/book a new consultation
+ * PUT /api/v1/patient/appointments — Self-cancel an active appointment with reason
  */
 
 import { NextRequest } from 'next/server';
+import { z } from 'zod';
 import prisma from '@/lib/prisma';
 import { requireAuth } from '@/lib/api/auth-helper';
 import { apiSuccess, apiError } from '@/lib/api/response';
 import { ERROR_CODES } from '@/lib/api/errors';
 import { bookAppointmentSchema } from '@/lib/validation/schemas';
+import { isDoctorAvailableOnDate } from '@/lib/validation/booking-helpers';
 
 interface HospitalOption {
   id: string;
@@ -24,6 +27,11 @@ interface DoctorOption {
   hospitalId: string;
   availableDays: unknown;
 }
+
+const patientCancelSchema = z.object({
+  appointmentId: z.string().min(1),
+  cancellationReason: z.string().trim().min(3, 'Cancellation reason must be at least 3 characters').max(1000),
+});
 
 export async function GET(request: NextRequest) {
   try {
@@ -125,6 +133,19 @@ export async function POST(request: NextRequest) {
 
     const { caseId, hospitalId, doctorId, appointmentType, scheduledAt } = result.data;
 
+    if (appointmentType === 'SURGERY') {
+      return apiError(
+        ERROR_CODES.BAD_REQUEST,
+        'Surgical procedures must be scheduled by your Case Manager',
+        400
+      );
+    }
+
+    const scheduledDate = new Date(scheduledAt);
+    if (isNaN(scheduledDate.getTime())) {
+      return apiError(ERROR_CODES.BAD_REQUEST, 'Invalid scheduled date', 400);
+    }
+
     // Verify case ownership and active status
     const caseRecord = await prisma.case.findUnique({ where: { id: caseId } });
     if (!caseRecord || caseRecord.patientId !== patient.id) {
@@ -148,6 +169,14 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    if (!isDoctorAvailableOnDate(doctor.availableDays, scheduledDate)) {
+      return apiError(
+        ERROR_CODES.SLOT_UNAVAILABLE,
+        'Doctor is not available on the selected day',
+        400
+      );
+    }
+
     // Create the appointment record
     const appointment = await prisma.appointment.create({
       data: {
@@ -156,7 +185,7 @@ export async function POST(request: NextRequest) {
         hospitalId,
         doctorId,
         appointmentType,
-        scheduledAt: new Date(scheduledAt),
+        scheduledAt: scheduledDate,
         createdBy: authUser!.userId,
         status: 'SCHEDULED',
       },
@@ -170,5 +199,56 @@ export async function POST(request: NextRequest) {
   } catch (err) {
     console.error('[Patient Appointments POST Error]', err);
     return apiError(ERROR_CODES.INTERNAL_ERROR, 'Failed to request appointment', 500);
+  }
+}
+
+export async function PUT(request: NextRequest) {
+  try {
+    const { user: authUser, error: authError } = requireAuth(request);
+    if (authError) return authError;
+
+    const patient = await prisma.patient.findFirst({
+      where: { userId: authUser!.userId },
+    });
+    if (!patient) {
+      return apiError(ERROR_CODES.USER_NOT_FOUND, 'Patient profile not found', 404);
+    }
+
+    const body = await request.json();
+    const parsed = patientCancelSchema.safeParse(body);
+    if (!parsed.success) {
+      return apiError(ERROR_CODES.BAD_REQUEST, parsed.error.issues[0].message, 400);
+    }
+
+    const { appointmentId, cancellationReason } = parsed.data;
+
+    const appointment = await prisma.appointment.findUnique({
+      where: { id: appointmentId },
+    });
+
+    if (!appointment || appointment.patientId !== patient.id) {
+      return apiError(ERROR_CODES.APPOINTMENT_NOT_FOUND, 'Appointment not found', 404);
+    }
+
+    if (appointment.status === 'CANCELLED' || appointment.status === 'COMPLETED') {
+      return apiError(
+        ERROR_CODES.BAD_REQUEST,
+        'Cancelled or completed appointments cannot be cancelled',
+        400
+      );
+    }
+
+    const updated = await prisma.appointment.update({
+      where: { id: appointmentId },
+      data: {
+        status: 'CANCELLED',
+        cancellationReason,
+      },
+    });
+
+    return apiSuccess({ appointment: updated });
+  } catch (err) {
+    console.error('[Patient Appointments PUT Error]', err);
+    return apiError(ERROR_CODES.INTERNAL_ERROR, 'Failed to cancel appointment', 500);
   }
 }

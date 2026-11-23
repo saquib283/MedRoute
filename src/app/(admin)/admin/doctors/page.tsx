@@ -2,7 +2,7 @@
 
 /**
  * Afzal Healthcare — Admin Doctors Management
- * CRUD for doctors with search, filters, deactivation, and toast notifications.
+ * CRUD for doctors with portal login provisioning/linking, search, filters, deactivation, and toast notifications.
  */
 
 import { useState, useEffect, useCallback } from 'react';
@@ -13,18 +13,28 @@ import { Select } from '@/components/ui/Select';
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
 import { toast } from '@/components/ui/Toast';
 import { DAYS_OF_WEEK } from '@/lib/constants';
+import { formatDoctorDisplayName } from '@/lib/validation/booking-helpers';
+
+interface DoctorUser {
+  id: string;
+  email: string;
+  fullName?: string;
+}
 
 interface Doctor {
   id: string;
+  hospitalId: string;
+  specialisationId: string;
+  userId: string | null;
   fullName: string;
   qualification: string | null;
   consultationFee: number | null;
   availableDays: string[];
   languages: string[];
   isActive: boolean;
-  hospital: { name: string; city: string };
-  specialisation: { name: string };
-  user: { email: string } | null;
+  hospital: { id?: string; name: string; city: string };
+  specialisation: { id?: string; name: string };
+  user: DoctorUser | null;
   _count: { appointments: number };
 }
 
@@ -39,8 +49,11 @@ interface SpecOption {
   name: string;
 }
 
+type AccountMode = 'none' | 'link' | 'create';
+
 export default function AdminDoctorsPage() {
   const [doctors, setDoctors] = useState<Doctor[]>([]);
+  const [unlinkedDoctorUsers, setUnlinkedDoctorUsers] = useState<DoctorUser[]>([]);
   const [hospitals, setHospitals] = useState<HospitalOption[]>([]);
   const [specs, setSpecs] = useState<SpecOption[]>([]);
   const [loading, setLoading] = useState(true);
@@ -59,6 +72,10 @@ export default function AdminDoctorsPage() {
     consultationFee: '',
     availableDays: [] as string[],
     isActive: true,
+    accountMode: 'none' as AccountMode,
+    userId: '',
+    email: '',
+    password: '',
   });
   const [saving, setSaving] = useState(false);
 
@@ -73,10 +90,11 @@ export default function AdminDoctorsPage() {
   const fetchDoctors = useCallback(async () => {
     setLoading(true);
     try {
-      const res = await fetch('/api/v1/admin/doctors');
+      const res = await fetch('/api/v1/admin/doctors?meta=true');
       const data = await res.json();
       if (data.success) {
-        let list: Doctor[] = data.data.doctors;
+        let list: Doctor[] = data.data.doctors || [];
+        setUnlinkedDoctorUsers(data.data.unlinkedDoctorUsers || []);
         if (search) {
           list = list.filter((d) => d.fullName.toLowerCase().includes(search.toLowerCase()));
         }
@@ -125,6 +143,10 @@ export default function AdminDoctorsPage() {
       consultationFee: '',
       availableDays: [],
       isActive: true,
+      accountMode: 'none',
+      userId: '',
+      email: '',
+      password: '',
     });
     setShowModal(true);
   };
@@ -133,12 +155,16 @@ export default function AdminDoctorsPage() {
     setEditing(d);
     setForm({
       fullName: d.fullName,
-      hospitalId: '',
-      specialisationId: '',
+      hospitalId: d.hospitalId || d.hospital?.id || '',
+      specialisationId: d.specialisationId || d.specialisation?.id || '',
       qualification: d.qualification || '',
       consultationFee: d.consultationFee?.toString() || '',
       availableDays: Array.isArray(d.availableDays) ? d.availableDays : [],
       isActive: d.isActive,
+      accountMode: d.userId ? 'link' : 'none',
+      userId: d.userId || '',
+      email: '',
+      password: '',
     });
     setShowModal(true);
   };
@@ -158,16 +184,24 @@ export default function AdminDoctorsPage() {
     try {
       const payload: Record<string, unknown> = {
         fullName: form.fullName,
+        hospitalId: form.hospitalId,
+        specialisationId: form.specialisationId,
         qualification: form.qualification || undefined,
         consultationFee: form.consultationFee ? parseFloat(form.consultationFee) : undefined,
         availableDays: form.availableDays,
         isActive: form.isActive,
       };
-      if (!editing) {
-        payload.hospitalId = form.hospitalId;
-        payload.specialisationId = form.specialisationId;
-      }
       if (editing) payload.id = editing.id;
+
+      if (form.accountMode === 'create') {
+        payload.createAccount = true;
+        payload.email = form.email;
+        payload.password = form.password;
+      } else if (form.accountMode === 'link') {
+        payload.userId = form.userId || null;
+      } else if (editing && editing.userId) {
+        payload.userId = null;
+      }
 
       const res = await fetch('/api/v1/admin/doctors', {
         method: editing ? 'PUT' : 'POST',
@@ -211,12 +245,22 @@ export default function AdminDoctorsPage() {
     }
   };
 
+  const linkableUserOptions = [
+    ...(editing?.user ? [{ value: editing.user.id, label: `${editing.user.email} (Current)` }] : []),
+    ...unlinkedDoctorUsers
+      .filter((u) => u.id !== editing?.user?.id)
+      .map((u) => ({
+        value: u.id,
+        label: u.fullName ? `${u.fullName} (${u.email})` : u.email,
+      })),
+  ];
+
   return (
     <div className="max-w-7xl mx-auto space-y-6 animate-fade-in">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
           <h1 className="text-2xl font-bold text-surface-900 tracking-tight">Doctors</h1>
-          <p className="text-sm text-surface-500 mt-1">Manage doctors, qualifications, fees, and weekly schedule availability.</p>
+          <p className="text-sm text-surface-500 mt-1">Manage doctors, portal logins, qualifications, fees, and weekly schedule availability.</p>
         </div>
         <Button onClick={openCreate}>+ Add Doctor</Button>
       </div>
@@ -266,6 +310,7 @@ export default function AdminDoctorsPage() {
               <thead>
                 <tr className="border-b border-surface-100 bg-surface-50">
                   <th className="px-5 py-3 text-left text-xs font-bold text-surface-500 uppercase tracking-wider">Name</th>
+                  <th className="px-5 py-3 text-left text-xs font-bold text-surface-500 uppercase tracking-wider">Portal Login</th>
                   <th className="px-5 py-3 text-left text-xs font-bold text-surface-500 uppercase tracking-wider">Hospital</th>
                   <th className="px-5 py-3 text-left text-xs font-bold text-surface-500 uppercase tracking-wider">Specialisation</th>
                   <th className="px-5 py-3 text-left text-xs font-bold text-surface-500 uppercase tracking-wider">Fee</th>
@@ -277,7 +322,7 @@ export default function AdminDoctorsPage() {
               <tbody className="divide-y divide-surface-100">
                 {doctors.length === 0 ? (
                   <tr>
-                    <td colSpan={7} className="px-5 py-12 text-center text-surface-500">
+                    <td colSpan={8} className="px-5 py-12 text-center text-surface-500">
                       No doctors found.
                     </td>
                   </tr>
@@ -285,8 +330,15 @@ export default function AdminDoctorsPage() {
                   doctors.map((d) => (
                     <tr key={d.id} className="hover:bg-surface-50 transition-colors">
                       <td className="px-5 py-3.5">
-                        <p className="font-semibold text-surface-900">{d.fullName}</p>
+                        <p className="font-semibold text-surface-900">{formatDoctorDisplayName(d.fullName)}</p>
                         <p className="text-xs text-surface-400">{d.qualification || '—'}</p>
+                      </td>
+                      <td className="px-5 py-3.5">
+                        {d.user?.email ? (
+                          <Badge variant="primary">{d.user.email}</Badge>
+                        ) : (
+                          <span className="text-xs text-surface-400">Not linked</span>
+                        )}
                       </td>
                       <td className="px-5 py-3.5 text-surface-600">
                         {d.hospital.name}, {d.hospital.city}
@@ -355,26 +407,26 @@ export default function AdminDoctorsPage() {
                   className="w-full p-2.5 border border-surface-200 rounded-xl text-sm focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500"
                 />
               </div>
-              {!editing && (
-                <div className="grid grid-cols-2 gap-4">
-                  <Select
-                    label="Hospital"
-                    value={form.hospitalId}
-                    onChange={(val) => setForm({ ...form, hospitalId: val })}
-                    options={hospitals.map((h) => ({ value: h.id, label: `${h.name} (${h.city})` }))}
-                    required
-                    className="col-span-1"
-                  />
-                  <Select
-                    label="Specialisation"
-                    value={form.specialisationId}
-                    onChange={(val) => setForm({ ...form, specialisationId: val })}
-                    options={specs.map((s) => ({ value: s.id, label: s.name }))}
-                    required
-                    className="col-span-1"
-                  />
-                </div>
-              )}
+
+              <div className="grid grid-cols-2 gap-4">
+                <Select
+                  label="Hospital"
+                  value={form.hospitalId}
+                  onChange={(val) => setForm({ ...form, hospitalId: val })}
+                  options={hospitals.map((h) => ({ value: h.id, label: `${h.name} (${h.city})` }))}
+                  required
+                  className="col-span-1"
+                />
+                <Select
+                  label="Specialisation"
+                  value={form.specialisationId}
+                  onChange={(val) => setForm({ ...form, specialisationId: val })}
+                  options={specs.map((s) => ({ value: s.id, label: s.name }))}
+                  required
+                  className="col-span-1"
+                />
+              </div>
+
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-1.5">
                   <label className="block text-xs font-semibold text-surface-700">Qualification</label>
@@ -395,6 +447,7 @@ export default function AdminDoctorsPage() {
                   />
                 </div>
               </div>
+
               <div className="space-y-1.5">
                 <label className="block text-xs font-semibold text-surface-700">Available Days</label>
                 <div className="flex flex-wrap gap-2">
@@ -414,6 +467,75 @@ export default function AdminDoctorsPage() {
                   ))}
                 </div>
               </div>
+
+              {/* Portal Login Account */}
+              <div className="space-y-3 p-3.5 bg-surface-50 border border-surface-200 rounded-xl">
+                <label className="block text-xs font-semibold text-surface-700">Portal Login Account</label>
+                <div className="grid grid-cols-3 gap-2">
+                  {(
+                    [
+                      { id: 'none', label: 'No Login' },
+                      { id: 'link', label: 'Link Existing' },
+                      { id: 'create', label: 'Create New' },
+                    ] as const
+                  ).map((mode) => (
+                    <button
+                      key={mode.id}
+                      type="button"
+                      onClick={() => setForm({ ...form, accountMode: mode.id })}
+                      className={`px-2.5 py-1.5 rounded-lg text-xs font-semibold border transition-colors ${
+                        form.accountMode === mode.id
+                          ? 'bg-primary-600 text-white border-primary-600'
+                          : 'bg-white text-surface-700 border-surface-200 hover:bg-surface-100'
+                      }`}
+                    >
+                      {mode.label}
+                    </button>
+                  ))}
+                </div>
+
+                {form.accountMode === 'link' && (
+                  <Select
+                    label="Select Doctor User Account"
+                    value={form.userId}
+                    onChange={(val) => setForm({ ...form, userId: val })}
+                    options={[
+                      { value: '', label: '-- Choose DOCTOR user --' },
+                      ...linkableUserOptions,
+                    ]}
+                    placeholder="Choose DOCTOR user..."
+                  />
+                )}
+
+                {form.accountMode === 'create' && (
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <div className="space-y-1">
+                      <label className="block text-xs font-semibold text-surface-700">Login Email</label>
+                      <input
+                        type="email"
+                        required
+                        value={form.email}
+                        onChange={(e) => setForm({ ...form, email: e.target.value })}
+                        placeholder="doctor@hospital.com"
+                        className="w-full p-2 border border-surface-200 bg-white rounded-lg text-sm focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500"
+                      />
+                    </div>
+                    <div className="space-y-1">
+                      <label className="block text-xs font-semibold text-surface-700">Temporary Password</label>
+                      <input
+                        type="password"
+                        required
+                        minLength={8}
+                        value={form.password}
+                        onChange={(e) => setForm({ ...form, password: e.target.value })}
+                        placeholder="Min 8 characters"
+                        className="w-full p-2 border border-surface-200 bg-white rounded-lg text-sm focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500"
+                      />
+                    </div>
+                  </div>
+                )}
+              </div>
+
               {editing && (
                 <div className="flex items-center gap-2">
                   <input
@@ -427,6 +549,7 @@ export default function AdminDoctorsPage() {
                   </label>
                 </div>
               )}
+
               <div className="flex gap-3 pt-2">
                 <Button type="button" variant="secondary" className="flex-1" onClick={() => setShowModal(false)}>
                   Cancel

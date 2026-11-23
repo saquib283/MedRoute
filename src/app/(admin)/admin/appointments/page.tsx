@@ -2,7 +2,7 @@
 
 /**
  * Afzal Healthcare — Admin Appointments Management
- * Paginated appointments list with search, filters, cancel, and reschedule actions.
+ * Paginated appointments list with search, filters, status progression, clinical notes, cancel, and reschedule actions.
  */
 
 import { useState, useEffect, useCallback } from 'react';
@@ -13,13 +13,14 @@ import { DatePicker } from '@/components/ui/DatePicker';
 import { Select } from '@/components/ui/Select';
 import { toast } from '@/components/ui/Toast';
 import { APPOINTMENT_TYPE_LABELS, APPOINTMENT_STATUS_LABELS } from '@/lib/constants';
+import { formatDoctorDisplayName } from '@/lib/validation/booking-helpers';
 
 interface Appointment {
   id: string;
   scheduledAt: string;
   status: string;
   appointmentType: string;
-  notes: string | null;
+  clinicalNotes: string | null;
   cancellationReason: string | null;
   patient: { user: { fullName: string } };
   doctor: { fullName: string };
@@ -53,6 +54,7 @@ export default function AdminAppointmentsPage() {
 
   // Detail drawer
   const [selectedAppt, setSelectedAppt] = useState<Appointment | null>(null);
+  const [notesDraft, setNotesDraft] = useState('');
   const [actionLoading, setActionLoading] = useState(false);
 
   // Cancel dialog
@@ -91,7 +93,6 @@ export default function AdminAppointmentsPage() {
   }, [fetchAppointments]);
 
   useEffect(() => {
-    // Fetch hospitals for filter dropdown
     fetch('/api/v1/admin/hospitals')
       .then((r) => r.json())
       .then((d) => {
@@ -101,6 +102,49 @@ export default function AdminAppointmentsPage() {
       })
       .catch(() => {});
   }, []);
+
+  const openDetailModal = (appt: Appointment) => {
+    setSelectedAppt(appt);
+    setNotesDraft(appt.clinicalNotes || '');
+  };
+
+  const handleUpdateDetails = async (status?: string) => {
+    if (!selectedAppt) return;
+    setActionLoading(true);
+    try {
+      const payload: Record<string, unknown> = {
+        id: selectedAppt.id,
+        clinicalNotes: notesDraft,
+      };
+      if (status) payload.status = status;
+
+      const res = await fetch('/api/v1/admin/appointments', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      });
+      const data = await res.json();
+      if (!data.success) {
+        toast.error(data.error?.message || 'Failed to update appointment');
+        return;
+      }
+      toast.success(status ? `Appointment marked ${APPOINTMENT_STATUS_LABELS[status] || status}` : 'Clinical notes saved');
+      setSelectedAppt((prev) =>
+        prev
+          ? {
+              ...prev,
+              status: status || prev.status,
+              clinicalNotes: notesDraft,
+            }
+          : null
+      );
+      fetchAppointments(pagination.page);
+    } catch {
+      toast.error('An error occurred.');
+    } finally {
+      setActionLoading(false);
+    }
+  };
 
   const handleCancel = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -261,7 +305,7 @@ export default function AdminAppointmentsPage() {
                     <tr key={a.id} className="hover:bg-surface-50 transition-colors">
                       <td className="px-5 py-3.5 font-semibold text-surface-900">{a.patient.user.fullName}</td>
                       <td className="px-5 py-3.5">
-                        <p className="font-semibold text-surface-900">{a.doctor.fullName}</p>
+                        <p className="font-semibold text-surface-900">{formatDoctorDisplayName(a.doctor.fullName)}</p>
                         <p className="text-xs text-surface-400">
                           {a.hospital.name}, {a.hospital.city}
                         </p>
@@ -278,7 +322,7 @@ export default function AdminAppointmentsPage() {
                         </Badge>
                       </td>
                       <td className="px-5 py-3.5 text-right">
-                        <Button variant="ghost" size="sm" onClick={() => setSelectedAppt(a)}>
+                        <Button variant="ghost" size="sm" onClick={() => openDetailModal(a)}>
                           Manage
                         </Button>
                       </td>
@@ -340,7 +384,7 @@ export default function AdminAppointmentsPage() {
                 </div>
                 <div>
                   <p className="text-xs font-bold text-surface-600 uppercase">Doctor</p>
-                  <p className="text-sm font-semibold text-surface-900">{selectedAppt.doctor.fullName}</p>
+                  <p className="text-sm font-semibold text-surface-900">{formatDoctorDisplayName(selectedAppt.doctor.fullName)}</p>
                 </div>
                 <div>
                   <p className="text-xs font-bold text-surface-600 uppercase">Hospital</p>
@@ -361,42 +405,98 @@ export default function AdminAppointmentsPage() {
                     </Badge>
                   </div>
                 </div>
-                {selectedAppt.notes && (
-                  <div>
-                    <p className="text-xs font-bold text-surface-600 uppercase">Notes</p>
-                    <p className="text-sm text-surface-600 bg-surface-50 p-3 rounded-xl border border-surface-200">{selectedAppt.notes}</p>
-                  </div>
-                )}
+
                 {selectedAppt.cancellationReason && (
                   <div>
                     <p className="text-xs font-bold text-danger-600 uppercase">Cancellation Reason</p>
                     <p className="text-sm text-danger-700 bg-danger-50 p-3 rounded-xl border border-danger-200">{selectedAppt.cancellationReason}</p>
                   </div>
                 )}
+
+                <div className="space-y-1.5">
+                  <label htmlFor="admin-clinical-notes" className="block text-xs font-bold text-surface-600 uppercase">
+                    Clinical Notes
+                  </label>
+                  <textarea
+                    id="admin-clinical-notes"
+                    rows={3}
+                    value={notesDraft}
+                    onChange={(e) => setNotesDraft(e.target.value)}
+                    placeholder="Record clinical notes or visit summary..."
+                    className="w-full p-2.5 border border-surface-200 rounded-xl text-sm focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500"
+                  />
+                  <div className="flex justify-end">
+                    <Button
+                      type="button"
+                      variant="secondary"
+                      size="sm"
+                      isLoading={actionLoading}
+                      onClick={() => handleUpdateDetails()}
+                    >
+                      Save Notes
+                    </Button>
+                  </div>
+                </div>
               </div>
 
               {selectedAppt.status !== 'CANCELLED' && selectedAppt.status !== 'COMPLETED' && (
-                <div className="pt-4 border-t border-surface-100 flex gap-3">
-                  <Button
-                    variant="secondary"
-                    className="flex-1 text-danger-600 hover:bg-danger-50 border-danger-200"
-                    onClick={() => setCancelModal({ open: true, id: selectedAppt.id, reason: '' })}
-                  >
-                    Cancel Appointment
-                  </Button>
-                  <Button
-                    variant="primary"
-                    className="flex-1"
-                    onClick={() =>
-                      setRescheduleModal({
-                        open: true,
-                        id: selectedAppt.id,
-                        dateStr: new Date(selectedAppt.scheduledAt).toISOString().slice(0, 16),
-                      })
-                    }
-                  >
-                    Reschedule
-                  </Button>
+                <div className="pt-4 border-t border-surface-100 space-y-3">
+                  <div className="flex flex-wrap gap-2">
+                    {selectedAppt.status !== 'CONFIRMED' && (
+                      <Button
+                        type="button"
+                        variant="secondary"
+                        size="sm"
+                        isLoading={actionLoading}
+                        onClick={() => handleUpdateDetails('CONFIRMED')}
+                      >
+                        Confirm
+                      </Button>
+                    )}
+                    {selectedAppt.status !== 'IN_PROGRESS' && (
+                      <Button
+                        type="button"
+                        variant="secondary"
+                        size="sm"
+                        isLoading={actionLoading}
+                        onClick={() => handleUpdateDetails('IN_PROGRESS')}
+                      >
+                        Mark In Progress
+                      </Button>
+                    )}
+                    <Button
+                      type="button"
+                      variant="primary"
+                      size="sm"
+                      isLoading={actionLoading}
+                      onClick={() => handleUpdateDetails('COMPLETED')}
+                    >
+                      Mark Completed
+                    </Button>
+                  </div>
+
+                  <div className="flex gap-3">
+                    <Button
+                      variant="secondary"
+                      className="flex-1 text-danger-600 hover:bg-danger-50 border-danger-200"
+                      onClick={() => setCancelModal({ open: true, id: selectedAppt.id, reason: '' })}
+                    >
+                      Cancel Appointment
+                    </Button>
+                    <Button
+                      variant="primary"
+                      className="flex-1"
+                      onClick={() =>
+                        setRescheduleModal({
+                          open: true,
+                          id: selectedAppt.id,
+                          dateStr: new Date(selectedAppt.scheduledAt).toISOString().slice(0, 16),
+                        })
+                      }
+                    >
+                      Reschedule
+                    </Button>
+                  </div>
                 </div>
               )}
             </div>

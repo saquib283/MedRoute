@@ -20,13 +20,16 @@ export const PERMISSIONS = {
   // Case Management
   'create:case': ['MANAGER', 'ADMIN'],
   'edit:case': ['MANAGER', 'ADMIN'],
-  'view:case': ['PATIENT', 'MANAGER', 'ADMIN'],
+  'view:case': ['PATIENT', 'MANAGER', 'ADMIN', 'DOCTOR'],
+  'sign:clinical-pathway': ['DOCTOR', 'MANAGER', 'ADMIN'],
+  'sign:fit-to-fly': ['DOCTOR', 'ADMIN'],
 
   // Appointments
   'book:appointment': ['MANAGER', 'ADMIN'],
   'request:appointment': ['PATIENT'],
   'cancel:appointment': ['MANAGER', 'ADMIN'],
   'view:appointments': ['PATIENT', 'MANAGER', 'ADMIN', 'DOCTOR'],
+  'update:clinical-appointments': ['DOCTOR', 'MANAGER', 'ADMIN'],
 
   // Partners
   'manage:hospitals': ['ADMIN'],
@@ -51,6 +54,8 @@ export const PERMISSIONS = {
   // Documents
   'upload:documents': ['PATIENT', 'MANAGER', 'ADMIN'],
   'view:documents': ['PATIENT', 'MANAGER', 'ADMIN', 'DOCTOR'],
+  'verify:documents': ['MANAGER', 'ADMIN'],
+  'issue:documents': ['MANAGER', 'DOCTOR', 'ADMIN'],
 
   // Messaging
   'send:messages': ['PATIENT', 'MANAGER', 'ADMIN'],

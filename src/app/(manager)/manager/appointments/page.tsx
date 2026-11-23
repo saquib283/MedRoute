@@ -2,7 +2,7 @@
 
 /**
  * Afzal Healthcare — Manager Appointments scheduler controller
- * Schedule, reschedule, or cancel patient hospital appointments.
+ * Schedule, confirm, complete, reschedule, or cancel patient hospital appointments.
  */
 
 import { useState, useEffect } from 'react';
@@ -10,6 +10,7 @@ import { Card } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { DatePicker } from '@/components/ui/DatePicker';
 import { Select } from '@/components/ui/Select';
+import { formatDoctorDisplayName } from '@/lib/validation/booking-helpers';
 
 enum AppointmentStatus {
   SCHEDULED = 'SCHEDULED',
@@ -65,6 +66,7 @@ interface Appointment {
   scheduledAt: string;
   status: AppointmentStatus;
   cancellationReason: string | null;
+  clinicalNotes?: string | null;
   patient: {
     user: {
       fullName: string;
@@ -103,11 +105,11 @@ export default function AppointmentsManager() {
   const [targetDoctorId, setTargetDoctorId] = useState('');
   const [targetApptType, setTargetApptType] = useState<AppointmentType>(AppointmentType.CONSULTATION);
   const [scheduledAtStr, setScheduledAtStr] = useState('');
-  
+
   // Form fields: Reschedule/Cancel
   const [rescheduleDateStr, setRescheduleDateStr] = useState('');
   const [cancellationReason, setCancellationReason] = useState('');
-  
+
   const [submitting, setSubmitting] = useState(false);
   const [formError, setFormError] = useState('');
 
@@ -175,7 +177,6 @@ export default function AppointmentsManager() {
           setAppointments(reloadData.appointments);
         }
         setIsBookModalOpen(false);
-        // Reset
         setTargetPatientId('');
         setTargetHospitalId('');
         setTargetDoctorId('');
@@ -188,6 +189,27 @@ export default function AppointmentsManager() {
     } catch (err) {
       console.error('Appointment schedule failed:', err);
       setFormError('Appointment registration encountered error.');
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  const handleQuickStatus = async (appointmentId: string, status: AppointmentStatus) => {
+    setSubmitting(true);
+    try {
+      const res = await fetch('/api/v1/manager/appointments', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ appointmentId, status }),
+      });
+
+      if (res.ok) {
+        setAppointments((prev) =>
+          prev.map((a) => (a.id === appointmentId ? { ...a, status } : a))
+        );
+      }
+    } catch (err) {
+      console.error('Quick status update failed:', err);
     } finally {
       setSubmitting(false);
     }
@@ -210,7 +232,6 @@ export default function AppointmentsManager() {
       });
 
       if (res.ok) {
-        const data = await res.json();
         setAppointments((prev) =>
           prev.map((a) => (a.id === reschedulingAppt.id ? { ...a, scheduledAt: rescheduleDateStr, status: AppointmentStatus.RESCHEDULED } : a))
         );
@@ -255,11 +276,11 @@ export default function AppointmentsManager() {
   };
 
   const upcomingAppointments = appointments.filter(
-    (a) => new Date(a.scheduledAt).getTime() >= new Date().getTime() && a.status !== 'CANCELLED'
+    (a) => new Date(a.scheduledAt).getTime() >= new Date().getTime() && a.status !== 'CANCELLED' && a.status !== 'COMPLETED'
   );
-  
+
   const pastAppointments = appointments.filter(
-    (a) => new Date(a.scheduledAt).getTime() < new Date().getTime() || a.status === 'CANCELLED'
+    (a) => new Date(a.scheduledAt).getTime() < new Date().getTime() || a.status === 'CANCELLED' || a.status === 'COMPLETED'
   );
 
   const activeRoster = activeTab === 'UPCOMING' ? upcomingAppointments : pastAppointments;
@@ -280,7 +301,7 @@ export default function AppointmentsManager() {
       <div className="flex justify-between items-start">
         <div>
           <h1 className="text-2xl font-bold text-surface-900">Clinical Appointments</h1>
-          <p className="text-sm text-surface-500 mt-1">Schedule, reschedule, or cancel patient hospital consultations, assessments, and surgeries.</p>
+          <p className="text-sm text-surface-500 mt-1">Schedule, confirm, complete, reschedule, or cancel patient hospital consultations, assessments, and surgeries.</p>
         </div>
         <Button size="sm" onClick={() => setIsBookModalOpen(true)}>
           Book Appointment
@@ -307,7 +328,7 @@ export default function AppointmentsManager() {
           }`}
           onClick={() => setActiveTab('PAST')}
         >
-          Past / Cancelled ({pastAppointments.length})
+          Past / Completed / Cancelled ({pastAppointments.length})
         </button>
       </div>
 
@@ -321,7 +342,7 @@ export default function AppointmentsManager() {
                 <th className="px-6 py-4 font-semibold text-surface-700">Doctor / Hospital</th>
                 <th className="px-6 py-4 font-semibold text-surface-700">Type</th>
                 <th className="px-6 py-4 font-semibold text-surface-700">Scheduled Date</th>
-                <th className="px-6 py-4 font-semibold text-surface-700">Status</th>
+                <th className="px-6 py-4 font-semibold text-surface-700">Status & Notes</th>
                 <th className="px-6 py-4 font-semibold text-surface-700 text-center">Actions</th>
               </tr>
             </thead>
@@ -340,7 +361,7 @@ export default function AppointmentsManager() {
                       <p className="text-xs text-surface-500 font-mono">Case ID: {appt.caseId}</p>
                     </td>
                     <td className="px-6 py-4">
-                      <p className="font-semibold text-surface-900">Dr. {appt.doctor.fullName}</p>
+                      <p className="font-semibold text-surface-900">{formatDoctorDisplayName(appt.doctor.fullName)}</p>
                       <p className="text-xs text-surface-500">
                         {appt.doctor.specialisation.name} • {appt.hospital.name} ({appt.hospital.city})
                       </p>
@@ -372,15 +393,38 @@ export default function AppointmentsManager() {
                         {appt.status}
                       </span>
                       {appt.cancellationReason && (
-                        <p className="text-xs text-red-600 mt-1 max-w-[150px] truncate" title={appt.cancellationReason}>
+                        <p className="text-xs text-red-600 mt-1 max-w-[180px] truncate" title={appt.cancellationReason}>
                           Reason: {appt.cancellationReason}
+                        </p>
+                      )}
+                      {appt.clinicalNotes && (
+                        <p className="text-xs text-surface-600 mt-1 max-w-[200px] truncate" title={appt.clinicalNotes}>
+                          Notes: {appt.clinicalNotes}
                         </p>
                       )}
                     </td>
                     <td className="px-6 py-4 text-center">
-                      <div className="flex justify-center gap-1.5">
+                      <div className="flex flex-wrap justify-center gap-1.5">
                         {appt.status !== 'CANCELLED' && appt.status !== 'COMPLETED' && (
                           <>
+                            {(appt.status === 'SCHEDULED' || appt.status === 'RESCHEDULED') && (
+                              <Button
+                                size="sm"
+                                variant="secondary"
+                                disabled={submitting}
+                                onClick={() => handleQuickStatus(appt.id, AppointmentStatus.CONFIRMED)}
+                              >
+                                Confirm
+                              </Button>
+                            )}
+                            <Button
+                              size="sm"
+                              variant="secondary"
+                              disabled={submitting}
+                              onClick={() => handleQuickStatus(appt.id, AppointmentStatus.COMPLETED)}
+                            >
+                              Complete
+                            </Button>
                             <Button size="sm" onClick={() => setReschedulingAppt(appt)}>
                               Reschedule
                             </Button>
@@ -455,7 +499,7 @@ export default function AppointmentsManager() {
                     .filter((d) => !targetHospitalId || d.hospitalId === targetHospitalId)
                     .map((d) => ({
                       value: d.id,
-                      label: `Dr. ${d.fullName} (${d.specialisation.name})`
+                      label: `${formatDoctorDisplayName(d.fullName)} (${d.specialisation.name})`
                     }))
                 ]}
                 required

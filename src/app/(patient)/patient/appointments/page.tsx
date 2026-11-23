@@ -2,7 +2,7 @@
 
 /**
  * Afzal Healthcare — Patient Appointments Page
- * Appointments timeline, status filters, and booking wizard modal using custom Select & DatePicker components.
+ * Appointments timeline, status filters, booking wizard modal, and self-cancellation modal.
  */
 
 import { useState, useEffect, useMemo } from 'react';
@@ -12,6 +12,7 @@ import { Badge } from '@/components/ui/Badge';
 import { Select, SelectOption } from '@/components/ui/Select';
 import { DatePicker } from '@/components/ui/DatePicker';
 import { APPOINTMENT_TYPE_LABELS } from '@/lib/constants';
+import { formatDoctorDisplayName } from '@/lib/validation/booking-helpers';
 import {
   Calendar,
   Building2,
@@ -19,7 +20,6 @@ import {
   Plus,
   LayoutGrid,
   Table,
-  CheckCircle2,
   Clock,
   AlertCircle,
   Stethoscope,
@@ -65,7 +65,6 @@ const STATUS_FILTERS = [
 const APPOINTMENT_TYPE_OPTIONS: SelectOption[] = [
   { value: 'CONSULTATION', label: 'Consultation', description: 'General specialist assessment' },
   { value: 'PRE_OP_ASSESSMENT', label: 'Pre-op Assessment', description: 'Surgeon pre-operation check' },
-  { value: 'SURGERY', label: 'Surgery', description: 'Scheduled surgical procedure' },
   { value: 'POST_OP_REVIEW', label: 'Post-op Review', description: 'Follow-up discharge check' },
 ];
 
@@ -87,6 +86,12 @@ export default function AppointmentsPage() {
   const [selectedDoctor, setSelectedDoctor] = useState('');
   const [selectedType, setSelectedType] = useState('CONSULTATION');
   const [scheduledAt, setScheduledAt] = useState('');
+
+  // Self-cancellation modal state
+  const [cancelTarget, setCancelTarget] = useState<Appointment | null>(null);
+  const [cancelReason, setCancelReason] = useState('');
+  const [cancelError, setCancelError] = useState('');
+  const [isCancelLoading, setIsCancelLoading] = useState(false);
 
   const fetchAppointments = async () => {
     try {
@@ -160,6 +165,42 @@ export default function AppointmentsPage() {
     }
   };
 
+  const handleSelfCancel = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!cancelTarget) return;
+    setCancelError('');
+
+    if (cancelReason.trim().length < 3) {
+      setCancelError('Please provide a brief cancellation reason (at least 3 characters).');
+      return;
+    }
+
+    setIsCancelLoading(true);
+    try {
+      const res = await fetch('/api/v1/patient/appointments', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          appointmentId: cancelTarget.id,
+          cancellationReason: cancelReason.trim(),
+        }),
+      });
+
+      const data = await res.json();
+      if (data.success) {
+        setCancelTarget(null);
+        setCancelReason('');
+        fetchAppointments();
+      } else {
+        setCancelError(data.error?.message || 'Failed to cancel appointment.');
+      }
+    } catch {
+      setCancelError('Network error cancelling appointment. Please try again.');
+    } finally {
+      setIsCancelLoading(false);
+    }
+  };
+
   const hospitalSelectOptions: SelectOption[] = hospitals.map((h) => ({
     value: h.id,
     label: `${h.name} (${h.city})`,
@@ -170,7 +211,7 @@ export default function AppointmentsPage() {
     .filter((doc) => doc.hospitalId === selectedHospital)
     .map((d) => ({
       value: d.id,
-      label: `Dr. ${d.fullName}`,
+      label: formatDoctorDisplayName(d.fullName),
       description: 'Attending Specialist',
     }));
 
@@ -342,7 +383,7 @@ export default function AppointmentsPage() {
                       {APPOINTMENT_TYPE_LABELS[app.appointmentType] || app.appointmentType}
                     </span>
                     <h3 className="text-base font-bold text-surface-900 mt-1 group-hover:text-primary-600 transition-colors">
-                      Dr. {app.doctor.fullName}
+                      {formatDoctorDisplayName(app.doctor.fullName)}
                     </h3>
                     {app.doctor.qualification && (
                       <p className="text-xs text-surface-500">{app.doctor.qualification}</p>
@@ -374,6 +415,24 @@ export default function AppointmentsPage() {
                   {app.cancellationReason}
                 </div>
               )}
+
+              {app.status !== 'CANCELLED' && app.status !== 'COMPLETED' && (
+                <div className="flex justify-end pt-1">
+                  <Button
+                    type="button"
+                    variant="secondary"
+                    size="sm"
+                    className="text-danger-600 hover:bg-danger-50 border-danger-200"
+                    onClick={() => {
+                      setCancelTarget(app);
+                      setCancelReason('');
+                      setCancelError('');
+                    }}
+                  >
+                    Cancel
+                  </Button>
+                </div>
+              )}
             </Card>
           ))}
         </div>
@@ -391,6 +450,7 @@ export default function AppointmentsPage() {
                   <th className="p-4">Accredited Hospital</th>
                   <th className="p-4">Consultation Type</th>
                   <th className="p-4">Status</th>
+                  <th className="p-4 text-right">Actions</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-surface-100 text-surface-700">
@@ -400,7 +460,7 @@ export default function AppointmentsPage() {
                       {new Date(app.scheduledAt).toLocaleString()}
                     </td>
                     <td className="p-4">
-                      <div className="font-bold text-surface-900">Dr. {app.doctor.fullName}</div>
+                      <div className="font-bold text-surface-900">{formatDoctorDisplayName(app.doctor.fullName)}</div>
                       {app.doctor.qualification && <div className="text-[11px] text-surface-500">{app.doctor.qualification}</div>}
                     </td>
                     <td className="p-4 font-medium">{app.hospital.name} ({app.hospital.city})</td>
@@ -411,6 +471,23 @@ export default function AppointmentsPage() {
                       <Badge variant={getStatusBadgeVariant(app.status)}>
                         {app.status}
                       </Badge>
+                    </td>
+                    <td className="p-4 text-right">
+                      {app.status !== 'CANCELLED' && app.status !== 'COMPLETED' && (
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="sm"
+                          className="text-danger-600 hover:text-danger-700"
+                          onClick={() => {
+                            setCancelTarget(app);
+                            setCancelReason('');
+                            setCancelError('');
+                          }}
+                        >
+                          Cancel
+                        </Button>
+                      )}
                     </td>
                   </tr>
                 ))}
@@ -515,6 +592,74 @@ export default function AppointmentsPage() {
                 </Button>
                 <Button type="submit" isLoading={isSubmitLoading}>
                   Confirm Request
+                </Button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Self-Cancellation Modal */}
+      {cancelTarget && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-surface-900/40 backdrop-blur-xs">
+          <div className="bg-white rounded-2xl border border-surface-200 shadow-2xl max-w-md w-full overflow-hidden animate-scale-in">
+            <div className="px-6 py-4 border-b border-surface-100 flex items-center justify-between bg-surface-50">
+              <h3 className="text-sm font-bold text-surface-900">Cancel Appointment</h3>
+              <button
+                type="button"
+                onClick={() => setCancelTarget(null)}
+                className="w-8 h-8 rounded-lg text-surface-400 hover:text-surface-700 hover:bg-surface-200 flex items-center justify-center transition-all font-bold"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            <form onSubmit={handleSelfCancel} className="p-6 space-y-4 text-xs">
+              <p className="text-surface-600">
+                Cancel your{' '}
+                <span className="font-semibold text-surface-900">
+                  {APPOINTMENT_TYPE_LABELS[cancelTarget.appointmentType] || cancelTarget.appointmentType}
+                </span>{' '}
+                with{' '}
+                <span className="font-semibold text-surface-900">
+                  {formatDoctorDisplayName(cancelTarget.doctor.fullName)}
+                </span>
+                ?
+              </p>
+
+              {cancelError && (
+                <div className="bg-danger-50 border border-danger-200 text-danger-800 p-3 rounded-xl flex items-center gap-2">
+                  <AlertCircle className="w-4 h-4 text-danger-600 shrink-0" />
+                  <span>{cancelError}</span>
+                </div>
+              )}
+
+              <div className="space-y-1.5">
+                <label htmlFor="patient-cancel-reason" className="block font-semibold text-surface-700">
+                  Reason for Cancellation
+                </label>
+                <textarea
+                  id="patient-cancel-reason"
+                  rows={3}
+                  required
+                  value={cancelReason}
+                  onChange={(e) => setCancelReason(e.target.value)}
+                  placeholder="e.g. Travel schedule changed, requesting reschedule..."
+                  className="w-full p-3 border border-surface-200 rounded-xl text-sm focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500"
+                />
+              </div>
+
+              <div className="flex items-center justify-end gap-3 pt-3 border-t border-surface-100">
+                <Button type="button" variant="secondary" onClick={() => setCancelTarget(null)}>
+                  Keep Appointment
+                </Button>
+                <Button
+                  type="submit"
+                  variant="primary"
+                  className="bg-danger-600 hover:bg-danger-700"
+                  isLoading={isCancelLoading}
+                >
+                  Confirm Cancellation
                 </Button>
               </div>
             </form>

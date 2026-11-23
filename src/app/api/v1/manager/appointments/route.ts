@@ -9,14 +9,22 @@ const createAppointmentSchema = z.object({
   hospitalId: z.string(),
   doctorId: z.string(),
   appointmentType: z.nativeEnum(AppointmentType),
-  scheduledAt: z.string().transform((val) => new Date(val)),
+  scheduledAt: z
+    .string()
+    .transform((val) => new Date(val))
+    .refine((d) => !isNaN(d.getTime()), 'Invalid date'),
 });
 
 const updateAppointmentSchema = z.object({
   appointmentId: z.string(),
   status: z.nativeEnum(AppointmentStatus).optional(),
-  scheduledAt: z.string().transform((val) => new Date(val)).optional(),
+  scheduledAt: z
+    .string()
+    .transform((val) => new Date(val))
+    .refine((d) => !isNaN(d.getTime()), 'Invalid date')
+    .optional(),
   cancellationReason: z.string().optional(),
+  clinicalNotes: z.string().max(10000).optional(),
 });
 
 export async function GET(request: Request) {
@@ -41,7 +49,7 @@ export async function GET(request: Request) {
           },
         }),
         prisma.patient.findMany({
-          where: { assignedManagerId: userId },
+          where: userRole === 'ADMIN' ? {} : { assignedManagerId: userId },
           include: {
             user: {
               select: {
@@ -63,11 +71,14 @@ export async function GET(request: Request) {
     }
 
     const appointments = await prisma.appointment.findMany({
-      where: {
-        case: {
-          managerId: userId,
-        },
-      },
+      where:
+        userRole === 'ADMIN'
+          ? {}
+          : {
+              case: {
+                managerId: userId,
+              },
+            },
       include: {
         patient: {
           include: {
@@ -192,9 +203,9 @@ export async function PUT(request: Request) {
       return NextResponse.json({ error: 'Invalid parameters', details: parsed.error.issues }, { status: 400 });
     }
 
-    const { appointmentId, status, scheduledAt, cancellationReason } = parsed.data;
+    const { appointmentId, status, scheduledAt, cancellationReason, clinicalNotes } = parsed.data;
 
-    // Verify appointment belongs to a case managed by this manager
+    // Verify appointment belongs to a case managed by this manager (ADMIN exempt)
     const appointmentRecord = await prisma.appointment.findUnique({
       where: { id: appointmentId },
       include: {
@@ -202,7 +213,7 @@ export async function PUT(request: Request) {
       },
     });
 
-    if (!appointmentRecord || appointmentRecord.case.managerId !== userId) {
+    if (!appointmentRecord || (userRole === 'MANAGER' && appointmentRecord.case.managerId !== userId)) {
       return NextResponse.json({ error: 'Appointment not found or unauthorized' }, { status: 404 });
     }
 
@@ -212,6 +223,7 @@ export async function PUT(request: Request) {
         ...(status !== undefined && { status }),
         ...(scheduledAt !== undefined && { scheduledAt }),
         ...(cancellationReason !== undefined && { cancellationReason }),
+        ...(clinicalNotes !== undefined && { clinicalNotes }),
       },
     });
 
