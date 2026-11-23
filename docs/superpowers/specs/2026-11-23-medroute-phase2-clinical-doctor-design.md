@@ -71,8 +71,8 @@ All case-scoped clinical endpoints resolve access through a shared helper `autho
 1. **`/api/v1/admin/doctors` (`src/app/api/v1/admin/doctors/route.ts`):**
    - `GET`: Include `hospitalId`, `specialisationId`, `userId`, `hospital: { select: { id: true, name: true, city: true } }`, `specialisation: { select: { id: true, name: true } }`, and `user: { select: { id: true, email: true, fullName: true } }`. Also support `?meta=true` returning `unlinkedDoctorUsers` (`User` rows where `role === 'DOCTOR'`, `isActive === true`, and `doctor === null`).
    - `POST` & `PUT`: Support two account-binding modes validated via Zod:
-     - **Link Existing User (`userId`):** Verify target `User` exists, has `role === 'DOCTOR'`, and is not linked to a different `Doctor` (`409 CONFLICT` otherwise). Pass `userId: null` on `PUT` to unlink.
-     - **Create New Login Inline (`createAccount: true`, `email`, `password` min 8 chars):** Inside `prisma.$transaction`, verify `email` is unused (`409 EMAIL_ALREADY_EXISTS`), hash password with `hashPassword(password)`, create `User` (`role: 'DOCTOR'`, `fullName`, `isActive: true`), and link `Doctor.userId = createdUser.id`.
+     - **Link Existing User (`userId`):** Verify target `User` exists, has `role === 'DOCTOR'`, and is not linked to a different `Doctor` (`409 USER_ALREADY_EXISTS` otherwise). Pass `userId: null` on `PUT` to unlink.
+     - **Create New Login Inline (`createAccount: true`, `email`, `password` min 8 chars):** Inside `prisma.$transaction`, verify `email` is unused (`409 USER_ALREADY_EXISTS`), hash password with `hashPassword(password)`, create `User` (`role: 'DOCTOR'`, `fullName`, `isActive: true`), and link `Doctor.userId = createdUser.id`.
 2. **`/admin/doctors` UI (`src/app/(admin)/admin/doctors/page.tsx`):**
    - Fix `openEdit(d)` to populate `hospitalId: d.hospitalId`, `specialisationId: d.specialisationId`, and `userId: d.userId || ''`, and allow editing hospital/specialisation on `PUT`.
    - Add **Portal Login Binding** selector in the Add/Edit modal: `"No Portal Login"`, `"Link Existing Doctor User"`, or `"Create New Doctor Login (Email + Password)"`, and display linked login email badge in the doctors table.
@@ -173,3 +173,4 @@ All case-scoped clinical endpoints resolve access through a shared helper `autho
    - `/api/v1/patient/appointments` blocks `'SURGERY'` self-booking, enforces `availableDays`, and allows patient self-cancellation.
    - `rbac.ts` `DOCTOR` permissions check.
 4. **Full Build & Quality Gates:** `npm test`, `npm run typecheck` (`next typegen && tsc --noEmit`), `npm run lint` (`0` errors), and `npm run build` (`next build`).
+
