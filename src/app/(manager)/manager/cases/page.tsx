@@ -353,7 +353,7 @@ export default function CasesPipeline() {
                 </form>
               </Card>
 
-              <CaseDocumentsManagerPanel caseId={editingCase.id} canVerify />
+              <CaseDocumentsManagerPanel key={editingCase.id} caseId={editingCase.id} canVerify />
             </>
           ) : (
             <Card className="bg-surface-50/50 border border-dashed border-surface-300 text-center py-20 px-6 rounded-2xl sticky top-6">

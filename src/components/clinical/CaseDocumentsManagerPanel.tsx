@@ -97,6 +97,7 @@ export function CaseDocumentsManagerPanel({
   const [issueFile, setIssueFile] = useState<File | null>(null);
   const [isIssuing, setIsIssuing] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const activeCaseIdRef = useRef(caseId);
 
   const resolvedIssueCategories = useMemo(
     () =>
@@ -119,7 +120,7 @@ export function CaseDocumentsManagerPanel({
       setIsLoading(true);
       const res = await fetch(`/api/v1/cases/${targetCaseId}/documents`);
       const data = await res.json();
-      if (isCancelled?.()) return;
+      if (isCancelled?.() || activeCaseIdRef.current !== targetCaseId) return;
 
       if (!res.ok || !data.success) {
         const message = data?.error?.message || 'Failed to load case documents';
@@ -130,21 +131,28 @@ export function CaseDocumentsManagerPanel({
 
       setDocuments(data.data?.documents || []);
     } catch (err) {
-      if (isCancelled?.()) return;
+      if (isCancelled?.() || activeCaseIdRef.current !== targetCaseId) return;
       console.error('Failed to fetch case documents:', err);
       setLoadError('Network error loading case documents');
     } finally {
-      if (!isCancelled?.()) {
+      if (!isCancelled?.() && activeCaseIdRef.current === targetCaseId) {
         setIsLoading(false);
       }
     }
   }, []);
 
   useEffect(() => {
+    activeCaseIdRef.current = caseId;
     let cancelled = false;
     const timer = setTimeout(() => {
       setRejectingDocId(null);
       setRejectReason('');
+      setShowIssueForm(false);
+      setIssueNotes('');
+      setIssueFile(null);
+      if (fileInputRef.current) {
+        fileInputRef.current.value = '';
+      }
       void fetchDocuments(caseId, () => cancelled);
     }, 0);
 
@@ -165,6 +173,7 @@ export function CaseDocumentsManagerPanel({
       return;
     }
 
+    const targetCaseId = caseId;
     setVerifyingDocId(docId);
     try {
       const res = await fetch(`/api/v1/documents/${docId}/verify`, {
@@ -177,6 +186,7 @@ export function CaseDocumentsManagerPanel({
       });
 
       const data = await res.json();
+      if (activeCaseIdRef.current !== targetCaseId) return;
       if (!res.ok || !data.success) {
         toast.apiError(data, 'Failed to update document verification status', 'Verification Failed');
         return;
@@ -186,7 +196,7 @@ export function CaseDocumentsManagerPanel({
       if (updatedDoc) {
         setDocuments((prev) => prev.map((d) => (d.id === docId ? updatedDoc : d)));
       } else {
-        await fetchDocuments(caseId);
+        await fetchDocuments(targetCaseId, () => activeCaseIdRef.current !== targetCaseId);
       }
 
       if (verificationStatus === 'REJECTED') {
@@ -197,14 +207,19 @@ export function CaseDocumentsManagerPanel({
         toast.success('Document approved and verified.', 'Document Verified');
       }
     } catch (err) {
-      toast.apiError(err, 'Network error verifying document', 'Connection Error');
+      if (activeCaseIdRef.current === targetCaseId) {
+        toast.apiError(err, 'Network error verifying document', 'Connection Error');
+      }
     } finally {
-      setVerifyingDocId(null);
+      if (activeCaseIdRef.current === targetCaseId) {
+        setVerifyingDocId(null);
+      }
     }
   };
 
   const handleIssueSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    const targetCaseId = caseId;
     setIsIssuing(true);
     try {
       const formData = new FormData();
@@ -216,12 +231,13 @@ export function CaseDocumentsManagerPanel({
         formData.append('file', issueFile);
       }
 
-      const res = await fetch(`/api/v1/cases/${caseId}/documents`, {
+      const res = await fetch(`/api/v1/cases/${targetCaseId}/documents`, {
         method: 'POST',
         body: formData,
       });
 
       const data = await res.json();
+      if (activeCaseIdRef.current !== targetCaseId) return;
       if (!res.ok || !data.success) {
         toast.apiError(data, 'Failed to issue official document', 'Issuance Failed');
         return;
@@ -237,12 +253,18 @@ export function CaseDocumentsManagerPanel({
         fileInputRef.current.value = '';
       }
       setShowIssueForm(false);
-      await fetchDocuments(caseId);
-      onDocumentIssued?.();
+      await fetchDocuments(targetCaseId, () => activeCaseIdRef.current !== targetCaseId);
+      if (activeCaseIdRef.current === targetCaseId) {
+        onDocumentIssued?.();
+      }
     } catch (err) {
-      toast.apiError(err, 'Network error issuing official document', 'Connection Error');
+      if (activeCaseIdRef.current === targetCaseId) {
+        toast.apiError(err, 'Network error issuing official document', 'Connection Error');
+      }
     } finally {
-      setIsIssuing(false);
+      if (activeCaseIdRef.current === targetCaseId) {
+        setIsIssuing(false);
+      }
     }
   };
 

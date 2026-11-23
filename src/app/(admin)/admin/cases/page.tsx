@@ -307,7 +307,7 @@ export default function AdminCasesPage() {
 
               {/* Case Documents Verification & Official Certificate Issuance */}
               <div className="pt-3 border-t border-surface-100">
-                <CaseDocumentsManagerPanel caseId={selectedCase.id} canVerify />
+                <CaseDocumentsManagerPanel key={selectedCase.id} caseId={selectedCase.id} canVerify />
               </div>
             </div>
           </div>
