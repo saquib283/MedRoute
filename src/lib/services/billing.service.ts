@@ -227,7 +227,7 @@ export async function getManagerBillingMetadata(actor: {
 
 /**
  * Update a medical bill (record payment increment, explicit paidAmount, status, dueDate, notes, or hospitalId).
- * Restricted to assigned MANAGER or ADMIN.
+ * Restricted to assigned MANAGER or ADMIN. Reads and validates balance/status atomically inside $transaction.
  */
 export async function updateMedicalBill(
   params: UpdateMedicalBillParams
@@ -263,74 +263,113 @@ export async function updateMedicalBill(
   }
 
   const data = parsed.data;
-  const bill = await prisma.medicalBill.findUnique({
-    where: { id: data.billId },
-    include: {
-      case: { select: { id: true, managerId: true } },
-      patient: { select: { id: true, assignedManagerId: true } },
-    },
-  });
 
-  if (!bill) {
-    return {
-      ok: false,
-      code: ERROR_CODES.NOT_FOUND,
-      message: 'Medical bill not found',
-      status: 404,
+  if (data.hospitalId !== undefined && data.hospitalId !== null) {
+    const hospital = await prisma.hospital.findUnique({
+      where: { id: data.hospitalId },
+      select: { id: true },
+    });
+    if (!hospital) {
+      return {
+        ok: false,
+        code: ERROR_CODES.BAD_REQUEST,
+        message: 'Hospital not found',
+        status: 400,
+      };
+    }
+  }
+
+  const txResult = await prisma.$transaction(async (tx) => {
+    const bill = await tx.medicalBill.findUnique({
+      where: { id: data.billId },
+      include: {
+        case: { select: { id: true, managerId: true } },
+        patient: { select: { id: true, assignedManagerId: true } },
+      },
+    });
+
+    if (!bill) {
+      return {
+        ok: false as const,
+        code: ERROR_CODES.NOT_FOUND,
+        message: 'Medical bill not found',
+        status: 404,
+      };
+    }
+
+    const isAuthorized =
+      actor.role === 'ADMIN' ||
+      bill.case.managerId === actor.userId ||
+      bill.patient.assignedManagerId === actor.userId;
+
+    if (!isAuthorized) {
+      return {
+        ok: false as const,
+        code: ERROR_CODES.FORBIDDEN,
+        message: 'You are not authorized to update this medical bill',
+        status: 403,
+      };
+    }
+
+    const totalAmount = Number(bill.totalAmount);
+    const currentPaid = Number(bill.paidAmount);
+
+    const isCancelledWithoutReactivation =
+      bill.status === 'CANCELLED' &&
+      (data.status === undefined || data.status === 'CANCELLED');
+
+    if (
+      isCancelledWithoutReactivation &&
+      (data.paymentAmount !== undefined ||
+        (data.paidAmount !== undefined && Math.abs(data.paidAmount - currentPaid) > 0.005))
+    ) {
+      return {
+        ok: false as const,
+        code: ERROR_CODES.BAD_REQUEST,
+        message: 'Cannot record payment on a cancelled bill',
+        status: 400,
+      };
+    }
+
+    const rawNextPaid =
+      data.paymentAmount !== undefined
+        ? currentPaid + data.paymentAmount
+        : data.paidAmount !== undefined
+        ? data.paidAmount
+        : currentPaid;
+
+    if (rawNextPaid < 0 || rawNextPaid > totalAmount + 0.005) {
+      return {
+        ok: false as const,
+        code: ERROR_CODES.BAD_REQUEST,
+        message: 'Paid amount cannot exceed total invoice amount',
+        status: 400,
+      };
+    }
+
+    const nextPaid = Math.min(totalAmount, Math.round(rawNextPaid * 100) / 100);
+    const effectiveRequestedStatus =
+      data.status ??
+      (bill.status === 'CANCELLED' || bill.status === 'OVERDUE'
+        ? bill.status
+        : undefined);
+    const nextStatus = deriveBillStatus(totalAmount, nextPaid, effectiveRequestedStatus);
+
+    const updatePayload: Prisma.MedicalBillUncheckedUpdateInput = {
+      paidAmount: nextPaid,
+      status: nextStatus,
     };
-  }
 
-  const isAuthorized =
-    actor.role === 'ADMIN' ||
-    bill.case.managerId === actor.userId ||
-    bill.patient.assignedManagerId === actor.userId;
+    if (data.dueDate !== undefined) {
+      updatePayload.dueDate = data.dueDate;
+    }
+    if (data.notes !== undefined) {
+      updatePayload.notes = data.notes;
+    }
+    if (data.hospitalId !== undefined) {
+      updatePayload.hospitalId = data.hospitalId;
+    }
 
-  if (!isAuthorized) {
-    return {
-      ok: false,
-      code: ERROR_CODES.FORBIDDEN,
-      message: 'You are not authorized to update this medical bill',
-      status: 403,
-    };
-  }
-
-  const totalAmount = Number(bill.totalAmount);
-  const currentPaid = Number(bill.paidAmount);
-  const rawNextPaid =
-    data.paymentAmount !== undefined
-      ? currentPaid + data.paymentAmount
-      : data.paidAmount !== undefined
-      ? data.paidAmount
-      : currentPaid;
-
-  if (rawNextPaid < 0 || rawNextPaid > totalAmount + 0.005) {
-    return {
-      ok: false,
-      code: ERROR_CODES.BAD_REQUEST,
-      message: 'Paid amount cannot exceed total invoice amount',
-      status: 400,
-    };
-  }
-
-  const nextPaid = Math.min(totalAmount, Math.round(rawNextPaid * 100) / 100);
-  const nextStatus = deriveBillStatus(totalAmount, nextPaid, data.status);
-
-  const updatePayload: Prisma.MedicalBillUncheckedUpdateInput = {
-    paidAmount: nextPaid,
-    status: nextStatus,
-  };
-
-  if (data.dueDate !== undefined) {
-    updatePayload.dueDate = data.dueDate;
-  }
-  if (data.notes !== undefined) {
-    updatePayload.notes = data.notes;
-  }
-  if (data.hospitalId !== undefined) {
-    updatePayload.hospitalId = data.hospitalId;
-  }
-
-  const updatedBill = await prisma.$transaction(async (tx) => {
     const updated = await tx.medicalBill.update({
       where: { id: bill.id },
       data: updatePayload,
@@ -351,37 +390,52 @@ export async function updateMedicalBill(
       await syncCaseSettleBillSteps(tx, bill.caseId);
     }
 
-    return updated;
+    return {
+      ok: true as const,
+      billId: bill.id,
+      updated,
+      currentPaid,
+      nextPaid,
+      previousStatus: bill.status,
+      nextStatus,
+      previousDueDate: bill.dueDate,
+      previousHospitalId: bill.hospitalId,
+    };
   });
+
+  if (!txResult.ok) {
+    return txResult;
+  }
 
   await createAuditLog({
     actorId: actor.userId,
     action:
-      nextPaid > currentPaid || nextStatus === 'PAID'
+      txResult.nextPaid > txResult.currentPaid || txResult.nextStatus === 'PAID'
         ? AUDIT_ACTIONS.SETTLE_BILL
         : AUDIT_ACTIONS.UPDATE_BILL,
     entityType: 'MedicalBill',
-    entityId: bill.id,
+    entityId: txResult.billId,
     oldValue: {
-      paidAmount: currentPaid,
-      status: bill.status,
-      dueDate: bill.dueDate,
-      hospitalId: bill.hospitalId,
+      paidAmount: txResult.currentPaid,
+      status: txResult.previousStatus,
+      dueDate: txResult.previousDueDate,
+      hospitalId: txResult.previousHospitalId,
     },
     newValue: {
-      paidAmount: nextPaid,
-      status: nextStatus,
+      paidAmount: txResult.nextPaid,
+      status: txResult.nextStatus,
       ...(data.dueDate !== undefined ? { dueDate: data.dueDate } : {}),
       ...(data.hospitalId !== undefined ? { hospitalId: data.hospitalId } : {}),
     },
     ipAddress: actor.ipAddress,
   });
 
-  return { ok: true, data: { bill: updatedBill } };
+  return { ok: true, data: { bill: txResult.updated } };
 }
 
 /**
  * Allow an owning PATIENT to pay a partial or full remaining balance on a medical bill.
+ * Reads and validates bill status/balance atomically inside $transaction.
  */
 export async function payPatientMedicalBill(
   params: PayPatientBillParams
@@ -427,58 +481,58 @@ export async function payPatientMedicalBill(
     };
   }
 
-  const bill = await prisma.medicalBill.findUnique({
-    where: { id: data.billId },
-  });
+  const txResult = await prisma.$transaction(async (tx) => {
+    const bill = await tx.medicalBill.findUnique({
+      where: { id: data.billId },
+    });
 
-  if (!bill) {
-    return {
-      ok: false,
-      code: ERROR_CODES.NOT_FOUND,
-      message: 'Medical bill not found',
-      status: 404,
-    };
-  }
+    if (!bill) {
+      return {
+        ok: false as const,
+        code: ERROR_CODES.NOT_FOUND,
+        message: 'Medical bill not found',
+        status: 404,
+      };
+    }
 
-  if (bill.patientId !== patient.id) {
-    return {
-      ok: false,
-      code: ERROR_CODES.FORBIDDEN,
-      message: 'You are not authorized to pay this medical bill',
-      status: 403,
-    };
-  }
+    if (bill.patientId !== patient.id) {
+      return {
+        ok: false as const,
+        code: ERROR_CODES.FORBIDDEN,
+        message: 'You are not authorized to pay this medical bill',
+        status: 403,
+      };
+    }
 
-  if (bill.status === 'CANCELLED' || bill.status === 'PAID') {
-    return {
-      ok: false,
-      code: ERROR_CODES.BAD_REQUEST,
-      message: `Cannot pay a bill with status ${bill.status}`,
-      status: 400,
-    };
-  }
+    if (bill.status === 'CANCELLED' || bill.status === 'PAID') {
+      return {
+        ok: false as const,
+        code: ERROR_CODES.BAD_REQUEST,
+        message: `Cannot pay a bill with status ${bill.status}`,
+        status: 400,
+      };
+    }
 
-  const totalAmount = Number(bill.totalAmount);
-  const currentPaid = Number(bill.paidAmount);
-  const remainingBalance = Math.max(0, Math.round((totalAmount - currentPaid) * 100) / 100);
+    const totalAmount = Number(bill.totalAmount);
+    const currentPaid = Number(bill.paidAmount);
+    const remainingBalance = Math.max(0, Math.round((totalAmount - currentPaid) * 100) / 100);
 
-  if (data.amount > remainingBalance + 0.005) {
-    return {
-      ok: false,
-      code: ERROR_CODES.BAD_REQUEST,
-      message: 'Payment amount exceeds remaining balance',
-      status: 400,
-    };
-  }
+    if (data.amount > remainingBalance + 0.005) {
+      return {
+        ok: false as const,
+        code: ERROR_CODES.BAD_REQUEST,
+        message: 'Payment amount exceeds remaining balance',
+        status: 400,
+      };
+    }
 
-  const nextPaid = Math.min(totalAmount, Math.round((currentPaid + data.amount) * 100) / 100);
-  const nextStatus = deriveBillStatus(totalAmount, nextPaid);
-  const currency = bill.currency || 'USD';
-  const refSegment = data.referenceNo ? ` Ref: ${data.referenceNo}` : '';
-  const receiptNote = `[Paid ${currency} ${data.amount.toFixed(2)} via ${data.paymentMethod}${refSegment} at ${new Date().toISOString()}]`;
-  const nextNotes = bill.notes ? `${bill.notes}\n${receiptNote}` : receiptNote;
+    const nextPaid = Math.min(totalAmount, Math.round((currentPaid + data.amount) * 100) / 100);
+    const nextStatus = deriveBillStatus(totalAmount, nextPaid);
+    const currency = bill.currency || 'USD';
+    const refSegment = data.referenceNo ? ` Ref: ${data.referenceNo}` : '';
+    const receiptNote = `[Paid ${currency} ${data.amount.toFixed(2)} via ${data.paymentMethod}${refSegment} at ${new Date().toISOString()}]`;
+    const nextNotes = bill.notes ? `${bill.notes}\n${receiptNote}` : receiptNote;
 
-  const updatedBill = await prisma.$transaction(async (tx) => {
     const updated = await tx.medicalBill.update({
       where: { id: bill.id },
       data: {
@@ -498,23 +552,35 @@ export async function payPatientMedicalBill(
       await syncCaseSettleBillSteps(tx, bill.caseId);
     }
 
-    return updated;
+    return {
+      ok: true as const,
+      billId: bill.id,
+      updated,
+      currentPaid,
+      nextPaid,
+      previousStatus: bill.status,
+      nextStatus,
+    };
   });
+
+  if (!txResult.ok) {
+    return txResult;
+  }
 
   await createAuditLog({
     actorId: actor.userId,
     action: AUDIT_ACTIONS.SETTLE_BILL,
     entityType: 'MedicalBill',
-    entityId: bill.id,
-    oldValue: { paidAmount: currentPaid, status: bill.status },
+    entityId: txResult.billId,
+    oldValue: { paidAmount: txResult.currentPaid, status: txResult.previousStatus },
     newValue: {
-      paidAmount: nextPaid,
-      status: nextStatus,
+      paidAmount: txResult.nextPaid,
+      status: txResult.nextStatus,
       paymentMethod: data.paymentMethod,
       ...(data.referenceNo ? { referenceNo: data.referenceNo } : {}),
     },
     ipAddress: actor.ipAddress,
   });
 
-  return { ok: true, data: { bill: updatedBill } };
+  return { ok: true, data: { bill: txResult.updated } };
 }

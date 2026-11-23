@@ -11,6 +11,7 @@ jest.mock('@/lib/prisma', () => ({
     },
     hospital: {
       findMany: jest.fn(),
+      findUnique: jest.fn(),
     },
     patient: {
       findFirst: jest.fn(),
@@ -127,7 +128,7 @@ describe('Task 1: Billing Service, Dual Settlement & Real PDF Stream OCR', () =>
     );
   });
 
-  it('enforces manager ownership and overpayment bounds on updateMedicalBill, preserves undefined on omitted nullable fields, and auto-completes SETTLE_BILL steps when fully paid', async () => {
+  it('enforces manager ownership and overpayment bounds inside $transaction on updateMedicalBill, preserves undefined on omitted nullable fields, and auto-completes SETTLE_BILL steps when fully paid', async () => {
     const baseBill = {
       id: 'bill-1',
       caseId: 'case-1',
@@ -142,36 +143,17 @@ describe('Task 1: Billing Service, Dual Settlement & Real PDF Stream OCR', () =>
       patient: { id: 'pat-1', assignedManagerId: 'mgr-1' },
     };
 
-    mockedPrisma.medicalBill.findUnique.mockResolvedValue(baseBill);
-
-    // Wrong manager -> 403
-    const wrongMgr = await updateMedicalBill({
-      billId: 'bill-1',
-      paymentAmount: 500,
-      actor: { userId: 'mgr-other', role: 'MANAGER' },
-    });
-    expect(wrongMgr.ok).toBe(false);
-    if (!wrongMgr.ok) expect(wrongMgr.status).toBe(403);
-
-    // Overpayment -> 400
-    const overpay = await updateMedicalBill({
-      billId: 'bill-1',
-      paymentAmount: 2500,
-      actor: { userId: 'mgr-1', role: 'MANAGER' },
-    });
-    expect(overpay.ok).toBe(false);
-    if (!overpay.ok) expect(overpay.status).toBe(400);
-
-    // Settling remaining 2000 -> PAID + completes SETTLE_BILL step, and omits dueDate/notes/hospitalId
     const txUpdateMock = jest.fn().mockResolvedValue({
       ...baseBill,
       paidAmount: 3000,
       status: 'PAID',
     });
     const stepUpdateMany = jest.fn().mockResolvedValue({ count: 1 });
+
     mockedPrisma.$transaction.mockImplementation(async (fn: (tx: unknown) => unknown) =>
       fn({
         medicalBill: {
+          findUnique: jest.fn().mockResolvedValue(baseBill),
           update: txUpdateMock,
           count: jest
             .fn()
@@ -184,6 +166,27 @@ describe('Task 1: Billing Service, Dual Settlement & Real PDF Stream OCR', () =>
       })
     );
 
+    // Wrong manager -> 403
+    const wrongMgr = await updateMedicalBill({
+      billId: 'bill-1',
+      paymentAmount: 500,
+      actor: { userId: 'mgr-other', role: 'MANAGER' },
+    });
+    expect(wrongMgr.ok).toBe(false);
+    if (!wrongMgr.ok) expect(wrongMgr.status).toBe(403);
+    expect(txUpdateMock).not.toHaveBeenCalled();
+
+    // Overpayment -> 400
+    const overpay = await updateMedicalBill({
+      billId: 'bill-1',
+      paymentAmount: 2500,
+      actor: { userId: 'mgr-1', role: 'MANAGER' },
+    });
+    expect(overpay.ok).toBe(false);
+    if (!overpay.ok) expect(overpay.status).toBe(400);
+    expect(txUpdateMock).not.toHaveBeenCalled();
+
+    // Settling remaining 2000 -> PAID + completes SETTLE_BILL step, and omits dueDate/notes/hospitalId
     const paidRes = await updateMedicalBill({
       billId: 'bill-1',
       paymentAmount: 2000,
@@ -215,17 +218,95 @@ describe('Task 1: Billing Service, Dual Settlement & Real PDF Stream OCR', () =>
     );
   });
 
-  it('allows owning PATIENT to pay partial or full balance via payPatientMedicalBill and blocks other patients', async () => {
-    mockedPrisma.patient.findFirst.mockResolvedValue({ id: 'pat-1', userId: 'u-pat-1' });
-    mockedPrisma.medicalBill.findUnique.mockResolvedValueOnce({
-      id: 'bill-other',
-      caseId: 'case-2',
-      patientId: 'pat-other',
-      totalAmount: 1000,
+  it('protects CANCELLED and OVERDUE bills on partial updates and rejects invalid hospitalId with 400', async () => {
+    const cancelledBill = {
+      id: 'bill-cancelled',
+      caseId: 'case-1',
+      patientId: 'pat-1',
+      totalAmount: 2000,
       paidAmount: 0,
-      status: 'PENDING',
+      status: 'CANCELLED',
       notes: null,
+      dueDate: null,
+      hospitalId: null,
+      case: { id: 'case-1', managerId: 'mgr-1' },
+      patient: { id: 'pat-1', assignedManagerId: 'mgr-1' },
+    };
+
+    const txUpdateMock = jest.fn().mockImplementation(async ({ data }: { data: Record<string, unknown> }) => ({
+      ...cancelledBill,
+      ...data,
+    }));
+
+    mockedPrisma.$transaction.mockImplementation(async (fn: (tx: unknown) => unknown) =>
+      fn({
+        medicalBill: {
+          findUnique: jest.fn().mockResolvedValue(cancelledBill),
+          update: txUpdateMock,
+          count: jest.fn().mockResolvedValue(0),
+        },
+        clinicalStep: { updateMany: jest.fn() },
+      })
+    );
+
+    // Rejects paymentAmount on a CANCELLED bill -> 400
+    const payCancelled = await updateMedicalBill({
+      billId: 'bill-cancelled',
+      paymentAmount: 500,
+      actor: { userId: 'mgr-1', role: 'MANAGER' },
     });
+    expect(payCancelled.ok).toBe(false);
+    if (!payCancelled.ok) expect(payCancelled.status).toBe(400);
+    expect(txUpdateMock).not.toHaveBeenCalled();
+
+    // Preserves CANCELLED status when patching notes without status
+    const noteUpdate = await updateMedicalBill({
+      billId: 'bill-cancelled',
+      notes: 'Cancelled due to duplicate invoice',
+      actor: { userId: 'mgr-1', role: 'MANAGER' },
+    });
+    expect(noteUpdate.ok).toBe(true);
+    expect(txUpdateMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({
+          status: 'CANCELLED',
+          notes: 'Cancelled due to duplicate invoice',
+        }),
+      })
+    );
+
+    // Invalid hospitalId -> 400 BAD_REQUEST before writing
+    mockedPrisma.hospital.findUnique.mockResolvedValueOnce(null);
+    const invalidHospitalRes = await updateMedicalBill({
+      billId: 'bill-cancelled',
+      hospitalId: 'non-existent-hosp',
+      actor: { userId: 'mgr-1', role: 'MANAGER' },
+    });
+    expect(invalidHospitalRes.ok).toBe(false);
+    if (!invalidHospitalRes.ok) expect(invalidHospitalRes.status).toBe(400);
+  });
+
+  it('allows owning PATIENT to pay partial or full balance via payPatientMedicalBill inside $transaction and blocks other patients', async () => {
+    mockedPrisma.patient.findFirst.mockResolvedValue({ id: 'pat-1', userId: 'u-pat-1' });
+
+    mockedPrisma.$transaction.mockImplementationOnce(async (fn: (tx: unknown) => unknown) =>
+      fn({
+        medicalBill: {
+          findUnique: jest.fn().mockResolvedValue({
+            id: 'bill-other',
+            caseId: 'case-2',
+            patientId: 'pat-other',
+            totalAmount: 1000,
+            paidAmount: 0,
+            status: 'PENDING',
+            notes: null,
+          }),
+          update: jest.fn(),
+          count: jest.fn(),
+        },
+        clinicalStep: { updateMany: jest.fn() },
+      })
+    );
 
     const forbidden = await payPatientMedicalBill({
       billId: 'bill-other',
@@ -236,16 +317,6 @@ describe('Task 1: Billing Service, Dual Settlement & Real PDF Stream OCR', () =>
     expect(forbidden.ok).toBe(false);
     if (!forbidden.ok) expect(forbidden.status).toBe(403);
 
-    mockedPrisma.medicalBill.findUnique.mockResolvedValueOnce({
-      id: 'bill-1',
-      caseId: 'case-1',
-      patientId: 'pat-1',
-      totalAmount: 1500,
-      paidAmount: 500,
-      currency: 'USD',
-      status: 'PARTIALLY_PAID',
-      notes: null,
-    });
     const txUpdate = jest.fn().mockResolvedValue({
       id: 'bill-1',
       totalAmount: 1500,
@@ -253,9 +324,19 @@ describe('Task 1: Billing Service, Dual Settlement & Real PDF Stream OCR', () =>
       status: 'PAID',
     });
     const stepUpdateMany = jest.fn().mockResolvedValue({ count: 1 });
-    mockedPrisma.$transaction.mockImplementation(async (fn: (tx: unknown) => unknown) =>
+    mockedPrisma.$transaction.mockImplementationOnce(async (fn: (tx: unknown) => unknown) =>
       fn({
         medicalBill: {
+          findUnique: jest.fn().mockResolvedValue({
+            id: 'bill-1',
+            caseId: 'case-1',
+            patientId: 'pat-1',
+            totalAmount: 1500,
+            paidAmount: 500,
+            currency: 'USD',
+            status: 'PARTIALLY_PAID',
+            notes: null,
+          }),
           update: txUpdate,
           count: jest.fn().mockResolvedValueOnce(0).mockResolvedValueOnce(1),
         },
@@ -337,7 +418,7 @@ describe('Task 1: Billing Service, Dual Settlement & Real PDF Stream OCR', () =>
     expect(parsedPng.confidenceScore).toBeLessThan(0.8);
   });
 
-  it('handles HTTP route handlers for manager billing metadata, overpayment validation, patient payment, and OCR security checks', async () => {
+  it('handles HTTP route handlers for manager billing metadata, hospitalId/overpayment validation, atomic PAID creation, patient payment, and OCR security checks', async () => {
     // 1. GET /api/v1/manager/billing?meta=true
     mockedPrisma.medicalBill.findMany.mockResolvedValue([]);
     mockedPrisma.case.findMany.mockResolvedValue([]);
@@ -375,21 +456,84 @@ describe('Task 1: Billing Service, Dual Settlement & Real PDF Stream OCR', () =>
     );
     expect(postInvalid.status).toBe(400);
 
-    // 3. PATCH /api/v1/manager/billing
-    mockedPrisma.medicalBill.findUnique.mockResolvedValueOnce({
-      id: 'bill-1',
-      caseId: 'case-1',
-      patientId: 'pat-1',
-      totalAmount: 1000,
-      paidAmount: 0,
-      status: 'PENDING',
-      notes: null,
-      case: { id: 'case-1', managerId: 'mgr-1' },
-      patient: { id: 'pat-1', assignedManagerId: 'mgr-1' },
-    });
+    // 3. POST /api/v1/manager/billing rejects invalid hospitalId with 400
+    mockedPrisma.hospital.findUnique.mockResolvedValueOnce(null);
+    const postInvalidHospital = await managerBillingPost(
+      new NextRequest('http://localhost/api/v1/manager/billing', {
+        method: 'POST',
+        headers: {
+          ...makeAuthHeaders('mgr-1', 'MANAGER'),
+          'content-type': 'application/json',
+        },
+        body: JSON.stringify({
+          caseId: 'case-1',
+          patientId: 'pat-1',
+          hospitalId: 'missing-hosp',
+          title: 'Surgery Invoice',
+          paidAmount: 0,
+          items: [{ description: 'OT', quantity: 1, unitPrice: 1000 }],
+        }),
+      })
+    );
+    expect(postInvalidHospital.status).toBe(400);
+
+    // 4. POST /api/v1/manager/billing creates PAID bill and syncs SETTLE_BILL atomically inside $transaction
+    const postStepUpdateMany = jest.fn().mockResolvedValue({ count: 1 });
     mockedPrisma.$transaction.mockImplementationOnce(async (fn: (tx: unknown) => unknown) =>
       fn({
         medicalBill: {
+          create: jest.fn().mockResolvedValue({
+            id: 'bill-created',
+            totalAmount: 1000,
+            paidAmount: 1000,
+            status: 'PAID',
+          }),
+          update: jest.fn(),
+          count: jest.fn().mockResolvedValueOnce(0).mockResolvedValueOnce(1),
+        },
+        clinicalStep: { updateMany: postStepUpdateMany },
+      })
+    );
+    const postPaidOk = await managerBillingPost(
+      new NextRequest('http://localhost/api/v1/manager/billing', {
+        method: 'POST',
+        headers: {
+          ...makeAuthHeaders('mgr-1', 'MANAGER'),
+          'content-type': 'application/json',
+        },
+        body: JSON.stringify({
+          caseId: 'case-1',
+          patientId: 'pat-1',
+          title: 'Pre-Paid Surgery Invoice',
+          paidAmount: 1000,
+          items: [{ description: 'OT', quantity: 1, unitPrice: 1000 }],
+        }),
+      })
+    );
+    expect(postPaidOk.status).toBe(200);
+    expect(postStepUpdateMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: expect.objectContaining({ caseId: 'case-1', actionType: 'SETTLE_BILL' }),
+      })
+    );
+
+    // 5. PATCH /api/v1/manager/billing
+    mockedPrisma.$transaction.mockImplementationOnce(async (fn: (tx: unknown) => unknown) =>
+      fn({
+        medicalBill: {
+          findUnique: jest.fn().mockResolvedValue({
+            id: 'bill-1',
+            caseId: 'case-1',
+            patientId: 'pat-1',
+            totalAmount: 1000,
+            paidAmount: 0,
+            status: 'PENDING',
+            notes: null,
+            dueDate: null,
+            hospitalId: null,
+            case: { id: 'case-1', managerId: 'mgr-1' },
+            patient: { id: 'pat-1', assignedManagerId: 'mgr-1' },
+          }),
           update: jest.fn().mockResolvedValue({ id: 'bill-1', paidAmount: 1000, status: 'PAID' }),
           count: jest.fn().mockResolvedValueOnce(0).mockResolvedValueOnce(1),
         },
@@ -408,7 +552,7 @@ describe('Task 1: Billing Service, Dual Settlement & Real PDF Stream OCR', () =>
     );
     expect(patchRes.status).toBe(200);
 
-    // 4. POST /api/v1/patient/billing/pay rejects MANAGER role with 403
+    // 6. POST /api/v1/patient/billing/pay rejects MANAGER role with 403
     const patRoleFail = await patientBillingPayPost(
       new NextRequest('http://localhost/api/v1/patient/billing/pay', {
         method: 'POST',
@@ -421,7 +565,7 @@ describe('Task 1: Billing Service, Dual Settlement & Real PDF Stream OCR', () =>
     );
     expect(patRoleFail.status).toBe(403);
 
-    // 5. POST /api/v1/manager/billing/ocr rejects PATIENT role with 403
+    // 7. POST /api/v1/manager/billing/ocr rejects PATIENT role with 403
     const ocrRoleFail = await managerBillingOcrPost(
       new NextRequest('http://localhost/api/v1/manager/billing/ocr', {
         method: 'POST',
@@ -430,7 +574,7 @@ describe('Task 1: Billing Service, Dual Settlement & Real PDF Stream OCR', () =>
     );
     expect(ocrRoleFail.status).toBe(403);
 
-    // 6. POST /api/v1/manager/billing/ocr rejects spoofed magic bytes with 400
+    // 8. POST /api/v1/manager/billing/ocr rejects spoofed magic bytes with 400
     const spoofedForm = new FormData();
     spoofedForm.append(
       'files',

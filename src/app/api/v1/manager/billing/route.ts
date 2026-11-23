@@ -197,6 +197,16 @@ export async function POST(request: NextRequest) {
     const normalizedPaid = Math.min(calculatedTotal, Math.round(paidAmount * 100) / 100);
     const normalizedStatus = deriveBillStatus(calculatedTotal, normalizedPaid, status);
 
+    if (hospitalId) {
+      const hospital = await prisma.hospital.findUnique({
+        where: { id: hospitalId },
+        select: { id: true },
+      });
+      if (!hospital) {
+        return apiError(ERROR_CODES.BAD_REQUEST, 'Hospital not found', 400);
+      }
+    }
+
     if (uploadFile) {
       const saved = await saveValidatedUpload(uploadFile, 'bill');
       if (!saved.ok) {
@@ -212,56 +222,60 @@ export async function POST(request: NextRequest) {
 
     let finalBill;
     try {
-      const newBill = await prisma.medicalBill.create({
-        data: {
-          billNumber,
-          caseId,
-          patientId,
-          hospitalId,
-          title,
-          category,
-          totalAmount: calculatedTotal,
-          paidAmount: normalizedPaid,
-          currency,
-          status: normalizedStatus,
-          dueDate,
-          fileUrl: null,
-          storageKey: savedStorageKey,
-          fileName,
-          notes,
-          createdBy: authUser!.userId,
-          items: {
-            create: processedItems,
-          },
-        },
-        include: {
-          items: true,
-          patient: {
-            include: {
-              user: { select: { fullName: true } },
+      finalBill = await prisma.$transaction(async (tx) => {
+        const newBill = await tx.medicalBill.create({
+          data: {
+            billNumber,
+            caseId,
+            patientId,
+            hospitalId,
+            title,
+            category,
+            totalAmount: calculatedTotal,
+            paidAmount: normalizedPaid,
+            currency,
+            status: normalizedStatus,
+            dueDate,
+            fileUrl: null,
+            storageKey: savedStorageKey,
+            fileName,
+            notes,
+            createdBy: authUser!.userId,
+            items: {
+              create: processedItems,
             },
           },
-        },
-      });
-
-      finalBill = savedStorageKey
-        ? await prisma.medicalBill.update({
-            where: { id: newBill.id },
-            data: { fileUrl: `/api/v1/documents/bill/${newBill.id}/download` },
-            include: {
-              items: true,
-              patient: {
-                include: {
-                  user: { select: { fullName: true } },
-                },
+          include: {
+            items: true,
+            patient: {
+              include: {
+                user: { select: { fullName: true } },
               },
             },
-          })
-        : newBill;
+          },
+        });
 
-      if (normalizedStatus === 'PAID') {
-        await syncCaseSettleBillSteps(prisma, caseId);
-      }
+        const updatedOrCreated = savedStorageKey
+          ? await tx.medicalBill.update({
+              where: { id: newBill.id },
+              data: { fileUrl: `/api/v1/documents/bill/${newBill.id}/download` },
+              include: {
+                items: true,
+                patient: {
+                  include: {
+                    user: { select: { fullName: true } },
+                  },
+                },
+              },
+            })
+          : newBill;
+
+        if (normalizedStatus === 'PAID') {
+          await syncCaseSettleBillSteps(tx, caseId);
+        }
+
+        return updatedOrCreated;
+      });
     } catch (dbErr) {
       if (savedStorageKey) {
         await removeStoredFile(savedStorageKey);
