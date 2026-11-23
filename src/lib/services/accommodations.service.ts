@@ -20,6 +20,16 @@ export const HOTEL_BOOKING_STATUSES = [
   'CANCELLED',
 ] as const;
 
+type HotelBookingStatus = (typeof HOTEL_BOOKING_STATUSES)[number];
+
+const TERMINAL_BOOKING_STATUSES = new Set<string>(['CANCELLED', 'COMPLETED']);
+
+const ALLOWED_BOOKING_TRANSITIONS: Record<string, readonly HotelBookingStatus[]> = {
+  PENDING: ['PENDING', 'CONFIRMED', 'CHECKED_IN', 'CANCELLED'],
+  CONFIRMED: ['CONFIRMED', 'CHECKED_IN', 'COMPLETED', 'CANCELLED'],
+  CHECKED_IN: ['CHECKED_IN', 'COMPLETED', 'CANCELLED'],
+};
+
 export interface UpdatePartnerHotelParams {
   id: unknown;
   name?: unknown;
@@ -115,6 +125,35 @@ const optionalNumberInRange = (
       return num;
     });
 
+const optionalNullableEmail = z
+  .string()
+  .trim()
+  .max(180)
+  .nullable()
+  .optional()
+  .transform((val, ctx) => {
+    if (val === undefined) return undefined;
+    if (val === null || val.length === 0) return null;
+    const check = z.string().email().safeParse(val);
+    if (!check.success) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: 'contactEmail must be a valid email address',
+      });
+      return z.NEVER;
+    }
+    return val;
+  });
+
+const safeImageUrl = z
+  .string()
+  .trim()
+  .min(1, 'Image URL cannot be empty')
+  .refine(
+    (val) => /^https?:\/\//i.test(val) || /^\/(?!\/)/.test(val),
+    'Image URLs must use https://, http://, or a single-slash / path'
+  );
+
 const updatePartnerHotelSchema = z.object({
   id: z.string().trim().min(1, 'Hotel id is required'),
   name: z.string().trim().min(1, 'Hotel name cannot be empty').max(200).optional(),
@@ -126,10 +165,10 @@ const updatePartnerHotelSchema = z.object({
   nightlyRateUsd: optionalNumberInRange('nightlyRateUsd', { gt: 0 }),
   commissionPercent: optionalNumberInRange('commissionPercent', { min: 0, max: 100 }),
   amenities: z.array(z.string().trim().min(1)).optional(),
-  images: z.array(z.string().trim().min(1)).optional(),
+  images: z.array(safeImageUrl).optional(),
   description: optionalNullableString(5000),
   contactPhone: optionalNullableString(60),
-  contactEmail: optionalNullableString(180),
+  contactEmail: optionalNullableEmail,
   isActive: z.boolean().optional(),
 });
 
@@ -158,6 +197,32 @@ export function sanitizeHotelsForViewer<T extends Record<string, unknown>>(
     void _commissionPercent;
     return rest;
   });
+}
+
+/**
+ * Strip booking commissionAmountUsd and nested hotel.commissionPercent for non-ADMIN/MANAGER viewers.
+ */
+export function sanitizeBookingForViewer<T extends Record<string, unknown>>(
+  booking: T,
+  role?: string | null
+): T | Omit<T, 'commissionAmountUsd'> {
+  if (role === 'ADMIN' || role === 'MANAGER') {
+    return booking;
+  }
+  const { commissionAmountUsd: _commissionAmountUsd, hotel, ...rest } = booking as T & {
+    commissionAmountUsd?: unknown;
+    hotel?: Record<string, unknown> | null;
+  };
+  void _commissionAmountUsd;
+
+  if (hotel && typeof hotel === 'object') {
+    return {
+      ...rest,
+      hotel: sanitizeHotelsForViewer([hotel], role)[0],
+    } as Omit<T, 'commissionAmountUsd'>;
+  }
+
+  return rest as Omit<T, 'commissionAmountUsd'>;
 }
 
 /**
@@ -397,6 +462,12 @@ export async function updateHotelBooking(
     where: { id: data.bookingId },
     include: {
       hotel: true,
+      case: {
+        select: {
+          id: true,
+          managerId: true,
+        },
+      },
       patient: {
         select: {
           id: true,
@@ -463,12 +534,37 @@ export async function updateHotelBooking(
       };
     }
   } else if (actor.role === 'MANAGER') {
-    if (booking.patient.assignedManagerId !== actor.userId) {
+    const isAssignedManager =
+      booking.patient.assignedManagerId === actor.userId ||
+      booking.case?.managerId === actor.userId;
+
+    if (!isAssignedManager) {
       return {
         ok: false,
         code: ERROR_CODES.FORBIDDEN,
         message: 'Patient is not assigned to you',
         status: 403,
+      };
+    }
+  }
+
+  if (TERMINAL_BOOKING_STATUSES.has(booking.status)) {
+    return {
+      ok: false,
+      code: ERROR_CODES.BAD_REQUEST,
+      message: `Cannot modify a ${booking.status} hotel booking`,
+      status: 400,
+    };
+  }
+
+  if (data.status !== undefined) {
+    const allowedNext = ALLOWED_BOOKING_TRANSITIONS[booking.status] ?? [];
+    if (!allowedNext.includes(data.status)) {
+      return {
+        ok: false,
+        code: ERROR_CODES.BAD_REQUEST,
+        message: `Cannot transition booking from ${booking.status} to ${data.status}`,
+        status: 400,
       };
     }
   }
@@ -568,11 +664,13 @@ export async function updateHotelBooking(
     ipAddress: actor.ipAddress,
   });
 
-  if (actor.role === 'PATIENT') {
-    const { commissionAmountUsd: _commissionAmountUsd, ...sanitizedBooking } = updated;
-    void _commissionAmountUsd;
-    return { ok: true, data: { booking: sanitizedBooking } };
-  }
-
-  return { ok: true, data: { booking: updated } };
+  return {
+    ok: true,
+    data: {
+      booking: sanitizeBookingForViewer(
+        updated as unknown as Record<string, unknown>,
+        actor.role
+      ),
+    },
+  };
 }

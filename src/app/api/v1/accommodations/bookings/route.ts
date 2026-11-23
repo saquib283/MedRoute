@@ -11,7 +11,10 @@ import { getClientIP, requireAuth } from '@/lib/api/auth-helper';
 import { apiSuccess, apiError } from '@/lib/api/response';
 import { ERROR_CODES } from '@/lib/api/errors';
 import { calculateHotelStayNights } from '@/lib/validation/booking-helpers';
-import { updateHotelBooking } from '@/lib/services/accommodations.service';
+import {
+  sanitizeBookingForViewer,
+  updateHotelBooking,
+} from '@/lib/services/accommodations.service';
 
 export async function GET(request: NextRequest) {
   try {
@@ -31,7 +34,10 @@ export async function GET(request: NextRequest) {
       if (!patient) return apiError(ERROR_CODES.NOT_FOUND, 'Patient profile not found', 404);
       where.patientId = patient.id;
     } else if (authUser.role === 'MANAGER') {
-      where.patient = { assignedManagerId: authUser.userId };
+      where.OR = [
+        { patient: { assignedManagerId: authUser.userId } },
+        { case: { managerId: authUser.userId } },
+      ];
     }
 
     const bookings = await prisma.hotelBooking.findMany({
@@ -50,10 +56,9 @@ export async function GET(request: NextRequest) {
     });
 
     if (authUser.role === 'PATIENT') {
-      const sanitized = bookings.map(({ commissionAmountUsd: _commissionAmountUsd, ...rest }) => {
-        void _commissionAmountUsd;
-        return rest;
-      });
+      const sanitized = bookings.map((b) =>
+        sanitizeBookingForViewer(b as unknown as Record<string, unknown>, authUser.role)
+      );
       return apiSuccess({ bookings: sanitized });
     }
 
@@ -115,6 +120,18 @@ export async function POST(request: NextRequest) {
       return apiError(ERROR_CODES.BAD_REQUEST, 'hotelId, checkInDate, and checkOutDate are required', 400);
     }
 
+    // Verify optional case ownership
+    let caseRecord: { id: string; patientId: string; managerId: string | null } | null = null;
+    if (caseId) {
+      caseRecord = await prisma.case.findUnique({
+        where: { id: caseId },
+        select: { id: true, patientId: true, managerId: true },
+      });
+      if (!caseRecord) {
+        return apiError(ERROR_CODES.FORBIDDEN, 'Invalid case for patient', 403);
+      }
+    }
+
     // Find Patient
     let patient;
     if (
@@ -126,7 +143,11 @@ export async function POST(request: NextRequest) {
       if (!patient) {
         return apiError(ERROR_CODES.NOT_FOUND, 'Patient profile not found', 404);
       }
-      if (authUser.role === 'MANAGER' && patient.assignedManagerId !== authUser.userId) {
+      if (
+        authUser.role === 'MANAGER' &&
+        patient.assignedManagerId !== authUser.userId &&
+        caseRecord?.managerId !== authUser.userId
+      ) {
         return apiError(ERROR_CODES.FORBIDDEN, 'Patient is not assigned to you', 403);
       }
     } else {
@@ -136,6 +157,10 @@ export async function POST(request: NextRequest) {
     }
     if (!patient) {
       return apiError(ERROR_CODES.NOT_FOUND, 'Patient profile required for hotel booking', 404);
+    }
+
+    if (caseRecord && caseRecord.patientId !== patient.id) {
+      return apiError(ERROR_CODES.FORBIDDEN, 'Invalid case for patient', 403);
     }
 
     // Find Hotel & ensure active
@@ -170,14 +195,6 @@ export async function POST(request: NextRequest) {
       return apiError(ERROR_CODES.BAD_REQUEST, 'Number of guests must be between 1 and 10', 400);
     }
 
-    // Verify optional case ownership
-    if (caseId) {
-      const caseRecord = await prisma.case.findUnique({ where: { id: caseId } });
-      if (!caseRecord || caseRecord.patientId !== patient.id) {
-        return apiError(ERROR_CODES.FORBIDDEN, 'Invalid case for patient', 403);
-      }
-    }
-
     // Calculate Price & Partner Commission Cut ($ USD)
     const nightlyPrice = Number(hotel.nightlyRateUsd);
     const totalAmountUsd = nightlyPrice * numNights;
@@ -207,13 +224,12 @@ export async function POST(request: NextRequest) {
       },
     });
 
-    if (authUser.role === 'PATIENT') {
-      const { commissionAmountUsd: _commissionAmountUsd, ...sanitizedBooking } = booking;
-      void _commissionAmountUsd;
-      return apiSuccess({ booking: sanitizedBooking });
-    }
-
-    return apiSuccess({ booking });
+    return apiSuccess({
+      booking: sanitizeBookingForViewer(
+        booking as unknown as Record<string, unknown>,
+        authUser.role
+      ),
+    });
   } catch (err) {
     console.error('[Hotel Bookings POST Error]', err);
     return apiError(ERROR_CODES.INTERNAL_ERROR, 'Failed to process hotel accommodation booking', 500);

@@ -14,7 +14,9 @@ jest.mock('@/lib/prisma', () => ({
       update: jest.fn(),
     },
     hotelBooking: {
+      findMany: jest.fn(),
       findUnique: jest.fn(),
+      create: jest.fn(),
       update: jest.fn(),
     },
     hospital: {
@@ -35,7 +37,10 @@ import {
   PUT as putAccommodation,
   DELETE as deleteAccommodation,
 } from '@/app/api/v1/accommodations/route';
-import { PATCH as patchHotelBooking } from '@/app/api/v1/accommodations/bookings/route';
+import {
+  GET as getHotelBookings,
+  PATCH as patchHotelBooking,
+} from '@/app/api/v1/accommodations/bookings/route';
 
 const mockedPrisma = prisma as unknown as {
   hotel: Record<string, jest.Mock>;
@@ -228,6 +233,43 @@ describe('Task 3: Partner Accommodations & Hotel Booking Lifecycle', () => {
       body: JSON.stringify({ id: 'h-1', name: 'Hack' }),
     });
     expect((await putAccommodation(docPutReq)).status).toBe(403);
+
+    // Rejects invalid contactEmail and unsafe image URL schemes
+    const badEmailReq = new NextRequest('http://localhost/api/v1/accommodations', {
+      method: 'PUT',
+      headers: {
+        'content-type': 'application/json',
+        'x-user-id': 'adm-1',
+        'x-user-email': 'a@example.com',
+        'x-user-role': 'ADMIN',
+      },
+      body: JSON.stringify({ id: 'h-1', contactEmail: 'not-an-email' }),
+    });
+    expect((await putAccommodation(badEmailReq)).status).toBe(400);
+
+    const jsImgReq = new NextRequest('http://localhost/api/v1/accommodations', {
+      method: 'PUT',
+      headers: {
+        'content-type': 'application/json',
+        'x-user-id': 'adm-1',
+        'x-user-email': 'a@example.com',
+        'x-user-role': 'ADMIN',
+      },
+      body: JSON.stringify({ id: 'h-1', images: ['javascript:alert(1)'] }),
+    });
+    expect((await putAccommodation(jsImgReq)).status).toBe(400);
+
+    const dataImgReq = new NextRequest('http://localhost/api/v1/accommodations', {
+      method: 'PUT',
+      headers: {
+        'content-type': 'application/json',
+        'x-user-id': 'adm-1',
+        'x-user-email': 'a@example.com',
+        'x-user-role': 'ADMIN',
+      },
+      body: JSON.stringify({ id: 'h-1', images: ['data:text/html,<script>alert(1)</script>'] }),
+    });
+    expect((await putAccommodation(dataImgReq)).status).toBe(400);
   });
 
   it('allows PATIENT self-cancellation of CONFIRMED bookings and recalculates commission on MANAGER date updates', async () => {
@@ -243,6 +285,7 @@ describe('Task 3: Partner Accommodations & Hotel Booking Lifecycle', () => {
       numNights: 4,
       totalAmountUsd: 400,
       commissionAmountUsd: 80,
+      case: { id: 'case-1', managerId: 'mgr-1' },
       patient: { id: 'pat-1', assignedManagerId: 'mgr-1' },
       hotel: { id: 'h-1', nightlyRateUsd: 100, commissionPercent: 20 },
     });
@@ -250,6 +293,7 @@ describe('Task 3: Partner Accommodations & Hotel Booking Lifecycle', () => {
       id: 'bk-1',
       status: 'CANCELLED',
       commissionAmountUsd: 80,
+      hotel: { id: 'h-1', name: 'Taj Recovery', commissionPercent: 20 },
     });
 
     const patCancel = new NextRequest('http://localhost/api/v1/accommodations/bookings', {
@@ -266,6 +310,7 @@ describe('Task 3: Partner Accommodations & Hotel Booking Lifecycle', () => {
     const patCancelJson = await patCancelRes.json();
     expect(patCancelRes.status).toBe(200);
     expect(patCancelJson.data.booking.commissionAmountUsd).toBeUndefined();
+    expect(patCancelJson.data.booking.hotel.commissionPercent).toBeUndefined();
     expect(mockedPrisma.auditLog.create).toHaveBeenCalledWith(
       expect.objectContaining({
         data: expect.objectContaining({
@@ -276,6 +321,26 @@ describe('Task 3: Partner Accommodations & Hotel Booking Lifecycle', () => {
       })
     );
 
+    // GET /api/v1/accommodations/bookings also strips hotel.commissionPercent for PATIENT
+    mockedPrisma.hotelBooking.findMany.mockResolvedValueOnce([
+      {
+        id: 'bk-1',
+        status: 'CONFIRMED',
+        totalAmountUsd: 400,
+        commissionAmountUsd: 80,
+        hotel: { id: 'h-1', name: 'Taj Recovery', commissionPercent: 20 },
+      },
+    ]);
+    const patGetRes = await getHotelBookings(
+      new NextRequest('http://localhost/api/v1/accommodations/bookings', {
+        headers: { 'x-user-id': 'u-pat-1', 'x-user-email': 'p@example.com', 'x-user-role': 'PATIENT' },
+      })
+    );
+    const patGetJson = await patGetRes.json();
+    expect(patGetRes.status).toBe(200);
+    expect(patGetJson.data.bookings[0].commissionAmountUsd).toBeUndefined();
+    expect(patGetJson.data.bookings[0].hotel.commissionPercent).toBeUndefined();
+
     // Patient cannot cancel CHECKED_IN booking
     mockedPrisma.hotelBooking.findUnique.mockResolvedValueOnce({
       id: 'bk-checked',
@@ -283,6 +348,7 @@ describe('Task 3: Partner Accommodations & Hotel Booking Lifecycle', () => {
       status: 'CHECKED_IN',
       checkInDate: new Date('2026-12-01'),
       checkOutDate: new Date('2026-12-05'),
+      case: null,
       patient: { id: 'pat-1', assignedManagerId: 'mgr-1' },
       hotel: { id: 'h-1', nightlyRateUsd: 100, commissionPercent: 20 },
     });
@@ -298,13 +364,14 @@ describe('Task 3: Partner Accommodations & Hotel Booking Lifecycle', () => {
     });
     expect((await patchHotelBooking(patCheckedInCancel)).status).toBe(400);
 
-    // Manager scoped check: unassigned manager gets 403
+    // Manager scoped check: unassigned patient AND unassigned case gets 403
     mockedPrisma.hotelBooking.findUnique.mockResolvedValueOnce({
       id: 'bk-other',
       patientId: 'pat-2',
       status: 'CONFIRMED',
       checkInDate: new Date('2026-12-01'),
       checkOutDate: new Date('2026-12-05'),
+      case: { id: 'case-other', managerId: 'mgr-other' },
       patient: { id: 'pat-2', assignedManagerId: 'mgr-other' },
       hotel: { id: 'h-1', nightlyRateUsd: 100, commissionPercent: 20 },
     });
@@ -320,6 +387,100 @@ describe('Task 3: Partner Accommodations & Hotel Booking Lifecycle', () => {
     });
     expect((await patchHotelBooking(otherMgrPatch)).status).toBe(403);
 
+    // Manager assigned via booking.case.managerId (even when patient.assignedManagerId differs) is allowed
+    mockedPrisma.hotelBooking.findUnique.mockResolvedValueOnce({
+      id: 'bk-case-mgr',
+      patientId: 'pat-2',
+      status: 'CONFIRMED',
+      checkInDate: new Date('2026-12-01'),
+      checkOutDate: new Date('2026-12-05'),
+      case: { id: 'case-2', managerId: 'mgr-1' },
+      patient: { id: 'pat-2', assignedManagerId: 'mgr-other' },
+      hotel: { id: 'h-1', nightlyRateUsd: 100, commissionPercent: 20 },
+    });
+    mockedPrisma.hotelBooking.update.mockResolvedValueOnce({
+      id: 'bk-case-mgr',
+      status: 'CHECKED_IN',
+    });
+    const caseMgrPatch = new NextRequest('http://localhost/api/v1/accommodations/bookings', {
+      method: 'PATCH',
+      headers: {
+        'content-type': 'application/json',
+        'x-user-id': 'mgr-1',
+        'x-user-email': 'm@example.com',
+        'x-user-role': 'MANAGER',
+      },
+      body: JSON.stringify({ bookingId: 'bk-case-mgr', status: 'CHECKED_IN' }),
+    });
+    expect((await patchHotelBooking(caseMgrPatch)).status).toBe(200);
+
+    // Terminal-state and invalid state-transition guards for ADMIN/MANAGER
+    mockedPrisma.hotelBooking.findUnique.mockResolvedValueOnce({
+      id: 'bk-cancelled',
+      patientId: 'pat-1',
+      status: 'CANCELLED',
+      checkInDate: new Date('2026-12-01'),
+      checkOutDate: new Date('2026-12-05'),
+      case: { id: 'case-1', managerId: 'mgr-1' },
+      patient: { id: 'pat-1', assignedManagerId: 'mgr-1' },
+      hotel: { id: 'h-1', nightlyRateUsd: 100, commissionPercent: 20 },
+    });
+    const cancelledToCheckedIn = new NextRequest('http://localhost/api/v1/accommodations/bookings', {
+      method: 'PATCH',
+      headers: {
+        'content-type': 'application/json',
+        'x-user-id': 'adm-1',
+        'x-user-email': 'a@example.com',
+        'x-user-role': 'ADMIN',
+      },
+      body: JSON.stringify({ bookingId: 'bk-cancelled', status: 'CHECKED_IN' }),
+    });
+    expect((await patchHotelBooking(cancelledToCheckedIn)).status).toBe(400);
+
+    mockedPrisma.hotelBooking.findUnique.mockResolvedValueOnce({
+      id: 'bk-completed',
+      patientId: 'pat-1',
+      status: 'COMPLETED',
+      checkInDate: new Date('2026-12-01'),
+      checkOutDate: new Date('2026-12-05'),
+      case: { id: 'case-1', managerId: 'mgr-1' },
+      patient: { id: 'pat-1', assignedManagerId: 'mgr-1' },
+      hotel: { id: 'h-1', nightlyRateUsd: 100, commissionPercent: 20 },
+    });
+    const editCompletedDates = new NextRequest('http://localhost/api/v1/accommodations/bookings', {
+      method: 'PATCH',
+      headers: {
+        'content-type': 'application/json',
+        'x-user-id': 'adm-1',
+        'x-user-email': 'a@example.com',
+        'x-user-role': 'ADMIN',
+      },
+      body: JSON.stringify({ bookingId: 'bk-completed', checkOutDate: '2026-12-08' }),
+    });
+    expect((await patchHotelBooking(editCompletedDates)).status).toBe(400);
+
+    mockedPrisma.hotelBooking.findUnique.mockResolvedValueOnce({
+      id: 'bk-pending',
+      patientId: 'pat-1',
+      status: 'PENDING',
+      checkInDate: new Date('2026-12-01'),
+      checkOutDate: new Date('2026-12-05'),
+      case: { id: 'case-1', managerId: 'mgr-1' },
+      patient: { id: 'pat-1', assignedManagerId: 'mgr-1' },
+      hotel: { id: 'h-1', nightlyRateUsd: 100, commissionPercent: 20 },
+    });
+    const pendingToCompleted = new NextRequest('http://localhost/api/v1/accommodations/bookings', {
+      method: 'PATCH',
+      headers: {
+        'content-type': 'application/json',
+        'x-user-id': 'adm-1',
+        'x-user-email': 'a@example.com',
+        'x-user-role': 'ADMIN',
+      },
+      body: JSON.stringify({ bookingId: 'bk-pending', status: 'COMPLETED' }),
+    });
+    expect((await patchHotelBooking(pendingToCompleted)).status).toBe(400);
+
     // Manager extends stay to 6 nights -> total 600, commission 120
     mockedPrisma.hotelBooking.findUnique.mockResolvedValueOnce({
       id: 'bk-2',
@@ -332,6 +493,7 @@ describe('Task 3: Partner Accommodations & Hotel Booking Lifecycle', () => {
       numNights: 4,
       totalAmountUsd: 400,
       commissionAmountUsd: 80,
+      case: { id: 'case-1', managerId: 'mgr-1' },
       patient: { id: 'pat-1', assignedManagerId: 'mgr-1' },
       hotel: { id: 'h-1', nightlyRateUsd: 100, commissionPercent: 20 },
     });
