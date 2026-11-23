@@ -38,8 +38,10 @@ export default function LoginPage() {
   const [totpCode, setTotpCode] = useState('');
   const [tempSessionId, setTempSessionId] = useState('');
   const [totpSecret, setTotpSecret] = useState('');
+  const [totpUri, setTotpUri] = useState('');
   const [isFetchingSecret, setIsFetchingSecret] = useState(false);
   const [copied, setCopied] = useState(false);
+  const [copiedUri, setCopiedUri] = useState(false);
 
   const fillDemoAccount = (demoEmail: string, demoPass: string) => {
     setEmail(demoEmail);
@@ -85,6 +87,9 @@ export default function LoginPage() {
         case 'PATIENT':
           router.push('/patient/dashboard');
           break;
+        case 'DOCTOR':
+          router.push('/doctor/dashboard');
+          break;
         case 'MANAGER':
           router.push('/manager/dashboard');
           break;
@@ -111,6 +116,7 @@ export default function LoginPage() {
       const data = await res.json();
       if (data.success) {
         setTotpSecret(data.data.secret);
+        setTotpUri(data.data.totpUri || '');
       } else {
         setError(data.error?.message || 'Failed to initialize 2FA secret.');
       }
@@ -154,7 +160,6 @@ export default function LoginPage() {
         case 'DOCTOR':
           router.push('/doctor/dashboard');
           break;
-        case 'ADMIN':
         case 'ADMIN':
           router.push('/admin/dashboard');
           break;
@@ -272,6 +277,13 @@ export default function LoginPage() {
             <Button type="submit" fullWidth isLoading={isLoading} size="lg">
               Sign In to Care Portal
             </Button>
+
+            <p className="text-xs text-center text-surface-500 pt-2">
+              New international patient?{' '}
+              <Link href="/register" className="font-bold text-primary-600 hover:text-primary-700 transition-colors">
+                Create an account
+              </Link>
+            </p>
           </form>
         </>
       )}
@@ -375,6 +387,31 @@ export default function LoginPage() {
                       className="text-xs font-bold text-primary-600 hover:text-primary-700 transition-colors shrink-0"
                     >
                       {copied ? 'Copied!' : 'Copy'}
+                    </button>
+                  </div>
+                </div>
+              )}
+
+              {totpUri && (
+                <div className="space-y-2">
+                  <label className="block text-xs font-bold text-surface-700">Authenticator Setup URI (otpauth://)</label>
+                  <div className="bg-surface-50 border border-surface-200 p-3 rounded-xl flex items-center justify-between gap-2 text-xs">
+                    <a
+                      href={totpUri}
+                      className="font-mono text-primary-600 hover:text-primary-700 underline break-all"
+                    >
+                      {totpUri}
+                    </a>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        navigator.clipboard.writeText(totpUri);
+                        setCopiedUri(true);
+                        setTimeout(() => setCopiedUri(false), 2000);
+                      }}
+                      className="text-xs font-bold text-primary-600 hover:text-primary-700 transition-colors shrink-0"
+                    >
+                      {copiedUri ? 'Copied!' : 'Copy URI'}
                     </button>
                   </div>
                 </div>

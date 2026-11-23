@@ -15,18 +15,34 @@ const updateAppointmentSchema = z.object({
   clinicalNotes: z.string().max(10000).optional(),
 });
 
+async function requireActiveDoctor(request: NextRequest) {
+  const { user: authUser, error } = requireAuth(request);
+  if (error) return { doctorProfile: null, error };
+  if (authUser!.role !== 'DOCTOR') {
+    return {
+      doctorProfile: null,
+      error: apiError(ERROR_CODES.FORBIDDEN, 'Doctor access required', 403),
+    };
+  }
+
+  const doctorProfile = await prisma.doctor.findUnique({
+    where: { userId: authUser!.userId },
+  });
+
+  if (!doctorProfile || !doctorProfile.isActive) {
+    return {
+      doctorProfile: null,
+      error: apiError(ERROR_CODES.USER_NOT_FOUND, 'Active doctor profile not found', 404),
+    };
+  }
+
+  return { doctorProfile, error: null };
+}
+
 export async function GET(request: NextRequest) {
   try {
-    const { user: authUser, error } = requireAuth(request);
+    const { doctorProfile, error } = await requireActiveDoctor(request);
     if (error) return error;
-
-    const doctorProfile = await prisma.doctor.findUnique({
-      where: { userId: authUser!.userId },
-    });
-
-    if (!doctorProfile) {
-      return apiError(ERROR_CODES.USER_NOT_FOUND, 'Doctor profile not found', 404);
-    }
 
     const { searchParams } = new URL(request.url);
     const filter = searchParams.get('filter') || 'all'; // all, upcoming, past
@@ -66,16 +82,8 @@ export async function GET(request: NextRequest) {
 
 export async function PUT(request: NextRequest) {
   try {
-    const { user: authUser, error } = requireAuth(request);
+    const { doctorProfile, error } = await requireActiveDoctor(request);
     if (error) return error;
-
-    const doctorProfile = await prisma.doctor.findUnique({
-      where: { userId: authUser!.userId },
-    });
-
-    if (!doctorProfile) {
-      return apiError(ERROR_CODES.USER_NOT_FOUND, 'Doctor profile not found', 404);
-    }
 
     const { searchParams } = new URL(request.url);
     const appointmentId = searchParams.get('id');

@@ -7,25 +7,14 @@
 import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
 import { verifyAccessToken } from '@/lib/auth/jwt';
-import { canAccessRoute, getDefaultRoute, ROUTE_ROLES } from '@/lib/auth/rbac';
+import {
+  canAccessRoute,
+  getDefaultRoute,
+  PUBLIC_ROUTES,
+  ROUTE_ROLES,
+  SKIP_ROUTES,
+} from '@/lib/auth/rbac';
 import type { UserRole } from '@prisma/client';
-
-// Routes that don't require authentication
-const PUBLIC_ROUTES = [
-  '/login',
-  '/register',
-  '/forgot-password',
-  '/api/v1/auth/login',
-  '/api/v1/auth/register',
-  '/api/v1/auth/login/otp/request',
-  '/api/v1/auth/login/otp/verify',
-  '/api/v1/auth/forgot-password',
-  '/api/v1/auth/reset-password',
-  '/api/v1/auth/refresh',
-];
-
-// Static assets and internal routes to skip
-const SKIP_ROUTES = ['/_next', '/favicon.ico', '/api/docs'];
 
 export default async function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl;

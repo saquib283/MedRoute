@@ -13,14 +13,17 @@ export async function GET(request: NextRequest) {
   try {
     const { user: authUser, error } = requireAuth(request);
     if (error) return error;
+    if (authUser!.role !== 'DOCTOR') {
+      return apiError(ERROR_CODES.FORBIDDEN, 'Doctor access required', 403);
+    }
 
     // Resolve the doctor profile tied to this user
     const doctorProfile = await prisma.doctor.findUnique({
       where: { userId: authUser!.userId },
     });
 
-    if (!doctorProfile) {
-      return apiError(ERROR_CODES.USER_NOT_FOUND, 'Doctor profile not found for this account', 404);
+    if (!doctorProfile || !doctorProfile.isActive) {
+      return apiError(ERROR_CODES.USER_NOT_FOUND, 'Active doctor profile not found', 404);
     }
 
     const todayStart = new Date();

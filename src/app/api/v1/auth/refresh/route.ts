@@ -9,12 +9,11 @@ import prisma from '@/lib/prisma';
 import { verifyRefreshToken, signAccessToken, signRefreshToken } from '@/lib/auth/jwt';
 import { apiSuccess, apiError } from '@/lib/api/response';
 import { ERROR_CODES } from '@/lib/api/errors';
-import { setAuthCookies } from '@/lib/api/auth-helper';
+import { setAuthCookies, extractRefreshTokenFromRequest } from '@/lib/api/auth-helper';
 
 export async function POST(request: NextRequest) {
   try {
-    const body = await request.json();
-    const { refreshToken: incomingToken } = body;
+    const incomingToken = await extractRefreshTokenFromRequest(request);
 
     if (!incomingToken) {
       return apiError(ERROR_CODES.BAD_REQUEST, 'Refresh token is required', 400);

@@ -19,6 +19,7 @@ export function SessionTimeoutProvider({ children }: { children: React.ReactNode
   const [remainingSeconds, setRemainingSeconds] = useState(120);
 
   const lastActivityRef = useRef<number>(Date.now());
+  const lastRefreshRef = useRef<number>(Date.now());
   const warningTimerRef = useRef<NodeJS.Timeout | null>(null);
   const logoutTimerRef = useRef<NodeJS.Timeout | null>(null);
   const countdownIntervalRef = useRef<NodeJS.Timeout | null>(null);
@@ -29,6 +30,21 @@ export function SessionTimeoutProvider({ children }: { children: React.ReactNode
     pathname === '/register' ||
     pathname === '/forgot-password' ||
     pathname === '/';
+
+  const refreshSession = useCallback(async (): Promise<boolean> => {
+    try {
+      const res = await fetch('/api/v1/auth/refresh', { method: 'POST' });
+      if (!res.ok) {
+        setShowWarning(false);
+        router.push('/login?reason=expired');
+        return false;
+      }
+      lastRefreshRef.current = Date.now();
+      return true;
+    } catch {
+      return false;
+    }
+  }, [router]);
 
   const handleLogout = useCallback(async () => {
     try {
@@ -76,13 +92,26 @@ export function SessionTimeoutProvider({ children }: { children: React.ReactNode
     }, INACTIVITY_LIMIT_MS);
   }, [isPublicRoute, showWarning, handleLogout]);
 
+  const handleStayLoggedIn = useCallback(async () => {
+    const ok = await refreshSession();
+    if (ok) {
+      resetTimers();
+    }
+  }, [refreshSession, resetTimers]);
+
   useEffect(() => {
     if (isPublicRoute) return;
 
     const events = ['mousemove', 'keydown', 'mousedown', 'touchstart', 'scroll'];
     const handleUserActivity = () => {
+      const now = Date.now();
+      // Proactively refresh the 15-min access token before expiry while user is active
+      if (now - lastRefreshRef.current > 11 * 60 * 1000) {
+        lastRefreshRef.current = now;
+        void refreshSession();
+      }
       // Throttle activity updates to once per 5 seconds
-      if (Date.now() - lastActivityRef.current > 5000) {
+      if (now - lastActivityRef.current > 5000) {
         resetTimers();
       }
     };
@@ -96,7 +125,7 @@ export function SessionTimeoutProvider({ children }: { children: React.ReactNode
       if (logoutTimerRef.current) clearTimeout(logoutTimerRef.current);
       if (countdownIntervalRef.current) clearInterval(countdownIntervalRef.current);
     };
-  }, [isPublicRoute, resetTimers]);
+  }, [isPublicRoute, resetTimers, refreshSession]);
 
   return (
     <>
@@ -118,7 +147,7 @@ export function SessionTimeoutProvider({ children }: { children: React.ReactNode
               <div className="mt-4 flex gap-2">
                 <button
                   type="button"
-                  onClick={resetTimers}
+                  onClick={handleStayLoggedIn}
                   className="px-3 py-1.5 bg-primary-600 hover:bg-primary-700 text-white font-medium text-xs rounded-lg transition-colors"
                 >
                   Stay Logged In
