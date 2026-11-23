@@ -118,7 +118,7 @@ export function validateUploadBuffer(
  */
 export async function saveValidatedUpload(
   file: File,
-  prefix: 'doc' | 'bill'
+  prefix: 'doc' | 'bill' | 'cert'
 ): Promise<SaveValidatedUploadResult> {
   if (!file || file.size <= 0) {
     return { ok: false, message: 'Uploaded file is empty' };
@@ -146,6 +146,21 @@ export async function saveValidatedUpload(
     canonicalMime: validation.canonicalMime,
     fileSize: buffer.length,
   };
+}
+
+/**
+ * Persists a server-generated PDF buffer to private storage using an opaque UUID storageKey.
+ */
+export async function saveGeneratedBuffer(
+  buffer: Buffer,
+  prefix: string,
+  extension: '.pdf' = '.pdf'
+): Promise<{ storageKey: string; fileSize: number }> {
+  const safePrefix = prefix.replace(/[^a-zA-Z0-9_-]/g, '') || 'cert';
+  const storageKey = `${safePrefix}_${crypto.randomUUID()}${extension}`;
+  await fs.mkdir(UPLOAD_DIR, { recursive: true });
+  await fs.writeFile(path.join(UPLOAD_DIR, storageKey), buffer);
+  return { storageKey, fileSize: buffer.length };
 }
 
 /**
