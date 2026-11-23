@@ -8,7 +8,6 @@
 import React, { useState, useEffect } from 'react';
 import { Card } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
-import { Badge } from '@/components/ui/Badge';
 import { toast } from '@/components/ui/Toast';
 import {
   Receipt,
@@ -17,12 +16,12 @@ import {
   Clock,
   AlertCircle,
   Building2,
-  DollarSign,
   Layers,
-  FileText,
   ShieldCheck,
   CreditCard,
   Percent,
+  X,
+  Ban,
 } from 'lucide-react';
 
 interface BillItem {
@@ -55,9 +54,19 @@ interface MedicalBill {
   items: BillItem[];
 }
 
+type PaymentMethodOption = 'CARD' | 'WIRE_TRANSFER' | 'INSURANCE_DIRECT';
+
 export default function PatientBillingPage() {
   const [bills, setBills] = useState<MedicalBill[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+
+  // Payment Modal State
+  const [paymentModalBill, setPaymentModalBill] = useState<MedicalBill | null>(null);
+  const [paymentMode, setPaymentMode] = useState<'FULL' | 'CUSTOM'>('FULL');
+  const [customAmount, setCustomAmount] = useState('');
+  const [paymentMethod, setPaymentMethod] = useState<PaymentMethodOption>('CARD');
+  const [referenceNo, setReferenceNo] = useState('');
+  const [isPaying, setIsPaying] = useState(false);
 
   const fetchPatientBills = async () => {
     try {
@@ -83,6 +92,66 @@ export default function PatientBillingPage() {
     return () => clearTimeout(timer);
   }, []);
 
+  const openPaymentModal = (bill: MedicalBill) => {
+    const total = Number(bill.totalAmount) || 0;
+    const paid = Number(bill.paidAmount) || 0;
+    const due = Math.max(0, Math.round((total - paid) * 100) / 100);
+    setPaymentModalBill(bill);
+    setPaymentMode('FULL');
+    setCustomAmount(due.toFixed(2));
+    setPaymentMethod('CARD');
+    setReferenceNo('');
+  };
+
+  const handlePaymentSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!paymentModalBill) return;
+
+    const total = Number(paymentModalBill.totalAmount) || 0;
+    const paid = Number(paymentModalBill.paidAmount) || 0;
+    const remainingDue = Math.max(0, Math.round((total - paid) * 100) / 100);
+    const amount = paymentMode === 'FULL' ? remainingDue : parseFloat(customAmount);
+
+    if (!Number.isFinite(amount) || amount <= 0) {
+      toast.error('Please enter a valid payment amount greater than zero.', 'Validation Error');
+      return;
+    }
+
+    if (amount > remainingDue + 0.005) {
+      toast.error(`Payment amount cannot exceed remaining balance ($${remainingDue.toFixed(2)}).`, 'Validation Error');
+      return;
+    }
+
+    setIsPaying(true);
+    try {
+      const res = await fetch('/api/v1/patient/billing/pay', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          billId: paymentModalBill.id,
+          amount,
+          paymentMethod,
+          ...(referenceNo.trim() ? { referenceNo: referenceNo.trim() } : {}),
+        }),
+      });
+      const data = await res.json();
+      if (res.ok && data.success) {
+        toast.success(
+          `Payment of $${amount.toFixed(2)} ${paymentModalBill.currency} applied to ${paymentModalBill.billNumber}.`,
+          'Payment Recorded'
+        );
+        setPaymentModalBill(null);
+        await fetchPatientBills();
+      } else {
+        toast.apiError(data, 'Failed to process medical bill payment', 'Payment Error');
+      }
+    } catch (err) {
+      toast.apiError(err, 'Network error while submitting payment', 'Connection Error');
+    } finally {
+      setIsPaying(false);
+    }
+  };
+
   const renderStatusBadge = (status: string) => {
     switch (status) {
       case 'PAID':
@@ -101,6 +170,12 @@ export default function PatientBillingPage() {
         return (
           <span className="inline-flex items-center gap-1 bg-rose-100 text-rose-800 border border-rose-200 px-3 py-1 rounded-lg text-xs font-extrabold">
             <AlertCircle className="w-3.5 h-3.5 text-rose-600" /> Payment Overdue
+          </span>
+        );
+      case 'CANCELLED':
+        return (
+          <span className="inline-flex items-center gap-1 bg-surface-100 text-surface-700 border border-surface-200 px-3 py-1 rounded-lg text-xs font-extrabold">
+            <Ban className="w-3.5 h-3.5 text-surface-500" /> Cancelled
           </span>
         );
       default:
@@ -238,6 +313,23 @@ export default function PatientBillingPage() {
                   </div>
                 </div>
 
+                {/* Optional Hospital & Billing Note */}
+                {(bill.hospital || bill.notes) && (
+                  <div className="flex flex-wrap items-center justify-between gap-2 text-xs text-surface-600 bg-surface-50/70 px-4 py-2.5 rounded-xl border border-surface-200/80">
+                    {bill.hospital && (
+                      <span className="inline-flex items-center gap-1.5 font-semibold text-surface-700">
+                        <Building2 className="w-3.5 h-3.5 text-primary-600" />
+                        {bill.hospital.name} ({bill.hospital.city})
+                      </span>
+                    )}
+                    {bill.notes && (
+                      <span className="text-surface-600 truncate max-w-full" title={bill.notes}>
+                        <strong>Note:</strong> {bill.notes}
+                      </span>
+                    )}
+                  </div>
+                )}
+
                 {/* Footer Actions & Note */}
                 <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pt-2">
                   <div className="text-xs text-surface-500 flex items-center gap-1.5">
@@ -245,22 +337,188 @@ export default function PatientBillingPage() {
                     <span>Verified Hospital Invoice — Issued by Case Management Team</span>
                   </div>
 
-                  {bill.fileUrl && (
-                    <a
-                      href={bill.fileUrl}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="px-5 py-2.5 bg-primary-600 hover:bg-primary-700 text-white font-bold rounded-xl text-xs flex items-center justify-center gap-2 transition-colors shadow-xs"
-                    >
-                      <Download className="w-4 h-4" /> Download Official Tax PDF Invoice
-                    </a>
-                  )}
+                  <div className="flex flex-wrap items-center gap-2.5">
+                    {bill.status !== 'CANCELLED' && due > 0 && (
+                      <Button
+                        type="button"
+                        onClick={() => openPaymentModal(bill)}
+                        className="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-xl text-xs flex items-center gap-2 shadow-xs"
+                      >
+                        <CreditCard className="w-4 h-4" />
+                        <span>Pay Balance</span>
+                      </Button>
+                    )}
+
+                    {bill.fileUrl && (
+                      <a
+                        href={bill.fileUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="px-5 py-2.5 bg-primary-600 hover:bg-primary-700 text-white font-bold rounded-xl text-xs flex items-center justify-center gap-2 transition-colors shadow-xs"
+                      >
+                        <Download className="w-4 h-4" /> Download Official Tax PDF Invoice
+                      </a>
+                    )}
+                  </div>
                 </div>
               </Card>
             );
           })}
         </div>
       )}
+
+      {/* Pay Medical Bill Modal */}
+      {paymentModalBill && (() => {
+        const modalTotal = Number(paymentModalBill.totalAmount) || 0;
+        const modalPaid = Number(paymentModalBill.paidAmount) || 0;
+        const modalDue = Math.max(0, Math.round((modalTotal - modalPaid) * 100) / 100);
+
+        return (
+          <div className="fixed inset-0 z-50 bg-surface-950/60 backdrop-blur-xs flex items-center justify-center p-4">
+            <div className="bg-white rounded-3xl max-w-lg w-full p-6 space-y-5 shadow-2xl border border-surface-200 animate-scale-in">
+              <div className="flex items-start justify-between border-b border-surface-100 pb-4">
+                <div>
+                  <span className="text-xs font-black uppercase tracking-wider text-primary-600">
+                    {paymentModalBill.billNumber}
+                  </span>
+                  <h3 className="text-lg font-extrabold text-surface-900 mt-0.5 flex items-center gap-2">
+                    <CreditCard className="w-5 h-5 text-emerald-600" />
+                    Pay Medical Bill
+                  </h3>
+                  <p className="text-xs text-surface-500 mt-0.5">{paymentModalBill.title}</p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setPaymentModalBill(null)}
+                  className="p-1.5 text-surface-400 hover:text-surface-700 hover:bg-surface-100 rounded-lg"
+                  aria-label="Close payment modal"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+
+              <form onSubmit={handlePaymentSubmit} className="space-y-5">
+                <div className="p-3.5 bg-surface-50 rounded-2xl border border-surface-200 flex items-center justify-between text-xs">
+                  <span className="font-bold text-surface-600">Remaining Balance Due:</span>
+                  <span className="text-base font-black text-surface-900">
+                    ${modalDue.toLocaleString('en-US', { minimumFractionDigits: 2 })} {paymentModalBill.currency}
+                  </span>
+                </div>
+
+                {/* Amount Selection */}
+                <div className="space-y-2.5">
+                  <label className="text-xs font-bold text-surface-700 block">Payment Amount</label>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setPaymentMode('FULL');
+                        setCustomAmount(modalDue.toFixed(2));
+                      }}
+                      className={`p-3 rounded-xl border text-left transition-all ${
+                        paymentMode === 'FULL'
+                          ? 'border-emerald-500 bg-emerald-50 text-emerald-900 ring-1 ring-emerald-500'
+                          : 'border-surface-200 bg-white text-surface-700 hover:bg-surface-50'
+                      }`}
+                    >
+                      <span className="text-xs font-extrabold block">Full Remaining Balance</span>
+                      <span className="text-xs font-bold text-emerald-700 mt-0.5 block">
+                        ${modalDue.toFixed(2)} {paymentModalBill.currency}
+                      </span>
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => setPaymentMode('CUSTOM')}
+                      className={`p-3 rounded-xl border text-left transition-all ${
+                        paymentMode === 'CUSTOM'
+                          ? 'border-primary-600 bg-primary-50 text-primary-900 ring-1 ring-primary-600'
+                          : 'border-surface-200 bg-white text-surface-700 hover:bg-surface-50'
+                      }`}
+                    >
+                      <span className="text-xs font-extrabold block">Custom Deposit Amount</span>
+                      <span className="text-xs text-surface-500 mt-0.5 block">Partial installment</span>
+                    </button>
+                  </div>
+
+                  {paymentMode === 'CUSTOM' && (
+                    <div className="pt-1">
+                      <input
+                        type="number"
+                        step="0.01"
+                        min="0.01"
+                        max={modalDue.toFixed(2)}
+                        value={customAmount}
+                        onChange={(e) => setCustomAmount(e.target.value)}
+                        placeholder={`Enter amount up to ${modalDue.toFixed(2)}`}
+                        className="w-full h-11 px-3 bg-surface-50 border border-surface-300 rounded-xl text-xs font-bold text-surface-900 focus:outline-none focus:border-primary-600"
+                        required
+                      />
+                    </div>
+                  )}
+                </div>
+
+                {/* Payment Method */}
+                <div className="space-y-1.5">
+                  <label className="text-xs font-bold text-surface-700 block">Payment Method</label>
+                  <select
+                    value={paymentMethod}
+                    onChange={(e) => setPaymentMethod(e.target.value as PaymentMethodOption)}
+                    className="w-full h-11 px-3 bg-surface-50 border border-surface-300 rounded-xl text-xs font-bold text-surface-900 focus:outline-none focus:border-primary-600"
+                  >
+                    <option value="CARD">Card (Credit / Debit)</option>
+                    <option value="WIRE_TRANSFER">Wire Transfer (SWIFT / IBAN)</option>
+                    <option value="INSURANCE_DIRECT">Insurance Direct Settlement</option>
+                  </select>
+                </div>
+
+                {/* Optional Reference No */}
+                <div className="space-y-1.5">
+                  <label className="text-xs font-bold text-surface-700 block">
+                    Payment Reference # (Optional)
+                  </label>
+                  <input
+                    type="text"
+                    maxLength={120}
+                    value={referenceNo}
+                    onChange={(e) => setReferenceNo(e.target.value)}
+                    placeholder="e.g. SWIFT-882190, Auth Code, or Policy Claim #"
+                    className="w-full h-11 px-3 bg-surface-50 border border-surface-300 rounded-xl text-xs font-medium text-surface-900 focus:outline-none focus:border-primary-600"
+                  />
+                </div>
+
+                <div className="flex items-center justify-end gap-3 pt-2">
+                  <Button
+                    type="button"
+                    variant="secondary"
+                    onClick={() => setPaymentModalBill(null)}
+                    className="px-4 py-2 text-xs font-bold rounded-xl"
+                  >
+                    Cancel
+                  </Button>
+                  <Button
+                    type="submit"
+                    disabled={isPaying}
+                    className="px-5 py-2 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-xl text-xs flex items-center gap-2"
+                  >
+                    {isPaying ? (
+                      <>
+                        <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                        <span>Processing...</span>
+                      </>
+                    ) : (
+                      <>
+                        <CheckCircle2 className="w-4 h-4" />
+                        <span>Submit Payment</span>
+                      </>
+                    )}
+                  </Button>
+                </div>
+              </form>
+            </div>
+          </div>
+        );
+      })()}
     </div>
   );
 }

@@ -8,32 +8,28 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { Card } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
-import { Badge } from '@/components/ui/Badge';
-import { Input } from '@/components/ui/Input';
 import { Select, SelectOption } from '@/components/ui/Select';
 import { toast } from '@/components/ui/Toast';
+import type { MultiPageOcrExtractionResult } from '@/lib/services/billing-ocr.service';
 import {
   Receipt,
   Plus,
   Search,
   DollarSign,
-  Calendar,
-  FileText,
   Download,
   Trash2,
   CheckCircle2,
   Clock,
   AlertCircle,
   Building2,
-  User,
   Layers,
   X,
   CreditCard,
   Percent,
   Sparkles,
   UploadCloud,
-  ScanLine,
   FileCheck2,
+  Ban,
 } from 'lucide-react';
 
 interface BillItemData {
@@ -47,6 +43,8 @@ interface BillItemData {
 
 interface MedicalBillData {
   id: string;
+  caseId?: string;
+  hospitalId?: string | null;
   billNumber: string;
   title: string;
   category: string;
@@ -67,16 +65,38 @@ interface MedicalBillData {
     };
   };
   hospital?: {
+    id?: string;
     name: string;
     city: string;
   } | null;
   items: BillItemData[];
 }
 
-interface PatientOption {
-  id: string;
-  fullName: string;
+interface CaseOption {
   caseId: string;
+  patientId: string;
+  patientName: string;
+  caseStatus: string;
+}
+
+interface HospitalOption {
+  id: string;
+  name: string;
+  city: string;
+}
+
+interface MetadataCaseItem {
+  id: string;
+  patientId: string;
+  status: string;
+  createdAt: string;
+  patient?: {
+    id: string;
+    user?: {
+      fullName?: string;
+      email?: string;
+    };
+  };
 }
 
 const CATEGORY_OPTIONS: SelectOption[] = [
@@ -98,13 +118,20 @@ const ITEM_CATEGORY_OPTIONS: SelectOption[] = [
 
 export default function ManagerBillingPage() {
   const [bills, setBills] = useState<MedicalBillData[]>([]);
-  const [patients, setPatients] = useState<PatientOption[]>([]);
+  const [caseOptions, setCaseOptions] = useState<CaseOption[]>([]);
+  const [hospitals, setHospitals] = useState<HospitalOption[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
   // Filters & Views
   const [activeStatusFilter, setActiveStatusFilter] = useState('ALL');
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedBillForDetails, setSelectedBillForDetails] = useState<MedicalBillData | null>(null);
+
+  // Settlement Drawer State (inside selectedBillForDetails modal)
+  const [settlementPaymentAmount, setSettlementPaymentAmount] = useState('');
+  const [settlementStatus, setSettlementStatus] = useState('PENDING');
+  const [settlementNotes, setSettlementNotes] = useState('');
+  const [isUpdatingBill, setIsUpdatingBill] = useState(false);
 
   // Modal State
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -113,6 +140,7 @@ export default function ManagerBillingPage() {
   // Form State
   const [selectedPatientId, setSelectedPatientId] = useState('');
   const [selectedCaseId, setSelectedCaseId] = useState('');
+  const [selectedHospitalId, setSelectedHospitalId] = useState('');
   const [billTitle, setBillTitle] = useState('');
   const [billCategory, setBillCategory] = useState('HOSPITAL_SURGERY');
   const [currency, setCurrency] = useState('USD');
@@ -126,6 +154,7 @@ export default function ManagerBillingPage() {
   const [isOcrScanning, setIsOcrScanning] = useState(false);
   const [ocrSuccessData, setOcrSuccessData] = useState<{
     confidence: number;
+    extractionMode: 'PDF_TEXT' | 'SCANNED_FALLBACK';
     hospitalName?: string;
     invoiceNumber?: string;
     itemCount: number;
@@ -151,15 +180,15 @@ export default function ManagerBillingPage() {
       });
 
       const data = await res.json();
-      if (data.success && data.data?.ocr) {
-        const ocr = data.data.ocr;
+      if (res.ok && data.success && data.data?.ocr) {
+        const ocr = data.data.ocr as MultiPageOcrExtractionResult;
         setBillTitle(ocr.title || 'Multi-Page Hospital Medical Bill');
         setBillCategory(ocr.category || 'HOSPITAL_SURGERY');
         setCurrency(ocr.currency || 'USD');
 
         if (ocr.items && ocr.items.length > 0) {
           setLineItems(
-            ocr.items.map((it: BillItemData) => ({
+            ocr.items.map((it) => ({
               description: it.description,
               quantity: it.quantity,
               unitPrice: it.unitPrice,
@@ -169,8 +198,10 @@ export default function ManagerBillingPage() {
           );
         }
 
+        const confidencePct = Math.round((ocr.confidenceScore ?? 0.65) * 100);
         setOcrSuccessData({
-          confidence: Math.round((ocr.confidenceScore || 0.97) * 100),
+          confidence: confidencePct,
+          extractionMode: ocr.extractionMode,
           hospitalName: ocr.hospitalName,
           invoiceNumber: ocr.invoiceNumber,
           itemCount: ocr.items?.length || 0,
@@ -178,12 +209,19 @@ export default function ManagerBillingPage() {
           pages: ocr.pages || [],
         });
 
-        toast.success(
-          `Multi-Page OCR Extracted ${ocr.items?.length || 0} Line-Item Breakdowns Across ${ocr.pageCount || 1} Pages with ${Math.round((ocr.confidenceScore || 0.97) * 100)}% Accuracy!`,
-          'Multi-Page Scan Complete'
-        );
+        if (ocr.extractionMode === 'SCANNED_FALLBACK') {
+          toast.warning(
+            'Scanned image fallback active — please verify and enter line-item amounts manually.',
+            'Verify Line Items'
+          );
+        } else {
+          toast.success(
+            `Digital PDF text extracted ${ocr.items?.length || 0} line items across ${ocr.pageCount || 1} page(s).`,
+            'PDF Extraction Complete'
+          );
+        }
       } else {
-        toast.error('Failed to parse multi-page bill with OCR. You can enter items manually.', 'OCR Warning');
+        toast.apiError(data, 'Failed to parse bill with OCR. You can enter items manually.', 'OCR Warning');
       }
     } catch (err) {
       console.error('Multi-Page OCR Error', err);
@@ -200,28 +238,34 @@ export default function ManagerBillingPage() {
 
   const fetchBillingData = async () => {
     try {
-      const res = await fetch('/api/v1/manager/billing');
+      const res = await fetch('/api/v1/manager/billing?meta=true');
       const data = await res.json();
-      if (data.success) {
-        setBills(data.data.bills || []);
+      if (!res.ok || !data.success) {
+        toast.apiError(data, 'Failed to load billing data', 'Fetch Error');
+        return;
       }
 
-      // Fetch patient list for select dropdown
-      const casesRes = await fetch('/api/v1/patient/cases');
-      const casesData = await casesRes.json();
-      if (casesData.success && casesData.data?.cases) {
-        const opts: PatientOption[] = casesData.data.cases.map(
-          (c: { id: string; patientId: string; patient?: { user?: { fullName?: string } } }) => ({
-            id: c.patientId,
-            fullName: c.patient?.user?.fullName || `Patient #${c.patientId.slice(0, 6)}`,
-            caseId: c.id,
-          })
-        );
-        setPatients(opts);
-        if (opts.length > 0) {
-          setSelectedPatientId(opts[0].id);
-          setSelectedCaseId(opts[0].caseId);
-        }
+      setBills(data.data.bills || []);
+
+      const rawCases: MetadataCaseItem[] = data.data.metadata?.cases || [];
+      const opts: CaseOption[] = rawCases.map((c) => ({
+        caseId: c.id,
+        patientId: c.patientId,
+        patientName: c.patient?.user?.fullName || 'Patient',
+        caseStatus: c.status,
+      }));
+      setCaseOptions(opts);
+
+      const rawHospitals: HospitalOption[] = data.data.metadata?.hospitals || [];
+      setHospitals(rawHospitals);
+
+      if (opts.length > 0) {
+        setSelectedCaseId((prev) => {
+          const existing = opts.find((o) => o.caseId === prev);
+          const chosen = existing || opts[0];
+          setSelectedPatientId(chosen.patientId);
+          return chosen.caseId;
+        });
       }
     } catch (err) {
       console.error('Failed to load billing workspace', err);
@@ -237,6 +281,79 @@ export default function ManagerBillingPage() {
     }, 0);
     return () => clearTimeout(timer);
   }, []);
+
+  const openBillDetails = (bill: MedicalBillData) => {
+    setSelectedBillForDetails(bill);
+    setSettlementPaymentAmount('');
+    setSettlementStatus(bill.status);
+    setSettlementNotes(bill.notes || '');
+  };
+
+  const handleBillSettlement = async (markPaidInFull: boolean) => {
+    if (!selectedBillForDetails) return;
+
+    const totalAmount = Number(selectedBillForDetails.totalAmount) || 0;
+    const paidAmount = Number(selectedBillForDetails.paidAmount) || 0;
+    const remaining = Math.max(0, Math.round((totalAmount - paidAmount) * 100) / 100);
+
+    const payload: Record<string, unknown> = {
+      billId: selectedBillForDetails.id,
+    };
+
+    if (markPaidInFull) {
+      payload.paidAmount = totalAmount;
+      payload.status = 'PAID';
+      if (settlementNotes.trim() !== (selectedBillForDetails.notes || '').trim()) {
+        payload.notes = settlementNotes.trim();
+      }
+    } else {
+      const parsedIncrement = settlementPaymentAmount.trim()
+        ? parseFloat(settlementPaymentAmount)
+        : 0;
+
+      if (settlementPaymentAmount.trim()) {
+        if (!Number.isFinite(parsedIncrement) || parsedIncrement <= 0) {
+          toast.error('Payment increment must be a positive amount.', 'Validation Error');
+          return;
+        }
+        if (parsedIncrement > remaining + 0.005) {
+          toast.error(`Payment increment cannot exceed remaining balance ($${remaining.toFixed(2)}).`, 'Validation Error');
+          return;
+        }
+        payload.paymentAmount = parsedIncrement;
+      }
+
+      payload.status = settlementStatus;
+      payload.notes = settlementNotes.trim();
+    }
+
+    setIsUpdatingBill(true);
+    try {
+      const res = await fetch('/api/v1/manager/billing', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      });
+      const data = await res.json();
+      if (res.ok && data.success && data.data?.bill) {
+        const updatedBill = data.data.bill as MedicalBillData;
+        setBills((prev) => prev.map((b) => (b.id === updatedBill.id ? updatedBill : b)));
+        openBillDetails(updatedBill);
+        toast.success(
+          markPaidInFull
+            ? `Invoice ${updatedBill.billNumber} marked as Paid in Full.`
+            : `Invoice ${updatedBill.billNumber} updated (${updatedBill.status.replace(/_/g, ' ')}).`,
+          'Bill Updated'
+        );
+      } else {
+        toast.apiError(data, 'Failed to update medical bill', 'Update Error');
+      }
+    } catch (err) {
+      toast.apiError(err, 'Network error updating medical bill', 'Connection Error');
+    } finally {
+      setIsUpdatingBill(false);
+    }
+  };
 
   // Line Item Handlers
   const addLineItem = () => {
@@ -269,10 +386,10 @@ export default function ManagerBillingPage() {
     return lineItems.reduce((acc, item) => acc + (item.amount || 0), 0);
   }, [lineItems]);
 
-  const handlePatientSelectChange = (patientIdVal: string) => {
-    setSelectedPatientId(patientIdVal);
-    const p = patients.find((opt) => opt.id === patientIdVal);
-    if (p) setSelectedCaseId(p.caseId);
+  const handleCaseSelectChange = (caseIdVal: string) => {
+    setSelectedCaseId(caseIdVal);
+    const matched = caseOptions.find((opt) => opt.caseId === caseIdVal);
+    if (matched) setSelectedPatientId(matched.patientId);
   };
 
   const handleFormSubmit = async (e: React.FormEvent) => {
@@ -287,6 +404,7 @@ export default function ManagerBillingPage() {
       const formData = new FormData();
       formData.append('caseId', selectedCaseId);
       formData.append('patientId', selectedPatientId);
+      if (selectedHospitalId) formData.append('hospitalId', selectedHospitalId);
       formData.append('title', billTitle.trim());
       formData.append('category', billCategory);
       formData.append('currency', currency);
@@ -303,11 +421,11 @@ export default function ManagerBillingPage() {
       });
 
       const data = await res.json();
-      if (data.success) {
+      if (res.ok && data.success) {
         toast.success(`Invoice ${data.data.bill.billNumber} created with ${lineItems.length} itemized breakdowns!`, 'Bill Created');
         setIsModalOpen(false);
         resetForm();
-        fetchBillingData();
+        void fetchBillingData();
       } else {
         toast.apiError(data, 'Failed to create medical bill', 'Creation Error');
       }
@@ -319,12 +437,16 @@ export default function ManagerBillingPage() {
   };
 
   const resetForm = () => {
+    setSelectedHospitalId('');
     setBillTitle('');
     setBillCategory('HOSPITAL_SURGERY');
+    setCurrency('USD');
+    setBillStatus('PENDING');
     setPaidAmountInput('0');
     setDueDateInput('');
     setNotesInput('');
     setBillFile(null);
+    setOcrSuccessData(null);
     setLineItems([{ description: 'Operating Suite & Surgical Charges', quantity: 1, unitPrice: 1500, amount: 1500, category: 'SURGERY_OT' }]);
   };
 
@@ -368,6 +490,12 @@ export default function ManagerBillingPage() {
         return (
           <span className="inline-flex items-center gap-1 bg-rose-100 text-rose-800 border border-rose-200 px-2.5 py-0.5 rounded-md text-[11px] font-extrabold">
             <AlertCircle className="w-3 h-3 text-rose-600" /> Overdue
+          </span>
+        );
+      case 'CANCELLED':
+        return (
+          <span className="inline-flex items-center gap-1 bg-surface-100 text-surface-700 border border-surface-200 px-2.5 py-0.5 rounded-md text-[11px] font-extrabold">
+            <Ban className="w-3 h-3 text-surface-500" /> Cancelled
           </span>
         );
       default:
@@ -461,7 +589,7 @@ export default function ManagerBillingPage() {
       {/* ─── Search & Status Filters ────────────────────────────────────── */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div className="flex items-center gap-2 overflow-x-auto pb-1 no-scrollbar">
-          {['ALL', 'PENDING', 'PARTIALLY_PAID', 'PAID', 'OVERDUE'].map((st) => (
+          {['ALL', 'PENDING', 'PARTIALLY_PAID', 'PAID', 'OVERDUE', 'CANCELLED'].map((st) => (
             <button
               key={st}
               type="button"
@@ -548,7 +676,7 @@ export default function ManagerBillingPage() {
                     <td className="p-4">
                       <button
                         type="button"
-                        onClick={() => setSelectedBillForDetails(bill)}
+                        onClick={() => openBillDetails(bill)}
                         className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-surface-100 hover:bg-surface-200 text-surface-800 rounded-lg text-xs font-bold border border-surface-200 transition-colors"
                       >
                         <Layers className="w-3.5 h-3.5 text-primary-600" />
@@ -587,10 +715,10 @@ export default function ManagerBillingPage() {
                         )}
                         <button
                           type="button"
-                          onClick={() => setSelectedBillForDetails(bill)}
+                          onClick={() => openBillDetails(bill)}
                           className="px-2.5 py-1 bg-primary-50 text-primary-700 hover:bg-primary-100 rounded-lg text-xs font-bold transition-colors"
                         >
-                          View Breakdown
+                          View & Settle
                         </button>
                       </div>
                     </td>
@@ -602,20 +730,31 @@ export default function ManagerBillingPage() {
         )}
       </Card>
 
-      {/* ─── Itemized Breakdown Modal / Drawer ───────────────────────────── */}
+      {/* ─── Itemized Breakdown & Settlement Modal / Drawer ─────────────── */}
       {selectedBillForDetails && (
         <div className="fixed inset-0 z-50 bg-surface-950/60 backdrop-blur-xs flex items-center justify-center p-4">
           <div className="bg-white rounded-3xl max-w-2xl w-full p-6 space-y-6 shadow-2xl border border-surface-200 animate-scale-in max-h-[90vh] overflow-y-auto">
             <div className="flex items-start justify-between border-b border-surface-100 pb-4">
               <div>
-                <span className="text-xs font-bold uppercase tracking-wider text-primary-600">
-                  {selectedBillForDetails.billNumber}
-                </span>
-                <h3 className="text-lg font-extrabold text-surface-900 mt-0.5">
+                <div className="flex items-center gap-2">
+                  <span className="text-xs font-bold uppercase tracking-wider text-primary-600">
+                    {selectedBillForDetails.billNumber}
+                  </span>
+                  {renderStatusBadge(selectedBillForDetails.status)}
+                </div>
+                <h3 className="text-lg font-extrabold text-surface-900 mt-1">
                   {selectedBillForDetails.title}
                 </h3>
-                <p className="text-xs text-surface-500 mt-0.5">
-                  Patient: <strong>{selectedBillForDetails.patient?.user?.fullName}</strong>
+                <p className="text-xs text-surface-500 mt-0.5 flex flex-wrap items-center gap-3">
+                  <span>
+                    Patient: <strong>{selectedBillForDetails.patient?.user?.fullName}</strong>
+                  </span>
+                  {selectedBillForDetails.hospital && (
+                    <span className="inline-flex items-center gap-1">
+                      <Building2 className="w-3.5 h-3.5 text-primary-600" />
+                      {selectedBillForDetails.hospital.name} ({selectedBillForDetails.hospital.city})
+                    </span>
+                  )}
                 </p>
               </div>
               <button
@@ -625,6 +764,28 @@ export default function ManagerBillingPage() {
               >
                 <X className="w-5 h-5" />
               </button>
+            </div>
+
+            {/* Balance Summary Strip */}
+            <div className="grid grid-cols-3 gap-3 bg-surface-50 p-3.5 rounded-2xl border border-surface-200 text-xs">
+              <div>
+                <span className="text-surface-500 font-semibold block">Invoice Total</span>
+                <span className="font-black text-surface-900 text-sm">
+                  ${Number(selectedBillForDetails.totalAmount).toFixed(2)} {selectedBillForDetails.currency}
+                </span>
+              </div>
+              <div>
+                <span className="text-surface-500 font-semibold block">Paid So Far</span>
+                <span className="font-black text-emerald-700 text-sm">
+                  ${Number(selectedBillForDetails.paidAmount).toFixed(2)}
+                </span>
+              </div>
+              <div>
+                <span className="text-surface-500 font-semibold block">Remaining Due</span>
+                <span className="font-black text-amber-700 text-sm">
+                  ${Math.max(0, Number(selectedBillForDetails.totalAmount) - Number(selectedBillForDetails.paidAmount)).toFixed(2)}
+                </span>
+              </div>
             </div>
 
             {/* Line Items Table */}
@@ -663,7 +824,7 @@ export default function ManagerBillingPage() {
                     <tr>
                       <td colSpan={4} className="p-3 text-right uppercase text-surface-500 text-xs">Net Invoice Total:</td>
                       <td className="p-3 text-right text-sm text-primary-700 font-black">
-                        ${Number(selectedBillForDetails.totalAmount).toFixed(2)} USD
+                        ${Number(selectedBillForDetails.totalAmount).toFixed(2)} {selectedBillForDetails.currency}
                       </td>
                     </tr>
                   </tfoot>
@@ -671,11 +832,90 @@ export default function ManagerBillingPage() {
               </div>
             </div>
 
-            {selectedBillForDetails.notes && (
-              <div className="p-3 bg-surface-50 rounded-xl border border-surface-200 text-xs text-surface-700">
-                <strong>Billing Note:</strong> {selectedBillForDetails.notes}
+            {/* Payment & Status Settlement Panel */}
+            <div className="p-4 bg-surface-50 rounded-2xl border border-surface-200 space-y-4">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                <div>
+                  <h4 className="text-xs font-extrabold uppercase tracking-wider text-surface-700 flex items-center gap-2">
+                    <CreditCard className="w-4 h-4 text-primary-600" /> Payment & Status Settlement
+                  </h4>
+                  <p className="text-xs text-surface-500 mt-0.5">
+                    Record incremental payments, mark paid in full, or update status and notes.
+                  </p>
+                </div>
+
+                <Button
+                  type="button"
+                  onClick={() => void handleBillSettlement(true)}
+                  disabled={
+                    isUpdatingBill ||
+                    selectedBillForDetails.status === 'PAID' ||
+                    selectedBillForDetails.status === 'CANCELLED'
+                  }
+                  className="px-3.5 py-2 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-xl text-xs flex items-center gap-1.5 shrink-0"
+                >
+                  <CheckCircle2 className="w-4 h-4" />
+                  <span>Mark Paid in Full</span>
+                </Button>
               </div>
-            )}
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div className="space-y-1">
+                  <label className="text-xs font-bold text-surface-700 block">
+                    Record Incremental Payment ({selectedBillForDetails.currency})
+                  </label>
+                  <input
+                    type="number"
+                    step="0.01"
+                    min="0"
+                    placeholder="0.00"
+                    value={settlementPaymentAmount}
+                    onChange={(e) => setSettlementPaymentAmount(e.target.value)}
+                    disabled={selectedBillForDetails.status === 'CANCELLED' || isUpdatingBill}
+                    className="w-full h-10 px-3 bg-white border border-surface-300 rounded-xl text-xs font-bold text-surface-900 focus:outline-none focus:border-primary-600"
+                  />
+                </div>
+
+                <div className="space-y-1">
+                  <label className="text-xs font-bold text-surface-700 block">Status</label>
+                  <select
+                    value={settlementStatus}
+                    onChange={(e) => setSettlementStatus(e.target.value)}
+                    disabled={isUpdatingBill}
+                    className="w-full h-10 px-3 bg-white border border-surface-300 rounded-xl text-xs font-bold text-surface-900 focus:outline-none focus:border-primary-600"
+                  >
+                    <option value="PENDING">PENDING</option>
+                    <option value="PARTIALLY_PAID">PARTIALLY_PAID</option>
+                    <option value="PAID">PAID</option>
+                    <option value="OVERDUE">OVERDUE</option>
+                    <option value="CANCELLED">CANCELLED</option>
+                  </select>
+                </div>
+              </div>
+
+              <div className="space-y-1">
+                <label className="text-xs font-bold text-surface-700 block">Billing / Settlement Notes</label>
+                <textarea
+                  rows={2}
+                  value={settlementNotes}
+                  onChange={(e) => setSettlementNotes(e.target.value)}
+                  disabled={isUpdatingBill}
+                  placeholder="Add receipt reference, wire details, or coordinator remarks..."
+                  className="w-full p-2.5 bg-white border border-surface-300 rounded-xl text-xs font-medium text-surface-900 focus:outline-none focus:border-primary-600"
+                />
+              </div>
+
+              <div className="flex justify-end">
+                <Button
+                  type="button"
+                  onClick={() => void handleBillSettlement(false)}
+                  disabled={isUpdatingBill}
+                  className="px-4 py-2 bg-primary-600 hover:bg-primary-700 text-white font-bold rounded-xl text-xs"
+                >
+                  {isUpdatingBill ? 'Saving Changes...' : 'Save Settlement & Status'}
+                </Button>
+              </div>
+            </div>
 
             <div className="flex items-center justify-between pt-2">
               {selectedBillForDetails.fileUrl ? (
@@ -733,9 +973,9 @@ export default function ManagerBillingPage() {
                     <div>
                       <h4 className="text-xs font-black tracking-wide text-white uppercase flex items-center gap-1.5">
                         Smart OCR Bill Auto-Scanner
-                        <span className="bg-emerald-500/20 text-emerald-300 text-xs font-bold px-2 py-0.5 rounded-full border border-emerald-400/30">AI Instant Extract</span>
+                        <span className="bg-emerald-500/20 text-emerald-300 text-xs font-bold px-2 py-0.5 rounded-full border border-emerald-400/30">PDF Stream Extract</span>
                       </h4>
-                      <p className="text-xs text-slate-300">Upload a hospital bill scan or PDF to auto-extract itemized breakdowns instantly.</p>
+                      <p className="text-xs text-slate-300">Upload a hospital PDF invoice or scan to populate line-item breakdowns.</p>
                     </div>
                   </div>
                 </div>
@@ -756,42 +996,87 @@ export default function ManagerBillingPage() {
                   {isOcrScanning ? (
                     <div className="flex items-center justify-center gap-2 text-xs font-bold text-emerald-300 py-1">
                       <div className="w-4 h-4 border-2 border-emerald-400 border-t-transparent rounded-full animate-spin" />
-                      <span>Scanning Multi-Page Medical Bill with OCR AI...</span>
+                      <span>Scanning Multi-Page Medical Bill...</span>
                     </div>
                   ) : (
                     <div className="flex items-center justify-center gap-2 text-xs font-bold text-slate-200 group-hover:text-white py-1">
                       <UploadCloud className="w-4 h-4 text-emerald-400" />
-                      <span>Drop multi-page bill / batch files here (PDF/JPG) for instant OCR stitching</span>
+                      <span>Drop multi-page bill / batch files here (PDF/JPG/PNG) for OCR extraction</span>
                     </div>
                   )}
                 </div>
 
                 {ocrSuccessData && (
-                  <div className="p-3 bg-emerald-500/20 rounded-xl border border-emerald-400/40 text-emerald-200 text-xs space-y-2">
-                    <div className="flex items-center justify-between">
+                  <div
+                    className={`p-3 rounded-xl border text-xs space-y-2 ${
+                      ocrSuccessData.extractionMode === 'SCANNED_FALLBACK'
+                        ? 'bg-amber-500/20 border-amber-400/40 text-amber-100'
+                        : 'bg-emerald-500/20 border-emerald-400/40 text-emerald-200'
+                    }`}
+                  >
+                    <div className="flex flex-wrap items-center justify-between gap-2">
                       <div className="flex items-center gap-2">
-                        <FileCheck2 className="w-4 h-4 text-emerald-400 shrink-0" />
+                        <FileCheck2
+                          className={`w-4 h-4 shrink-0 ${
+                            ocrSuccessData.extractionMode === 'SCANNED_FALLBACK'
+                              ? 'text-amber-300'
+                              : 'text-emerald-400'
+                          }`}
+                        />
                         <div>
-                          <p className="font-bold text-white">Multi-Page OCR Stitched ({ocrSuccessData.confidence}% Accuracy)</p>
-                          <p className="text-xs text-emerald-200">
-                            {ocrSuccessData.itemCount} sub-items extracted across {ocrSuccessData.pageCount} pages ({ocrSuccessData.hospitalName || 'hospital bill'}).
+                          <p className="font-bold text-white">
+                            {ocrSuccessData.extractionMode === 'SCANNED_FALLBACK'
+                              ? 'Raster / Scanned Document Loaded'
+                              : `Multi-Page OCR Stitched (${ocrSuccessData.confidence}% Confidence)`}
+                          </p>
+                          <p
+                            className={`text-xs ${
+                              ocrSuccessData.extractionMode === 'SCANNED_FALLBACK'
+                                ? 'text-amber-100'
+                                : 'text-emerald-200'
+                            }`}
+                          >
+                            {ocrSuccessData.itemCount} sub-items across {ocrSuccessData.pageCount} page(s)
+                            {ocrSuccessData.hospitalName ? ` (${ocrSuccessData.hospitalName})` : ''}.
                           </p>
                         </div>
                       </div>
-                      <span className="text-xs font-bold uppercase bg-emerald-400 text-slate-950 px-2 py-0.5 rounded-md shrink-0">Stitched</span>
+                      {ocrSuccessData.extractionMode === 'SCANNED_FALLBACK' ? (
+                        <span className="text-xs font-bold bg-amber-400 text-slate-950 px-2.5 py-0.5 rounded-md shrink-0">
+                          Scanned Image Fallback — Please verify line-item amounts
+                        </span>
+                      ) : (
+                        <span className="text-xs font-bold bg-emerald-400 text-slate-950 px-2.5 py-0.5 rounded-md shrink-0">
+                          Digital PDF Text Extracted
+                        </span>
+                      )}
                     </div>
 
                     {/* Page-by-Page Audit Tray */}
                     {ocrSuccessData.pages && ocrSuccessData.pages.length > 0 && (
-                      <div className="flex flex-wrap gap-1.5 pt-2 border-t border-emerald-400/20">
+                      <div
+                        className={`flex flex-wrap gap-1.5 pt-2 border-t ${
+                          ocrSuccessData.extractionMode === 'SCANNED_FALLBACK'
+                            ? 'border-amber-400/20'
+                            : 'border-emerald-400/20'
+                        }`}
+                      >
                         {ocrSuccessData.pages.map((p) => (
                           <span
                             key={p.pageNumber}
-                            className="bg-white/10 text-emerald-200 text-xs font-semibold px-2.5 py-1 rounded-lg border border-white/10 flex items-center gap-1"
+                            className="bg-white/10 text-white text-xs font-semibold px-2.5 py-1 rounded-lg border border-white/10 flex items-center gap-1"
                           >
                             <span>Page {p.pageNumber}:</span>
-                            <span className="text-white">{p.itemsFound} items</span>
-                            <span className="text-emerald-400 font-black">(${p.pageSubtotal.toFixed(2)})</span>
+                            <span>{p.itemsFound} items</span>
+                            <span
+                              className={`font-black ${
+                                ocrSuccessData.extractionMode === 'SCANNED_FALLBACK'
+                                  ? 'text-amber-300'
+                                  : 'text-emerald-400'
+                              }`}
+                            >
+                              (${p.pageSubtotal.toFixed(2)})
+                            </span>
                           </span>
                         ))}
                       </div>
@@ -800,19 +1085,39 @@ export default function ManagerBillingPage() {
                 )}
               </div>
 
-              {/* Patient & General Info */}
+              {/* Patient Case, Hospital & General Info */}
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div className="space-y-1.5">
-                  <label className="text-xs font-bold text-surface-700 block">Select Patient</label>
+                  <label className="text-xs font-bold text-surface-700 block">Select Patient & Case</label>
                   <select
-                    value={selectedPatientId}
-                    onChange={(e) => handlePatientSelectChange(e.target.value)}
+                    value={selectedCaseId}
+                    onChange={(e) => handleCaseSelectChange(e.target.value)}
                     className="w-full h-11 px-3 bg-surface-50 border border-surface-300 rounded-xl text-xs font-bold text-surface-900 focus:outline-none focus:border-primary-600"
                     required
                   >
-                    {patients.map((p) => (
-                      <option key={p.id} value={p.id}>
-                        {p.fullName}
+                    {caseOptions.length === 0 ? (
+                      <option value="">No active cases available</option>
+                    ) : (
+                      caseOptions.map((opt) => (
+                        <option key={opt.caseId} value={opt.caseId}>
+                          {opt.patientName} — Case #{opt.caseId.slice(-6)} ({opt.caseStatus})
+                        </option>
+                      ))
+                    )}
+                  </select>
+                </div>
+
+                <div className="space-y-1.5">
+                  <label className="text-xs font-bold text-surface-700 block">Partner Hospital (Optional)</label>
+                  <select
+                    value={selectedHospitalId}
+                    onChange={(e) => setSelectedHospitalId(e.target.value)}
+                    className="w-full h-11 px-3 bg-surface-50 border border-surface-300 rounded-xl text-xs font-bold text-surface-900 focus:outline-none focus:border-primary-600"
+                  >
+                    <option value="">None / Unspecified</option>
+                    {hospitals.map((h) => (
+                      <option key={h.id} value={h.id}>
+                        {h.name} ({h.city})
                       </option>
                     ))}
                   </select>
@@ -854,9 +1159,11 @@ export default function ManagerBillingPage() {
                 </div>
 
                 <div className="space-y-1.5">
-                  <label className="text-xs font-bold text-surface-700 block">Paid Deposit Amount ($)</label>
+                  <label className="text-xs font-bold text-surface-700 block">Paid Deposit Amount ({currency})</label>
                   <input
                     type="number"
+                    step="0.01"
+                    min="0"
                     placeholder="0.00"
                     value={paidAmountInput}
                     onChange={(e) => setPaidAmountInput(e.target.value)}
@@ -871,6 +1178,17 @@ export default function ManagerBillingPage() {
                     value={dueDateInput}
                     onChange={(e) => setDueDateInput(e.target.value)}
                     className="w-full h-11 px-3 bg-surface-50 border border-surface-300 rounded-xl text-xs font-bold text-surface-900 focus:outline-none focus:border-primary-600"
+                  />
+                </div>
+
+                <div className="space-y-1.5">
+                  <label className="text-xs font-bold text-surface-700 block">Billing Notes (Optional)</label>
+                  <input
+                    type="text"
+                    placeholder="Payment instructions or invoice remarks"
+                    value={notesInput}
+                    onChange={(e) => setNotesInput(e.target.value)}
+                    className="w-full h-11 px-3 bg-surface-50 border border-surface-300 rounded-xl text-xs font-medium text-surface-900 focus:outline-none focus:border-primary-600"
                   />
                 </div>
               </div>

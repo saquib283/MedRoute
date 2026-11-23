@@ -589,4 +589,188 @@ describe('Task 1: Billing Service, Dual Settlement & Real PDF Stream OCR', () =>
     );
     expect(ocrSpoofFail.status).toBe(400);
   });
+
+  it('returns populated metadata on GET ?meta=true, returns updated bill on PATCH, handles OCR 200 PDF/fallback, and settles patient bill to PAID (200) on POST /patient/billing/pay', async () => {
+    // 1. GET /api/v1/manager/billing?meta=true with populated cases & hospitals
+    mockedPrisma.medicalBill.findMany.mockResolvedValueOnce([
+      {
+        id: 'bill-10',
+        billNumber: 'INV-2026-1010',
+        title: 'Cardiac Care Invoice',
+        totalAmount: 2500,
+        paidAmount: 500,
+        status: 'PARTIALLY_PAID',
+      },
+    ]);
+    mockedPrisma.case.findMany.mockResolvedValueOnce([
+      {
+        id: 'case-10',
+        patientId: 'pat-10',
+        status: 'IN_TREATMENT',
+        createdAt: new Date('2026-11-01T00:00:00Z'),
+        patient: {
+          id: 'pat-10',
+          user: { fullName: 'Tariq Al-Said', email: 'tariq@example.com' },
+        },
+      },
+    ]);
+    mockedPrisma.hospital.findMany.mockResolvedValueOnce([
+      { id: 'hosp-10', name: 'Apollo Hospital', city: 'New Delhi' },
+    ]);
+
+    const metaRes = await managerBillingGet(
+      new NextRequest('http://localhost/api/v1/manager/billing?meta=true', {
+        headers: makeAuthHeaders('mgr-1', 'MANAGER'),
+      })
+    );
+    expect(metaRes.status).toBe(200);
+    const metaBody = await metaRes.json();
+    expect(metaBody.success).toBe(true);
+    expect(metaBody.data.bills).toHaveLength(1);
+    expect(metaBody.data.metadata.cases).toHaveLength(1);
+    expect(metaBody.data.metadata.cases[0]).toMatchObject({
+      id: 'case-10',
+      patientId: 'pat-10',
+      status: 'IN_TREATMENT',
+    });
+    expect(metaBody.data.metadata.hospitals).toEqual([
+      { id: 'hosp-10', name: 'Apollo Hospital', city: 'New Delhi' },
+    ]);
+
+    // 2. PATCH /api/v1/manager/billing updates bill status, notes, and paidAmount
+    const updatedManagerBill = {
+      id: 'bill-10',
+      caseId: 'case-10',
+      patientId: 'pat-10',
+      totalAmount: 2500,
+      paidAmount: 2500,
+      status: 'PAID',
+      notes: 'Settled at desk',
+      items: [],
+      patient: { id: 'pat-10', user: { fullName: 'Tariq Al-Said', email: 'tariq@example.com' } },
+      hospital: { id: 'hosp-10', name: 'Apollo Hospital', city: 'New Delhi' },
+    };
+    mockedPrisma.$transaction.mockImplementationOnce(async (fn: (tx: unknown) => unknown) =>
+      fn({
+        medicalBill: {
+          findUnique: jest.fn().mockResolvedValue({
+            id: 'bill-10',
+            caseId: 'case-10',
+            patientId: 'pat-10',
+            totalAmount: 2500,
+            paidAmount: 500,
+            status: 'PARTIALLY_PAID',
+            notes: null,
+            dueDate: null,
+            hospitalId: 'hosp-10',
+            case: { id: 'case-10', managerId: 'mgr-1' },
+            patient: { id: 'pat-10', assignedManagerId: 'mgr-1' },
+          }),
+          update: jest.fn().mockResolvedValue(updatedManagerBill),
+          count: jest.fn().mockResolvedValueOnce(0).mockResolvedValueOnce(1),
+        },
+        clinicalStep: { updateMany: jest.fn().mockResolvedValue({ count: 1 }) },
+      })
+    );
+    const patchRes = await managerBillingPatch(
+      new NextRequest('http://localhost/api/v1/manager/billing', {
+        method: 'PATCH',
+        headers: {
+          ...makeAuthHeaders('mgr-1', 'MANAGER'),
+          'content-type': 'application/json',
+        },
+        body: JSON.stringify({
+          billId: 'bill-10',
+          paidAmount: 2500,
+          status: 'PAID',
+          notes: 'Settled at desk',
+        }),
+      })
+    );
+    expect(patchRes.status).toBe(200);
+    const patchBody = await patchRes.json();
+    expect(patchBody.success).toBe(true);
+    expect(patchBody.data.bill).toMatchObject({
+      id: 'bill-10',
+      paidAmount: 2500,
+      status: 'PAID',
+      notes: 'Settled at desk',
+    });
+
+    // 3. POST /api/v1/manager/billing/ocr returns 200 with PDF_TEXT for valid PDF
+    const validPdf = buildFlatePdf(
+      'BT\n/F1 12 Tf\n50 750 Td\n(Apollo Hospital) Tj\n0 -20 Td\n(Invoice: INV-2026-5500) Tj\n0 -20 Td\n(ICU Bed Rent | 2 | 450.00 | 900.00) Tj\nET'
+    );
+    const ocrForm = new FormData();
+    ocrForm.append(
+      'files',
+      new File([new Uint8Array(validPdf)], 'apollo.pdf', { type: 'application/pdf' })
+    );
+    const ocrOkRes = await managerBillingOcrPost(
+      new NextRequest('http://localhost/api/v1/manager/billing/ocr', {
+        method: 'POST',
+        headers: makeAuthHeaders('mgr-1', 'MANAGER'),
+        body: ocrForm,
+      })
+    );
+    expect(ocrOkRes.status).toBe(200);
+    const ocrOkBody = await ocrOkRes.json();
+    expect(ocrOkBody.data.ocr.extractionMode).toBe('PDF_TEXT');
+    expect(ocrOkBody.data.ocr.totalAmount).toBe(900);
+
+    // 4. POST /api/v1/patient/billing/pay returns 200 with PAID bill for owning patient
+    mockedPrisma.patient.findFirst.mockResolvedValueOnce({ id: 'pat-10', userId: 'u-pat-10' });
+    const patStepUpdateMany = jest.fn().mockResolvedValue({ count: 1 });
+    mockedPrisma.$transaction.mockImplementationOnce(async (fn: (tx: unknown) => unknown) =>
+      fn({
+        medicalBill: {
+          findUnique: jest.fn().mockResolvedValue({
+            id: 'bill-10',
+            caseId: 'case-10',
+            patientId: 'pat-10',
+            totalAmount: 2500,
+            paidAmount: 500,
+            currency: 'USD',
+            status: 'PARTIALLY_PAID',
+            notes: null,
+          }),
+          update: jest.fn().mockResolvedValue({
+            id: 'bill-10',
+            caseId: 'case-10',
+            patientId: 'pat-10',
+            totalAmount: 2500,
+            paidAmount: 2500,
+            currency: 'USD',
+            status: 'PAID',
+            items: [],
+            hospital: { id: 'hosp-10', name: 'Apollo Hospital', city: 'New Delhi' },
+          }),
+          count: jest.fn().mockResolvedValueOnce(0).mockResolvedValueOnce(1),
+        },
+        clinicalStep: { updateMany: patStepUpdateMany },
+      })
+    );
+
+    const patPayOk = await patientBillingPayPost(
+      new NextRequest('http://localhost/api/v1/patient/billing/pay', {
+        method: 'POST',
+        headers: {
+          ...makeAuthHeaders('u-pat-10', 'PATIENT'),
+          'content-type': 'application/json',
+        },
+        body: JSON.stringify({
+          billId: 'bill-10',
+          amount: 2000,
+          paymentMethod: 'CARD',
+          referenceNo: 'VISA-4242',
+        }),
+      })
+    );
+    expect(patPayOk.status).toBe(200);
+    const patPayBody = await patPayOk.json();
+    expect(patPayBody.success).toBe(true);
+    expect(patPayBody.data.bill.status).toBe('PAID');
+    expect(patPayBody.data.bill.paidAmount).toBe(2500);
+    expect(patStepUpdateMany).toHaveBeenCalled();
+  });
 });
