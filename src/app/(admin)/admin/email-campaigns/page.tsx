@@ -13,6 +13,7 @@ import { Badge } from '@/components/ui/Badge';
 import { DatePicker } from '@/components/ui/DatePicker';
 import { Select } from '@/components/ui/Select';
 import { toast } from '@/components/ui/Toast';
+import { sanitizeEmailHtml } from '@/lib/validation/email-sanitizer';
 
 interface EmailTemplate {
   id: string;
@@ -62,6 +63,7 @@ export default function EmailCampaignsPage() {
   const [showModal, setShowModal] = useState(false);
   const [form, setForm] = useState({ name: '', templateId: '', targetRole: 'ALL', scheduledAt: '' });
   const [sending, setSending] = useState(false);
+  const [processingQueued, setProcessingQueued] = useState(false);
   const [selectedTemplate, setSelectedTemplate] = useState<EmailTemplate | null>(null);
 
   // Detail view
@@ -166,6 +168,37 @@ export default function EmailCampaignsPage() {
     }
   };
 
+  const handleProcessQueued = async () => {
+    setProcessingQueued(true);
+    try {
+      const res = await fetch('/api/v1/admin/email-campaigns', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'PROCESS_QUEUED' }),
+      });
+      const data = await res.json();
+      if (!data.success) {
+        toast.error(data.error?.message || 'Failed to process queued campaigns');
+        return;
+      }
+      const { processedCampaigns, notificationsCreated } = data.data;
+      if (processedCampaigns > 0) {
+        toast.success(
+          `Processed ${processedCampaigns} due campaign(s) (${notificationsCreated} notifications sent)`
+        );
+      } else {
+        toast.info('No due queued campaigns to process');
+      }
+      fetchCampaigns(pagination.page);
+    } catch {
+      toast.error('Failed to process queued campaigns');
+    } finally {
+      setProcessingQueued(false);
+    }
+  };
+
+  const hasQueuedCampaigns = campaigns.some((c) => c.status === 'QUEUED');
+
   return (
     <div className="max-w-7xl mx-auto space-y-6 animate-fade-in">
       {/* Header */}
@@ -195,6 +228,16 @@ export default function EmailCampaignsPage() {
           className="w-full sm:w-48"
         />
         <Button variant="secondary" size="sm" onClick={() => fetchCampaigns()}>Refresh</Button>
+        {hasQueuedCampaigns && (
+          <Button
+            variant="secondary"
+            size="sm"
+            isLoading={processingQueued}
+            onClick={handleProcessQueued}
+          >
+            Process Due Queued
+          </Button>
+        )}
       </Card>
 
       {/* Table */}
@@ -335,7 +378,7 @@ export default function EmailCampaignsPage() {
                     <p className="text-xs text-surface-500">Subject: <span className="font-semibold text-surface-800">{selectedTemplate.subject}</span></p>
                   </div>
                   <div className="p-4 bg-white max-h-[200px] overflow-y-auto text-sm">
-                    <div dangerouslySetInnerHTML={{ __html: selectedTemplate.body }} />
+                    <div dangerouslySetInnerHTML={{ __html: sanitizeEmailHtml(selectedTemplate.body) }} />
                   </div>
                 </div>
               )}

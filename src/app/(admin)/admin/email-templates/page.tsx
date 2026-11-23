@@ -13,6 +13,7 @@ import { Badge } from '@/components/ui/Badge';
 import { Select } from '@/components/ui/Select';
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
 import { toast } from '@/components/ui/Toast';
+import { sanitizeEmailHtml } from '@/lib/validation/email-sanitizer';
 
 interface EmailTemplate {
   id: string;
@@ -27,7 +28,7 @@ interface EmailTemplate {
 }
 
 const CATEGORIES = ['general', 'marketing', 'operational', 'onboarding', 'reminder', 'transactional'];
-const PLACEHOLDER_HINTS = ['{{fullName}}', '{{email}}', '{{phone}}', '{{caseId}}', '{{appointmentDate}}', '{{hospitalName}}', '{{doctorName}}'];
+const PLACEHOLDER_HINTS = ['{{fullName}}', '{{email}}', '{{role}}', '{{nationality}}', '{{caseStatus}}', '{{portalUrl}}', '{{supportEmail}}'];
 
 export default function EmailTemplatesPage() {
   const [templates, setTemplates] = useState<EmailTemplate[]>([]);
@@ -298,7 +299,7 @@ export default function EmailTemplatesPage() {
                 </div>
                 {showPreview ? (
                   <div className="w-full min-h-[200px] max-h-[400px] overflow-auto p-4 border border-surface-200 rounded-xl bg-white text-sm">
-                    <div dangerouslySetInnerHTML={{ __html: form.body }} />
+                    <div dangerouslySetInnerHTML={{ __html: sanitizeEmailHtml(form.body) }} />
                   </div>
                 ) : (
                   <textarea
