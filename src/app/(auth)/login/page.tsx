@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/Button';
@@ -9,7 +9,6 @@ import { toast } from '@/components/ui/Toast';
 import {
   User,
   Briefcase,
-  Stethoscope,
   Zap,
   Mail,
   Lock,
@@ -42,6 +41,25 @@ export default function LoginPage() {
   const [isFetchingSecret, setIsFetchingSecret] = useState(false);
   const [copied, setCopied] = useState(false);
   const [copiedUri, setCopiedUri] = useState(false);
+  const [reasonNotice, setReasonNotice] = useState('');
+
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      const reason = new URLSearchParams(window.location.search).get('reason');
+      if (reason === 'maintenance') {
+        setReasonNotice(
+          'System is currently undergoing scheduled maintenance. Only administrators may sign in at this time.'
+        );
+      } else if (reason === 'timeout') {
+        setReasonNotice(
+          'You were automatically signed out due to session inactivity (HIPAA § 164.312). Please sign in again.'
+        );
+      } else if (reason === 'expired') {
+        setReasonNotice('Your session has expired. Please sign in again to continue.');
+      }
+    }, 0);
+    return () => clearTimeout(timer);
+  }, []);
 
   const fillDemoAccount = (demoEmail: string, demoPass: string) => {
     setEmail(demoEmail);
@@ -104,7 +122,7 @@ export default function LoginPage() {
     }
   };
 
-  const fetch2FASecret = async () => {
+  const fetch2FASecret = useCallback(async () => {
     setIsFetchingSecret(true);
     setError('');
     try {
@@ -125,7 +143,7 @@ export default function LoginPage() {
     } finally {
       setIsFetchingSecret(false);
     }
-  };
+  }, [tempSessionId]);
 
   useEffect(() => {
     if (step === '2fa-setup' && tempSessionId) {
@@ -134,7 +152,7 @@ export default function LoginPage() {
       }, 0);
       return () => clearTimeout(timer);
     }
-  }, [step, tempSessionId]);
+  }, [step, tempSessionId, fetch2FASecret]);
 
   const handle2FAVerify = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -216,6 +234,13 @@ export default function LoginPage() {
           </div>
 
           <form onSubmit={handleLogin} className="space-y-4">
+            {reasonNotice && (
+              <div className="bg-warning-50 border border-warning-200 text-warning-900 p-3 rounded-xl text-xs flex items-center gap-2 animate-slide-down">
+                <AlertCircle className="w-4 h-4 text-warning-600 shrink-0" />
+                <span>{reasonNotice}</span>
+              </div>
+            )}
+
             {error && (
               <div className="bg-danger-50 border border-danger-200 text-danger-800 p-3 rounded-xl text-xs flex items-center gap-2 animate-slide-down">
                 <AlertCircle className="w-4 h-4 text-danger-600 shrink-0" />

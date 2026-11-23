@@ -6,6 +6,7 @@
 import prisma from '@/lib/prisma';
 import { ERROR_CODES } from '@/lib/api/errors';
 import { AUDIT_ACTIONS } from '@/lib/api/audit-logger';
+import { assertManagerCapacity } from '@/lib/services/system-settings.service';
 
 export interface AssignPatientCoordinatorInput {
   patientId?: string;
@@ -65,6 +66,13 @@ export async function assignPatientCoordinator({
           message: 'Patient not found',
           status: 404,
         };
+      }
+
+      if (managerId && patient.assignedManagerId !== managerId) {
+        const capCheck = await assertManagerCapacity(tx, managerId, 1, [patient.id]);
+        if (!capCheck.ok) {
+          return capCheck;
+        }
       }
 
       const openCases = await tx.case.findMany({
@@ -157,6 +165,36 @@ export async function assignPatientCoordinator({
     const foundCaseIds = openCases.map((c) => c.id);
     const uniquePatientIds = Array.from(new Set(openCases.map((c) => c.patientId)));
 
+    const patientRecords: Array<{
+      id: string;
+      userId: string;
+      assignedManagerId: string | null;
+    } | null> = [];
+    for (const pid of uniquePatientIds) {
+      const patient = await tx.patient.findUnique({
+        where: { id: pid },
+        select: { id: true, userId: true, assignedManagerId: true },
+      });
+      patientRecords.push(patient);
+    }
+
+    if (managerId) {
+      const incomingNewPatients = patientRecords.filter(
+        (p) => !p || p.assignedManagerId !== managerId
+      ).length;
+      if (incomingNewPatients > 0) {
+        const capCheck = await assertManagerCapacity(
+          tx,
+          managerId,
+          incomingNewPatients,
+          uniquePatientIds
+        );
+        if (!capCheck.ok) {
+          return capCheck;
+        }
+      }
+    }
+
     await tx.case.updateMany({
       where: { patientId: { in: uniquePatientIds }, status: { not: 'CLOSED' } },
       data: { managerId },
@@ -169,11 +207,9 @@ export async function assignPatientCoordinator({
       triggerEvent: string;
     }> = [];
 
-    for (const pid of uniquePatientIds) {
-      const patient = await tx.patient.findUnique({
-        where: { id: pid },
-        select: { id: true, userId: true, assignedManagerId: true },
-      });
+    for (let i = 0; i < uniquePatientIds.length; i += 1) {
+      const pid = uniquePatientIds[i];
+      const patient = patientRecords[i];
 
       await tx.patient.update({
         where: { id: pid },

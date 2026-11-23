@@ -9,6 +9,10 @@ import { encrypt } from '@/lib/auth/crypto';
 import { hashPassword } from '@/lib/auth/password';
 import { ERROR_CODES } from '@/lib/api/errors';
 import { AUDIT_ACTIONS } from '@/lib/api/audit-logger';
+import {
+  assertManagerCapacity,
+  getSystemSettings,
+} from '@/lib/services/system-settings.service';
 
 export interface OnboardPatientInput {
   email: string;
@@ -42,21 +46,29 @@ async function findActiveManager(managerId: string) {
 }
 
 async function resolveLeastLoadedManagerId(): Promise<string | null> {
-  const managers = await prisma.user.findMany({
-    where: { role: 'MANAGER', isActive: true },
-    select: {
-      id: true,
-      _count: {
-        select: {
-          managedCases: { where: { status: { not: 'CLOSED' } } },
+  const [settings, managers] = await Promise.all([
+    getSystemSettings(),
+    prisma.user.findMany({
+      where: { role: 'MANAGER', isActive: true },
+      select: {
+        id: true,
+        _count: {
+          select: {
+            managedCases: { where: { status: { not: 'CLOSED' } } },
+            managedPatients: true,
+          },
         },
       },
-    },
-  });
+    }),
+  ]);
 
-  if (managers.length === 0) return null;
+  const eligible = managers.filter(
+    (m) => (m._count?.managedPatients ?? 0) < settings.maxPatientsPerManager
+  );
 
-  const sorted = [...managers].sort(
+  if (eligible.length === 0) return null;
+
+  const sorted = [...eligible].sort(
     (a, b) => (a._count?.managedCases ?? 0) - (b._count?.managedCases ?? 0)
   );
   return sorted[0].id;
@@ -99,6 +111,10 @@ export async function onboardPatient(
         message: 'Target manager not found or inactive',
         status: 400,
       };
+    }
+    const capCheck = await assertManagerCapacity(prisma, manager.id, 1);
+    if (!capCheck.ok) {
+      return capCheck;
     }
     resolvedManagerId = manager.id;
   } else {
@@ -266,6 +282,13 @@ export async function createCaseForPatient(input: CreateCaseForPatientInput) {
       explicitManagerId !== undefined
         ? explicitManagerId
         : patient.assignedManagerId;
+
+    if (resolvedManagerId && resolvedManagerId !== patient.assignedManagerId) {
+      const capCheck = await assertManagerCapacity(tx, resolvedManagerId, 1, [patient.id]);
+      if (!capCheck.ok) {
+        return capCheck;
+      }
+    }
 
     if (resolvedManagerId !== patient.assignedManagerId) {
       await tx.patient.update({

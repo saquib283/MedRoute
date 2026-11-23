@@ -1,7 +1,7 @@
-﻿/**
+/**
  * Afzal Healthcare — Next.js Proxy
- * Route protection with JWT validation and role-based access control.
- * Runs on the Edge runtime, using `jose` for JWT verification.
+ * Route protection with JWT validation, role-based access control, and maintenance enforcement.
+ * Runs on the Node.js runtime, using `jose` for JWT verification.
  */
 
 import { NextResponse } from 'next/server';
@@ -14,6 +14,7 @@ import {
   ROUTE_ROLES,
   SKIP_ROUTES,
 } from '@/lib/auth/rbac';
+import { checkMaintenanceActive } from '@/lib/services/system-settings.service';
 import type { UserRole } from '@prisma/client';
 
 export default async function proxy(request: NextRequest) {
@@ -91,6 +92,29 @@ export default async function proxy(request: NextRequest) {
         return NextResponse.redirect(
           new URL(getDefaultRoute(role), request.url)
         );
+      }
+    }
+
+    // ─── Maintenance Mode Enforcement (ADMIN always bypasses) ───
+    if (role !== 'ADMIN') {
+      const inMaintenance = await checkMaintenanceActive(role);
+      if (inMaintenance) {
+        if (pathname.startsWith('/api/')) {
+          if (!['GET', 'HEAD', 'OPTIONS'].includes(request.method.toUpperCase())) {
+            return NextResponse.json(
+              {
+                success: false,
+                error: {
+                  code: 'MAINTENANCE_MODE',
+                  message: 'System is currently undergoing scheduled maintenance. Please try again later.',
+                },
+              },
+              { status: 503 }
+            );
+          }
+        } else {
+          return NextResponse.redirect(new URL('/login?reason=maintenance', request.url));
+        }
       }
     }
 

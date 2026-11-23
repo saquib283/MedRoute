@@ -1,4 +1,4 @@
-﻿/**
+/**
  * Afzal Healthcare — GET /api/v1/auth/me
  * Returns the authenticated user's profile information.
  */
@@ -16,13 +16,15 @@ export async function GET(request: NextRequest) {
     if (error) return error;
 
     // Check System Maintenance Mode
-    const { checkMaintenanceActive, readSettings } = await import('@/lib/api/settings-helper');
+    const { checkMaintenanceActive, getSystemSettings } = await import(
+      '@/lib/services/system-settings.service'
+    );
     const isMaintenance = await checkMaintenanceActive(authUser!.role);
     if (isMaintenance) {
       return apiError(
-        ERROR_CODES.FORBIDDEN,
+        ERROR_CODES.MAINTENANCE_MODE,
         'System is currently undergoing scheduled maintenance. Please try again later.',
-        403
+        503
       );
     }
 
@@ -64,9 +66,10 @@ export async function GET(request: NextRequest) {
       return apiError(ERROR_CODES.USER_NOT_FOUND, 'User not found', 404);
     }
 
-    // Load global settings for alert banner text
-    const settings = await readSettings();
-    const alertBannerText = settings?.alertBannerText || '';
+    // Load global settings for alert banner text and session timeout
+    const settings = await getSystemSettings();
+    const alertBannerText = settings.alertBannerText || '';
+    const sessionTimeoutMinutes = settings.sessionTimeoutMinutes || 15;
 
     const formattedUser = user.patient?.medicalProfile
       ? {
@@ -80,7 +83,7 @@ export async function GET(request: NextRequest) {
         }
       : user;
 
-    return apiSuccess({ user: formattedUser, alertBannerText });
+    return apiSuccess({ user: formattedUser, alertBannerText, sessionTimeoutMinutes });
   } catch (error) {
     console.error('[Get Me Error]', error);
     return apiError(ERROR_CODES.INTERNAL_ERROR, 'Failed to fetch profile', 500);

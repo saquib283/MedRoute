@@ -10,6 +10,7 @@ import prisma from '@/lib/prisma';
 import { ERROR_CODES } from '@/lib/api/errors';
 import { AUDIT_ACTIONS, createAuditLog } from '@/lib/api/audit-logger';
 import { calculateHotelStayNights } from '@/lib/validation/booking-helpers';
+import { getSystemSettings } from '@/lib/services/system-settings.service';
 import type { ServiceResult } from '@/lib/services/clinical-pathway.service';
 
 export const HOTEL_BOOKING_STATUSES = [
@@ -29,6 +30,23 @@ const ALLOWED_BOOKING_TRANSITIONS: Record<string, readonly HotelBookingStatus[]>
   CONFIRMED: ['CONFIRMED', 'CHECKED_IN', 'COMPLETED', 'CANCELLED'],
   CHECKED_IN: ['CHECKED_IN', 'COMPLETED', 'CANCELLED'],
 };
+
+export interface CreatePartnerHotelParams {
+  name?: unknown;
+  city?: unknown;
+  address?: unknown;
+  nearHospitalId?: unknown;
+  distanceKm?: unknown;
+  starRating?: unknown;
+  nightlyRateUsd?: unknown;
+  commissionPercent?: unknown;
+  amenities?: unknown;
+  images?: unknown;
+  description?: unknown;
+  contactPhone?: unknown;
+  contactEmail?: unknown;
+  actor: { userId: string; role: string; ipAddress?: string };
+}
 
 export interface UpdatePartnerHotelParams {
   id: unknown;
@@ -154,6 +172,35 @@ const safeImageUrl = z
     'Image URLs must use https://, http://, or a single-slash / path'
   );
 
+const requiredPositiveNumber = (label: string) =>
+  z.union([z.number(), z.string()]).transform((val, ctx) => {
+    const num = typeof val === 'number' ? val : val.trim() === '' ? NaN : Number(val);
+    if (!Number.isFinite(num) || num <= 0) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: `${label} must be greater than 0`,
+      });
+      return z.NEVER;
+    }
+    return num;
+  });
+
+const createPartnerHotelSchema = z.object({
+  name: z.string().trim().min(1, 'Hotel name is required').max(200),
+  city: z.string().trim().min(1, 'City is required').max(120),
+  address: z.string().trim().min(1, 'Address is required').max(500),
+  nearHospitalId: optionalNullableString(120),
+  distanceKm: optionalNumberInRange('distanceKm', { min: 0, max: 500 }),
+  starRating: optionalNumberInRange('starRating', { min: 1, max: 5 }),
+  nightlyRateUsd: requiredPositiveNumber('nightlyRateUsd'),
+  commissionPercent: optionalNumberInRange('commissionPercent', { min: 0, max: 100 }),
+  amenities: z.array(z.string().trim().min(1)).optional(),
+  images: z.array(safeImageUrl).optional(),
+  description: optionalNullableString(5000),
+  contactPhone: optionalNullableString(60),
+  contactEmail: optionalNullableEmail,
+});
+
 const updatePartnerHotelSchema = z.object({
   id: z.string().trim().min(1, 'Hotel id is required'),
   name: z.string().trim().min(1, 'Hotel name cannot be empty').max(200).optional(),
@@ -223,6 +270,115 @@ export function sanitizeBookingForViewer<T extends Record<string, unknown>>(
   }
 
   return rest as Omit<T, 'commissionAmountUsd'>;
+}
+
+/**
+ * Create a new partner hotel listing (ADMIN & MANAGER only),
+ * validating fields in parity with updatePartnerHotel and defaulting
+ * commissionPercent to SystemConfig.defaultCommissionRate when omitted.
+ */
+export async function createPartnerHotel(
+  params: CreatePartnerHotelParams
+): Promise<ServiceResult<{ hotel: unknown }>> {
+  const { actor } = params;
+
+  if (actor.role !== 'ADMIN' && actor.role !== 'MANAGER') {
+    return {
+      ok: false,
+      code: ERROR_CODES.FORBIDDEN,
+      message: 'Only Admins and Managers can add partner hotels',
+      status: 403,
+    };
+  }
+
+  const normalizeOptional = (val: unknown) =>
+    val === '' || val === null ? undefined : val;
+
+  const parsed = createPartnerHotelSchema.safeParse({
+    name: params.name,
+    city: params.city,
+    address: params.address,
+    nearHospitalId: params.nearHospitalId,
+    distanceKm: normalizeOptional(params.distanceKm),
+    starRating: normalizeOptional(params.starRating),
+    nightlyRateUsd: params.nightlyRateUsd,
+    commissionPercent: normalizeOptional(params.commissionPercent),
+    amenities: Array.isArray(params.amenities) ? params.amenities : undefined,
+    images: Array.isArray(params.images) ? params.images : undefined,
+    description: params.description,
+    contactPhone: params.contactPhone,
+    contactEmail: params.contactEmail,
+  });
+
+  if (!parsed.success) {
+    return {
+      ok: false,
+      code: ERROR_CODES.BAD_REQUEST,
+      message: parsed.error.issues[0]?.message || 'Invalid partner hotel payload',
+      status: 400,
+    };
+  }
+
+  const data = parsed.data;
+
+  if (data.nearHospitalId !== undefined && data.nearHospitalId !== null) {
+    const hospital = await prisma.hospital.findUnique({
+      where: { id: data.nearHospitalId },
+      select: { id: true },
+    });
+    if (!hospital) {
+      return {
+        ok: false,
+        code: ERROR_CODES.BAD_REQUEST,
+        message: 'Referenced hospital not found',
+        status: 400,
+      };
+    }
+  }
+
+  const commissionPercent =
+    data.commissionPercent !== undefined
+      ? data.commissionPercent
+      : (await getSystemSettings()).defaultCommissionRate;
+
+  const hotel = await prisma.hotel.create({
+    data: {
+      name: data.name,
+      city: data.city,
+      address: data.address,
+      nearHospitalId: data.nearHospitalId ?? null,
+      distanceKm: data.distanceKm ?? 2.0,
+      starRating: data.starRating ?? 4.5,
+      nightlyRateUsd: data.nightlyRateUsd,
+      commissionPercent,
+      amenities: data.amenities ?? ['Wheelchair Accessible', 'Halal Food'],
+      images: data.images ?? [
+        'https://images.unsplash.com/photo-1566073771259-6a8506099945?auto=format&fit=crop&w=1200&q=80',
+      ],
+      description: data.description ?? null,
+      contactPhone: data.contactPhone ?? null,
+      contactEmail: data.contactEmail ?? null,
+    },
+    include: {
+      nearHospital: { select: { id: true, name: true, city: true } },
+    },
+  });
+
+  await createAuditLog({
+    actorId: actor.userId,
+    action: AUDIT_ACTIONS.CREATE,
+    entityType: 'Hotel',
+    entityId: hotel.id,
+    newValue: {
+      name: hotel.name,
+      city: hotel.city,
+      nightlyRateUsd: hotel.nightlyRateUsd,
+      commissionPercent: hotel.commissionPercent,
+    },
+    ipAddress: actor.ipAddress,
+  });
+
+  return { ok: true, data: { hotel } };
 }
 
 /**
