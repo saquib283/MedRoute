@@ -153,15 +153,28 @@ export async function PUT(request: NextRequest) {
       }
     }
 
+    const normalizedEscalation =
+      restUpdateData.escalationNote !== undefined
+        ? restUpdateData.escalationNote?.trim()
+          ? restUpdateData.escalationNote.trim()
+          : null
+        : undefined;
+
     const hasOtherUpdates =
       restUpdateData.status !== undefined ||
       restUpdateData.notes !== undefined ||
-      restUpdateData.escalationNote !== undefined;
+      normalizedEscalation !== undefined;
 
     if (hasOtherUpdates) {
+      const caseUpdateData = {
+        ...(restUpdateData.status !== undefined && { status: restUpdateData.status }),
+        ...(restUpdateData.notes !== undefined && { notes: restUpdateData.notes }),
+        ...(normalizedEscalation !== undefined && { escalationNote: normalizedEscalation }),
+      };
+
       await prisma.case.update({
         where: { id },
-        data: restUpdateData,
+        data: caseUpdateData,
       });
 
       const action =
@@ -175,7 +188,7 @@ export async function PUT(request: NextRequest) {
         entityType: 'Case',
         entityId: id,
         oldValue: { status: existing.status, managerId: existing.managerId },
-        newValue: restUpdateData,
+        newValue: caseUpdateData,
         ipAddress: getClientIP(request),
       });
     }

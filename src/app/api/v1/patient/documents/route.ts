@@ -68,8 +68,10 @@ export async function POST(request: NextRequest) {
 
     // Parse form data
     const formData = await request.formData();
-    const file = formData.get('file') as File | null;
-    const categoryRaw = formData.get('category') as string | null;
+    const rawFile = formData.get('file');
+    const file = rawFile instanceof File ? rawFile : null;
+    const rawCategory = formData.get('category');
+    const categoryRaw = typeof rawCategory === 'string' ? rawCategory : null;
 
     if (!file || !categoryRaw) {
       return apiError(ERROR_CODES.BAD_REQUEST, 'File and category are required', 400);

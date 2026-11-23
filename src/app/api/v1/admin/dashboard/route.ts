@@ -58,7 +58,12 @@ export async function GET(request: NextRequest) {
       prisma.case.count({ where: { status: { notIn: ['CLOSED'] } } }),
       prisma.appointment.count({ where: { scheduledAt: { gte: periodStart } } }),
       prisma.appointment.count({ where: { scheduledAt: { gte: prevStart, lt: periodStart } } }),
-      prisma.case.count({ where: { escalationNote: { not: null }, status: { notIn: ['CLOSED'] } } }),
+      prisma.case.count({
+        where: {
+          AND: [{ escalationNote: { not: null } }, { escalationNote: { not: '' } }],
+          status: { notIn: ['CLOSED'] },
+        },
+      }),
       prisma.case.count({ where: { createdAt: { gte: periodStart } } }),
       prisma.case.count({ where: { createdAt: { gte: prevStart, lt: periodStart } } }),
       prisma.auditLog.findMany({

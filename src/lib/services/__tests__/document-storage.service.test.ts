@@ -1,5 +1,18 @@
+const mockPatientFindFirst = jest.fn();
+
+jest.mock('@/lib/prisma', () => ({
+  __esModule: true,
+  default: {
+    patient: {
+      findFirst: (...args: unknown[]) => mockPatientFindFirst(...args),
+    },
+  },
+}));
+
+import { NextRequest } from 'next/server';
 import { validateUploadBuffer, canUserAccessPatientDocument } from '../document-storage.service';
 import { SYSTEM_LIMITS } from '@/lib/constants';
+import { POST as postPatientDocument } from '@/app/api/v1/patient/documents/route';
 
 describe('document-storage.service', () => {
   it('accepts genuine PDF, JPEG, and PNG binary headers', () => {
@@ -71,6 +84,30 @@ describe('document-storage.service', () => {
     expect(canUserAccessPatientDocument({ userId: 'doc-u1', role: 'DOCTOR', email: 'd@b.c' }, docContext)).toBe(true);
     expect(canUserAccessPatientDocument({ userId: 'doc-u2', role: 'DOCTOR', email: 'd2@b.c' }, docContext)).toBe(false);
     expect(canUserAccessPatientDocument({ userId: 'adm-1', role: 'ADMIN', email: 'ad@b.c' }, docContext)).toBe(true);
+  });
+
+  it('POST /api/v1/patient/documents rejects non-File string "file" multipart field with 400 BAD_REQUEST', async () => {
+    mockPatientFindFirst.mockResolvedValue({ id: 'pat-1', userId: 'pat-u1' });
+
+    const formData = new FormData();
+    formData.append('file', 'not-a-file-string');
+    formData.append('category', 'MEDICAL_REPORT');
+
+    const req = new NextRequest('http://localhost/api/v1/patient/documents', {
+      method: 'POST',
+      headers: {
+        'x-user-id': 'pat-u1',
+        'x-user-role': 'PATIENT',
+        'x-user-email': 'pat@medroute.test',
+      },
+      body: formData,
+    });
+
+    const res = await postPatientDocument(req);
+    expect(res.status).toBe(400);
+    const json = await res.json();
+    expect(json.success).toBe(false);
+    expect(json.error.code).toBe('BAD_REQUEST');
   });
 });
 

@@ -70,5 +70,40 @@ describe('Crypto Module AES-256-GCM', () => {
       expect(ct.split(':')).toHaveLength(3);
       expect(decrypt(ct)).toBe('[]');
     });
+
+    it('throws configuration Error (not DecryptionTamperError) in production when ENCRYPTION_KEY is missing or malformed', () => {
+      const ct = encrypt('Sensitive Passport');
+      const prevNodeEnv = process.env.NODE_ENV;
+      const prevKey = process.env.ENCRYPTION_KEY;
+
+      try {
+        Object.assign(process.env, { NODE_ENV: 'production' });
+        delete process.env.ENCRYPTION_KEY;
+
+        expect(() => decrypt(ct)).toThrow(/ENCRYPTION_KEY/);
+        try {
+          decrypt(ct);
+        } catch (err) {
+          expect(err).toBeInstanceOf(Error);
+          expect(err).not.toBeInstanceOf(DecryptionTamperError);
+        }
+
+        process.env.ENCRYPTION_KEY = 'short';
+        expect(() => decrypt(ct)).toThrow(/ENCRYPTION_KEY/);
+        try {
+          decrypt(ct);
+        } catch (err) {
+          expect(err).toBeInstanceOf(Error);
+          expect(err).not.toBeInstanceOf(DecryptionTamperError);
+        }
+      } finally {
+        Object.assign(process.env, { NODE_ENV: prevNodeEnv });
+        if (prevKey === undefined) {
+          delete process.env.ENCRYPTION_KEY;
+        } else {
+          process.env.ENCRYPTION_KEY = prevKey;
+        }
+      }
+    });
   });
 });

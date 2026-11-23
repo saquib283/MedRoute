@@ -86,8 +86,9 @@ export function decrypt(ciphertext: unknown): string {
     return ciphertext;
   }
 
+  const key = getEncryptionKey();
+
   try {
-    const key = getEncryptionKey();
     const decipher = crypto.createDecipheriv(ALGORITHM, key, Buffer.from(ivHex, 'hex'));
     decipher.setAuthTag(Buffer.from(authTagHex, 'hex'));
 
