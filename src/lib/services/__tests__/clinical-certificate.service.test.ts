@@ -430,4 +430,30 @@ describe('Task 3: Clinical Certificate PDF Generator, Document Verification & Fi
     const directGet = await getCaseFitToFly('case-1', { userId: 'pat-u-1', role: 'PATIENT' });
     expect(directGet.ok).toBe(true);
   });
+
+  it('does not mutate FitToFlyClearance when uploaded certificate file fails validation', async () => {
+    mockedPrisma.case.findUnique.mockResolvedValue(activeCase);
+    mockedPrisma.doctor.findUnique.mockResolvedValue({
+      id: 'doc-1',
+      userId: 'doc-u-1',
+      fullName: 'Ashok Seth',
+      isActive: true,
+    });
+    mockedPrisma.appointment.findFirst.mockResolvedValue({ id: 'appt-1' });
+
+    const spoofedFile = new File(['not-a-pdf'], 'fake.pdf', { type: 'application/pdf' });
+    const res = await upsertCaseFitToFly({
+      caseId: 'case-1',
+      isCleared: true,
+      file: spoofedFile,
+      actor: { userId: 'doc-u-1', role: 'DOCTOR' },
+    });
+
+    expect(res.ok).toBe(false);
+    if (!res.ok) expect(res.status).toBe(400);
+    expect(mockedPrisma.fitToFlyClearance.upsert).not.toHaveBeenCalled();
+    expect(mockedPrisma.clinicalStep.updateMany).not.toHaveBeenCalled();
+    expect(mockedPrisma.case.update).not.toHaveBeenCalled();
+    expect(mockedPrisma.auditLog.create).not.toHaveBeenCalled();
+  });
 });

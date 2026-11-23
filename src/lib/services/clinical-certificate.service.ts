@@ -54,7 +54,7 @@ const CATEGORY_STEP_ACTION_MAP: Partial<Record<IssuableCategory, string>> = {
 
 const verifyDocumentSchema = z.object({
   verificationStatus: z.enum(['VERIFIED', 'REJECTED']),
-  verificationNotes: z.string().max(1000).optional(),
+  verificationNotes: z.string().max(1000).nullable().optional(),
 });
 
 const upsertFitToFlySchema = z.object({
@@ -681,6 +681,21 @@ export async function upsertCaseFitToFly(
   const cleanRestrictions = parsed.data.restrictions?.trim() || null;
   const clearanceDate = parsed.data.isCleared ? new Date() : null;
 
+  let certificateDocument: unknown | null = null;
+  let caseStatus: string = access.targetCase.status;
+
+  if (parsed.data.isCleared) {
+    const issued = await issueCaseDocument({
+      caseId: params.caseId,
+      category: 'FIT_TO_FLY_CERTIFICATE',
+      file: params.file,
+      notes: cleanRestrictions,
+      actor: params.actor,
+    });
+    if (!issued.ok) return issued;
+    certificateDocument = issued.data.document;
+  }
+
   const fitToFlyClearance = await prisma.fitToFlyClearance.upsert({
     where: { caseId: params.caseId },
     create: {
@@ -700,20 +715,7 @@ export async function upsertCaseFitToFly(
     },
   });
 
-  let certificateDocument: unknown | null = null;
-  let caseStatus: string = access.targetCase.status;
-
   if (parsed.data.isCleared) {
-    const issued = await issueCaseDocument({
-      caseId: params.caseId,
-      category: 'FIT_TO_FLY_CERTIFICATE',
-      file: params.file,
-      notes: cleanRestrictions,
-      actor: params.actor,
-    });
-    if (!issued.ok) return issued;
-    certificateDocument = issued.data.document;
-
     await prisma.clinicalStep.updateMany({
       where: {
         caseId: params.caseId,
