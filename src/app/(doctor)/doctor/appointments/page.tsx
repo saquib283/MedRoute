@@ -19,7 +19,10 @@ import {
   APPOINTMENT_STATUS_LABELS,
   APPOINTMENT_TYPE_LABELS,
 } from '@/lib/constants';
-import { formatConsultationScheduleDualTz } from '@/lib/validation/booking-helpers';
+import {
+  formatConsultationScheduleDualTz,
+  isSafeHttpUrl,
+} from '@/lib/validation/booking-helpers';
 import {
   Calendar,
   MapPin,
@@ -229,7 +232,7 @@ export default function DoctorAppointmentsPage() {
             const dualTz = formatConsultationScheduleDualTz(appt.scheduledAt);
             const isTeleconsult = appt.mode === APPOINTMENT_MODES.TELECONSULTATION;
             const canJoinVideo =
-              isTeleconsult && Boolean(appt.meetingUrl) && appt.status !== 'CANCELLED';
+              isTeleconsult && isSafeHttpUrl(appt.meetingUrl) && appt.status !== 'CANCELLED';
 
             return (
               <Card key={appt.id} className="p-5 space-y-4">

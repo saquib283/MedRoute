@@ -16,6 +16,7 @@ import { APPOINTMENT_MODES, APPOINTMENT_MODE_LABELS } from '@/lib/constants';
 import {
   formatConsultationScheduleDualTz,
   formatDoctorDisplayName,
+  isSafeHttpUrl,
 } from '@/lib/validation/booking-helpers';
 import { Video, Languages, ExternalLink } from 'lucide-react';
 
@@ -243,6 +244,7 @@ export default function AppointmentsManager() {
   const handleReschedule = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!reschedulingAppt) return;
+    setFormError('');
     setSubmitting(true);
 
     const hasNewDate = Boolean(rescheduleDateStr);
@@ -268,17 +270,36 @@ export default function AppointmentsManager() {
         }),
       });
 
+      const data = await res.json().catch(() => null);
       if (res.ok) {
+        const updated = data?.appointment as
+          | {
+              scheduledAt?: string;
+              status?: AppointmentStatus;
+              mode?: string;
+              meetingUrl?: string | null;
+              interpreterLanguage?: string | null;
+            }
+          | undefined;
         setAppointments((prev) =>
           prev.map((a) =>
             a.id === reschedulingAppt.id
               ? {
                   ...a,
-                  mode: editMode,
-                  meetingUrl: normalizedMeetingUrl,
-                  interpreterLanguage: normalizedInterpreter,
+                  mode: updated?.mode ?? editMode,
+                  meetingUrl:
+                    updated?.meetingUrl !== undefined
+                      ? updated.meetingUrl
+                      : normalizedMeetingUrl,
+                  interpreterLanguage:
+                    updated?.interpreterLanguage !== undefined
+                      ? updated.interpreterLanguage
+                      : normalizedInterpreter,
                   ...(hasNewDate
-                    ? { scheduledAt: rescheduleDateStr, status: AppointmentStatus.RESCHEDULED }
+                    ? {
+                        scheduledAt: updated?.scheduledAt ?? rescheduleDateStr,
+                        status: updated?.status ?? AppointmentStatus.RESCHEDULED,
+                      }
                     : {}),
                 }
               : a
@@ -288,9 +309,17 @@ export default function AppointmentsManager() {
         setRescheduleDateStr('');
         setEditMeetingUrl('');
         setEditInterpreterLanguage('');
+        setFormError('');
+      } else {
+        const errMessage =
+          data?.error?.message ||
+          (typeof data?.error === 'string' ? data.error : null) ||
+          'Failed to update appointment.';
+        setFormError(errMessage);
       }
     } catch (err) {
       console.error('Reschedule failed:', err);
+      setFormError('Network error updating appointment. Please try again.');
     } finally {
       setSubmitting(false);
     }
@@ -488,18 +517,21 @@ export default function AppointmentsManager() {
                       </td>
                       <td className="px-5 py-3.5 text-center">
                         <div className="flex flex-wrap justify-center gap-1.5">
-                          {isTeleconsult && appt.meetingUrl && appt.status !== 'CANCELLED' && (
-                            <a
-                              href={appt.meetingUrl}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              className="inline-flex items-center gap-1 min-h-11 px-3 rounded-md bg-primary-600 hover:bg-primary-700 text-white text-xs font-medium transition-colors"
-                            >
-                              <Video className="w-3.5 h-3.5" aria-hidden="true" />
-                              <span>Join Video Consultation</span>
-                              <ExternalLink className="w-3 h-3" aria-hidden="true" />
-                            </a>
-                          )}
+                          {isTeleconsult &&
+                            isSafeHttpUrl(appt.meetingUrl) &&
+                            appt.meetingUrl &&
+                            appt.status !== 'CANCELLED' && (
+                              <a
+                                href={appt.meetingUrl}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="inline-flex items-center gap-1 min-h-11 px-3 rounded-md bg-primary-600 hover:bg-primary-700 text-white text-xs font-medium transition-colors"
+                              >
+                                <Video className="w-3.5 h-3.5" aria-hidden="true" />
+                                <span>Join Video Consultation</span>
+                                <ExternalLink className="w-3 h-3" aria-hidden="true" />
+                              </a>
+                            )}
                           {appt.status !== 'CANCELLED' && appt.status !== 'COMPLETED' && (
                             <>
                               {(appt.status === 'SCHEDULED' || appt.status === 'RESCHEDULED') && (
@@ -523,6 +555,7 @@ export default function AppointmentsManager() {
                               <Button
                                 size="sm"
                                 onClick={() => {
+                                  setFormError('');
                                   setReschedulingAppt(appt);
                                   setRescheduleDateStr('');
                                   setEditMode(appt.mode || APPOINTMENT_MODES.IN_PERSON);
@@ -699,12 +732,24 @@ export default function AppointmentsManager() {
               </h2>
               <button
                 type="button"
-                onClick={() => setReschedulingAppt(null)}
+                onClick={() => {
+                  setReschedulingAppt(null);
+                  setFormError('');
+                }}
                 className="text-surface-500 hover:text-surface-800 font-medium text-xs min-h-11 px-2"
               >
                 Cancel
               </button>
             </div>
+
+            {formError && (
+              <div
+                role="alert"
+                className="bg-danger-50 text-danger-800 p-3 rounded-md border border-danger-200 text-xs font-medium"
+              >
+                {formError}
+              </div>
+            )}
 
             <form onSubmit={handleReschedule} className="space-y-4 text-xs text-surface-700">
               <Select

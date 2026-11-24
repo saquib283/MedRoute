@@ -2,9 +2,18 @@ import { NextResponse } from 'next/server';
 import { AppointmentMode, AppointmentStatus, AppointmentType } from '@prisma/client';
 import { z } from 'zod';
 import prisma from '@/lib/prisma';
+import { isSafeHttpUrl } from '@/lib/validation/booking-helpers';
 
 const optionalMeetingUrlSchema = z
-  .union([z.string().trim().url('Invalid video meeting URL').max(500), z.literal('')])
+  .union([
+    z
+      .string()
+      .trim()
+      .url('Invalid video meeting URL')
+      .max(500)
+      .refine((val) => isSafeHttpUrl(val), 'Video meeting URL must use http:// or https://'),
+    z.literal(''),
+  ])
   .nullable()
   .optional()
   .transform((val) => {

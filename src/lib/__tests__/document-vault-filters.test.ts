@@ -5,7 +5,9 @@ import {
 import {
   isPassportValidForMedicalVisa,
   formatConsultationScheduleDualTz,
+  isSafeHttpUrl,
 } from '@/lib/validation/booking-helpers';
+import { bookAppointmentSchema } from '@/lib/validation/schemas';
 
 describe('Task 4: Patient Document Vault Filters & Delete Eligibility', () => {
   it('includes INSURANCE under TRAVEL_VERIFICATION filter and preserves HOSPITAL_OFFICIAL / DIAGNOSTICS', () => {
@@ -40,5 +42,45 @@ describe('Task 4: Patient Document Vault Filters & Delete Eligibility', () => {
     expect(formatted.istLabel).toContain('IST');
     expect(formatted.istLabel).toContain('2:30');
     expect(formatted.localLabel.length).toBeGreaterThan(0);
+  });
+
+  it('isSafeHttpUrl and bookAppointmentSchema.meetingUrl allow only http/https and reject javascript:/data:', () => {
+    expect(isSafeHttpUrl('https://meet.google.com/abc-defg-hij')).toBe(true);
+    expect(isSafeHttpUrl('http://localhost:3000/teleconsult')).toBe(true);
+    expect(isSafeHttpUrl('javascript:alert(1)')).toBe(false);
+    expect(isSafeHttpUrl('data:text/html,<script>alert(1)</script>')).toBe(false);
+    expect(isSafeHttpUrl('vbscript:msgbox(1)')).toBe(false);
+    expect(isSafeHttpUrl('')).toBe(false);
+    expect(isSafeHttpUrl(null)).toBe(false);
+
+    const futureIso = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString();
+    const basePayload = {
+      caseId: 'case-1',
+      patientId: 'pat-1',
+      hospitalId: 'hosp-1',
+      doctorId: 'doc-1',
+      appointmentType: 'CONSULTATION',
+      mode: 'TELECONSULTATION',
+      scheduledAt: futureIso,
+    };
+
+    expect(
+      bookAppointmentSchema.safeParse({
+        ...basePayload,
+        meetingUrl: 'https://meet.google.com/abc-defg-hij',
+      }).success
+    ).toBe(true);
+    expect(
+      bookAppointmentSchema.safeParse({
+        ...basePayload,
+        meetingUrl: 'javascript:alert(1)',
+      }).success
+    ).toBe(false);
+    expect(
+      bookAppointmentSchema.safeParse({
+        ...basePayload,
+        meetingUrl: 'data:text/html,<script>alert(1)</script>',
+      }).success
+    ).toBe(false);
   });
 });

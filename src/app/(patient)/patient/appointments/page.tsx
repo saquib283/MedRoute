@@ -23,6 +23,7 @@ import {
 import {
   formatConsultationScheduleDualTz,
   formatDoctorDisplayName,
+  isSafeHttpUrl,
 } from '@/lib/validation/booking-helpers';
 import {
   Calendar,
@@ -472,7 +473,7 @@ export default function AppointmentsPage() {
             const isTeleconsult = app.mode === APPOINTMENT_MODES.TELECONSULTATION;
             const canJoinVideo =
               isTeleconsult &&
-              Boolean(app.meetingUrl) &&
+              isSafeHttpUrl(app.meetingUrl) &&
               app.status !== 'CANCELLED' &&
               app.status !== 'COMPLETED';
 
@@ -628,7 +629,7 @@ export default function AppointmentsPage() {
                   const isTeleconsult = app.mode === APPOINTMENT_MODES.TELECONSULTATION;
                   const canJoinVideo =
                     isTeleconsult &&
-                    Boolean(app.meetingUrl) &&
+                    isSafeHttpUrl(app.meetingUrl) &&
                     app.status !== 'CANCELLED' &&
                     app.status !== 'COMPLETED';
 

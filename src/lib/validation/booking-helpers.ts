@@ -171,3 +171,19 @@ export function formatConsultationScheduleDualTz(
     localLabel: localFormatted,
   };
 }
+
+/**
+ * Ensures external URLs (e.g. teleconsultation meeting links) use only http: or https: schemes,
+ * blocking javascript:, data:, or other non-HTTP(S) URIs.
+ */
+export function isSafeHttpUrl(url: string | null | undefined): boolean {
+  if (!url) return false;
+  const trimmed = url.trim();
+  if (!trimmed) return false;
+  try {
+    const parsed = new URL(trimmed);
+    return parsed.protocol === 'http:' || parsed.protocol === 'https:';
+  } catch {
+    return false;
+  }
+}

@@ -11,6 +11,7 @@ import {
   FOLLOW_UP_MILESTONES,
   SSR_ASSISTANCE_CODES,
 } from '@/lib/constants';
+import { isSafeHttpUrl } from '@/lib/validation/booking-helpers';
 
 // ─── Auth Schemas ───────────────────────────────────────────────────
 
@@ -188,7 +189,15 @@ export const bookAppointmentSchema = z.object({
   ]),
   mode: appointmentModeSchema.optional(),
   meetingUrl: z
-    .union([z.string().url('Invalid meeting URL').max(500), z.literal('')])
+    .union([
+      z
+        .string()
+        .trim()
+        .url('Invalid meeting URL')
+        .max(500)
+        .refine((val) => isSafeHttpUrl(val), 'Meeting URL must use http:// or https://'),
+      z.literal(''),
+    ])
     .nullable()
     .optional(),
   interpreterLanguage: z.string().max(100).nullable().optional(),
