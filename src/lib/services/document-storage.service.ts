@@ -302,12 +302,12 @@ export async function streamDocumentById(
           cases: {
             select: {
               managerId: true,
-              primaryDoctor: { select: { userId: true } },
+              primaryDoctor: { select: { userId: true, isActive: true } },
             },
           },
           appointments: {
             where: { status: { not: 'CANCELLED' } },
-            include: { doctor: { select: { userId: true } } },
+            include: { doctor: { select: { userId: true, isActive: true } } },
           },
         },
       },
@@ -324,8 +324,12 @@ export async function streamDocumentById(
   const doctorUserIds = Array.from(
     new Set(
       [
-        ...document.patient.cases.map((c) => c.primaryDoctor?.userId),
-        ...document.patient.appointments.map((a) => a.doctor.userId),
+        ...document.patient.cases.map((c) =>
+          c.primaryDoctor?.isActive === true ? c.primaryDoctor.userId : null
+        ),
+        ...document.patient.appointments.map((a) =>
+          a.doctor?.isActive === true ? a.doctor.userId : null
+        ),
       ].filter((id): id is string => Boolean(id))
     )
   );

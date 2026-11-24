@@ -49,6 +49,35 @@ describe('Case Lifecycle Engine & Stage Guardrails', () => {
     expect(blocked.ok).toBe(false);
   });
 
+  test('validateCaseStatusTransition blocks pre-arrival -> inpatient/surgical transitions without verified passport', () => {
+    const planToTreatmentBlocked = validateCaseStatusTransition({
+      currentStatus: 'PLAN_CONFIRMED',
+      nextStatus: 'IN_TREATMENT',
+      hasVerifiedPassport: false,
+      hasClearedFitToFly: false,
+      unpaidBillCount: 0,
+    });
+    expect(planToTreatmentBlocked.ok).toBe(false);
+
+    const inquiryToIcuBlocked = validateCaseStatusTransition({
+      currentStatus: 'INQUIRY_RECEIVED',
+      nextStatus: 'ICU_RECOVERY',
+      hasVerifiedPassport: false,
+      hasClearedFitToFly: false,
+      unpaidBillCount: 0,
+    });
+    expect(inquiryToIcuBlocked.ok).toBe(false);
+
+    const planToTreatmentAllowed = validateCaseStatusTransition({
+      currentStatus: 'PLAN_CONFIRMED',
+      nextStatus: 'IN_TREATMENT',
+      hasVerifiedPassport: true,
+      hasClearedFitToFly: false,
+      unpaidBillCount: 0,
+    });
+    expect(planToTreatmentAllowed.ok).toBe(true);
+  });
+
   test('validateCaseStatusTransition blocks CLOSED when unpaid bills exist without explicit overrideReason', () => {
     const blocked = validateCaseStatusTransition({
       currentStatus: 'FIT_TO_FLY_CLEARED',
@@ -70,11 +99,12 @@ describe('Case Lifecycle Engine & Stage Guardrails', () => {
     expect(allowedWithOverride.ok).toBe(true);
   });
 
-  test('derivePatientNextActions prioritizes rejected documents, unaccepted treatment plan, and missing flight details by phase', () => {
+  test('derivePatientNextActions prioritizes deduplicated rejected docs, unaccepted treatment plan, and blocks pre-arrival prompts after arrival', () => {
     const actions = derivePatientNextActions({
       caseStatus: 'UNDER_REVIEW',
       documents: [
         { category: 'PASSPORT', verificationStatus: 'REJECTED', verificationNotes: 'Blurry MRZ line' },
+        { category: 'PASSPORT', verificationStatus: 'REJECTED', verificationNotes: 'Cropped corner' },
       ],
       treatmentPlan: {
         diagnosis: 'CAD',
@@ -92,7 +122,36 @@ describe('Case Lifecycle Engine & Stage Guardrails', () => {
     });
 
     expect(actions[0].key).toBe('REUPLOAD_REJECTED_DOC');
+    expect(actions.filter((a) => a.key === 'REUPLOAD_REJECTED_DOC')).toHaveLength(1);
     expect(actions.some((a) => a.key === 'ACCEPT_TREATMENT_PLAN')).toBe(true);
+
+    // Inpatient & post-return phases must NOT leak pre-arrival visa/flight/quote prompts even when VIL exists
+    for (const postArrivalStatus of ['IN_TREATMENT', 'FIT_TO_FLY_CLEARED']) {
+      const postArrivalActions = derivePatientNextActions({
+        caseStatus: postArrivalStatus,
+        documents: [
+          { category: 'PASSPORT', verificationStatus: 'VERIFIED' },
+          { category: 'VISA_INVITATION_LETTER', verificationStatus: 'ISSUED_BY_HOSPITAL' },
+        ],
+        treatmentPlan: {
+          diagnosis: 'CAD',
+          procedureName: 'PCI Stent',
+          hospitalLosDays: 3,
+          recoveryStayDays: 5,
+          estimatedCostUsd: 4850,
+          currency: 'USD',
+          publishedAt: '2026-11-24T00:00:00.000Z',
+          consentAcceptedAt: null,
+        },
+        travelLogistics: null,
+        unpaidBillCount: 0,
+        postReturnFollowUps: [],
+      });
+
+      expect(postArrivalActions.some((a) => a.key === 'UPLOAD_APPROVED_VISA')).toBe(false);
+      expect(postArrivalActions.some((a) => a.key === 'SUBMIT_FLIGHT_DETAILS')).toBe(false);
+      expect(postArrivalActions.some((a) => a.key === 'ACCEPT_TREATMENT_PLAN')).toBe(false);
+    }
   });
 
   test('pure client-safe helpers cover certificate visibility, Form C 24h SLA, Fit-to-Fly checklist, and discriminated lifecycle mutations', () => {
@@ -100,6 +159,18 @@ describe('Case Lifecycle Engine & Stage Guardrails', () => {
       canShowRoadmapCertificateDownload(
         { actionType: 'ISSUE_VIL', status: 'PENDING' },
         new Set(['PASSPORT'])
+      )
+    ).toBe(false);
+    expect(
+      canShowRoadmapCertificateDownload(
+        { actionType: 'ISSUE_VIL', status: 'PENDING' },
+        new Set(['VISA_INVITATION_LETTER'])
+      )
+    ).toBe(false);
+    expect(
+      canShowRoadmapCertificateDownload(
+        { actionType: 'VOTE_MDT', status: 'COMPLETED' },
+        new Set(['VISA_INVITATION_LETTER'])
       )
     ).toBe(false);
     expect(
@@ -113,6 +184,10 @@ describe('Case Lifecycle Engine & Stage Guardrails', () => {
     const now = new Date('2026-11-24T10:00:00Z');
     expect(computeFormCSlaStatus(arrival, null, now)).toBe('OVERDUE_STATUTORY');
     expect(computeFormCSlaStatus(arrival, '2026-11-22T18:00:00Z', now)).toBe('SUBMITTED_ON_TIME');
+    expect(computeFormCSlaStatus(arrival, '2026-11-23T12:00:00Z', now)).toBe('SUBMITTED_LATE');
+
+    expect(validateFitToFlySafetyChecklist(true, null).ok).toBe(false);
+    expect(validateFitToFlySafetyChecklist(false, null).ok).toBe(true);
 
     const unsafeChecklist = validateFitToFlySafetyChecklist(true, {
       woundStable: true,
@@ -123,6 +198,15 @@ describe('Case Lifecycle Engine & Stage Guardrails', () => {
     });
     expect(unsafeChecklist.ok).toBe(false);
 
+    const safeChecklist = validateFitToFlySafetyChecklist(true, {
+      woundStable: true,
+      noTrappedGasRisk: true,
+      cardioRespiratoryStable: true,
+      hemoglobinCleared: true,
+      dvtProphylaxisPlan: true,
+    });
+    expect(safeChecklist.ok).toBe(true);
+
     const parsedAssign = lifecycleMutationSchema.safeParse({
       action: 'ASSIGN_CLINICAL_TEAM',
       hospitalId: 'hosp-1',
@@ -131,4 +215,3 @@ describe('Case Lifecycle Engine & Stage Guardrails', () => {
     expect(parsedAssign.success).toBe(true);
   });
 });
-

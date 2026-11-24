@@ -1,4 +1,6 @@
 const mockPatientFindFirst = jest.fn();
+const mockDocumentFindUnique = jest.fn();
+const mockAuditLogCreate = jest.fn().mockResolvedValue({});
 
 jest.mock('@/lib/prisma', () => ({
   __esModule: true,
@@ -6,11 +8,23 @@ jest.mock('@/lib/prisma', () => ({
     patient: {
       findFirst: (...args: unknown[]) => mockPatientFindFirst(...args),
     },
+    document: {
+      findUnique: (...args: unknown[]) => mockDocumentFindUnique(...args),
+    },
+    auditLog: {
+      create: (...args: unknown[]) => mockAuditLogCreate(...args),
+    },
   },
 }));
 
 import { NextRequest } from 'next/server';
-import { validateUploadBuffer, canUserAccessPatientDocument } from '../document-storage.service';
+import {
+  validateUploadBuffer,
+  canUserAccessPatientDocument,
+  saveGeneratedBuffer,
+  removeStoredFile,
+  streamDocumentById,
+} from '../document-storage.service';
 import { SYSTEM_LIMITS } from '@/lib/constants';
 import { POST as postPatientDocument } from '@/app/api/v1/patient/documents/route';
 
@@ -108,6 +122,73 @@ describe('document-storage.service', () => {
     const json = await res.json();
     expect(json.success).toBe(false);
     expect(json.error.code).toBe('BAD_REQUEST');
+  });
+
+  it('streamDocumentById permits active primaryDoctor (200) and rejects deactivated primaryDoctor (403)', async () => {
+    const pdfBuf = Buffer.from('%PDF-1.7\n1 0 obj<<>>endobj');
+    const saved = await saveGeneratedBuffer(pdfBuf, 'test_phi');
+
+    try {
+      mockDocumentFindUnique.mockResolvedValueOnce({
+        id: 'doc-phi-1',
+        fileName: 'cardiac-scan.pdf',
+        mimeType: 'application/pdf',
+        storageKey: saved.storageKey,
+        fileUrl: '/api/v1/documents/doc-phi-1/download',
+        category: 'MEDICAL_REPORT',
+        patient: {
+          userId: 'pat-u1',
+          assignedManagerId: 'mgr-1',
+          cases: [
+            {
+              managerId: 'mgr-1',
+              primaryDoctor: { userId: 'doc-active-u1', isActive: true },
+            },
+          ],
+          appointments: [],
+        },
+      });
+
+      const allowedRes = await streamDocumentById(
+        'doc-phi-1',
+        { userId: 'doc-active-u1', role: 'DOCTOR', email: 'active@hospital.in' },
+        '127.0.0.1'
+      );
+      expect(allowedRes.status).toBe(200);
+
+      mockDocumentFindUnique.mockResolvedValueOnce({
+        id: 'doc-phi-1',
+        fileName: 'cardiac-scan.pdf',
+        mimeType: 'application/pdf',
+        storageKey: saved.storageKey,
+        fileUrl: '/api/v1/documents/doc-phi-1/download',
+        category: 'MEDICAL_REPORT',
+        patient: {
+          userId: 'pat-u1',
+          assignedManagerId: 'mgr-1',
+          cases: [
+            {
+              managerId: 'mgr-1',
+              primaryDoctor: { userId: 'doc-inactive-u1', isActive: false },
+            },
+          ],
+          appointments: [
+            {
+              doctor: { userId: 'doc-inactive-u1', isActive: false },
+            },
+          ],
+        },
+      });
+
+      const deniedRes = await streamDocumentById(
+        'doc-phi-1',
+        { userId: 'doc-inactive-u1', role: 'DOCTOR', email: 'inactive@hospital.in' },
+        '127.0.0.1'
+      );
+      expect(deniedRes.status).toBe(403);
+    } finally {
+      await removeStoredFile(saved.storageKey);
+    }
   });
 });
 

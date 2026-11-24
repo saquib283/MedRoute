@@ -823,15 +823,15 @@ export function validateCaseStatusTransition(
   }
 
   if (
-    params.currentStatus === 'INQUIRY_RECEIVED' &&
-    params.nextStatus === 'IN_TREATMENT' &&
+    !INPATIENT_SURGICAL_STATUSES.has(params.currentStatus) &&
+    INPATIENT_SURGICAL_STATUSES.has(params.nextStatus) &&
     !params.hasVerifiedPassport &&
     !hasOverride
   ) {
     return {
       ok: false,
       message:
-        'Cannot jump directly from Inquiry Received to active Hospital Treatment without passport verification or override reason',
+        'Cannot transition into inpatient surgical or recovery care without passport verification or an explicit override reason',
     };
   }
 
@@ -863,6 +863,7 @@ export function validateCaseStatusTransition(
 export type FormCSlaStatus =
   | 'NOT_ARRIVED'
   | 'SUBMITTED_ON_TIME'
+  | 'SUBMITTED_LATE'
   | 'DUE_WITHIN_24H'
   | 'OVERDUE_STATUTORY';
 
@@ -875,11 +876,15 @@ export function computeFormCSlaStatus(
   const arrivalDate = arrivalAt instanceof Date ? arrivalAt : new Date(arrivalAt);
   if (Number.isNaN(arrivalDate.getTime())) return 'NOT_ARRIVED';
 
+  const twentyFourHoursMs = 24 * 60 * 60 * 1000;
+
   if (formCSubmittedAt) {
     const submittedDate =
       formCSubmittedAt instanceof Date ? formCSubmittedAt : new Date(formCSubmittedAt);
     if (!Number.isNaN(submittedDate.getTime())) {
-      return 'SUBMITTED_ON_TIME';
+      return submittedDate.getTime() - arrivalDate.getTime() <= twentyFourHoursMs
+        ? 'SUBMITTED_ON_TIME'
+        : 'SUBMITTED_LATE';
     }
   }
 
@@ -888,7 +893,6 @@ export function computeFormCSlaStatus(
   }
 
   const elapsedMs = referenceNow.getTime() - arrivalDate.getTime();
-  const twentyFourHoursMs = 24 * 60 * 60 * 1000;
   return elapsedMs > twentyFourHoursMs ? 'OVERDUE_STATUTORY' : 'DUE_WITHIN_24H';
 }
 
@@ -896,8 +900,15 @@ export function validateFitToFlySafetyChecklist(
   isCleared: boolean,
   checklist?: FitToFlyChecklistPayload | null
 ): { ok: true } | { ok: false; message: string } {
-  if (!isCleared || !checklist) {
+  if (!isCleared) {
     return { ok: true };
+  }
+
+  if (!checklist) {
+    return {
+      ok: false,
+      message: 'Physiological safety checklist is required to certify Fit-to-Fly clearance',
+    };
   }
 
   const allPassed =
@@ -930,10 +941,9 @@ export function canShowRoadmapCertificateDownload(
   step: { actionType?: string | null; status?: string | null },
   issuedDocCategories?: ReadonlySet<string> | readonly string[] | null
 ): boolean {
-  if (!step.actionType) return false;
+  if (!step.actionType || step.status !== 'COMPLETED') return false;
   const requiredCategory = CERTIFICATE_ACTION_TO_CATEGORY[step.actionType];
-  if (!requiredCategory) return true;
-  if (!issuedDocCategories) return false;
+  if (!requiredCategory || !issuedDocCategories) return false;
 
   if (issuedDocCategories instanceof Set) {
     return issuedDocCategories.has(requiredCategory);
@@ -981,6 +991,13 @@ export interface PatientNextActionItem {
   meta?: Record<string, unknown>;
 }
 
+const PRE_ARRIVAL_CASE_STATUSES = new Set<string>([
+  'INQUIRY_RECEIVED',
+  'UNDER_REVIEW',
+  'PRE_OP_CLEARANCE',
+  'PLAN_CONFIRMED',
+]);
+
 export function derivePatientNextActions(
   input: PatientNextActionContext
 ): PatientNextActionItem[] {
@@ -990,6 +1007,7 @@ export function derivePatientNextActions(
 
   const actions: PatientNextActionItem[] = [];
   const docs = input.documents || [];
+  const isPreArrivalPhase = PRE_ARRIVAL_CASE_STATUSES.has(input.caseStatus);
 
   const hasValidCategoryDoc = (category: string) =>
     docs.some(
@@ -998,11 +1016,18 @@ export function derivePatientNextActions(
         d.verificationStatus !== 'REJECTED'
     );
 
-  // 1. Highest priority: any REJECTED document that has not been replaced yet
-  const unresolvedRejectedDocs = docs.filter(
-    (d) =>
-      d.verificationStatus === 'REJECTED' && !hasValidCategoryDoc(d.category)
-  );
+  // 1. Highest priority: any REJECTED document that has not been replaced yet (deduplicated by category)
+  const seenRejectedCategories = new Set<string>();
+  const unresolvedRejectedDocs = docs.filter((d) => {
+    if (d.verificationStatus !== 'REJECTED' || hasValidCategoryDoc(d.category)) {
+      return false;
+    }
+    if (seenRejectedCategories.has(d.category)) {
+      return false;
+    }
+    seenRejectedCategories.add(d.category);
+    return true;
+  });
   for (const rejected of unresolvedRejectedDocs) {
     const categoryLabel =
       DOCUMENT_CATEGORY_LABELS[rejected.category] || rejected.category;
@@ -1022,8 +1047,9 @@ export function derivePatientNextActions(
     });
   }
 
-  // 2. Published Treatment Plan awaiting Patient Informed Consent
+  // 2. Published Treatment Plan awaiting Patient Informed Consent (pre-arrival stages only)
   if (
+    isPreArrivalPhase &&
     input.treatmentPlan &&
     (input.treatmentPlan.publishedAt || input.treatmentPlan.procedureName) &&
     !input.treatmentPlan.consentAcceptedAt
@@ -1077,16 +1103,17 @@ export function derivePatientNextActions(
     }
   }
 
-  // 4. Stage 3 Visa Sponsorship & Flight Concierge
+  // 4. Stage 3 Visa Sponsorship & Flight Concierge (gated to pre-arrival stages)
   const hasIssuedVil = docs.some(
     (d) =>
       d.category === 'VISA_INVITATION_LETTER' &&
       d.verificationStatus !== 'REJECTED'
   );
   if (
-    input.caseStatus === 'PRE_OP_CLEARANCE' ||
-    input.caseStatus === 'PLAN_CONFIRMED' ||
-    hasIssuedVil
+    isPreArrivalPhase &&
+    (input.caseStatus === 'PRE_OP_CLEARANCE' ||
+      input.caseStatus === 'PLAN_CONFIRMED' ||
+      hasIssuedVil)
   ) {
     if (!hasValidCategoryDoc('VISA') && (hasIssuedVil || input.caseStatus === 'PLAN_CONFIRMED')) {
       actions.push({
