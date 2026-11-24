@@ -36,10 +36,16 @@ export const registerSchema = z.object({
   passportNo: z.string().min(5, 'Passport number is required'),
   passportExpiry: z
     .string()
-    .refine((val) => !isNaN(Date.parse(val)), {
-      message: 'Invalid passport expiry date',
+    .nullable()
+    .optional()
+    .transform((val) => {
+      if (val === undefined || val === null) return undefined;
+      const trimmed = val.trim();
+      return trimmed.length > 0 ? trimmed : undefined;
     })
-    .optional(),
+    .refine((val) => !val || !Number.isNaN(Date.parse(val)), {
+      message: 'Invalid passport expiry date',
+    }),
   dob: z.string().refine((val) => !isNaN(Date.parse(val)), {
     message: 'Invalid date of birth',
   }),
@@ -86,7 +92,13 @@ export const patientProfileSchema = z.object({
     .string()
     .nullable()
     .optional()
-    .refine((val) => !val || !isNaN(Date.parse(val)), {
+    .transform((val) => {
+      if (val === undefined) return undefined;
+      if (val === null) return null;
+      const trimmed = val.trim();
+      return trimmed.length > 0 ? trimmed : null;
+    })
+    .refine((val) => !val || !Number.isNaN(Date.parse(val)), {
       message: 'Invalid passport expiry date',
     }),
   dob: z

@@ -3,15 +3,28 @@
  * Hospital Certificate Issuance & Fit-to-Fly Clearance Service
  */
 
+import { Prisma, type DocumentCategory } from '@prisma/client';
 import { z } from 'zod';
-import type { DocumentCategory } from '@prisma/client';
 import prisma from '@/lib/prisma';
 import { ERROR_CODES } from '@/lib/api/errors';
 import { AUDIT_ACTIONS, createAuditLog } from '@/lib/api/audit-logger';
-import { DOCUMENT_CATEGORY_LABELS } from '@/lib/constants';
+import {
+  DOCUMENT_CATEGORY_LABELS,
+  SSR_ASSISTANCE_CODES,
+} from '@/lib/constants';
 import { formatDoctorDisplayName } from '@/lib/validation/booking-helpers';
 import {
+  fitToFlyChecklistSchema,
+  validateFitToFlySafetyChecklist,
+  type FitToFlyChecklistPayload,
+  type FollowUpMilestone,
+  type TravelLogisticsPayload,
+  type TreatmentPlanPayload,
+} from '@/lib/validation/lifecycle-schemas';
+import { safeDecryptString } from '@/lib/services/phi.service';
+import {
   authorizeCaseClinicalAccess,
+  type ClinicalCaseRecord,
   type ServiceResult,
 } from '@/lib/services/clinical-pathway.service';
 import {
@@ -29,6 +42,7 @@ export const MANAGER_ISSUE_CATEGORIES = [
 
 export const DOCTOR_ISSUE_CATEGORIES = [
   'FIT_TO_FLY_CERTIFICATE',
+  'DISCHARGE_SUMMARY',
   'MEDICAL_OPINION',
   'PRESCRIPTION',
   'MEDICAL_REPORT',
@@ -40,16 +54,18 @@ export const ALL_ISSUE_CATEGORIES = [
   'MEDICAL_OPINION',
   'FRRO_REGISTRATION',
   'FIT_TO_FLY_CERTIFICATE',
+  'DISCHARGE_SUMMARY',
   'PRESCRIPTION',
   'MEDICAL_REPORT',
 ] as const;
 
 type IssuableCategory = (typeof ALL_ISSUE_CATEGORIES)[number];
 
-const CATEGORY_STEP_ACTION_MAP: Partial<Record<IssuableCategory, string>> = {
-  VISA_INVITATION_LETTER: 'ISSUE_VIL',
-  PROFORMA_INVOICE: 'ISSUE_PROFORMA',
-  FIT_TO_FLY_CERTIFICATE: 'SIGN_FIT_TO_FLY',
+const CATEGORY_STEP_ACTION_MAP: Partial<Record<IssuableCategory, string[]>> = {
+  VISA_INVITATION_LETTER: ['ISSUE_VIL'],
+  PROFORMA_INVOICE: ['ISSUE_PROFORMA'],
+  FIT_TO_FLY_CERTIFICATE: ['SIGN_FIT_TO_FLY'],
+  DISCHARGE_SUMMARY: ['DISCHARGE_SUMMARY', 'OPERATIVE_SUMMARY'],
 };
 
 const verifyDocumentSchema = z.object({
@@ -61,6 +77,15 @@ const upsertFitToFlySchema = z.object({
   isCleared: z.boolean(),
   restrictions: z.string().max(2000).nullable().optional(),
   reEvalDate: z.string().nullable().optional(),
+  checklist: fitToFlyChecklistSchema.nullable().optional(),
+  ssrCode: z
+    .union([z.enum(SSR_ASSISTANCE_CODES), z.literal('')])
+    .nullable()
+    .optional()
+    .transform((val) => (val === '' ? null : val)),
+  requiresMedif: z.boolean().optional(),
+  flightNumber: z.string().trim().max(64).nullable().optional(),
+  departureDate: z.string().nullable().optional(),
 });
 
 export interface CertificatePdfInput {
@@ -82,11 +107,20 @@ export interface VerifyDocumentParams {
   actor: { userId: string; role: string; ipAddress?: string };
 }
 
+export interface FitToFlyCertificateMeta {
+  checklist?: FitToFlyChecklistPayload | null;
+  ssrCode?: string | null;
+  requiresMedif?: boolean;
+  flightNumber?: string | null;
+  departureDate?: Date | string | null;
+}
+
 export interface IssueCaseDocumentParams {
   caseId: string;
   category: unknown;
   file?: File | null;
   notes?: unknown;
+  fitToFlyMeta?: FitToFlyCertificateMeta;
   actor: { userId: string; role: string; ipAddress?: string };
 }
 
@@ -95,6 +129,11 @@ export interface UpsertFitToFlyParams {
   isCleared: unknown;
   restrictions?: unknown;
   reEvalDate?: unknown;
+  checklist?: unknown;
+  ssrCode?: unknown;
+  requiresMedif?: unknown;
+  flightNumber?: unknown;
+  departureDate?: unknown;
   file?: File | null;
   actor: { userId: string; role: string; ipAddress?: string };
 }
@@ -163,7 +202,7 @@ export function generateClinicalCertificatePdf(input: CertificatePdfInput): Buff
     `(${escapePdfText('--------------------------------------------------------------------------')}) Tj`,
   ];
 
-  for (const bodyLine of wrappedBody.slice(0, 32)) {
+  for (const bodyLine of wrappedBody.slice(0, 36)) {
     streamOps.push('0 -15 Td');
     streamOps.push(`(${escapePdfText(bodyLine)}) Tj`);
   }
@@ -213,43 +252,256 @@ export function generateClinicalCertificatePdf(input: CertificatePdfInput): Buff
   return Buffer.from(chunks.join(''), 'ascii');
 }
 
-function getDefaultBodyLines(
-  category: IssuableCategory,
-  patientName: string,
-  nationality: string | null | undefined,
-  notes: string | null
-): string[] {
-  const originLabel = nationality ? ` (${nationality})` : '';
-  const defaults: Record<IssuableCategory, string[]> = {
-    VISA_INVITATION_LETTER: [
-      `This official Visa Invitation Letter (VIL) confirms medical travel sponsorship for ${patientName}${originLabel}.`,
-      'The patient is scheduled for specialized clinical evaluation and treatment under Afzal Healthcare partner hospital supervision.',
-    ],
-    PROFORMA_INVOICE: [
-      `Official Pro-Forma Treatment Cost Estimate issued for ${patientName}${originLabel}.`,
-      'Covers estimated procedural, inpatient accommodation, and clinical coordinator support.',
-    ],
-    MEDICAL_OPINION: [
-      `Official Hospital Medical Opinion summary issued for ${patientName}${originLabel}.`,
-      'Prepared following clinical record review by the assigned specialist team.',
-    ],
-    FRRO_REGISTRATION: [
-      `FRRO Medical Visa Registration & Extension Support Certificate for ${patientName}${originLabel}.`,
-      'Confirms ongoing inpatient/outpatient clinical care in India.',
-    ],
-    FIT_TO_FLY_CERTIFICATE: [
-      `Medical Fit-to-Fly Clearance Certificate for ${patientName}${originLabel}.`,
-      'Clinical examination confirms the patient meets fitness criteria for commercial air travel subject to listed restrictions.',
-    ],
-    PRESCRIPTION: [
-      `Official Outpatient Discharge & Medication Prescription for ${patientName}${originLabel}.`,
-    ],
-    MEDICAL_REPORT: [
-      `Official Clinical Diagnostic & Procedure Report for ${patientName}${originLabel}.`,
-    ],
-  };
+function formatIsoDateShort(val: Date | string | null | undefined): string | null {
+  if (!val) return null;
+  const dt = val instanceof Date ? val : new Date(val);
+  if (Number.isNaN(dt.getTime())) return null;
+  return dt.toISOString().slice(0, 10);
+}
 
-  const lines = [...defaults[category]];
+function buildInitialFollowUpMilestones(baseDate: Date): FollowUpMilestone[] {
+  const dayMs = 24 * 60 * 60 * 1000;
+  return [
+    {
+      milestone: 'DAY_7',
+      dueAt: new Date(baseDate.getTime() + 7 * dayMs).toISOString(),
+      status: 'PENDING',
+    },
+    {
+      milestone: 'DAY_30',
+      dueAt: new Date(baseDate.getTime() + 30 * dayMs).toISOString(),
+      status: 'PENDING',
+    },
+    {
+      milestone: 'DAY_90',
+      dueAt: new Date(baseDate.getTime() + 90 * dayMs).toISOString(),
+      status: 'PENDING',
+    },
+  ];
+}
+
+function buildEnrichedCertificateBodyLines(params: {
+  category: IssuableCategory;
+  patientName: string;
+  nationality: string | null | undefined;
+  notes: string | null;
+  targetCase: ClinicalCaseRecord;
+  fitToFlyMeta?: FitToFlyCertificateMeta;
+}): string[] {
+  const { category, patientName, nationality, notes, targetCase, fitToFlyMeta } = params;
+  const originLabel = nationality ? ` (${nationality})` : '';
+
+  const hospital = targetCase.hospital ?? null;
+  const primaryDoctor = targetCase.primaryDoctor ?? null;
+  const treatmentPlan =
+    targetCase.treatmentPlan && typeof targetCase.treatmentPlan === 'object'
+      ? (targetCase.treatmentPlan as unknown as TreatmentPlanPayload)
+      : null;
+  const travelLogistics =
+    targetCase.travelLogistics && typeof targetCase.travelLogistics === 'object'
+      ? (targetCase.travelLogistics as unknown as TravelLogisticsPayload)
+      : null;
+
+  const hospitalLine = hospital
+    ? `Hospital: ${hospital.name}${hospital.accreditation ? ` (${hospital.accreditation})` : ''}${hospital.city ? ` - ${hospital.city}` : ''}`
+    : null;
+
+  const doctorLine = primaryDoctor
+    ? `Treating Specialist: ${formatDoctorDisplayName(primaryDoctor.fullName)}${primaryDoctor.specialisation?.name ? ` (${primaryDoctor.specialisation.name})` : ''}`
+    : null;
+
+  const decryptedPatientPassport = safeDecryptString(targetCase.patient.passportNo);
+  const hasDecryptedPassport =
+    Boolean(decryptedPatientPassport) && decryptedPatientPassport !== '[DECRYPTION_ERROR]';
+  const passportExpiryStr = formatIsoDateShort(targetCase.patient.passportExpiry);
+
+  const lines: string[] = [];
+
+  if (category === 'VISA_INVITATION_LETTER') {
+    lines.push(
+      `This official Visa Invitation Letter (VIL) confirms medical travel sponsorship for ${patientName}${originLabel}.`,
+      'The patient is scheduled for specialized clinical evaluation and treatment under Afzal Healthcare partner hospital supervision.'
+    );
+    if (hospitalLine) {
+      lines.push(
+        travelLogistics?.frroNumber
+          ? `${hospitalLine} | FRRO Ref: ${travelLogistics.frroNumber}`
+          : hospitalLine
+      );
+    }
+    if (hasDecryptedPassport) {
+      lines.push(
+        `Patient Passport No: ${decryptedPatientPassport}${passportExpiryStr ? ` | Expiry: ${passportExpiryStr}` : ''} | Visa Category: MED`
+      );
+    }
+    if (Array.isArray(travelLogistics?.attendants)) {
+      travelLogistics.attendants.slice(0, 2).forEach((att, idx) => {
+        const attPassport = safeDecryptString(att.passportNo);
+        const cleanAttPassport =
+          attPassport && attPassport !== '[DECRYPTION_ERROR]' ? attPassport : 'On File';
+        lines.push(
+          `MED-X Attendant ${idx + 1}: ${att.fullName} | Passport: ${cleanAttPassport} | Relation: ${att.relation}`
+        );
+      });
+    }
+    if (doctorLine) lines.push(doctorLine);
+    if (treatmentPlan?.diagnosis) {
+      lines.push(`Clinical Diagnosis: ${treatmentPlan.diagnosis}`);
+    }
+    if (treatmentPlan?.procedureName) {
+      lines.push(`Proposed Procedure: ${treatmentPlan.procedureName}`);
+    }
+    if (
+      treatmentPlan &&
+      (treatmentPlan.hospitalLosDays !== undefined ||
+        treatmentPlan.recoveryStayDays !== undefined)
+    ) {
+      lines.push(
+        `Estimated Stay Window: ${treatmentPlan.hospitalLosDays ?? 0} inpatient day(s) + ${treatmentPlan.recoveryStayDays ?? 0} recovery day(s)`
+      );
+    }
+  } else if (category === 'FRRO_REGISTRATION') {
+    lines.push(
+      `FRRO Medical Visa Registration & Statutory Form C Support Certificate for ${patientName}${originLabel}.`,
+      'Confirms ongoing inpatient/outpatient clinical care in India.'
+    );
+    if (hospitalLine) lines.push(hospitalLine);
+    if (hasDecryptedPassport) {
+      lines.push(
+        `Patient Passport No: ${decryptedPatientPassport}${passportExpiryStr ? ` | Expiry: ${passportExpiryStr}` : ''}`
+      );
+    }
+    if (travelLogistics?.visaNumber || travelLogistics?.visaExpiryDate) {
+      lines.push(
+        `Medical Visa No: ${travelLogistics.visaNumber || 'On File'}${travelLogistics.visaExpiryDate ? ` | Visa Expiry: ${travelLogistics.visaExpiryDate.slice(0, 10)}` : ''}`
+      );
+    }
+    if (travelLogistics?.frroNumber || travelLogistics?.formCSubmittedAt) {
+      lines.push(
+        `FRRO / Form C Filing: ${travelLogistics.frroNumber || 'Submitted'}${travelLogistics.formCSubmittedAt ? ` | Form C Timestamp: ${travelLogistics.formCSubmittedAt}` : ''}`
+      );
+    }
+    if (Array.isArray(travelLogistics?.attendants)) {
+      travelLogistics.attendants.slice(0, 2).forEach((att, idx) => {
+        const attPassport = safeDecryptString(att.passportNo);
+        const cleanAttPassport =
+          attPassport && attPassport !== '[DECRYPTION_ERROR]' ? attPassport : 'On File';
+        lines.push(
+          `MED-X Attendant ${idx + 1}: ${att.fullName} | Passport: ${cleanAttPassport} | Relation: ${att.relation}`
+        );
+      });
+    }
+    if (doctorLine) lines.push(doctorLine);
+  } else if (category === 'PROFORMA_INVOICE') {
+    lines.push(
+      `Official Pro-Forma Treatment Cost Estimate issued for ${patientName}${originLabel}.`
+    );
+    if (hospitalLine) lines.push(hospitalLine);
+    if (doctorLine) lines.push(doctorLine);
+    if (treatmentPlan) {
+      lines.push(`Clinical Diagnosis: ${treatmentPlan.diagnosis}`);
+      lines.push(`Proposed Procedure: ${treatmentPlan.procedureName}`);
+      lines.push(
+        `Estimated Stay: ${treatmentPlan.hospitalLosDays} hospital day(s) + ${treatmentPlan.recoveryStayDays} recovery hotel day(s)`
+      );
+      lines.push(
+        `All-In Cost Estimate: ${treatmentPlan.currency || 'USD'} ${Number(treatmentPlan.estimatedCostUsd || 0).toFixed(2)}`
+      );
+      if (treatmentPlan.inclusions?.length) {
+        lines.push(`Package Inclusions: ${treatmentPlan.inclusions.join('; ')}`);
+      }
+      if (treatmentPlan.exclusions?.length) {
+        lines.push(`Package Exclusions: ${treatmentPlan.exclusions.join('; ')}`);
+      }
+    } else {
+      lines.push(
+        'Covers estimated procedural, inpatient accommodation, and clinical coordinator support.'
+      );
+    }
+  } else if (category === 'DISCHARGE_SUMMARY') {
+    lines.push(
+      `Official Hospital Discharge Summary & Continuum of Care Handover for ${patientName}${originLabel}.`
+    );
+    if (hospitalLine) lines.push(hospitalLine);
+    if (doctorLine) lines.push(doctorLine);
+    if (treatmentPlan?.diagnosis) {
+      lines.push(`Final Diagnosis: ${treatmentPlan.diagnosis}`);
+    }
+    if (treatmentPlan?.procedureName) {
+      lines.push(`Procedure Performed: ${treatmentPlan.procedureName}`);
+    }
+    lines.push(
+      'Discharge Medications: Continue prescribed post-procedure regimen strictly per outpatient prescription.',
+      'Wound Care & Activity Instructions: Keep surgical/procedural site clean and dry; avoid heavy lifting until specialist review.',
+      'Emergency Red-Flag Symptoms: Seek urgent medical care or contact 24/7 coordinator helpline for fever >38C, active bleeding, chest pain, dyspnea, or acute swelling.',
+      'Continuum Follow-Up Schedule: Mandatory Day-7, Day-30, and Day-90 remote recovery check-ins via Afzal Healthcare portal.'
+    );
+  } else if (category === 'FIT_TO_FLY_CERTIFICATE') {
+    const existingFtf = targetCase.fitToFlyClearance;
+    const ssrCode = fitToFlyMeta?.ssrCode ?? existingFtf?.ssrCode ?? 'NONE';
+    const requiresMedif =
+      fitToFlyMeta?.requiresMedif ?? existingFtf?.requiresMedif ?? false;
+    const flightNumber =
+      fitToFlyMeta?.flightNumber ??
+      existingFtf?.flightNumber ??
+      travelLogistics?.departureFlightNo ??
+      null;
+    const departureDateStr = formatIsoDateShort(
+      fitToFlyMeta?.departureDate ??
+        existingFtf?.departureDate ??
+        travelLogistics?.departureAt ??
+        null
+    );
+    const checklist =
+      fitToFlyMeta?.checklist ??
+      (existingFtf?.checklist && typeof existingFtf.checklist === 'object'
+        ? (existingFtf.checklist as unknown as FitToFlyChecklistPayload)
+        : null);
+
+    lines.push(
+      `Medical Fit-to-Fly Clearance Certificate for ${patientName}${originLabel}.`,
+      'Clinical examination confirms the patient meets fitness criteria for commercial air travel subject to listed restrictions.'
+    );
+    if (hospitalLine) lines.push(hospitalLine);
+    if (doctorLine) lines.push(doctorLine);
+    if (hasDecryptedPassport) {
+      lines.push(
+        `Patient Passport No: ${decryptedPatientPassport}${passportExpiryStr ? ` | Expiry: ${passportExpiryStr}` : ''}`
+      );
+    }
+    lines.push(
+      `Airline SSR Assistance Code: ${ssrCode}`,
+      `IATA MEDIF Airline Clearance (48-72h Pre-Departure): ${requiresMedif ? 'REQUIRED (MEDIF)' : 'NOT REQUIRED'}`
+    );
+    if (flightNumber || departureDateStr) {
+      lines.push(
+        `Outbound Flight: ${flightNumber || 'TBD'}${departureDateStr ? ` | Departure Date: ${departureDateStr}` : ''}`
+      );
+    }
+    if (checklist) {
+      lines.push(
+        `IATA Physiological Safety Checklist: Wound=${checklist.woundStable ? 'PASS' : 'FAIL'}, CabinGas=${checklist.noTrappedGasRisk ? 'PASS' : 'FAIL'}, CardioResp=${checklist.cardioRespiratoryStable ? 'PASS' : 'FAIL'}, Hb=${checklist.hemoglobinCleared ? 'PASS' : 'FAIL'}, DVT=${checklist.dvtProphylaxisPlan ? 'PASS' : 'FAIL'}`
+      );
+    }
+  } else if (category === 'MEDICAL_OPINION') {
+    lines.push(
+      `Official Hospital Medical Opinion summary issued for ${patientName}${originLabel}.`,
+      'Prepared following clinical record review by the assigned specialist team.'
+    );
+    if (hospitalLine) lines.push(hospitalLine);
+    if (doctorLine) lines.push(doctorLine);
+  } else if (category === 'PRESCRIPTION') {
+    lines.push(
+      `Official Outpatient Discharge & Medication Prescription for ${patientName}${originLabel}.`
+    );
+    if (doctorLine) lines.push(doctorLine);
+  } else {
+    lines.push(
+      `Official Clinical Diagnostic & Procedure Report for ${patientName}${originLabel}.`
+    );
+    if (doctorLine) lines.push(doctorLine);
+  }
+
   if (notes) {
     lines.push(`Clinical / Coordinator Notes: ${notes}`);
   }
@@ -504,12 +756,14 @@ export async function issueCaseDocument(
       caseId: params.caseId,
       issuedByName,
       issuedByRole,
-      bodyLines: getDefaultBodyLines(
+      bodyLines: buildEnrichedCertificateBodyLines({
         category,
         patientName,
-        access.targetCase.patient.nationality,
-        cleanNotes
-      ),
+        nationality: access.targetCase.patient.nationality,
+        notes: cleanNotes,
+        targetCase: access.targetCase,
+        fitToFlyMeta: params.fitToFlyMeta,
+      }),
     });
     const savedPdf = await saveGeneratedBuffer(pdfBuffer, 'cert', '.pdf');
     storageKey = savedPdf.storageKey;
@@ -546,12 +800,15 @@ export async function issueCaseDocument(
     data: { fileUrl: `/api/v1/documents/${createdDoc.id}/download` },
   });
 
-  const stepActionType = CATEGORY_STEP_ACTION_MAP[category];
-  if (stepActionType) {
+  const stepActionTypes = CATEGORY_STEP_ACTION_MAP[category];
+  if (stepActionTypes && stepActionTypes.length > 0) {
     await prisma.clinicalStep.updateMany({
       where: {
         caseId: params.caseId,
-        actionType: stepActionType,
+        actionType:
+          stepActionTypes.length === 1
+            ? stepActionTypes[0]
+            : { in: stepActionTypes },
         status: { not: 'COMPLETED' },
       },
       data: {
@@ -610,7 +867,8 @@ export async function getCaseFitToFly(
 
 /**
  * Certify or update Fit-to-Fly clearance (treating DOCTOR or ADMIN only),
- * issuing a downloadable PDF certificate and advancing Case status when cleared.
+ * enforcing IATA physiological safety checks when a checklist is supplied,
+ * issuing an enriched PDF certificate, advancing Case status, and seeding Day-7/30/90 follow-ups.
  */
 export async function upsertCaseFitToFly(
   params: UpsertFitToFlyParams
@@ -634,6 +892,11 @@ export async function upsertCaseFitToFly(
     isCleared: params.isCleared,
     restrictions: params.restrictions,
     reEvalDate: params.reEvalDate,
+    checklist: params.checklist,
+    ssrCode: params.ssrCode,
+    requiresMedif: params.requiresMedif,
+    flightNumber: params.flightNumber,
+    departureDate: params.departureDate,
   });
   if (!parsed.success) {
     return {
@@ -644,8 +907,24 @@ export async function upsertCaseFitToFly(
     };
   }
 
+  if (
+    parsed.data.isCleared === true &&
+    params.checklist !== undefined &&
+    params.checklist !== null
+  ) {
+    const safetyCheck = validateFitToFlySafetyChecklist(true, parsed.data.checklist);
+    if (!safetyCheck.ok) {
+      return {
+        ok: false,
+        code: ERROR_CODES.BAD_REQUEST,
+        message: safetyCheck.message,
+        status: 400,
+      };
+    }
+  }
+
   let parsedReEvalDate: Date | null = null;
-  if (parsed.data.reEvalDate) {
+  if (parsed.data.reEvalDate && parsed.data.reEvalDate.trim()) {
     const dt = new Date(parsed.data.reEvalDate);
     if (Number.isNaN(dt.getTime())) {
       return {
@@ -656,6 +935,24 @@ export async function upsertCaseFitToFly(
       };
     }
     parsedReEvalDate = dt;
+  }
+
+  let parsedDepartureDate: Date | null | undefined = undefined;
+  if (parsed.data.departureDate !== undefined) {
+    if (parsed.data.departureDate && parsed.data.departureDate.trim()) {
+      const depDt = new Date(parsed.data.departureDate);
+      if (Number.isNaN(depDt.getTime())) {
+        return {
+          ok: false,
+          code: ERROR_CODES.BAD_REQUEST,
+          message: 'Invalid departure date',
+          status: 400,
+        };
+      }
+      parsedDepartureDate = depDt;
+    } else {
+      parsedDepartureDate = null;
+    }
   }
 
   const access = await authorizeCaseClinicalAccess(params.caseId, params.actor);
@@ -682,6 +979,12 @@ export async function upsertCaseFitToFly(
   }
 
   const cleanRestrictions = parsed.data.restrictions?.trim() || null;
+  const cleanFlightNumber =
+    parsed.data.flightNumber !== undefined
+      ? parsed.data.flightNumber?.trim() || null
+      : undefined;
+  const resolvedSsrCode =
+    parsed.data.ssrCode !== undefined ? parsed.data.ssrCode || 'NONE' : undefined;
   const clearanceDate = parsed.data.isCleared ? new Date() : null;
 
   let certificateDocument: unknown | null = null;
@@ -693,11 +996,35 @@ export async function upsertCaseFitToFly(
       category: 'FIT_TO_FLY_CERTIFICATE',
       file: params.file,
       notes: cleanRestrictions,
+      fitToFlyMeta: {
+        checklist: parsed.data.checklist,
+        ssrCode: resolvedSsrCode,
+        requiresMedif: parsed.data.requiresMedif,
+        flightNumber: cleanFlightNumber,
+        departureDate: parsedDepartureDate,
+      },
       actor: params.actor,
     });
     if (!issued.ok) return issued;
     certificateDocument = issued.data.document;
   }
+
+  const extraPersistenceFields = {
+    ...(parsed.data.checklist !== undefined
+      ? {
+          checklist:
+            parsed.data.checklist === null
+              ? Prisma.DbNull
+              : (parsed.data.checklist as Prisma.InputJsonValue),
+        }
+      : {}),
+    ...(resolvedSsrCode !== undefined ? { ssrCode: resolvedSsrCode } : {}),
+    ...(parsed.data.requiresMedif !== undefined
+      ? { requiresMedif: parsed.data.requiresMedif }
+      : {}),
+    ...(cleanFlightNumber !== undefined ? { flightNumber: cleanFlightNumber } : {}),
+    ...(parsedDepartureDate !== undefined ? { departureDate: parsedDepartureDate } : {}),
+  };
 
   const fitToFlyClearance = await prisma.fitToFlyClearance.upsert({
     where: { caseId: params.caseId },
@@ -708,6 +1035,7 @@ export async function upsertCaseFitToFly(
       clearanceDate,
       restrictions: cleanRestrictions,
       reEvalDate: parsedReEvalDate,
+      ...extraPersistenceFields,
     },
     update: {
       isCleared: parsed.data.isCleared,
@@ -715,6 +1043,7 @@ export async function upsertCaseFitToFly(
       clearanceDate,
       restrictions: cleanRestrictions,
       reEvalDate: parsedReEvalDate,
+      ...extraPersistenceFields,
     },
   });
 
@@ -736,7 +1065,21 @@ export async function upsertCaseFitToFly(
         where: { id: params.caseId },
         data: { status: 'FIT_TO_FLY_CLEARED' },
       });
-      caseStatus = updatedCase.status;
+      caseStatus = updatedCase?.status || 'FIT_TO_FLY_CLEARED';
+    }
+
+    const existingFollowUps = Array.isArray(access.targetCase.postReturnFollowUps)
+      ? access.targetCase.postReturnFollowUps
+      : [];
+    if (existingFollowUps.length === 0) {
+      const milestoneAnchor = parsedDepartureDate ?? clearanceDate ?? new Date();
+      const seededMilestones = buildInitialFollowUpMilestones(milestoneAnchor);
+      await prisma.case.update({
+        where: { id: params.caseId },
+        data: {
+          postReturnFollowUps: seededMilestones as unknown as Prisma.InputJsonValue,
+        },
+      });
     }
   } else {
     await prisma.clinicalStep.updateMany({
@@ -756,7 +1099,7 @@ export async function upsertCaseFitToFly(
         where: { id: params.caseId },
         data: { status: 'OUTPATIENT_RECUPERATION' },
       });
-      caseStatus = updatedCase.status;
+      caseStatus = updatedCase?.status || 'OUTPATIENT_RECUPERATION';
     }
   }
 
@@ -770,6 +1113,9 @@ export async function upsertCaseFitToFly(
       isCleared: parsed.data.isCleared,
       clearedBy,
       restrictions: cleanRestrictions,
+      ssrCode: resolvedSsrCode,
+      requiresMedif: parsed.data.requiresMedif,
+      flightNumber: cleanFlightNumber,
       caseStatus,
     },
     ipAddress: params.actor.ipAddress,

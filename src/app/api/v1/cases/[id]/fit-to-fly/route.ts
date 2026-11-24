@@ -52,6 +52,11 @@ export async function PUT(
     let isCleared: unknown;
     let restrictions: unknown;
     let reEvalDate: unknown;
+    let checklist: unknown;
+    let ssrCode: unknown;
+    let requiresMedif: unknown;
+    let flightNumber: unknown;
+    let departureDate: unknown;
     let file: File | null = null;
 
     if (contentType.includes('multipart/form-data')) {
@@ -67,6 +72,34 @@ export async function PUT(
       const rawReEval = formData.get('reEvalDate');
       reEvalDate = typeof rawReEval === 'string' && rawReEval.trim() ? rawReEval : null;
 
+      const rawChecklist = formData.get('checklist');
+      if (typeof rawChecklist === 'string' && rawChecklist.trim()) {
+        try {
+          checklist = JSON.parse(rawChecklist);
+        } catch {
+          return apiError(
+            ERROR_CODES.BAD_REQUEST,
+            'Invalid Fit-to-Fly checklist JSON payload',
+            400
+          );
+        }
+      }
+
+      const rawSsr = formData.get('ssrCode');
+      ssrCode = typeof rawSsr === 'string' && rawSsr.trim() ? rawSsr.trim() : undefined;
+
+      const rawMedif = formData.get('requiresMedif');
+      if (rawMedif === 'true') requiresMedif = true;
+      else if (rawMedif === 'false') requiresMedif = false;
+
+      const rawFlight = formData.get('flightNumber');
+      flightNumber = typeof rawFlight === 'string' ? rawFlight : undefined;
+
+      const rawDeparture = formData.get('departureDate');
+      if (typeof rawDeparture === 'string') {
+        departureDate = rawDeparture.trim() ? rawDeparture.trim() : null;
+      }
+
       const rawFile = formData.get('file');
       file = rawFile instanceof File && rawFile.size > 0 ? rawFile : null;
     } else {
@@ -77,6 +110,11 @@ export async function PUT(
       isCleared = body.isCleared;
       restrictions = body.restrictions;
       reEvalDate = body.reEvalDate;
+      checklist = body.checklist;
+      ssrCode = body.ssrCode;
+      requiresMedif = body.requiresMedif;
+      flightNumber = body.flightNumber;
+      departureDate = body.departureDate;
     }
 
     const result = await upsertCaseFitToFly({
@@ -84,6 +122,11 @@ export async function PUT(
       isCleared,
       restrictions,
       reEvalDate,
+      checklist,
+      ssrCode,
+      requiresMedif,
+      flightNumber,
+      departureDate,
       file,
       actor: {
         userId: authUser.userId,

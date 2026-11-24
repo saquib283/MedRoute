@@ -79,6 +79,28 @@ export interface TravelLogisticsPayload {
   updatedAt?: string | null;
 }
 
+function optionalParseableDateString(fieldLabel: string) {
+  return z
+    .string()
+    .nullable()
+    .optional()
+    .transform((val) => {
+      if (val === undefined) return undefined;
+      if (val === null) return null;
+      const trimmed = val.trim();
+      return trimmed.length > 0 ? trimmed : null;
+    })
+    .refine((val) => !val || !Number.isNaN(Date.parse(val)), {
+      message: `Invalid ${fieldLabel}`,
+    });
+}
+
+const optionalSsrAssistanceCodeSchema = z
+  .union([z.enum(SSR_ASSISTANCE_CODES), z.literal('')])
+  .nullable()
+  .optional()
+  .transform((val) => (val === '' ? null : val));
+
 export const travelLogisticsSchema = z.object({
   attendants: z
     .array(medicalAttendantSchema)
@@ -86,19 +108,19 @@ export const travelLogisticsSchema = z.object({
     .optional(),
   arrivalAirline: z.string().max(120).nullable().optional(),
   arrivalFlightNo: z.string().max(64).nullable().optional(),
-  arrivalAt: z.string().nullable().optional(),
+  arrivalAt: optionalParseableDateString('arrival date/time'),
   arrivalAirport: z.string().max(120).nullable().optional(),
   airportPickupRequired: z.boolean().optional(),
   pickupConfirmed: z.boolean().optional(),
   pickupDriverNotes: z.string().max(1000).nullable().optional(),
-  wheelchairSsrCode: z.enum(SSR_ASSISTANCE_CODES).nullable().optional(),
+  wheelchairSsrCode: optionalSsrAssistanceCodeSchema,
   dietaryPreferences: z.string().max(500).nullable().optional(),
   departureAirline: z.string().max(120).nullable().optional(),
   departureFlightNo: z.string().max(64).nullable().optional(),
-  departureAt: z.string().nullable().optional(),
+  departureAt: optionalParseableDateString('departure date/time'),
   visaNumber: z.string().max(100).nullable().optional(),
-  visaExpiryDate: z.string().nullable().optional(),
-  formCSubmittedAt: z.string().nullable().optional(),
+  visaExpiryDate: optionalParseableDateString('visa expiry date'),
+  formCSubmittedAt: optionalParseableDateString('Form C submission timestamp'),
   frroNumber: z.string().max(120).nullable().optional(),
   updatedAt: z.string().nullable().optional(),
 });
@@ -165,32 +187,32 @@ export const acceptTreatmentPlanMutationSchema = z.object({
 
 export const updateTravelLogisticsMutationSchema = z.object({
   action: z.literal('UPDATE_TRAVEL_LOGISTICS'),
-  passportExpiry: z.string().nullable().optional(),
+  passportExpiry: optionalParseableDateString('passport expiry date'),
   attendants: z
     .array(medicalAttendantSchema)
     .max(2, 'Indian MHA rules allow at most 2 MED-X medical attendants')
     .optional(),
   arrivalAirline: z.string().max(120).nullable().optional(),
   arrivalFlightNo: z.string().max(64).nullable().optional(),
-  arrivalAt: z.string().nullable().optional(),
+  arrivalAt: optionalParseableDateString('arrival date/time'),
   arrivalAirport: z.string().max(120).nullable().optional(),
   airportPickupRequired: z.boolean().optional(),
   pickupConfirmed: z.boolean().optional(),
   pickupDriverNotes: z.string().max(1000).nullable().optional(),
-  wheelchairSsrCode: z.enum(SSR_ASSISTANCE_CODES).nullable().optional(),
+  wheelchairSsrCode: optionalSsrAssistanceCodeSchema,
   dietaryPreferences: z.string().max(500).nullable().optional(),
   departureAirline: z.string().max(120).nullable().optional(),
   departureFlightNo: z.string().max(64).nullable().optional(),
-  departureAt: z.string().nullable().optional(),
+  departureAt: optionalParseableDateString('departure date/time'),
   visaNumber: z.string().max(100).nullable().optional(),
-  visaExpiryDate: z.string().nullable().optional(),
+  visaExpiryDate: optionalParseableDateString('visa expiry date'),
 });
 
 export const recordFormCMutationSchema = z.object({
   action: z.literal('RECORD_FORM_C'),
-  formCSubmittedAt: z.string().optional(),
+  formCSubmittedAt: optionalParseableDateString('Form C submission timestamp'),
   frroNumber: z.string().trim().max(120).nullable().optional(),
-  visaExpiryDate: z.string().nullable().optional(),
+  visaExpiryDate: optionalParseableDateString('visa expiry date'),
 });
 
 export const submitFollowUpMutationSchema = z.object({
