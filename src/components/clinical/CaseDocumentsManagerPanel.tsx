@@ -272,25 +272,25 @@ export function CaseDocumentsManagerPanel({
     switch (status) {
       case 'ISSUED_BY_HOSPITAL':
         return (
-          <span className="inline-flex items-center gap-1 bg-sky-100 text-sky-800 border border-sky-200 px-2 py-0.5 rounded-md text-[11px] font-bold">
+          <span className="inline-flex items-center gap-1 bg-sky-50 text-sky-700 border border-sky-200 px-2 py-0.5 rounded text-[11px] font-medium">
             <Building2 className="w-3 h-3 text-sky-600" /> Hospital Official
           </span>
         );
       case 'VERIFIED':
         return (
-          <span className="inline-flex items-center gap-1 bg-emerald-100 text-emerald-800 border border-emerald-200 px-2 py-0.5 rounded-md text-[11px] font-bold">
+          <span className="inline-flex items-center gap-1 bg-emerald-50 text-emerald-700 border border-emerald-200 px-2 py-0.5 rounded text-[11px] font-medium">
             <CheckCircle2 className="w-3 h-3 text-emerald-600" /> Verified
           </span>
         );
       case 'REJECTED':
         return (
-          <span className="inline-flex items-center gap-1 bg-rose-100 text-rose-800 border border-rose-200 px-2 py-0.5 rounded-md text-[11px] font-bold">
+          <span className="inline-flex items-center gap-1 bg-rose-50 text-rose-700 border border-rose-200 px-2 py-0.5 rounded text-[11px] font-medium">
             <XCircle className="w-3 h-3 text-rose-600" /> Rejected
           </span>
         );
       default:
         return (
-          <span className="inline-flex items-center gap-1 bg-amber-100 text-amber-800 border border-amber-200 px-2 py-0.5 rounded-md text-[11px] font-bold">
+          <span className="inline-flex items-center gap-1 bg-amber-50 text-amber-700 border border-amber-200 px-2 py-0.5 rounded text-[11px] font-medium">
             <Clock className="w-3 h-3 text-amber-600" /> Pending Review
           </span>
         );
@@ -298,14 +298,14 @@ export function CaseDocumentsManagerPanel({
   };
 
   return (
-    <Card className="bg-white border border-surface-200/80 p-5 space-y-4">
-      <div className="flex flex-wrap items-center justify-between gap-2 pb-3 border-b border-surface-100">
+    <Card className="p-5 space-y-4">
+      <div className="flex flex-wrap items-center justify-between gap-2 pb-3 border-b border-surface-200">
         <div>
-          <h3 className="font-bold text-surface-900 text-sm flex items-center gap-2">
-            <FileText className="w-4 h-4 text-primary-600" />
-            Case Documents & Official Certificates
+          <h3 className="font-semibold text-surface-900 text-sm sm:text-base flex items-center gap-2">
+            <FileText className="w-4 h-4 text-surface-500" />
+            <span>Case Documents &amp; Official Certificates</span>
           </h3>
-          <p className="text-xs text-surface-500 mt-0.5">
+          <p className="text-xs text-surface-500 mt-0.5 tabular-nums">
             {documents.length} {documents.length === 1 ? 'document' : 'documents'} linked to patient vault
           </p>
         </div>
@@ -315,7 +315,6 @@ export function CaseDocumentsManagerPanel({
           size="sm"
           variant={showIssueForm ? 'secondary' : 'primary'}
           onClick={() => setShowIssueForm((prev) => !prev)}
-          className="text-xs"
         >
           <FilePlus2 className="w-3.5 h-3.5" />
           <span>Issue Official Document</span>
@@ -330,7 +329,7 @@ export function CaseDocumentsManagerPanel({
       {showIssueForm && (
         <form
           onSubmit={handleIssueSubmit}
-          className="p-4 rounded-xl bg-surface-50 border border-surface-200 space-y-3 text-xs"
+          className="p-4 rounded-lg bg-surface-50 border border-surface-200 space-y-3 text-xs"
         >
           <Select
             label="Certificate / Document Category"
@@ -341,7 +340,7 @@ export function CaseDocumentsManagerPanel({
           />
 
           <div className="space-y-1">
-            <label className="block font-semibold text-surface-700">
+            <label className="block font-medium text-surface-700">
               Notes (Optional)
             </label>
             <textarea
@@ -349,12 +348,12 @@ export function CaseDocumentsManagerPanel({
               value={issueNotes}
               onChange={(e) => setIssueNotes(e.target.value)}
               placeholder="Add hospital details, visa reference, or clinical notes..."
-              className="w-full p-2.5 rounded-lg border border-surface-200 bg-white text-surface-800 focus:border-primary-600 focus:outline-none"
+              className="w-full p-2.5 rounded-md border border-surface-300 bg-white text-surface-900 focus:border-primary-600 focus:outline-none"
             />
           </div>
 
           <div className="space-y-1">
-            <label className="block font-semibold text-surface-700">
+            <label className="block font-medium text-surface-700">
               Attachment (Optional PDF/JPG/PNG)
             </label>
             <div className="flex items-center gap-2 flex-wrap">
@@ -363,7 +362,7 @@ export function CaseDocumentsManagerPanel({
                 type="file"
                 accept=".pdf,.jpg,.jpeg,.png"
                 onChange={(e) => setIssueFile(e.target.files?.[0] || null)}
-                className="block w-full text-xs text-surface-600 file:mr-3 file:py-1.5 file:px-3 file:rounded-lg file:border file:border-surface-200 file:text-xs file:font-semibold file:bg-white file:text-surface-700 hover:file:bg-surface-100"
+                className="block w-full text-xs text-surface-600 file:mr-3 file:py-1.5 file:px-3 file:rounded-md file:border file:border-surface-300 file:text-xs file:font-medium file:bg-white file:text-surface-700 hover:file:bg-surface-50"
               />
               {issueFile && (
                 <button
@@ -372,7 +371,7 @@ export function CaseDocumentsManagerPanel({
                     setIssueFile(null);
                     if (fileInputRef.current) fileInputRef.current.value = '';
                   }}
-                  className="inline-flex items-center gap-1 text-[11px] font-semibold text-surface-500 hover:text-rose-600"
+                  className="inline-flex items-center gap-1 text-[11px] font-medium text-surface-500 hover:text-rose-600"
                 >
                   <X className="w-3.5 h-3.5" /> Clear file
                 </button>
@@ -407,7 +406,7 @@ export function CaseDocumentsManagerPanel({
           <span>Loading case documents...</span>
         </div>
       ) : loadError ? (
-        <div className="p-3 rounded-xl bg-rose-50 border border-rose-200 text-xs text-rose-700 flex items-center justify-between gap-2">
+        <div className="p-3 rounded-md bg-rose-50 border border-rose-200 text-xs text-rose-700 flex items-center justify-between gap-2">
           <span>{loadError}</span>
           <Button
             type="button"
@@ -419,7 +418,7 @@ export function CaseDocumentsManagerPanel({
           </Button>
         </div>
       ) : documents.length === 0 ? (
-        <div className="p-6 text-center rounded-xl bg-surface-50 border border-dashed border-surface-200 text-xs text-surface-500">
+        <div className="p-6 text-center rounded-lg bg-surface-50 border border-dashed border-surface-300 text-xs text-surface-500">
           No documents uploaded or issued for this case yet.
         </div>
       ) : (
@@ -432,20 +431,20 @@ export function CaseDocumentsManagerPanel({
             return (
               <div
                 key={doc.id}
-                className="p-3.5 rounded-xl border border-surface-200 bg-surface-50/40 space-y-2.5"
+                className="p-3.5 rounded-lg border border-surface-200 bg-surface-50/50 space-y-2.5"
               >
                 <div className="flex flex-wrap items-start justify-between gap-2">
                   <div className="min-w-0 flex-1 space-y-1">
                     <div className="flex flex-wrap items-center gap-1.5">
-                      <span className="inline-flex items-center px-2 py-0.5 rounded-md text-[11px] font-bold bg-primary-50 text-primary-700 border border-primary-200">
+                      <span className="inline-flex items-center px-2 py-0.5 rounded text-[11px] font-medium bg-surface-100 text-surface-700 border border-surface-200">
                         {DOCUMENT_CATEGORY_LABELS[doc.category] || doc.category}
                       </span>
                       {renderStatusBadge(doc.verificationStatus)}
                     </div>
-                    <p className="text-xs font-bold text-surface-900 truncate" title={doc.fileName}>
+                    <p className="text-xs font-semibold text-surface-900 truncate" title={doc.fileName}>
                       {doc.fileName}
                     </p>
-                    <p className="text-[11px] text-surface-500">
+                    <p className="text-[11px] text-surface-500 tabular-nums">
                       {formatFileSize(doc.fileSize)} • {new Date(doc.createdAt).toLocaleDateString()}
                     </p>
                   </div>
@@ -454,7 +453,7 @@ export function CaseDocumentsManagerPanel({
                     href={doc.fileUrl}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs font-semibold text-primary-700 bg-white border border-surface-200 hover:bg-primary-50 hover:border-primary-200 transition-colors shrink-0"
+                    className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-md text-xs font-medium text-surface-700 bg-white border border-surface-300 hover:bg-surface-50 transition-colors shrink-0"
                   >
                     <Download className="w-3.5 h-3.5" />
                     <span>Download</span>
@@ -462,14 +461,14 @@ export function CaseDocumentsManagerPanel({
                 </div>
 
                 {doc.verificationNotes && (
-                  <div className="p-2 rounded-lg bg-white border border-surface-200/80 text-[11px] text-surface-600">
-                    <span className="font-semibold text-surface-700">Note:</span>{' '}
+                  <div className="p-2 rounded-md bg-white border border-surface-200 text-[11px] text-surface-600">
+                    <span className="font-medium text-surface-700">Note:</span>{' '}
                     {doc.verificationNotes}
                   </div>
                 )}
 
                 {canModerate && (
-                  <div className="pt-2 border-t border-surface-200/70 space-y-2">
+                  <div className="pt-2 border-t border-surface-200 space-y-2">
                     <div className="flex flex-wrap items-center gap-2">
                       <Button
                         type="button"
@@ -477,7 +476,7 @@ export function CaseDocumentsManagerPanel({
                         variant="secondary"
                         disabled={isVerifyingThis || doc.verificationStatus === 'VERIFIED'}
                         onClick={() => void handleVerify(doc.id, 'VERIFIED')}
-                        className="text-xs !min-h-[30px] !px-2.5 !py-1 text-emerald-700 border-emerald-200 hover:bg-emerald-50"
+                        className="text-xs !min-h-[32px] !px-2.5 !py-1 text-emerald-700 border-emerald-200 hover:bg-emerald-50"
                       >
                         <CheckCircle2 className="w-3.5 h-3.5" />
                         <span>Approve</span>
@@ -497,7 +496,7 @@ export function CaseDocumentsManagerPanel({
                             setRejectReason('');
                           }
                         }}
-                        className="text-xs !min-h-[30px] !px-2.5 !py-1 text-rose-700 border-rose-200 hover:bg-rose-50"
+                        className="text-xs !min-h-[32px] !px-2.5 !py-1 text-rose-700 border-rose-200 hover:bg-rose-50"
                       >
                         <XCircle className="w-3.5 h-3.5" />
                         <span>Reject</span>
@@ -511,7 +510,7 @@ export function CaseDocumentsManagerPanel({
                           value={rejectReason}
                           onChange={(e) => setRejectReason(e.target.value)}
                           placeholder="Required rejection reason (e.g. blurry scan)..."
-                          className="flex-1 px-2.5 py-1.5 text-xs rounded-lg border border-rose-300 bg-white text-surface-800 focus:outline-none focus:border-rose-500"
+                          className="flex-1 px-2.5 py-1.5 text-xs rounded-md border border-rose-300 bg-white text-surface-900 focus:outline-none focus:border-rose-500"
                         />
                         <div className="flex items-center gap-1.5">
                           <Button
@@ -521,7 +520,7 @@ export function CaseDocumentsManagerPanel({
                             isLoading={isVerifyingThis}
                             disabled={!rejectReason.trim() || isVerifyingThis}
                             onClick={() => void handleVerify(doc.id, 'REJECTED', rejectReason)}
-                            className="text-xs !min-h-[30px] !px-2.5 !py-1"
+                            className="text-xs !min-h-[32px] !px-2.5 !py-1"
                           >
                             Confirm Reject
                           </Button>
@@ -534,7 +533,7 @@ export function CaseDocumentsManagerPanel({
                               setRejectingDocId(null);
                               setRejectReason('');
                             }}
-                            className="text-xs !min-h-[30px] !px-2 !py-1"
+                            className="text-xs !min-h-[32px] !px-2 !py-1"
                           >
                             Cancel
                           </Button>

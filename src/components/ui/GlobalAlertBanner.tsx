@@ -20,9 +20,9 @@ export function GlobalAlertBanner({ text, className = '' }: GlobalAlertBannerPro
     <div
       role="status"
       aria-live="polite"
-      className={`bg-warning-500 text-white px-4 py-2.5 text-center text-xs font-bold flex items-center justify-center gap-2 shadow-xs shrink-0 border-b border-warning-600 animate-slide-down ${className}`}
+      className={`bg-warning-50 text-warning-900 px-4 py-2 text-center text-xs font-medium flex items-center justify-center gap-2 shrink-0 border-b border-warning-200 ${className}`}
     >
-      <AlertTriangle className="w-4 h-4 shrink-0" aria-hidden="true" />
+      <AlertTriangle className="w-4 h-4 text-warning-600 shrink-0" aria-hidden="true" />
       <span>{trimmed}</span>
     </div>
   );

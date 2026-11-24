@@ -163,7 +163,7 @@ export function DatePicker({
   return (
     <div className={`space-y-1.5 ${className}`} ref={containerRef}>
       {label && (
-        <label className="block text-xs font-bold text-surface-700">
+        <label className="block text-xs font-medium text-surface-700">
           {label} {required && <span className="text-danger-500">*</span>}
         </label>
       )}
@@ -177,21 +177,21 @@ export function DatePicker({
           aria-haspopup="dialog"
           aria-expanded={isOpen}
           className={`
-            w-full min-h-[46px] px-3.5 py-2.5 ${value && !disabled ? 'pr-9' : ''} rounded-xl border text-xs font-medium text-left flex items-center justify-between gap-2 transition-all
+            w-full min-h-[44px] px-3 py-2 ${value && !disabled ? 'pr-9' : ''} rounded-md border text-sm text-left flex items-center justify-between gap-2 transition-colors
             ${
               disabled
                 ? 'bg-surface-100 border-surface-200 text-surface-400 cursor-not-allowed'
                 : isOpen
-                ? 'bg-white border-primary-600 text-surface-900 shadow-xs'
+                ? 'bg-white border-primary-600 text-surface-900'
                 : error
-                ? 'bg-white border-danger-300 text-surface-900 hover:border-danger-400'
-                : 'bg-white border-surface-200 text-surface-900 hover:border-surface-300'
+                ? 'bg-white border-danger-400 text-surface-900 hover:border-danger-500'
+                : 'bg-white border-surface-300 text-surface-900 hover:border-surface-400'
             }
           `}
         >
-          <div className="flex items-center gap-2.5 min-w-0">
-            <CalendarIcon className="w-4 h-4 text-primary-600 shrink-0" />
-            <span className={`truncate ${!value ? 'text-surface-400 font-normal' : 'font-semibold text-surface-900'}`}>
+          <div className="flex items-center gap-2 min-w-0">
+            <CalendarIcon className="w-4 h-4 text-surface-400 shrink-0" />
+            <span className={`truncate ${!value ? 'text-surface-400 font-normal' : 'font-normal text-surface-900'}`}>
               {formatDisplay() || placeholder}
             </span>
           </div>
@@ -207,7 +207,7 @@ export function DatePicker({
               e.stopPropagation();
               onChange('');
             }}
-            className="absolute right-2.5 top-1/2 -translate-y-1/2 p-1 text-surface-400 hover:text-surface-600 rounded-full"
+            className="absolute right-2.5 top-1/2 -translate-y-1/2 p-1 text-surface-400 hover:text-surface-600 rounded-md"
           >
             <X className="w-3.5 h-3.5" />
           </button>
@@ -215,7 +215,7 @@ export function DatePicker({
 
         {/* Calendar Popover */}
         {isOpen && (
-          <div className="absolute z-50 left-0 mt-1 bg-white border border-surface-200 rounded-2xl shadow-xl p-4 w-72 space-y-3 animate-scale-in">
+          <div className="absolute z-50 left-0 mt-1 bg-white border border-surface-200 rounded-lg shadow-md p-3.5 w-72 space-y-3 animate-scale-in">
             {/* Header: Month & Year Navigator */}
             <div className="flex items-center justify-between pb-2 border-b border-surface-100">
               <button
@@ -275,10 +275,10 @@ export function DatePicker({
                     aria-label={`${MONTH_NAMES[viewMonth]} ${day}, ${viewYear}`}
                     onClick={() => handleDaySelect(day)}
                     className={`
-                      w-8 h-8 rounded-xl text-xs font-semibold flex items-center justify-center transition-all relative after:absolute after:-inset-1.5 after:content-['']
+                      w-8 h-8 rounded-md text-xs font-medium flex items-center justify-center transition-colors relative after:absolute after:-inset-1.5 after:content-['']
                       ${
                         isSelected
-                          ? 'bg-primary-600 text-white font-bold shadow-2xs'
+                          ? 'bg-primary-600 text-white font-semibold'
                           : isToday
                           ? 'border border-primary-500 text-primary-700 bg-primary-50'
                           : 'text-surface-700 hover:bg-surface-100'

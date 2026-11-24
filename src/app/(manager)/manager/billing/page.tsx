@@ -26,7 +26,6 @@ import {
   X,
   CreditCard,
   Percent,
-  Sparkles,
   UploadCloud,
   FileCheck2,
   Ban,
@@ -476,31 +475,31 @@ export default function ManagerBillingPage() {
     switch (status) {
       case 'PAID':
         return (
-          <span className="inline-flex items-center gap-1 bg-emerald-100 text-emerald-800 border border-emerald-200 px-2.5 py-0.5 rounded-md text-[11px] font-extrabold">
+          <span className="inline-flex items-center gap-1 bg-emerald-50 text-emerald-700 border border-emerald-200 px-2 py-0.5 rounded text-[11px] font-medium">
             <CheckCircle2 className="w-3 h-3 text-emerald-600" /> Paid in Full
           </span>
         );
       case 'PARTIALLY_PAID':
         return (
-          <span className="inline-flex items-center gap-1 bg-sky-100 text-sky-800 border border-sky-200 px-2.5 py-0.5 rounded-md text-[11px] font-extrabold">
+          <span className="inline-flex items-center gap-1 bg-sky-50 text-sky-700 border border-sky-200 px-2 py-0.5 rounded text-[11px] font-medium">
             <Percent className="w-3 h-3 text-sky-600" /> Partially Paid
           </span>
         );
       case 'OVERDUE':
         return (
-          <span className="inline-flex items-center gap-1 bg-rose-100 text-rose-800 border border-rose-200 px-2.5 py-0.5 rounded-md text-[11px] font-extrabold">
+          <span className="inline-flex items-center gap-1 bg-rose-50 text-rose-700 border border-rose-200 px-2 py-0.5 rounded text-[11px] font-medium">
             <AlertCircle className="w-3 h-3 text-rose-600" /> Overdue
           </span>
         );
       case 'CANCELLED':
         return (
-          <span className="inline-flex items-center gap-1 bg-surface-100 text-surface-700 border border-surface-200 px-2.5 py-0.5 rounded-md text-[11px] font-extrabold">
+          <span className="inline-flex items-center gap-1 bg-surface-100 text-surface-700 border border-surface-200 px-2 py-0.5 rounded text-[11px] font-medium">
             <Ban className="w-3 h-3 text-surface-500" /> Cancelled
           </span>
         );
       default:
         return (
-          <span className="inline-flex items-center gap-1 bg-amber-100 text-amber-800 border border-amber-200 px-2.5 py-0.5 rounded-md text-[11px] font-extrabold">
+          <span className="inline-flex items-center gap-1 bg-amber-50 text-amber-700 border border-amber-200 px-2 py-0.5 rounded text-[11px] font-medium">
             <Clock className="w-3 h-3 text-amber-600" /> Pending Payment
           </span>
         );
@@ -509,30 +508,30 @@ export default function ManagerBillingPage() {
 
   if (isLoading) {
     return (
-      <div className="flex flex-col items-center justify-center min-h-[400px] gap-4">
-        <div className="w-10 h-10 border-4 border-primary-600 border-t-transparent rounded-full animate-spin" />
-        <p className="text-sm font-medium text-surface-600">Loading patient billing workspace...</p>
+      <div className="flex flex-col items-center justify-center min-h-[400px] gap-3">
+        <div className="w-7 h-7 border-2 border-primary-600 border-t-transparent rounded-full animate-spin" />
+        <p className="text-xs font-medium text-surface-500">Loading patient billing workspace...</p>
       </div>
     );
   }
 
   return (
-    <div className="space-y-8 animate-fade-in max-w-7xl mx-auto pb-12">
+    <div className="space-y-6">
       {/* ─── Page Title & Action Bar ─────────────────────────────────────── */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-5 border-b border-surface-200">
         <div>
-          <h1 className="text-2xl font-extrabold text-surface-900 tracking-tight flex items-center gap-2">
-            <Receipt className="w-7 h-7 text-primary-600" />
-            Patient Billing & Itemized Invoicing Workspace
+          <h1 className="text-xl font-semibold tracking-tight text-surface-900">
+            Patient Billing &amp; Itemized Invoicing Workspace
           </h1>
-          <p className="text-xs text-surface-500 mt-1">
+          <p className="text-xs sm:text-sm text-surface-500 mt-1">
             Upload hospital invoices, configure itemized line-item breakdowns, and issue official financial receipts to international patients.
           </p>
         </div>
 
         <Button
+          size="sm"
           onClick={() => setIsModalOpen(true)}
-          className="px-4 py-2.5 bg-primary-600 hover:bg-primary-700 text-white font-bold rounded-xl text-xs flex items-center gap-2 shadow-xs shrink-0"
+          className="shrink-0"
         >
           <Plus className="w-4 h-4" />
           <span>Create New Medical Bill</span>
@@ -541,67 +540,72 @@ export default function ManagerBillingPage() {
 
       {/* ─── KPI Widgets ─────────────────────────────────────────────────── */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        <Card className="p-5 rounded-2xl border border-surface-200 shadow-xs flex items-center justify-between">
+        <Card className="p-5 flex items-start justify-between gap-4">
           <div>
-            <p className="text-xs uppercase font-bold tracking-wider text-surface-500">Total Invoiced</p>
-            <h3 className="text-2xl font-extrabold text-surface-900 mt-1">${metrics.totalRev.toLocaleString('en-US', { minimumFractionDigits: 2 })}</h3>
-            <p className="text-xs font-medium text-surface-500 mt-0.5">Across active patient cases</p>
+            <p className="text-xs font-medium text-surface-500">Total Invoiced</p>
+            <p className="text-2xl font-semibold tracking-tight tabular-nums text-surface-900 mt-1.5">
+              ${metrics.totalRev.toLocaleString('en-US', { minimumFractionDigits: 2 })}
+            </p>
+            <p className="text-xs text-surface-500 mt-1">Across active patient cases</p>
           </div>
-          <div className="w-12 h-12 rounded-2xl bg-primary-50 text-primary-600 border border-primary-100 flex items-center justify-center font-bold text-xl shrink-0">
-            <DollarSign className="w-6 h-6" />
+          <div className="w-9 h-9 rounded-md bg-surface-100 text-surface-600 border border-surface-200 flex items-center justify-center shrink-0">
+            <DollarSign className="w-4 h-4" />
           </div>
         </Card>
 
-        <Card className="p-5 rounded-2xl border border-surface-200 shadow-xs flex items-center justify-between">
+        <Card className="p-5 flex items-start justify-between gap-4">
           <div>
-            <p className="text-xs uppercase font-bold tracking-wider text-surface-500">Paid Amount</p>
-            <h3 className="text-2xl font-extrabold text-emerald-600 mt-1">${metrics.paidRev.toLocaleString('en-US', { minimumFractionDigits: 2 })}</h3>
-            <p className="text-xs font-medium text-surface-500 mt-0.5">Settled by patients</p>
+            <p className="text-xs font-medium text-surface-500">Paid Amount</p>
+            <p className="text-2xl font-semibold tracking-tight tabular-nums text-surface-900 mt-1.5">
+              ${metrics.paidRev.toLocaleString('en-US', { minimumFractionDigits: 2 })}
+            </p>
+            <p className="text-xs text-surface-500 mt-1">Settled by patients</p>
           </div>
-          <div className="w-12 h-12 rounded-2xl bg-emerald-50 text-emerald-600 border border-emerald-100 flex items-center justify-center font-bold text-xl shrink-0">
-            <CreditCard className="w-6 h-6" />
+          <div className="w-9 h-9 rounded-md bg-surface-100 text-surface-600 border border-surface-200 flex items-center justify-center shrink-0">
+            <CreditCard className="w-4 h-4" />
           </div>
         </Card>
 
-        <Card className="p-5 rounded-2xl border border-surface-200 shadow-xs flex items-center justify-between">
+        <Card className="p-5 flex items-start justify-between gap-4">
           <div>
-            <p className="text-xs uppercase font-bold tracking-wider text-surface-500">Pending Invoices</p>
-            <h3 className="text-2xl font-extrabold text-amber-600 mt-1">{metrics.pendingCount}</h3>
-            <p className="text-xs font-medium text-surface-500 mt-0.5">Awaiting payment settlement</p>
+            <p className="text-xs font-medium text-surface-500">Pending Invoices</p>
+            <p className="text-2xl font-semibold tracking-tight tabular-nums text-surface-900 mt-1.5">
+              {metrics.pendingCount}
+            </p>
+            <p className="text-xs text-surface-500 mt-1">Awaiting payment settlement</p>
           </div>
-          <div className="w-12 h-12 rounded-2xl bg-amber-50 text-amber-600 border border-amber-100 flex items-center justify-center font-bold text-xl shrink-0">
-            <Clock className="w-6 h-6" />
+          <div className="w-9 h-9 rounded-md bg-surface-100 text-surface-600 border border-surface-200 flex items-center justify-center shrink-0">
+            <Clock className="w-4 h-4" />
           </div>
         </Card>
 
-        <Card className="p-5 rounded-2xl border border-surface-200 shadow-xs flex items-center justify-between">
+        <Card className="p-5 flex items-start justify-between gap-4">
           <div>
-            <p className="text-xs uppercase font-bold tracking-wider text-surface-500">Partially Paid</p>
-            <h3 className="text-2xl font-extrabold text-sky-600 mt-1">{metrics.partialCount}</h3>
-            <p className="text-xs font-medium text-surface-500 mt-0.5">Deposit received</p>
+            <p className="text-xs font-medium text-surface-500">Partially Paid</p>
+            <p className="text-2xl font-semibold tracking-tight tabular-nums text-surface-900 mt-1.5">
+              {metrics.partialCount}
+            </p>
+            <p className="text-xs text-surface-500 mt-1">Deposit received</p>
           </div>
-          <div className="w-12 h-12 rounded-2xl bg-sky-50 text-sky-600 border border-sky-100 flex items-center justify-center font-bold text-xl shrink-0">
-            <Percent className="w-6 h-6" />
+          <div className="w-9 h-9 rounded-md bg-surface-100 text-surface-600 border border-surface-200 flex items-center justify-center shrink-0">
+            <Percent className="w-4 h-4" />
           </div>
         </Card>
       </div>
 
       {/* ─── Search & Status Filters ────────────────────────────────────── */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-        <div className="flex items-center gap-2 overflow-x-auto pb-1 no-scrollbar">
+        <div className="flex items-center gap-1.5 overflow-x-auto pb-1 no-scrollbar">
           {['ALL', 'PENDING', 'PARTIALLY_PAID', 'PAID', 'OVERDUE', 'CANCELLED'].map((st) => (
             <button
               key={st}
               type="button"
               onClick={() => setActiveStatusFilter(st)}
-              className={`
-                px-3 py-1.5 rounded-xl text-xs font-bold whitespace-nowrap transition-all border
-                ${
-                  activeStatusFilter === st
-                    ? 'bg-primary-900 text-white border-primary-900 shadow-xs'
-                    : 'bg-white text-surface-600 hover:bg-surface-50 border-surface-200'
-                }
-              `}
+              className={`px-3 py-1.5 rounded-md text-xs font-medium whitespace-nowrap transition-colors border ${
+                activeStatusFilter === st
+                  ? 'bg-surface-900 text-white border-surface-900'
+                  : 'bg-white text-surface-600 hover:bg-surface-50 border-surface-200'
+              }`}
             >
               {st.replace(/_/g, ' ')}
             </button>
@@ -615,99 +619,99 @@ export default function ManagerBillingPage() {
             placeholder="Search invoice #, title, or patient..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className="pl-9 pr-4 py-2 bg-white border border-surface-200 rounded-xl text-xs text-surface-800 placeholder-surface-400 focus:outline-none focus:ring-2 focus:ring-primary-500 w-full sm:w-64"
+            className="pl-9 pr-4 py-2 bg-white border border-surface-300 rounded-md text-xs text-surface-900 placeholder-surface-400 focus:outline-none focus:border-primary-600 w-full sm:w-64"
           />
         </div>
       </div>
 
       {/* ─── Medical Bills Table ────────────────────────────────────────── */}
-      <Card className="rounded-2xl border border-surface-200 overflow-hidden shadow-xs">
+      <Card className="!p-0 overflow-hidden">
         {filteredBills.length === 0 ? (
           <div className="p-12 text-center space-y-3">
-            <div className="w-12 h-12 rounded-2xl bg-surface-100 text-surface-400 flex items-center justify-center mx-auto">
-              <Receipt className="w-6 h-6" />
+            <div className="w-10 h-10 rounded-md bg-surface-100 text-surface-500 border border-surface-200 flex items-center justify-center mx-auto">
+              <Receipt className="w-5 h-5" />
             </div>
-            <h3 className="text-sm font-bold text-surface-800">No medical bills found</h3>
+            <h2 className="text-sm font-semibold text-surface-900">No medical bills found</h2>
             <p className="text-xs text-surface-500 max-w-sm mx-auto">
               Click &lsquo;Create New Medical Bill&rsquo; to issue itemized hospital invoices for your patients.
             </p>
           </div>
         ) : (
           <div className="overflow-x-auto">
-            <table className="w-full text-left text-xs">
-              <thead className="bg-surface-50 border-b border-surface-200 text-surface-500 font-bold uppercase tracking-wider">
-                <tr>
-                  <th className="p-4">Invoice # & Title</th>
-                  <th className="p-4">Patient</th>
-                  <th className="p-4">Itemized Breakdown</th>
-                  <th className="p-4">Total Amount</th>
-                  <th className="p-4">Paid Balance</th>
-                  <th className="p-4">Status</th>
-                  <th className="p-4 text-right">Actions</th>
+            <table className="w-full text-left text-xs border-collapse">
+              <thead>
+                <tr className="bg-surface-50 border-b border-surface-200">
+                  <th className="px-4 py-3 text-[11px] font-medium uppercase tracking-wide text-surface-500">Invoice # &amp; Title</th>
+                  <th className="px-4 py-3 text-[11px] font-medium uppercase tracking-wide text-surface-500">Patient</th>
+                  <th className="px-4 py-3 text-[11px] font-medium uppercase tracking-wide text-surface-500">Itemized Breakdown</th>
+                  <th className="px-4 py-3 text-[11px] font-medium uppercase tracking-wide text-surface-500">Total Amount</th>
+                  <th className="px-4 py-3 text-[11px] font-medium uppercase tracking-wide text-surface-500">Paid Balance</th>
+                  <th className="px-4 py-3 text-[11px] font-medium uppercase tracking-wide text-surface-500">Status</th>
+                  <th className="px-4 py-3 text-[11px] font-medium uppercase tracking-wide text-surface-500 text-right">Actions</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-surface-100 font-medium">
+              <tbody className="divide-y divide-surface-200">
                 {filteredBills.map((bill) => (
-                  <tr key={bill.id} className="hover:bg-surface-50/60 transition-colors">
-                    <td className="p-4">
-                      <span className="text-xs font-bold text-primary-700 uppercase tracking-wider block">
+                  <tr key={bill.id} className="hover:bg-surface-50 transition-colors">
+                    <td className="px-4 py-3.5">
+                      <span className="text-[11px] font-mono font-medium text-surface-500 block">
                         {bill.billNumber}
                       </span>
-                      <h4 className="text-xs font-extrabold text-surface-900 mt-0.5" title={bill.title}>
+                      <p className="text-xs font-semibold text-surface-900 mt-0.5" title={bill.title}>
                         {bill.title}
-                      </h4>
-                      <p className="text-xs text-surface-500 mt-0.5">
+                      </p>
+                      <p className="text-[11px] text-surface-500 mt-0.5 tabular-nums">
                         Issued: {new Date(bill.createdAt).toLocaleDateString()}
                       </p>
                     </td>
 
-                    <td className="p-4">
-                      <div className="flex items-center gap-2">
-                        <div className="w-7 h-7 rounded-full bg-primary-100 text-primary-800 font-bold flex items-center justify-center text-xs">
+                    <td className="px-4 py-3.5">
+                      <div className="flex items-center gap-2.5">
+                        <div className="w-7 h-7 rounded-full bg-surface-100 text-surface-700 border border-surface-200 font-semibold flex items-center justify-center text-xs shrink-0">
                           {bill.patient?.user?.fullName?.charAt(0) || 'P'}
                         </div>
-                        <div>
-                          <p className="font-extrabold text-surface-900">{bill.patient?.user?.fullName}</p>
-                          <p className="text-xs text-surface-500">{bill.patient?.user?.email}</p>
+                        <div className="min-w-0">
+                          <p className="font-semibold text-surface-900 truncate">{bill.patient?.user?.fullName}</p>
+                          <p className="text-xs text-surface-500 truncate">{bill.patient?.user?.email}</p>
                         </div>
                       </div>
                     </td>
 
-                    <td className="p-4">
+                    <td className="px-4 py-3.5">
                       <button
                         type="button"
                         onClick={() => openBillDetails(bill)}
-                        className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-surface-100 hover:bg-surface-200 text-surface-800 rounded-lg text-xs font-bold border border-surface-200 transition-colors"
+                        className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-surface-50 hover:bg-surface-100 text-surface-700 rounded-md text-xs font-medium border border-surface-200 transition-colors tabular-nums"
                       >
-                        <Layers className="w-3.5 h-3.5 text-primary-600" />
+                        <Layers className="w-3.5 h-3.5 text-surface-500" />
                         <span>{bill.items?.length || 0} Sub-Items</span>
                       </button>
                     </td>
 
-                    <td className="p-4 font-black text-surface-900 text-sm">
+                    <td className="px-4 py-3.5 font-semibold tabular-nums text-surface-900 text-sm">
                       ${Number(bill.totalAmount).toLocaleString('en-US', { minimumFractionDigits: 2 })}
-                      <span className="text-xs font-normal text-surface-500 block">{bill.currency}</span>
+                      <span className="text-[11px] font-normal text-surface-500 block">{bill.currency}</span>
                     </td>
 
-                    <td className="p-4">
-                      <p className="font-extrabold text-emerald-600">
+                    <td className="px-4 py-3.5 tabular-nums">
+                      <p className="font-medium text-emerald-700">
                         ${Number(bill.paidAmount).toLocaleString('en-US', { minimumFractionDigits: 2 })}
                       </p>
-                      <p className="text-xs text-surface-500">
+                      <p className="text-[11px] text-surface-500">
                         Due: ${Math.max(0, Number(bill.totalAmount) - Number(bill.paidAmount)).toLocaleString('en-US', { minimumFractionDigits: 2 })}
                       </p>
                     </td>
 
-                    <td className="p-4">{renderStatusBadge(bill.status)}</td>
+                    <td className="px-4 py-3.5">{renderStatusBadge(bill.status)}</td>
 
-                    <td className="p-4 text-right">
-                      <div className="flex items-center justify-end gap-2">
+                    <td className="px-4 py-3.5 text-right">
+                      <div className="flex items-center justify-end gap-1.5">
                         {bill.fileUrl && (
                           <a
                             href={bill.fileUrl}
                             target="_blank"
                             rel="noopener noreferrer"
-                            className="p-1.5 text-primary-600 hover:bg-primary-50 rounded-lg transition-colors"
+                            className="p-1.5 text-surface-600 hover:text-surface-900 hover:bg-surface-100 rounded-md transition-colors"
                             title="Download Hospital PDF Invoice"
                           >
                             <Download className="w-4 h-4" />
@@ -716,9 +720,9 @@ export default function ManagerBillingPage() {
                         <button
                           type="button"
                           onClick={() => openBillDetails(bill)}
-                          className="px-2.5 py-1 bg-primary-50 text-primary-700 hover:bg-primary-100 rounded-lg text-xs font-bold transition-colors"
+                          className="px-2.5 py-1.5 bg-white hover:bg-surface-50 text-surface-700 border border-surface-300 rounded-md text-xs font-medium transition-colors"
                         >
-                          View & Settle
+                          View &amp; Settle
                         </button>
                       </div>
                     </td>
@@ -732,26 +736,26 @@ export default function ManagerBillingPage() {
 
       {/* ─── Itemized Breakdown & Settlement Modal / Drawer ─────────────── */}
       {selectedBillForDetails && (
-        <div className="fixed inset-0 z-50 bg-surface-950/60 backdrop-blur-xs flex items-center justify-center p-4">
-          <div className="bg-white rounded-3xl max-w-2xl w-full p-6 space-y-6 shadow-2xl border border-surface-200 animate-scale-in max-h-[90vh] overflow-y-auto">
-            <div className="flex items-start justify-between border-b border-surface-100 pb-4">
+        <div className="fixed inset-0 z-50 bg-surface-900/40 flex items-center justify-center p-4">
+          <div className="bg-white rounded-lg max-w-2xl w-full p-6 space-y-5 shadow-md border border-surface-200 max-h-[90vh] overflow-y-auto">
+            <div className="flex items-start justify-between border-b border-surface-200 pb-4">
               <div>
                 <div className="flex items-center gap-2">
-                  <span className="text-xs font-bold uppercase tracking-wider text-primary-600">
+                  <span className="text-xs font-mono font-medium text-surface-500">
                     {selectedBillForDetails.billNumber}
                   </span>
                   {renderStatusBadge(selectedBillForDetails.status)}
                 </div>
-                <h3 className="text-lg font-extrabold text-surface-900 mt-1">
+                <h2 className="text-base font-semibold text-surface-900 mt-1">
                   {selectedBillForDetails.title}
-                </h3>
+                </h2>
                 <p className="text-xs text-surface-500 mt-0.5 flex flex-wrap items-center gap-3">
                   <span>
-                    Patient: <strong>{selectedBillForDetails.patient?.user?.fullName}</strong>
+                    Patient: <span className="font-medium text-surface-800">{selectedBillForDetails.patient?.user?.fullName}</span>
                   </span>
                   {selectedBillForDetails.hospital && (
                     <span className="inline-flex items-center gap-1">
-                      <Building2 className="w-3.5 h-3.5 text-primary-600" />
+                      <Building2 className="w-3.5 h-3.5 text-surface-400" />
                       {selectedBillForDetails.hospital.name} ({selectedBillForDetails.hospital.city})
                     </span>
                   )}
@@ -761,70 +765,70 @@ export default function ManagerBillingPage() {
                 type="button"
                 aria-label="Close bill details modal"
                 onClick={() => setSelectedBillForDetails(null)}
-                className="p-1.5 text-surface-400 hover:text-surface-700 hover:bg-surface-100 rounded-lg"
+                className="p-1.5 text-surface-400 hover:text-surface-700 hover:bg-surface-100 rounded-md"
               >
-                <X className="w-5 h-5" />
+                <X className="w-4 h-4" />
               </button>
             </div>
 
             {/* Balance Summary Strip */}
-            <div className="grid grid-cols-3 gap-3 bg-surface-50 p-3.5 rounded-2xl border border-surface-200 text-xs">
+            <div className="grid grid-cols-3 gap-3 bg-surface-50 p-3.5 rounded-md border border-surface-200 text-xs">
               <div>
-                <span className="text-surface-500 font-semibold block">Invoice Total</span>
-                <span className="font-black text-surface-900 text-sm">
+                <span className="text-surface-500 font-medium block">Invoice Total</span>
+                <span className="font-semibold tabular-nums text-surface-900 text-sm mt-0.5 block">
                   ${Number(selectedBillForDetails.totalAmount).toFixed(2)} {selectedBillForDetails.currency}
                 </span>
               </div>
               <div>
-                <span className="text-surface-500 font-semibold block">Paid So Far</span>
-                <span className="font-black text-emerald-700 text-sm">
+                <span className="text-surface-500 font-medium block">Paid So Far</span>
+                <span className="font-semibold tabular-nums text-emerald-700 text-sm mt-0.5 block">
                   ${Number(selectedBillForDetails.paidAmount).toFixed(2)}
                 </span>
               </div>
               <div>
-                <span className="text-surface-500 font-semibold block">Remaining Due</span>
-                <span className="font-black text-amber-700 text-sm">
+                <span className="text-surface-500 font-medium block">Remaining Due</span>
+                <span className="font-semibold tabular-nums text-surface-900 text-sm mt-0.5 block">
                   ${Math.max(0, Number(selectedBillForDetails.totalAmount) - Number(selectedBillForDetails.paidAmount)).toFixed(2)}
                 </span>
               </div>
             </div>
 
             {/* Line Items Table */}
-            <div className="space-y-3">
-              <h4 className="text-xs font-extrabold uppercase tracking-wider text-surface-400 flex items-center gap-2">
-                <Layers className="w-4 h-4 text-primary-600" /> Itemized Cost Breakdown
-              </h4>
+            <div className="space-y-2.5">
+              <h3 className="text-sm font-semibold text-surface-900">
+                Itemized Cost Breakdown
+              </h3>
 
-              <div className="border border-surface-200 rounded-xl overflow-hidden">
-                <table className="w-full text-left text-xs">
-                  <thead className="bg-surface-50 border-b border-surface-200 text-surface-500 font-bold uppercase tracking-wider">
-                    <tr>
-                      <th className="p-3">Description</th>
-                      <th className="p-3 text-center">Category</th>
-                      <th className="p-3 text-center">Qty</th>
-                      <th className="p-3 text-right">Unit Price</th>
-                      <th className="p-3 text-right">Amount</th>
+              <div className="border border-surface-200 rounded-md overflow-hidden">
+                <table className="w-full text-left text-xs border-collapse">
+                  <thead>
+                    <tr className="bg-surface-50 border-b border-surface-200">
+                      <th className="px-3 py-2.5 text-[11px] font-medium uppercase tracking-wide text-surface-500">Description</th>
+                      <th className="px-3 py-2.5 text-[11px] font-medium uppercase tracking-wide text-surface-500 text-center">Category</th>
+                      <th className="px-3 py-2.5 text-[11px] font-medium uppercase tracking-wide text-surface-500 text-center">Qty</th>
+                      <th className="px-3 py-2.5 text-[11px] font-medium uppercase tracking-wide text-surface-500 text-right">Unit Price</th>
+                      <th className="px-3 py-2.5 text-[11px] font-medium uppercase tracking-wide text-surface-500 text-right">Amount</th>
                     </tr>
                   </thead>
-                  <tbody className="divide-y divide-surface-100">
+                  <tbody className="divide-y divide-surface-200">
                     {selectedBillForDetails.items.map((item, idx) => (
                       <tr key={idx} className="hover:bg-surface-50">
-                        <td className="p-3 font-extrabold text-surface-900">{item.description}</td>
-                        <td className="p-3 text-center">
-                          <span className="px-2 py-0.5 bg-surface-100 text-surface-700 rounded-md text-xs font-semibold">
+                        <td className="px-3 py-2.5 font-medium text-surface-900">{item.description}</td>
+                        <td className="px-3 py-2.5 text-center">
+                          <span className="px-2 py-0.5 bg-surface-100 text-surface-700 rounded text-[11px] font-medium border border-surface-200">
                             {item.category || 'GENERAL'}
                           </span>
                         </td>
-                        <td className="p-3 text-center font-bold">{item.quantity}</td>
-                        <td className="p-3 text-right font-medium">${Number(item.unitPrice).toFixed(2)}</td>
-                        <td className="p-3 text-right font-black text-surface-900">${Number(item.amount).toFixed(2)}</td>
+                        <td className="px-3 py-2.5 text-center font-medium tabular-nums">{item.quantity}</td>
+                        <td className="px-3 py-2.5 text-right text-surface-600 tabular-nums">${Number(item.unitPrice).toFixed(2)}</td>
+                        <td className="px-3 py-2.5 text-right font-semibold tabular-nums text-surface-900">${Number(item.amount).toFixed(2)}</td>
                       </tr>
                     ))}
                   </tbody>
-                  <tfoot className="bg-surface-50/80 font-extrabold border-t border-surface-200">
+                  <tfoot className="bg-surface-50 border-t border-surface-200">
                     <tr>
-                      <td colSpan={4} className="p-3 text-right uppercase text-surface-500 text-xs">Net Invoice Total:</td>
-                      <td className="p-3 text-right text-sm text-primary-700 font-black">
+                      <td colSpan={4} className="px-3 py-2.5 text-right text-surface-600 font-medium text-xs">Net Invoice Total</td>
+                      <td className="px-3 py-2.5 text-right text-sm text-surface-900 font-semibold tabular-nums">
                         ${Number(selectedBillForDetails.totalAmount).toFixed(2)} {selectedBillForDetails.currency}
                       </td>
                     </tr>
@@ -834,12 +838,12 @@ export default function ManagerBillingPage() {
             </div>
 
             {/* Payment & Status Settlement Panel */}
-            <div className="p-4 bg-surface-50 rounded-2xl border border-surface-200 space-y-4">
+            <div className="p-4 bg-surface-50 rounded-lg border border-surface-200 space-y-4">
               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
                 <div>
-                  <h4 className="text-xs font-extrabold uppercase tracking-wider text-surface-700 flex items-center gap-2">
-                    <CreditCard className="w-4 h-4 text-primary-600" /> Payment & Status Settlement
-                  </h4>
+                  <h3 className="text-sm font-semibold text-surface-900">
+                    Payment &amp; Status Settlement
+                  </h3>
                   <p className="text-xs text-surface-500 mt-0.5">
                     Record incremental payments, mark paid in full, or update status and notes.
                   </p>
@@ -847,13 +851,15 @@ export default function ManagerBillingPage() {
 
                 <Button
                   type="button"
+                  size="sm"
+                  variant="secondary"
                   onClick={() => void handleBillSettlement(true)}
                   disabled={
                     isUpdatingBill ||
                     selectedBillForDetails.status === 'PAID' ||
                     selectedBillForDetails.status === 'CANCELLED'
                   }
-                  className="px-3.5 py-2 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-xl text-xs flex items-center gap-1.5 shrink-0"
+                  className="shrink-0 text-emerald-700 border-emerald-200 hover:bg-emerald-50"
                 >
                   <CheckCircle2 className="w-4 h-4" />
                   <span>Mark Paid in Full</span>
@@ -862,7 +868,7 @@ export default function ManagerBillingPage() {
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div className="space-y-1">
-                  <label className="text-xs font-bold text-surface-700 block">
+                  <label className="text-xs font-medium text-surface-700 block">
                     Record Incremental Payment ({selectedBillForDetails.currency})
                   </label>
                   <input
@@ -873,17 +879,17 @@ export default function ManagerBillingPage() {
                     value={settlementPaymentAmount}
                     onChange={(e) => setSettlementPaymentAmount(e.target.value)}
                     disabled={selectedBillForDetails.status === 'CANCELLED' || isUpdatingBill}
-                    className="w-full h-10 px-3 bg-white border border-surface-300 rounded-xl text-xs font-bold text-surface-900 focus:outline-none focus:border-primary-600"
+                    className="w-full h-10 px-3 bg-white border border-surface-300 rounded-md text-xs font-medium tabular-nums text-surface-900 focus:outline-none focus:border-primary-600"
                   />
                 </div>
 
                 <div className="space-y-1">
-                  <label className="text-xs font-bold text-surface-700 block">Status</label>
+                  <label className="text-xs font-medium text-surface-700 block">Status</label>
                   <select
                     value={settlementStatus}
                     onChange={(e) => setSettlementStatus(e.target.value)}
                     disabled={isUpdatingBill}
-                    className="w-full h-10 px-3 bg-white border border-surface-300 rounded-xl text-xs font-bold text-surface-900 focus:outline-none focus:border-primary-600"
+                    className="w-full h-10 px-3 bg-white border border-surface-300 rounded-md text-xs font-medium text-surface-900 focus:outline-none focus:border-primary-600"
                   >
                     <option value="PENDING">PENDING</option>
                     <option value="PARTIALLY_PAID">PARTIALLY_PAID</option>
@@ -895,23 +901,23 @@ export default function ManagerBillingPage() {
               </div>
 
               <div className="space-y-1">
-                <label className="text-xs font-bold text-surface-700 block">Billing / Settlement Notes</label>
+                <label className="text-xs font-medium text-surface-700 block">Billing / Settlement Notes</label>
                 <textarea
                   rows={2}
                   value={settlementNotes}
                   onChange={(e) => setSettlementNotes(e.target.value)}
                   disabled={isUpdatingBill}
                   placeholder="Add receipt reference, wire details, or coordinator remarks..."
-                  className="w-full p-2.5 bg-white border border-surface-300 rounded-xl text-xs font-medium text-surface-900 focus:outline-none focus:border-primary-600"
+                  className="w-full p-2.5 bg-white border border-surface-300 rounded-md text-xs text-surface-900 focus:outline-none focus:border-primary-600"
                 />
               </div>
 
               <div className="flex justify-end">
                 <Button
                   type="button"
+                  size="sm"
                   onClick={() => void handleBillSettlement(false)}
                   disabled={isUpdatingBill}
-                  className="px-4 py-2 bg-primary-600 hover:bg-primary-700 text-white font-bold rounded-xl text-xs"
                 >
                   {isUpdatingBill ? 'Saving Changes...' : 'Save Settlement & Status'}
                 </Button>
@@ -924,17 +930,19 @@ export default function ManagerBillingPage() {
                   href={selectedBillForDetails.fileUrl}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="px-4 py-2 bg-primary-50 text-primary-700 hover:bg-primary-100 rounded-xl text-xs font-bold flex items-center gap-2"
+                  className="px-3.5 py-2 bg-white text-surface-700 hover:bg-surface-50 border border-surface-300 rounded-md text-xs font-medium inline-flex items-center gap-2 transition-colors"
                 >
                   <Download className="w-4 h-4" /> Download Official PDF Invoice
                 </a>
-              ) : <div />}
+              ) : (
+                <div />
+              )}
 
               <Button
                 type="button"
+                size="sm"
                 onClick={() => setSelectedBillForDetails(null)}
                 variant="secondary"
-                className="px-5 py-2 text-xs font-bold rounded-xl"
               >
                 Close Breakdown
               </Button>
@@ -945,44 +953,50 @@ export default function ManagerBillingPage() {
 
       {/* ─── Create Medical Bill Modal ──────────────────────────────────── */}
       {isModalOpen && (
-        <div className="fixed inset-0 z-50 bg-surface-950/60 backdrop-blur-xs flex items-center justify-center p-4">
-          <div className="bg-white rounded-3xl max-w-3xl w-full p-6 space-y-6 shadow-2xl border border-surface-200 animate-scale-in max-h-[92vh] overflow-y-auto">
-            <div className="flex items-center justify-between border-b border-surface-100 pb-4">
+        <div className="fixed inset-0 z-50 bg-surface-900/40 flex items-center justify-center p-4">
+          <div className="bg-white rounded-lg max-w-3xl w-full p-6 space-y-5 shadow-md border border-surface-200 max-h-[92vh] overflow-y-auto">
+            <div className="flex items-center justify-between border-b border-surface-200 pb-4">
               <div>
-                <h3 className="text-lg font-extrabold text-surface-900 flex items-center gap-2">
-                  <Receipt className="w-5 h-5 text-primary-600" /> Create Patient Medical Bill & Invoice
-                </h3>
-                <p className="text-xs text-surface-500 mt-0.5">Issue an itemized hospital bill with cost breakdowns for international patients.</p>
+                <h2 className="text-base font-semibold text-surface-900">
+                  Create Patient Medical Bill &amp; Invoice
+                </h2>
+                <p className="text-xs text-surface-500 mt-0.5">
+                  Issue an itemized hospital bill with cost breakdowns for international patients.
+                </p>
               </div>
               <button
                 type="button"
                 aria-label="Close create bill modal"
                 onClick={() => setIsModalOpen(false)}
-                className="p-1.5 text-surface-400 hover:text-surface-700 hover:bg-surface-100 rounded-lg"
+                className="p-1.5 text-surface-400 hover:text-surface-700 hover:bg-surface-100 rounded-md"
               >
-                <X className="w-5 h-5" />
+                <X className="w-4 h-4" />
               </button>
             </div>
 
-            <form onSubmit={handleFormSubmit} className="space-y-6">
-              {/* ─── AI OCR Bill Auto-Scanner Dropzone ───────────────────── */}
-              <div className="p-4 bg-gradient-to-r from-primary-900 to-slate-900 rounded-2xl text-white space-y-3 shadow-md">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    <div className="w-8 h-8 rounded-xl bg-white/10 flex items-center justify-center text-emerald-400">
-                      <Sparkles className="w-5 h-5 animate-pulse" />
+            <form onSubmit={handleFormSubmit} className="space-y-5">
+              {/* ─── OCR Bill Auto-Scanner Dropzone ───────────────────────── */}
+              <div className="p-4 bg-surface-50 border border-surface-200 rounded-lg space-y-3">
+                <div className="flex items-center justify-between gap-3">
+                  <div className="flex items-center gap-3">
+                    <div className="w-9 h-9 rounded-md bg-white text-surface-600 border border-surface-200 flex items-center justify-center shrink-0">
+                      <UploadCloud className="w-4 h-4" />
                     </div>
                     <div>
-                      <h4 className="text-xs font-black tracking-wide text-white uppercase flex items-center gap-1.5">
-                        Smart OCR Bill Auto-Scanner
-                        <span className="bg-emerald-500/20 text-emerald-300 text-xs font-bold px-2 py-0.5 rounded-full border border-emerald-400/30">PDF Stream Extract</span>
-                      </h4>
-                      <p className="text-xs text-slate-300">Upload a hospital PDF invoice or scan to populate line-item breakdowns.</p>
+                      <h3 className="text-sm font-semibold text-surface-900 flex flex-wrap items-center gap-2">
+                        <span>Smart OCR Bill Auto-Scanner</span>
+                        <span className="bg-primary-50 text-primary-700 text-[11px] font-medium px-2 py-0.5 rounded border border-primary-200">
+                          PDF Stream Extract
+                        </span>
+                      </h3>
+                      <p className="text-xs text-surface-500 mt-0.5">
+                        Upload a hospital PDF invoice or scan to populate line-item breakdowns.
+                      </p>
                     </div>
                   </div>
                 </div>
 
-                <div className="relative border-2 border-dashed border-white/20 hover:border-emerald-400/60 rounded-xl p-3 bg-white/5 transition-colors text-center cursor-pointer group">
+                <div className="relative border border-dashed border-surface-300 hover:border-primary-500 rounded-md p-3.5 bg-white transition-colors text-center cursor-pointer">
                   <input
                     type="file"
                     multiple
@@ -996,24 +1010,24 @@ export default function ManagerBillingPage() {
                     className="absolute inset-0 w-full h-full opacity-0 cursor-pointer disabled:cursor-not-allowed"
                   />
                   {isOcrScanning ? (
-                    <div className="flex items-center justify-center gap-2 text-xs font-bold text-emerald-300 py-1">
-                      <div className="w-4 h-4 border-2 border-emerald-400 border-t-transparent rounded-full animate-spin" />
-                      <span>Scanning Multi-Page Medical Bill...</span>
+                    <div className="flex items-center justify-center gap-2 text-xs font-medium text-primary-700 py-1">
+                      <div className="w-4 h-4 border-2 border-primary-600 border-t-transparent rounded-full animate-spin" />
+                      <span>Scanning multi-page medical bill...</span>
                     </div>
                   ) : (
-                    <div className="flex items-center justify-center gap-2 text-xs font-bold text-slate-200 group-hover:text-white py-1">
-                      <UploadCloud className="w-4 h-4 text-emerald-400" />
-                      <span>Drop multi-page bill / batch files here (PDF/JPG/PNG) for OCR extraction</span>
+                    <div className="flex items-center justify-center gap-2 text-xs font-medium text-surface-600 py-1">
+                      <UploadCloud className="w-4 h-4 text-surface-400" />
+                      <span>Drop multi-page bill or batch files here (PDF/JPG/PNG) for OCR extraction</span>
                     </div>
                   )}
                 </div>
 
                 {ocrSuccessData && (
                   <div
-                    className={`p-3 rounded-xl border text-xs space-y-2 ${
+                    className={`p-3 rounded-md border text-xs space-y-2 ${
                       ocrSuccessData.extractionMode === 'SCANNED_FALLBACK'
-                        ? 'bg-amber-500/20 border-amber-400/40 text-amber-100'
-                        : 'bg-emerald-500/20 border-emerald-400/40 text-emerald-200'
+                        ? 'bg-amber-50 border-amber-200 text-amber-900'
+                        : 'bg-emerald-50 border-emerald-200 text-emerald-900'
                     }`}
                   >
                     <div className="flex flex-wrap items-center justify-between gap-2">
@@ -1021,34 +1035,28 @@ export default function ManagerBillingPage() {
                         <FileCheck2
                           className={`w-4 h-4 shrink-0 ${
                             ocrSuccessData.extractionMode === 'SCANNED_FALLBACK'
-                              ? 'text-amber-300'
-                              : 'text-emerald-400'
+                              ? 'text-amber-600'
+                              : 'text-emerald-600'
                           }`}
                         />
                         <div>
-                          <p className="font-bold text-white">
+                          <p className="font-semibold text-surface-900">
                             {ocrSuccessData.extractionMode === 'SCANNED_FALLBACK'
                               ? 'Raster / Scanned Document Loaded'
                               : `Multi-Page OCR Stitched (${ocrSuccessData.confidence}% Confidence)`}
                           </p>
-                          <p
-                            className={`text-xs ${
-                              ocrSuccessData.extractionMode === 'SCANNED_FALLBACK'
-                                ? 'text-amber-100'
-                                : 'text-emerald-200'
-                            }`}
-                          >
+                          <p className="text-xs text-surface-600">
                             {ocrSuccessData.itemCount} sub-items across {ocrSuccessData.pageCount} page(s)
                             {ocrSuccessData.hospitalName ? ` (${ocrSuccessData.hospitalName})` : ''}.
                           </p>
                         </div>
                       </div>
                       {ocrSuccessData.extractionMode === 'SCANNED_FALLBACK' ? (
-                        <span className="text-xs font-bold bg-amber-400 text-slate-950 px-2.5 py-0.5 rounded-md shrink-0">
+                        <span className="text-[11px] font-medium bg-amber-100 text-amber-800 border border-amber-200 px-2 py-0.5 rounded shrink-0">
                           Scanned Image Fallback — Please verify line-item amounts
                         </span>
                       ) : (
-                        <span className="text-xs font-bold bg-emerald-400 text-slate-950 px-2.5 py-0.5 rounded-md shrink-0">
+                        <span className="text-[11px] font-medium bg-emerald-100 text-emerald-800 border border-emerald-200 px-2 py-0.5 rounded shrink-0">
                           Digital PDF Text Extracted
                         </span>
                       )}
@@ -1056,27 +1064,15 @@ export default function ManagerBillingPage() {
 
                     {/* Page-by-Page Audit Tray */}
                     {ocrSuccessData.pages && ocrSuccessData.pages.length > 0 && (
-                      <div
-                        className={`flex flex-wrap gap-1.5 pt-2 border-t ${
-                          ocrSuccessData.extractionMode === 'SCANNED_FALLBACK'
-                            ? 'border-amber-400/20'
-                            : 'border-emerald-400/20'
-                        }`}
-                      >
+                      <div className="flex flex-wrap gap-1.5 pt-2 border-t border-surface-200">
                         {ocrSuccessData.pages.map((p) => (
                           <span
                             key={p.pageNumber}
-                            className="bg-white/10 text-white text-xs font-semibold px-2.5 py-1 rounded-lg border border-white/10 flex items-center gap-1"
+                            className="bg-white text-surface-700 text-[11px] font-medium px-2 py-0.5 rounded border border-surface-200 flex items-center gap-1 tabular-nums"
                           >
                             <span>Page {p.pageNumber}:</span>
                             <span>{p.itemsFound} items</span>
-                            <span
-                              className={`font-black ${
-                                ocrSuccessData.extractionMode === 'SCANNED_FALLBACK'
-                                  ? 'text-amber-300'
-                                  : 'text-emerald-400'
-                              }`}
-                            >
+                            <span className="font-semibold text-surface-900">
                               (${p.pageSubtotal.toFixed(2)})
                             </span>
                           </span>
@@ -1089,12 +1085,12 @@ export default function ManagerBillingPage() {
 
               {/* Patient Case, Hospital & General Info */}
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div className="space-y-1.5">
-                  <label className="text-xs font-bold text-surface-700 block">Select Patient & Case</label>
+                <div className="space-y-1">
+                  <label className="text-xs font-medium text-surface-700 block">Select Patient &amp; Case</label>
                   <select
                     value={selectedCaseId}
                     onChange={(e) => handleCaseSelectChange(e.target.value)}
-                    className="w-full h-11 px-3 bg-surface-50 border border-surface-300 rounded-xl text-xs font-bold text-surface-900 focus:outline-none focus:border-primary-600"
+                    className="w-full h-10 px-3 bg-white border border-surface-300 rounded-md text-xs font-medium text-surface-900 focus:outline-none focus:border-primary-600"
                     required
                   >
                     {caseOptions.length === 0 ? (
@@ -1109,12 +1105,12 @@ export default function ManagerBillingPage() {
                   </select>
                 </div>
 
-                <div className="space-y-1.5">
-                  <label className="text-xs font-bold text-surface-700 block">Partner Hospital (Optional)</label>
+                <div className="space-y-1">
+                  <label className="text-xs font-medium text-surface-700 block">Partner Hospital (Optional)</label>
                   <select
                     value={selectedHospitalId}
                     onChange={(e) => setSelectedHospitalId(e.target.value)}
-                    className="w-full h-11 px-3 bg-surface-50 border border-surface-300 rounded-xl text-xs font-bold text-surface-900 focus:outline-none focus:border-primary-600"
+                    className="w-full h-10 px-3 bg-white border border-surface-300 rounded-md text-xs font-medium text-surface-900 focus:outline-none focus:border-primary-600"
                   >
                     <option value="">None / Unspecified</option>
                     {hospitals.map((h) => (
@@ -1125,20 +1121,20 @@ export default function ManagerBillingPage() {
                   </select>
                 </div>
 
-                <div className="space-y-1.5">
-                  <label className="text-xs font-bold text-surface-700 block">Invoice Title</label>
+                <div className="space-y-1">
+                  <label className="text-xs font-medium text-surface-700 block">Invoice Title</label>
                   <input
                     type="text"
                     placeholder="e.g. Surgical & Hospital Care Bill"
                     value={billTitle}
                     onChange={(e) => setBillTitle(e.target.value)}
-                    className="w-full h-11 px-3 bg-surface-50 border border-surface-300 rounded-xl text-xs font-bold text-surface-900 focus:outline-none focus:border-primary-600"
+                    className="w-full h-10 px-3 bg-white border border-surface-300 rounded-md text-xs font-medium text-surface-900 focus:outline-none focus:border-primary-600"
                     required
                   />
                 </div>
 
-                <div className="space-y-1.5">
-                  <label className="text-xs font-bold text-surface-700 block">Bill Category</label>
+                <div className="space-y-1">
+                  <label className="text-xs font-medium text-surface-700 block">Bill Category</label>
                   <Select
                     options={CATEGORY_OPTIONS}
                     value={billCategory}
@@ -1146,12 +1142,12 @@ export default function ManagerBillingPage() {
                   />
                 </div>
 
-                <div className="space-y-1.5">
-                  <label className="text-xs font-bold text-surface-700 block">Payment Status</label>
+                <div className="space-y-1">
+                  <label className="text-xs font-medium text-surface-700 block">Payment Status</label>
                   <select
                     value={billStatus}
                     onChange={(e) => setBillStatus(e.target.value)}
-                    className="w-full h-11 px-3 bg-surface-50 border border-surface-300 rounded-xl text-xs font-bold text-surface-900 focus:outline-none focus:border-primary-600"
+                    className="w-full h-10 px-3 bg-white border border-surface-300 rounded-md text-xs font-medium text-surface-900 focus:outline-none focus:border-primary-600"
                   >
                     <option value="PENDING">PENDING (Unpaid)</option>
                     <option value="PARTIALLY_PAID">PARTIALLY PAID (Deposit Received)</option>
@@ -1160,8 +1156,8 @@ export default function ManagerBillingPage() {
                   </select>
                 </div>
 
-                <div className="space-y-1.5">
-                  <label className="text-xs font-bold text-surface-700 block">Paid Deposit Amount ({currency})</label>
+                <div className="space-y-1">
+                  <label className="text-xs font-medium text-surface-700 block">Paid Deposit Amount ({currency})</label>
                   <input
                     type="number"
                     step="0.01"
@@ -1169,28 +1165,28 @@ export default function ManagerBillingPage() {
                     placeholder="0.00"
                     value={paidAmountInput}
                     onChange={(e) => setPaidAmountInput(e.target.value)}
-                    className="w-full h-11 px-3 bg-surface-50 border border-surface-300 rounded-xl text-xs font-bold text-surface-900 focus:outline-none focus:border-primary-600"
+                    className="w-full h-10 px-3 bg-white border border-surface-300 rounded-md text-xs font-medium tabular-nums text-surface-900 focus:outline-none focus:border-primary-600"
                   />
                 </div>
 
-                <div className="space-y-1.5">
-                  <label className="text-xs font-bold text-surface-700 block">Due Date</label>
+                <div className="space-y-1">
+                  <label className="text-xs font-medium text-surface-700 block">Due Date</label>
                   <input
                     type="date"
                     value={dueDateInput}
                     onChange={(e) => setDueDateInput(e.target.value)}
-                    className="w-full h-11 px-3 bg-surface-50 border border-surface-300 rounded-xl text-xs font-bold text-surface-900 focus:outline-none focus:border-primary-600"
+                    className="w-full h-10 px-3 bg-white border border-surface-300 rounded-md text-xs font-medium tabular-nums text-surface-900 focus:outline-none focus:border-primary-600"
                   />
                 </div>
 
-                <div className="space-y-1.5">
-                  <label className="text-xs font-bold text-surface-700 block">Billing Notes (Optional)</label>
+                <div className="space-y-1">
+                  <label className="text-xs font-medium text-surface-700 block">Billing Notes (Optional)</label>
                   <input
                     type="text"
                     placeholder="Payment instructions or invoice remarks"
                     value={notesInput}
                     onChange={(e) => setNotesInput(e.target.value)}
-                    className="w-full h-11 px-3 bg-surface-50 border border-surface-300 rounded-xl text-xs font-medium text-surface-900 focus:outline-none focus:border-primary-600"
+                    className="w-full h-10 px-3 bg-white border border-surface-300 rounded-md text-xs text-surface-900 focus:outline-none focus:border-primary-600"
                   />
                 </div>
               </div>
@@ -1198,29 +1194,29 @@ export default function ManagerBillingPage() {
               {/* Dynamic Line-Item Breakdown Builder */}
               <div className="space-y-3 pt-2">
                 <div className="flex items-center justify-between">
-                  <h4 className="text-xs font-extrabold uppercase tracking-wider text-surface-700 flex items-center gap-2">
-                    <Layers className="w-4 h-4 text-primary-600" /> Itemized Sub-Charge Breakdowns
-                  </h4>
+                  <h3 className="text-sm font-semibold text-surface-900">
+                    Itemized Sub-Charge Breakdowns
+                  </h3>
                   <Button
                     type="button"
+                    size="sm"
                     onClick={addLineItem}
                     variant="secondary"
-                    className="px-3 py-1.5 text-[11px] font-bold rounded-lg flex items-center gap-1"
                   >
-                    <Plus className="w-3.5 h-3.5 text-primary-600" /> Add Line Item
+                    <Plus className="w-3.5 h-3.5" /> Add Line Item
                   </Button>
                 </div>
 
-                <div className="space-y-3">
+                <div className="space-y-2.5">
                   {lineItems.map((item, idx) => (
-                    <div key={idx} className="p-3 bg-surface-50 rounded-xl border border-surface-200 grid grid-cols-12 gap-2 items-center">
+                    <div key={idx} className="p-3 bg-surface-50 rounded-md border border-surface-200 grid grid-cols-12 gap-2 items-center">
                       <div className="col-span-5">
                         <input
                           type="text"
                           placeholder="Sub-item description (e.g. Operating Theater)"
                           value={item.description}
                           onChange={(e) => updateLineItem(idx, 'description', e.target.value)}
-                          className="w-full px-2.5 py-1.5 bg-white border border-surface-300 rounded-lg text-xs font-medium focus:outline-none focus:border-primary-600"
+                          className="w-full px-2.5 py-1.5 bg-white border border-surface-300 rounded-md text-xs text-surface-900 focus:outline-none focus:border-primary-600"
                           required
                         />
                       </div>
@@ -1229,7 +1225,7 @@ export default function ManagerBillingPage() {
                         <select
                           value={item.category}
                           onChange={(e) => updateLineItem(idx, 'category', e.target.value)}
-                          className="w-full px-2 py-1.5 bg-white border border-surface-300 rounded-lg text-[11px] font-bold focus:outline-none"
+                          className="w-full px-2 py-1.5 bg-white border border-surface-300 rounded-md text-[11px] font-medium text-surface-900 focus:outline-none"
                         >
                           {ITEM_CATEGORY_OPTIONS.map((opt) => (
                             <option key={opt.value} value={opt.value}>{opt.label}</option>
@@ -1244,7 +1240,7 @@ export default function ManagerBillingPage() {
                           placeholder="Qty"
                           value={item.quantity}
                           onChange={(e) => updateLineItem(idx, 'quantity', e.target.value)}
-                          className="w-full px-2 py-1.5 bg-white border border-surface-300 rounded-lg text-xs font-bold text-center focus:outline-none"
+                          className="w-full px-2 py-1.5 bg-white border border-surface-300 rounded-md text-xs font-medium tabular-nums text-center focus:outline-none"
                         />
                       </div>
 
@@ -1254,12 +1250,12 @@ export default function ManagerBillingPage() {
                           placeholder="Price ($)"
                           value={item.unitPrice}
                           onChange={(e) => updateLineItem(idx, 'unitPrice', e.target.value)}
-                          className="w-full px-2 py-1.5 bg-white border border-surface-300 rounded-lg text-xs font-bold text-right focus:outline-none"
+                          className="w-full px-2 py-1.5 bg-white border border-surface-300 rounded-md text-xs font-medium tabular-nums text-right focus:outline-none"
                         />
                       </div>
 
                       <div className="col-span-2 flex items-center justify-between pl-2">
-                        <span className="text-xs font-black text-surface-900">${(item.amount || 0).toFixed(2)}</span>
+                        <span className="text-xs font-semibold tabular-nums text-surface-900">${(item.amount || 0).toFixed(2)}</span>
                         {lineItems.length > 1 && (
                           <button
                             type="button"
@@ -1274,48 +1270,44 @@ export default function ManagerBillingPage() {
                   ))}
                 </div>
 
-                <div className="p-3 bg-primary-50/60 rounded-xl border border-primary-200/80 flex items-center justify-between">
-                  <span className="text-xs font-bold text-primary-900">Total Calculated Invoice Amount:</span>
-                  <span className="text-base font-black text-primary-900">${computedTotal.toFixed(2)} USD</span>
+                <div className="p-3 bg-surface-50 rounded-md border border-surface-200 flex items-center justify-between">
+                  <span className="text-xs font-medium text-surface-600">Total Calculated Invoice Amount</span>
+                  <span className="text-base font-semibold tracking-tight tabular-nums text-surface-900">
+                    ${computedTotal.toFixed(2)} USD
+                  </span>
                 </div>
               </div>
 
               {/* Upload PDF Attachment */}
               <div className="space-y-1.5">
-                <label className="text-xs font-bold text-surface-700 block">Attach Official Hospital PDF Invoice (Optional)</label>
+                <label className="text-xs font-medium text-surface-700 block">
+                  Attach Official Hospital PDF Invoice (Optional)
+                </label>
                 <input
                   type="file"
                   accept=".pdf,.jpg,.jpeg,.png"
                   onChange={(e) => setBillFile(e.target.files?.[0] || null)}
-                  className="w-full text-xs text-surface-600 file:mr-4 file:py-2 file:px-4 file:rounded-xl file:border-0 file:text-xs file:font-bold file:bg-primary-50 file:text-primary-700 hover:file:bg-primary-100"
+                  className="w-full text-xs text-surface-600 file:mr-4 file:py-1.5 file:px-3.5 file:rounded-md file:border file:border-surface-300 file:text-xs file:font-medium file:bg-white file:text-surface-700 hover:file:bg-surface-50"
                 />
               </div>
 
-              <div className="flex items-center justify-end gap-3 pt-2">
+              <div className="flex items-center justify-end gap-2.5 pt-3 border-t border-surface-200">
                 <Button
                   type="button"
+                  size="sm"
                   onClick={() => setIsModalOpen(false)}
                   variant="secondary"
-                  className="px-5 py-2.5 text-xs font-bold rounded-xl"
                 >
                   Cancel
                 </Button>
                 <Button
                   type="submit"
+                  size="sm"
+                  isLoading={isSubmitting}
                   disabled={isSubmitting}
-                  className="px-6 py-2.5 bg-primary-600 hover:bg-primary-700 text-white font-bold rounded-xl text-xs flex items-center gap-2"
                 >
-                  {isSubmitting ? (
-                    <>
-                      <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                      <span>Creating Invoice...</span>
-                    </>
-                  ) : (
-                    <>
-                      <Receipt className="w-4 h-4" />
-                      <span>Issue Medical Bill</span>
-                    </>
-                  )}
+                  {!isSubmitting && <Receipt className="w-4 h-4" />}
+                  <span>{isSubmitting ? 'Creating Invoice...' : 'Issue Medical Bill'}</span>
                 </Button>
               </div>
             </form>

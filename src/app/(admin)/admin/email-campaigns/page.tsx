@@ -200,20 +200,17 @@ export default function EmailCampaignsPage() {
   const hasQueuedCampaigns = campaigns.some((c) => c.status === 'QUEUED');
 
   return (
-    <div className="max-w-7xl mx-auto space-y-6 animate-fade-in">
+    <div className="space-y-6 animate-fade-in">
       {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-5 border-b border-surface-200">
         <div>
-          <div className="flex items-center gap-3 mb-1">
-            <h1 className="text-2xl font-bold text-surface-900 tracking-tight">Email Campaigns</h1>
-            <span className="px-2.5 py-0.5 rounded-full text-xs font-bold uppercase tracking-wider bg-primary-50 text-primary-700 border border-primary-200">Admin</span>
-          </div>
-          <p className="text-sm text-surface-500">Send targeted email campaigns to platform users using templates.</p>
+          <h1 className="text-xl font-semibold tracking-tight text-surface-900">Email Campaigns</h1>
+          <p className="text-xs sm:text-sm text-surface-500 mt-1">Send targeted email campaigns to platform users using reusable templates.</p>
         </div>
         <Button onClick={openNewCampaign}>+ New Campaign</Button>
       </div>
 
-      <Card className="p-4 bg-white border border-surface-200 flex flex-col sm:flex-row gap-3">
+      <Card padding="sm" className="flex flex-col sm:flex-row gap-3">
         <Select
           value={statusFilter}
           onChange={setStatusFilter}
@@ -241,37 +238,37 @@ export default function EmailCampaignsPage() {
       </Card>
 
       {/* Table */}
-      <Card className="bg-white border border-surface-200 overflow-hidden">
+      <Card className="p-0! overflow-hidden">
         {loading ? (
           <div className="flex items-center justify-center py-16">
-            <div className="w-8 h-8 border-4 border-primary-600 border-t-transparent rounded-full animate-spin" />
+            <div className="w-7 h-7 border-2 border-primary-600 border-t-transparent rounded-full animate-spin" />
           </div>
         ) : (
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
               <thead>
-                <tr className="border-b border-surface-100 bg-surface-50">
-                  <th className="px-5 py-3 text-left text-xs font-bold text-surface-500 uppercase tracking-wider">Campaign</th>
-                  <th className="px-5 py-3 text-left text-xs font-bold text-surface-500 uppercase tracking-wider">Template</th>
-                  <th className="px-5 py-3 text-left text-xs font-bold text-surface-500 uppercase tracking-wider">Audience</th>
-                  <th className="px-5 py-3 text-left text-xs font-bold text-surface-500 uppercase tracking-wider">Status</th>
-                  <th className="px-5 py-3 text-left text-xs font-bold text-surface-500 uppercase tracking-wider">Sent</th>
-                  <th className="px-5 py-3 text-left text-xs font-bold text-surface-500 uppercase tracking-wider">Date</th>
-                  <th className="px-5 py-3 text-right text-xs font-bold text-surface-500 uppercase tracking-wider">Actions</th>
+                <tr className="border-b border-surface-200 bg-surface-100">
+                  <th className="px-5 py-3 text-left text-[11px] font-medium uppercase tracking-wide text-surface-500">Campaign</th>
+                  <th className="px-5 py-3 text-left text-[11px] font-medium uppercase tracking-wide text-surface-500">Template</th>
+                  <th className="px-5 py-3 text-left text-[11px] font-medium uppercase tracking-wide text-surface-500">Audience</th>
+                  <th className="px-5 py-3 text-left text-[11px] font-medium uppercase tracking-wide text-surface-500">Status</th>
+                  <th className="px-5 py-3 text-left text-[11px] font-medium uppercase tracking-wide text-surface-500">Sent</th>
+                  <th className="px-5 py-3 text-left text-[11px] font-medium uppercase tracking-wide text-surface-500">Date</th>
+                  <th className="px-5 py-3 text-right text-[11px] font-medium uppercase tracking-wide text-surface-500">Actions</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-surface-100">
+              <tbody className="divide-y divide-surface-200">
                 {campaigns.length === 0 ? (
                   <tr><td colSpan={7} className="px-5 py-12 text-center text-surface-500">No campaigns yet. Create your first campaign to get started.</td></tr>
                 ) : (
                   campaigns.map((c) => (
-                    <tr key={c.id} className="hover:bg-surface-50 transition-colors">
-                      <td className="px-5 py-3.5 font-semibold text-surface-900">{c.name}</td>
+                    <tr key={c.id} className="hover:bg-surface-100/60 transition-colors">
+                      <td className="px-5 py-3.5 font-medium text-surface-900">{c.name}</td>
                       <td className="px-5 py-3.5 text-surface-600">{c.template.name}</td>
                       <td className="px-5 py-3.5"><Badge variant="default">{c.targetRole}</Badge></td>
                       <td className="px-5 py-3.5"><Badge variant={STATUS_VARIANTS[c.status] || 'default'} dot>{c.status}</Badge></td>
-                      <td className="px-5 py-3.5 text-surface-600 font-medium">{c.sentCount}</td>
-                      <td className="px-5 py-3.5 text-surface-500 text-xs">
+                      <td className="px-5 py-3.5 text-surface-600 font-medium tabular-nums">{c.sentCount}</td>
+                      <td className="px-5 py-3.5 text-surface-500 text-xs tabular-nums">
                         {c.sentAt ? new Date(c.sentAt).toLocaleString() : c.scheduledAt ? `Scheduled: ${new Date(c.scheduledAt).toLocaleString()}` : new Date(c.createdAt).toLocaleDateString()}
                       </td>
                       <td className="px-5 py-3.5 text-right">
@@ -297,8 +294,8 @@ export default function EmailCampaignsPage() {
           </div>
         )}
         {pagination.totalPages > 1 && (
-          <div className="px-5 py-3 border-t border-surface-100 flex items-center justify-between text-sm">
-            <span className="text-surface-500">Page {pagination.page} of {pagination.totalPages} ({pagination.total} total)</span>
+          <div className="px-5 py-3 border-t border-surface-200 flex items-center justify-between text-sm">
+            <span className="text-surface-500 tabular-nums">Page {pagination.page} of {pagination.totalPages} ({pagination.total} total)</span>
             <div className="flex gap-2">
               <Button variant="secondary" size="sm" disabled={pagination.page <= 1} onClick={() => fetchCampaigns(pagination.page - 1)}>Previous</Button>
               <Button variant="secondary" size="sm" disabled={pagination.page >= pagination.totalPages} onClick={() => fetchCampaigns(pagination.page + 1)}>Next</Button>
@@ -309,14 +306,14 @@ export default function EmailCampaignsPage() {
 
       {/* New Campaign Modal */}
       {showModal && (
-        <div className="fixed inset-0 z-50 flex items-start justify-center p-4 pt-[5vh] bg-surface-900/40 backdrop-blur-xs overflow-y-auto">
-          <div className="bg-white rounded-2xl shadow-2xl border border-surface-200 w-full max-w-2xl animate-scale-up my-8">
-            <div className="px-6 py-4 border-b border-surface-100 flex items-center justify-between">
-              <h3 className="text-sm font-bold text-surface-900">New Email Campaign</h3>
+        <div className="fixed inset-0 z-50 flex items-start justify-center p-4 pt-[5vh] bg-surface-900/40 overflow-y-auto">
+          <div className="bg-white rounded-lg shadow-md border border-surface-200 w-full max-w-2xl animate-scale-in my-8">
+            <div className="px-6 py-4 border-b border-surface-200 flex items-center justify-between">
+              <h3 className="text-sm sm:text-base font-semibold text-surface-900">New email campaign</h3>
               <button
                 onClick={() => setShowModal(false)}
                 aria-label="Close"
-                className="text-surface-400 hover:text-surface-600 p-1 rounded-lg hover:bg-surface-100 transition-colors"
+                className="text-surface-400 hover:text-surface-600 p-1 rounded-md hover:bg-surface-100 transition-colors"
               >
                 <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2} aria-hidden="true">
                   <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
@@ -325,13 +322,13 @@ export default function EmailCampaignsPage() {
             </div>
             <form onSubmit={handleSend} className="p-6 space-y-5">
               <div className="space-y-1.5">
-                <label className="block text-xs font-semibold text-surface-700">Campaign Name *</label>
+                <label className="block text-xs font-medium text-surface-700">Campaign Name *</label>
                 <input
                   type="text"
                   required
                   value={form.name}
                   onChange={(e) => setForm({ ...form, name: e.target.value })}
-                  className="w-full p-2.5 border border-surface-200 rounded-xl text-sm focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500"
+                  className="w-full p-2.5 border border-surface-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-600"
                   placeholder="e.g., July Welcome Campaign"
                 />
               </div>
@@ -369,13 +366,13 @@ export default function EmailCampaignsPage() {
 
               {/* Template Preview */}
               {selectedTemplate && (
-                <div className="border border-surface-200 rounded-lg overflow-hidden">
-                  <div className="px-4 py-2.5 bg-surface-50 border-b border-surface-200 flex items-center justify-between">
-                    <span className="text-xs font-bold text-surface-700">Template Preview</span>
+                <div className="border border-surface-200 rounded-md overflow-hidden">
+                  <div className="px-4 py-2.5 bg-surface-100 border-b border-surface-200 flex items-center justify-between">
+                    <span className="text-xs font-medium text-surface-700">Template preview</span>
                     <Badge variant="primary" size="sm">{selectedTemplate.category}</Badge>
                   </div>
-                  <div className="px-4 py-2 border-b border-surface-100 bg-white">
-                    <p className="text-xs text-surface-500">Subject: <span className="font-semibold text-surface-800">{selectedTemplate.subject}</span></p>
+                  <div className="px-4 py-2 border-b border-surface-200 bg-white">
+                    <p className="text-xs text-surface-500">Subject: <span className="font-medium text-surface-800">{selectedTemplate.subject}</span></p>
                   </div>
                   <div className="p-4 bg-white max-h-[200px] overflow-y-auto text-sm">
                     <div dangerouslySetInnerHTML={{ __html: sanitizeEmailHtml(selectedTemplate.body) }} />
@@ -383,17 +380,17 @@ export default function EmailCampaignsPage() {
                 </div>
               )}
 
-              <div className="bg-warning-50 border border-warning-200 rounded-lg px-4 py-3 flex items-start gap-2">
-                <svg className="w-5 h-5 text-warning-600 shrink-0 mt-0.5" fill="currentColor" viewBox="0 0 20 20">
+              <div className="bg-warning-50 border border-warning-200 rounded-md px-4 py-3 flex items-start gap-2.5">
+                <svg className="w-4 h-4 text-warning-600 shrink-0 mt-0.5" fill="currentColor" viewBox="0 0 20 20">
                   <path fillRule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
                 </svg>
                 <div>
-                  <p className="text-xs font-bold text-warning-800">
+                  <p className="text-xs font-semibold text-warning-800">
                     {form.scheduledAt ? 'Campaign will be scheduled' : 'Campaign will be sent immediately'}
                   </p>
-                  <p className="text-[11px] text-warning-600 mt-0.5">
-                    {form.scheduledAt 
-                      ? `This will queue the campaign to process automatically at ${new Date(form.scheduledAt).toLocaleString()}.` 
+                  <p className="text-xs text-warning-700 mt-0.5">
+                    {form.scheduledAt
+                      ? `This will queue the campaign to process automatically at ${new Date(form.scheduledAt).toLocaleString()}.`
                       : 'This will create email notifications for all active users matching the target audience. The campaign cannot be undone.'}
                   </p>
                 </div>
@@ -412,14 +409,14 @@ export default function EmailCampaignsPage() {
 
       {/* Campaign Detail View */}
       {viewingCampaign && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-surface-900/40 backdrop-blur-xs">
-          <div className="bg-white rounded-2xl shadow-2xl border border-surface-200 w-full max-w-md animate-scale-up">
-            <div className="px-6 py-4 border-b border-surface-100 flex items-center justify-between">
-              <h3 className="text-sm font-bold text-surface-900">Campaign Details</h3>
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-surface-900/40">
+          <div className="bg-white rounded-lg shadow-md border border-surface-200 w-full max-w-md animate-scale-in">
+            <div className="px-6 py-4 border-b border-surface-200 flex items-center justify-between">
+              <h3 className="text-sm sm:text-base font-semibold text-surface-900">Campaign details</h3>
               <button
                 onClick={() => setViewingCampaign(null)}
                 aria-label="Close"
-                className="text-surface-400 hover:text-surface-600 p-1 rounded-lg hover:bg-surface-100 transition-colors"
+                className="text-surface-400 hover:text-surface-600 p-1 rounded-md hover:bg-surface-100 transition-colors"
               >
                 <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2} aria-hidden="true">
                   <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
@@ -429,35 +426,35 @@ export default function EmailCampaignsPage() {
             <div className="p-6 space-y-4">
               <div className="space-y-3">
                 <div>
-                  <p className="text-xs font-bold text-surface-500 uppercase tracking-wider">Campaign Name</p>
-                  <p className="text-sm font-semibold text-surface-900 mt-0.5">{viewingCampaign.name}</p>
+                  <p className="text-xs font-medium text-surface-500">Campaign name</p>
+                  <p className="text-sm font-medium text-surface-900 mt-0.5">{viewingCampaign.name}</p>
                 </div>
                 <div className="grid grid-cols-2 gap-3">
                   <div>
-                    <p className="text-xs font-bold text-surface-500 uppercase tracking-wider">Template</p>
+                    <p className="text-xs font-medium text-surface-500">Template</p>
                     <p className="text-sm text-surface-700 mt-0.5">{viewingCampaign.template.name}</p>
                   </div>
                   <div>
-                    <p className="text-xs font-bold text-surface-500 uppercase tracking-wider">Audience</p>
+                    <p className="text-xs font-medium text-surface-500">Audience</p>
                     <p className="text-sm text-surface-700 mt-0.5">{viewingCampaign.targetRole}</p>
                   </div>
                 </div>
                 <div className="grid grid-cols-3 gap-3">
-                  <div className="p-3 bg-surface-50 rounded-lg text-center">
-                    <p className="text-lg font-bold text-surface-900">{viewingCampaign.sentCount}</p>
-                    <p className="text-xs text-surface-500 font-semibold">Sent</p>
+                  <div className="p-3 bg-surface-100 border border-surface-200 rounded-md text-center">
+                    <p className="text-lg font-semibold tabular-nums text-surface-900">{viewingCampaign.sentCount}</p>
+                    <p className="text-xs text-surface-500 font-medium">Sent</p>
                   </div>
-                  <div className="p-3 bg-surface-50 rounded-lg text-center">
-                    <p className="text-lg font-bold text-surface-900">{viewingCampaign.failedCount}</p>
-                    <p className="text-xs text-surface-500 font-semibold">Failed</p>
+                  <div className="p-3 bg-surface-100 border border-surface-200 rounded-md text-center">
+                    <p className="text-lg font-semibold tabular-nums text-surface-900">{viewingCampaign.failedCount}</p>
+                    <p className="text-xs text-surface-500 font-medium">Failed</p>
                   </div>
-                  <div className="p-3 bg-surface-50 rounded-lg text-center">
+                  <div className="p-3 bg-surface-100 border border-surface-200 rounded-md flex items-center justify-center">
                     <Badge variant={STATUS_VARIANTS[viewingCampaign.status] || 'default'} dot>{viewingCampaign.status}</Badge>
                   </div>
                 </div>
                 <div>
-                  <p className="text-xs font-bold text-surface-500 uppercase tracking-wider">Sent At</p>
-                  <p className="text-sm text-surface-700 mt-0.5">
+                  <p className="text-xs font-medium text-surface-500">Sent at</p>
+                  <p className="text-sm text-surface-700 tabular-nums mt-0.5">
                     {viewingCampaign.sentAt ? new Date(viewingCampaign.sentAt).toLocaleString() : 'Not yet sent'}
                   </p>
                 </div>

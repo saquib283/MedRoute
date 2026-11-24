@@ -164,43 +164,43 @@ const VARIANT_CONFIG: Record<
 > = {
   success: {
     bg: 'bg-white',
-    border: 'border-emerald-200 shadow-xl shadow-emerald-900/10',
-    text: 'text-surface-700',
-    titleColor: 'text-emerald-800 font-extrabold',
-    iconBg: 'bg-emerald-100/90 text-emerald-700 border border-emerald-200/80',
-    progressColor: 'bg-emerald-500',
+    border: 'border-surface-200 shadow-md',
+    text: 'text-surface-600',
+    titleColor: 'text-surface-900 font-semibold',
+    iconBg: 'bg-success-50 text-success-600 border border-success-200',
+    progressColor: 'bg-success-600',
     IconComponent: CheckCircle2,
     defaultTitle: 'Success',
   },
   error: {
     bg: 'bg-white',
-    border: 'border-rose-200 shadow-xl shadow-rose-900/10',
-    text: 'text-surface-700',
-    titleColor: 'text-rose-800 font-extrabold',
-    iconBg: 'bg-rose-100/90 text-rose-700 border border-rose-200/80',
-    progressColor: 'bg-rose-500',
+    border: 'border-surface-200 shadow-md',
+    text: 'text-surface-600',
+    titleColor: 'text-surface-900 font-semibold',
+    iconBg: 'bg-danger-50 text-danger-600 border border-danger-200',
+    progressColor: 'bg-danger-600',
     IconComponent: XCircle,
     defaultTitle: 'Error',
   },
   warning: {
     bg: 'bg-white',
-    border: 'border-amber-200 shadow-xl shadow-amber-900/10',
-    text: 'text-surface-700',
-    titleColor: 'text-amber-800 font-extrabold',
-    iconBg: 'bg-amber-100/90 text-amber-700 border border-amber-200/80',
-    progressColor: 'bg-amber-500',
+    border: 'border-surface-200 shadow-md',
+    text: 'text-surface-600',
+    titleColor: 'text-surface-900 font-semibold',
+    iconBg: 'bg-warning-50 text-warning-600 border border-warning-200',
+    progressColor: 'bg-warning-500',
     IconComponent: AlertTriangle,
     defaultTitle: 'Warning',
   },
   info: {
     bg: 'bg-white',
-    border: 'border-sky-200 shadow-xl shadow-sky-900/10',
-    text: 'text-surface-700',
-    titleColor: 'text-sky-800 font-extrabold',
-    iconBg: 'bg-sky-100/90 text-sky-700 border border-sky-200/80',
-    progressColor: 'bg-sky-500',
+    border: 'border-surface-200 shadow-md',
+    text: 'text-surface-600',
+    titleColor: 'text-surface-900 font-semibold',
+    iconBg: 'bg-info-50 text-info-600 border border-info-200',
+    progressColor: 'bg-info-600',
     IconComponent: Info,
-    defaultTitle: 'Information',
+    defaultTitle: 'Notice',
   },
 };
 
@@ -225,24 +225,24 @@ function ToastCard({ t }: { t: ToastItemData }) {
     <div
       className={`
         relative overflow-hidden group
-        flex items-start gap-3.5 p-4 rounded-xl border shadow-lg backdrop-blur-md
-        transition-all duration-300 transform translate-y-0
+        flex items-start gap-3 p-3.5 rounded-lg border
+        transition-opacity duration-200
         w-[340px] sm:w-[380px] max-w-full select-none
         ${config.bg} ${config.border}
       `}
       role="alert"
     >
       {/* Accent Icon Badge */}
-      <div className={`p-2 rounded-lg shrink-0 mt-0.5 ${config.iconBg}`}>
-        <Icon className="w-5 h-5" />
+      <div className={`p-1.5 rounded-md shrink-0 mt-0.5 ${config.iconBg}`}>
+        <Icon className="w-4 h-4" />
       </div>
 
       {/* Message Content */}
       <div className="flex-1 pr-2 min-w-0">
-        <h4 className={`text-xs uppercase tracking-wider ${config.titleColor}`}>
+        <h4 className={`text-xs ${config.titleColor}`}>
           {t.title || config.defaultTitle}
         </h4>
-        <p className={`text-xs leading-relaxed font-medium mt-0.5 break-words ${config.text}`}>
+        <p className={`text-xs leading-relaxed mt-0.5 break-words ${config.text}`}>
           {t.message}
         </p>
       </div>

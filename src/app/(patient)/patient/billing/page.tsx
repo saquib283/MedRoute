@@ -2,13 +2,13 @@
 
 /**
  * Afzal Healthcare — Patient Medical Billing & Receipts
- * Container-adaptive responsive invoice breakdown, humanized clinical charge categories,
- * accessible native <dialog> payment flow, and beneficiary wire-transfer instructions.
+ * Clean 8px/6px clinical invoice layout, container-adaptive mobile table, and restrained typography.
  */
 
 import React, { useState, useEffect, useCallback } from 'react';
 import { Card } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
+import { Badge } from '@/components/ui/Badge';
 import { Modal } from '@/components/ui/Modal';
 import { Select, SelectOption } from '@/components/ui/Select';
 import { toast } from '@/components/ui/Toast';
@@ -16,14 +16,10 @@ import {
   Receipt,
   Download,
   CheckCircle2,
-  Clock,
   AlertCircle,
   Building2,
-  Layers,
   ShieldCheck,
   CreditCard,
-  Percent,
-  Ban,
   Landmark,
   FileCheck,
   RefreshCw,
@@ -109,7 +105,6 @@ export default function PatientBillingPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
 
-  // Payment Modal State
   const [paymentModalBill, setPaymentModalBill] = useState<MedicalBill | null>(null);
   const [paymentMode, setPaymentMode] = useState<'FULL' | 'CUSTOM'>('FULL');
   const [customAmount, setCustomAmount] = useState('');
@@ -212,48 +207,23 @@ export default function PatientBillingPage() {
   const renderStatusBadge = (status: string) => {
     switch (status) {
       case 'PAID':
-        return (
-          <span className="inline-flex items-center gap-1.5 bg-success-50 text-success-800 border border-success-200 px-3 py-1 rounded-full text-xs font-semibold">
-            <CheckCircle2 className="w-3.5 h-3.5 text-success-600" aria-hidden="true" />
-            Settled in Full
-          </span>
-        );
+        return <Badge variant="success" dot>Settled in Full</Badge>;
       case 'PARTIALLY_PAID':
-        return (
-          <span className="inline-flex items-center gap-1.5 bg-info-50 text-info-800 border border-info-200 px-3 py-1 rounded-full text-xs font-semibold">
-            <Percent className="w-3.5 h-3.5 text-info-600" aria-hidden="true" />
-            Deposit Received
-          </span>
-        );
+        return <Badge variant="info" dot>Deposit Received</Badge>;
       case 'OVERDUE':
-        return (
-          <span className="inline-flex items-center gap-1.5 bg-danger-50 text-danger-800 border border-danger-200 px-3 py-1 rounded-full text-xs font-semibold">
-            <AlertCircle className="w-3.5 h-3.5 text-danger-600" aria-hidden="true" />
-            Payment Overdue
-          </span>
-        );
+        return <Badge variant="danger" dot>Payment Overdue</Badge>;
       case 'CANCELLED':
-        return (
-          <span className="inline-flex items-center gap-1.5 bg-surface-100 text-surface-700 border border-surface-300 px-3 py-1 rounded-full text-xs font-semibold">
-            <Ban className="w-3.5 h-3.5 text-surface-500" aria-hidden="true" />
-            Cancelled
-          </span>
-        );
+        return <Badge variant="default">Cancelled</Badge>;
       default:
-        return (
-          <span className="inline-flex items-center gap-1.5 bg-warning-50 text-warning-800 border border-warning-200 px-3 py-1 rounded-full text-xs font-semibold">
-            <Clock className="w-3.5 h-3.5 text-warning-600" aria-hidden="true" />
-            Pending Payment
-          </span>
-        );
+        return <Badge variant="warning" dot>Pending Payment</Badge>;
     }
   };
 
   if (isLoading) {
     return (
-      <div className="max-w-6xl mx-auto space-y-6 py-2">
-        <div className="h-16 w-72 rounded-2xl bg-surface-200/70 animate-pulse" />
-        <div className="h-96 rounded-3xl bg-white border border-surface-200 animate-pulse" />
+      <div className="space-y-6">
+        <div className="h-14 w-64 rounded-lg bg-surface-200/70 animate-pulse" />
+        <div className="h-96 rounded-lg bg-white border border-surface-200 animate-pulse" />
       </div>
     );
   }
@@ -263,26 +233,26 @@ export default function PatientBillingPage() {
   const modalDue = Math.max(0, Math.round((modalTotal - modalPaid) * 100) / 100);
 
   return (
-    <div className="space-y-8 animate-fade-in max-w-6xl mx-auto pb-12">
-      {/* Single Authoritative Page Header */}
-      <div>
-        <h1 className="text-2xl sm:text-3xl font-extrabold text-surface-900 tracking-tight">
+    <div className="space-y-6 pb-10 animate-fade-in">
+      {/* Flat Aligned Page Header */}
+      <div className="pb-5 border-b border-surface-200">
+        <h1 className="text-xl sm:text-2xl font-semibold text-surface-900 tracking-tight">
           Medical Billing &amp; Receipts
         </h1>
-        <p className="text-xs sm:text-sm text-surface-600 mt-1 max-w-2xl">
-          Review verified hospital invoices, inspect itemized care charges, and download official receipts for insurance or foreign-exchange clearance.
+        <p className="text-xs sm:text-sm text-surface-500 mt-1 max-w-2xl">
+          Review verified hospital statements, inspect itemized department charges, and download official tax receipts.
         </p>
       </div>
 
       {loadError ? (
         <div
           role="alert"
-          className="p-5 rounded-2xl bg-danger-50 border border-danger-200 text-danger-900 flex flex-col sm:flex-row sm:items-center justify-between gap-4"
+          className="p-4 rounded-lg bg-danger-50 border border-danger-200 text-danger-900 flex flex-col sm:flex-row sm:items-center justify-between gap-4"
         >
           <div className="flex items-start gap-3">
-            <AlertCircle className="w-5 h-5 text-danger-600 shrink-0 mt-0.5" aria-hidden="true" />
+            <AlertCircle className="w-4 h-4 text-danger-600 shrink-0 mt-0.5" aria-hidden="true" />
             <div>
-              <h2 className="text-sm font-bold">Could not load your invoices</h2>
+              <h2 className="text-sm font-semibold">Could not load your invoices</h2>
               <p className="text-xs text-danger-800 mt-0.5">{loadError}</p>
             </div>
           </div>
@@ -292,17 +262,17 @@ export default function PatientBillingPage() {
             size="sm"
             onClick={() => void fetchPatientBills()}
           >
-            <RefreshCw className="w-4 h-4" aria-hidden="true" />
+            <RefreshCw className="w-3.5 h-3.5" aria-hidden="true" />
             <span>Retry</span>
           </Button>
         </div>
       ) : bills.length === 0 ? (
-        <Card className="p-12 text-center space-y-3 rounded-3xl border border-surface-200">
-          <div className="w-12 h-12 rounded-2xl bg-surface-100 text-surface-500 flex items-center justify-center mx-auto">
-            <Receipt className="w-6 h-6" aria-hidden="true" />
+        <Card className="p-10 text-center space-y-2.5">
+          <div className="w-10 h-10 rounded-md bg-surface-100 text-surface-500 border border-surface-200 flex items-center justify-center mx-auto">
+            <Receipt className="w-5 h-5" aria-hidden="true" />
           </div>
-          <h2 className="text-base font-bold text-surface-900">No hospital invoices issued yet</h2>
-          <p className="text-xs text-surface-600 max-w-sm mx-auto">
+          <h2 className="text-sm font-semibold text-surface-900">No hospital invoices issued yet</h2>
+          <p className="text-xs text-surface-500 max-w-sm mx-auto">
             Your case coordinator will post pro-forma cost estimates and itemized hospital bills here as your care plan is finalized.
           </p>
         </Card>
@@ -316,20 +286,19 @@ export default function PatientBillingPage() {
             const breakdownHeadingId = `invoice-breakdown-${bill.id}`;
 
             return (
-              <Card
-                key={bill.id}
-                className="p-5 sm:p-6 rounded-3xl border border-surface-200 shadow-xs space-y-6"
-              >
+              <Card key={bill.id} className="p-5 sm:p-6 space-y-5">
                 {/* Bill Header */}
-                <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-4 border-b border-surface-100 pb-5">
-                  <div className="space-y-1.5">
+                <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-4 border-b border-surface-200 pb-4">
+                  <div className="space-y-1">
                     <div className="flex items-center gap-2 flex-wrap">
-                      <span className="text-xs font-bold uppercase tracking-wider text-primary-800 bg-primary-50 border border-primary-200 px-2.5 py-0.5 rounded-lg tabular-nums">
+                      <span className="font-mono text-xs font-medium text-surface-700 bg-surface-100 border border-surface-200 px-2 py-0.5 rounded tabular-nums">
                         {bill.billNumber}
                       </span>
                       {renderStatusBadge(bill.status)}
                     </div>
-                    <h2 className="text-lg sm:text-xl font-bold text-surface-900">{bill.title}</h2>
+                    <h2 className="text-base sm:text-lg font-semibold text-surface-900 pt-0.5">
+                      {bill.title}
+                    </h2>
                     <p className="text-xs text-surface-500 tabular-nums">
                       Issued{' '}
                       {new Date(bill.createdAt).toLocaleDateString('en-US', {
@@ -341,17 +310,17 @@ export default function PatientBillingPage() {
                   </div>
 
                   <div className="sm:text-right sm:border-l sm:border-surface-200 sm:pl-6">
-                    <p className="text-xs font-semibold text-surface-500">Total Invoice</p>
-                    <p className="text-2xl font-extrabold text-surface-900 mt-0.5 tabular-nums">
+                    <p className="text-xs font-medium text-surface-500">Total Invoice</p>
+                    <p className="text-2xl font-semibold tracking-tight text-surface-900 mt-0.5 tabular-nums">
                       ${total.toLocaleString('en-US', { minimumFractionDigits: 2 })} {bill.currency}
                     </p>
                     {due > 0 ? (
-                      <p className="text-xs font-semibold text-warning-700 mt-0.5 tabular-nums">
+                      <p className="text-xs font-medium text-warning-700 mt-0.5 tabular-nums">
                         Balance due: ${due.toLocaleString('en-US', { minimumFractionDigits: 2 })}{' '}
                         {bill.currency}
                       </p>
                     ) : (
-                      <p className="text-xs font-semibold text-success-700 mt-0.5 tabular-nums">
+                      <p className="text-xs font-medium text-success-700 mt-0.5 tabular-nums">
                         Paid in full ($0.00 due)
                       </p>
                     )}
@@ -359,79 +328,75 @@ export default function PatientBillingPage() {
                 </div>
 
                 {/* Settlement Progress */}
-                <div className="bg-surface-50 p-4 rounded-2xl border border-surface-200 space-y-2">
+                <div className="bg-surface-50 px-4 py-3 rounded-md border border-surface-200 space-y-2">
                   <div className="flex items-center justify-between gap-2 flex-wrap text-xs">
-                    <span className="font-semibold text-surface-700">Settlement Progress</span>
-                    <span className="font-bold text-primary-800 tabular-nums">
+                    <span className="font-medium text-surface-600">Settlement Progress</span>
+                    <span className="font-medium text-surface-900 tabular-nums">
                       {paidPercent}% settled ($
                       {paid.toLocaleString('en-US', { minimumFractionDigits: 2 })} of $
                       {total.toLocaleString('en-US', { minimumFractionDigits: 2 })})
                     </span>
                   </div>
-                  <div className="h-2.5 bg-surface-200 rounded-full overflow-hidden">
+                  <div className="h-1.5 bg-surface-200 rounded-full overflow-hidden">
                     <div
-                      className="h-full bg-success-600 rounded-full transition-[width] duration-300"
+                      className="h-full bg-primary-600 rounded-full transition-[width] duration-300"
                       style={{ width: `${paidPercent}%` }}
                     />
                   </div>
                 </div>
 
                 {/* Container-Adaptive Itemized Breakdown Table */}
-                <div className="space-y-3">
-                  <h3
-                    id={breakdownHeadingId}
-                    className="text-xs font-bold uppercase tracking-wider text-surface-700 flex items-center gap-2"
-                  >
-                    <Layers className="w-4 h-4 text-primary-600" aria-hidden="true" />
-                    <span>Itemized Charges</span>
+                <div className="space-y-2.5">
+                  <h3 id={breakdownHeadingId} className="text-xs font-medium text-surface-600">
+                    Itemized Department Charges
                   </h3>
 
                   <div
                     tabIndex={0}
                     role="region"
                     aria-labelledby={breakdownHeadingId}
-                    className="invoice-table-region border border-surface-200 rounded-2xl bg-white"
+                    className="invoice-table-region border border-surface-200 rounded-lg bg-white"
                   >
                     <table className="w-full text-left text-xs">
-                      <thead className="bg-surface-50 border-b border-surface-200 text-surface-600 font-semibold uppercase tracking-wider">
+                      <thead className="bg-surface-50 border-b border-surface-200 text-[11px] font-medium uppercase tracking-wide text-surface-500">
                         <tr>
-                          <th scope="col" className="p-3.5">
+                          <th scope="col" className="px-4 py-3">
                             Description
                           </th>
-                          <th scope="col" className="p-3.5">
-                            Department / Category
+                          <th scope="col" className="px-4 py-3">
+                            Department
                           </th>
-                          <th scope="col" className="p-3.5 text-center">
+                          <th scope="col" className="px-4 py-3 text-center">
                             Qty
                           </th>
-                          <th scope="col" className="p-3.5 text-right">
+                          <th scope="col" className="px-4 py-3 text-right">
                             Unit Rate
                           </th>
-                          <th scope="col" className="p-3.5 text-right">
+                          <th scope="col" className="px-4 py-3 text-right">
                             Amount
                           </th>
                         </tr>
                       </thead>
                       <tbody className="divide-y divide-surface-100">
                         {bill.items.map((item) => (
-                          <tr key={item.id} className="hover:bg-surface-50/70">
-                            <th scope="row" className="p-3.5 font-bold text-surface-900">
+                          <tr key={item.id} className="hover:bg-surface-50/60">
+                            <th scope="row" className="px-4 py-3 font-medium text-surface-900">
                               {item.description}
                             </th>
-                            <td data-label="Category" className="p-3.5">
-                              <span className="inline-flex items-center px-2.5 py-0.5 bg-surface-100 text-surface-700 border border-surface-200 rounded-md text-xs font-medium">
+                            <td data-label="Department" className="px-4 py-3">
+                              <span className="inline-flex items-center px-2 py-0.5 bg-surface-100 text-surface-700 border border-surface-200 rounded text-[11px] font-medium">
                                 {formatBillCategory(item.category)}
                               </span>
                             </td>
                             <td
-                              data-label="Quantity"
-                              className="p-3.5 text-center font-semibold text-surface-800 tabular-nums"
+                              data-label="Qty"
+                              className="px-4 py-3 text-center text-surface-700 tabular-nums"
                             >
                               {item.quantity}
                             </td>
                             <td
                               data-label="Unit Rate"
-                              className="p-3.5 text-right font-medium text-surface-700 tabular-nums"
+                              className="px-4 py-3 text-right text-surface-600 tabular-nums"
                             >
                               ${Number(item.unitPrice).toLocaleString('en-US', {
                                 minimumFractionDigits: 2,
@@ -440,7 +405,7 @@ export default function PatientBillingPage() {
                             </td>
                             <td
                               data-label="Amount"
-                              className="p-3.5 text-right font-bold text-surface-900 tabular-nums"
+                              className="px-4 py-3 text-right font-semibold text-surface-900 tabular-nums"
                             >
                               ${Number(item.amount).toLocaleString('en-US', {
                                 minimumFractionDigits: 2,
@@ -450,12 +415,12 @@ export default function PatientBillingPage() {
                           </tr>
                         ))}
                       </tbody>
-                      <tfoot className="bg-surface-50 font-bold border-t border-surface-200">
+                      <tfoot className="bg-surface-50 border-t border-surface-200">
                         <tr>
-                          <td colSpan={4} className="p-3.5 sm:text-right text-surface-600 text-xs">
+                          <td colSpan={4} className="px-4 py-3 sm:text-right font-medium text-surface-600 text-xs">
                             Net Invoiced Total
                           </td>
-                          <td className="p-3.5 text-right text-sm text-primary-800 font-extrabold tabular-nums">
+                          <td className="px-4 py-3 text-right text-sm text-surface-900 font-semibold tabular-nums">
                             ${total.toLocaleString('en-US', { minimumFractionDigits: 2 })}{' '}
                             {bill.currency}
                           </td>
@@ -465,12 +430,12 @@ export default function PatientBillingPage() {
                   </div>
                 </div>
 
-                {/* Hospital & Coordinator Note */}
+                {/* Hospital & Billing Note */}
                 {(bill.hospital || bill.notes) && (
-                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 text-xs text-surface-700 bg-surface-50 px-4 py-3 rounded-2xl border border-surface-200">
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 text-xs text-surface-600 bg-surface-50 px-3.5 py-2.5 rounded-md border border-surface-200">
                     {bill.hospital && (
-                      <span className="inline-flex items-center gap-1.5 font-semibold text-surface-800">
-                        <Building2 className="w-4 h-4 text-primary-600 shrink-0" aria-hidden="true" />
+                      <span className="inline-flex items-center gap-1.5 font-medium text-surface-800">
+                        <Building2 className="w-3.5 h-3.5 text-surface-500 shrink-0" aria-hidden="true" />
                         <span>
                           {bill.hospital.name} ({bill.hospital.city})
                         </span>
@@ -478,42 +443,41 @@ export default function PatientBillingPage() {
                     )}
                     {bill.notes && (
                       <p className="text-surface-600">
-                        <strong className="text-surface-800">Billing Note:</strong> {bill.notes}
+                        <span className="font-medium text-surface-800">Note:</span> {bill.notes}
                       </p>
                     )}
                   </div>
                 )}
 
                 {/* Footer Actions */}
-                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pt-1">
-                  <div className="text-xs text-surface-600 flex items-center gap-2">
-                    <ShieldCheck className="w-4 h-4 text-success-600 shrink-0" aria-hidden="true" />
-                    <span>Verified hospital statement — receipts update automatically after settlement</span>
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pt-1">
+                  <div className="text-xs text-surface-500 flex items-center gap-1.5">
+                    <ShieldCheck className="w-4 h-4 text-primary-600 shrink-0" aria-hidden="true" />
+                    <span>Official hospital statement — receipts update upon settlement</span>
                   </div>
 
                   <div className="flex flex-wrap items-center gap-2.5">
-                    {bill.status !== 'CANCELLED' && due > 0 && (
-                      <Button
-                        type="button"
-                        size="md"
-                        onClick={() => openPaymentModal(bill)}
-                        className="bg-success-600 hover:bg-success-700 text-white"
-                      >
-                        <CreditCard className="w-4 h-4" aria-hidden="true" />
-                        <span>Pay Balance</span>
-                      </Button>
-                    )}
-
                     {bill.fileUrl && (
                       <a
                         href={bill.fileUrl}
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="inline-flex items-center justify-center gap-2 min-h-11 px-4 bg-primary-600 hover:bg-primary-700 active:scale-[0.96] text-white font-semibold rounded-xl text-xs transition-[background-color,transform] duration-150 shadow-2xs"
+                        className="inline-flex items-center justify-center gap-2 min-h-11 px-3.5 bg-white hover:bg-surface-100 text-surface-700 border border-surface-300 font-medium rounded-md text-xs transition-colors shadow-2xs"
                       >
-                        <Download className="w-4 h-4" aria-hidden="true" />
-                        <span>Download Tax Invoice PDF</span>
+                        <Download className="w-3.5 h-3.5" aria-hidden="true" />
+                        <span>Download PDF Invoice</span>
                       </a>
+                    )}
+
+                    {bill.status !== 'CANCELLED' && due > 0 && (
+                      <Button
+                        type="button"
+                        size="sm"
+                        onClick={() => openPaymentModal(bill)}
+                      >
+                        <CreditCard className="w-3.5 h-3.5" aria-hidden="true" />
+                        <span>Pay Balance</span>
+                      </Button>
                     )}
                   </div>
                 </div>
@@ -534,21 +498,20 @@ export default function PatientBillingPage() {
             ? `${paymentModalBill.billNumber} • ${paymentModalBill.title}`
             : undefined
         }
-        icon={<CreditCard className="w-5 h-5" />}
+        icon={<CreditCard className="w-4 h-4" />}
       >
         {paymentModalBill && (
-          <form onSubmit={handlePaymentSubmit} className="space-y-5">
-            <div className="p-4 bg-surface-50 rounded-2xl border border-surface-200 flex items-center justify-between text-xs">
-              <span className="font-semibold text-surface-600">Remaining Balance Due</span>
-              <span className="text-base font-extrabold text-surface-900 tabular-nums">
+          <form onSubmit={handlePaymentSubmit} className="space-y-4">
+            <div className="px-3.5 py-3 bg-surface-50 rounded-md border border-surface-200 flex items-center justify-between text-xs">
+              <span className="font-medium text-surface-600">Remaining Balance Due</span>
+              <span className="text-base font-semibold text-surface-900 tabular-nums">
                 ${modalDue.toLocaleString('en-US', { minimumFractionDigits: 2 })}{' '}
                 {paymentModalBill.currency}
               </span>
             </div>
 
-            {/* Amount Selection */}
-            <fieldset className="space-y-2.5">
-              <legend className="text-xs font-bold text-surface-700">Payment Amount</legend>
+            <fieldset className="space-y-2">
+              <legend className="text-xs font-medium text-surface-700">Payment Amount</legend>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
                 <button
                   type="button"
@@ -556,14 +519,14 @@ export default function PatientBillingPage() {
                     setPaymentMode('FULL');
                     setCustomAmount(modalDue.toFixed(2));
                   }}
-                  className={`min-h-14 p-3.5 rounded-2xl border text-left transition-colors ${
+                  className={`min-h-14 p-3 rounded-md border text-left transition-colors ${
                     paymentMode === 'FULL'
-                      ? 'border-primary-600 bg-primary-50 text-primary-950 ring-1 ring-primary-600'
-                      : 'border-surface-200 bg-white text-surface-700 hover:bg-surface-50'
+                      ? 'border-primary-600 bg-primary-50/70 text-surface-900'
+                      : 'border-surface-300 bg-white text-surface-700 hover:bg-surface-50'
                   }`}
                 >
-                  <span className="text-xs font-bold block">Full Remaining Balance</span>
-                  <span className="text-xs font-semibold text-primary-700 mt-0.5 block tabular-nums">
+                  <span className="text-xs font-medium block">Full Remaining Balance</span>
+                  <span className="text-xs text-primary-700 mt-0.5 block tabular-nums font-medium">
                     ${modalDue.toFixed(2)} {paymentModalBill.currency}
                   </span>
                 </button>
@@ -571,13 +534,13 @@ export default function PatientBillingPage() {
                 <button
                   type="button"
                   onClick={() => setPaymentMode('CUSTOM')}
-                  className={`min-h-14 p-3.5 rounded-2xl border text-left transition-colors ${
+                  className={`min-h-14 p-3 rounded-md border text-left transition-colors ${
                     paymentMode === 'CUSTOM'
-                      ? 'border-primary-600 bg-primary-50 text-primary-950 ring-1 ring-primary-600'
-                      : 'border-surface-200 bg-white text-surface-700 hover:bg-surface-50'
+                      ? 'border-primary-600 bg-primary-50/70 text-surface-900'
+                      : 'border-surface-300 bg-white text-surface-700 hover:bg-surface-50'
                   }`}
                 >
-                  <span className="text-xs font-bold block">Custom Deposit</span>
+                  <span className="text-xs font-medium block">Custom Deposit</span>
                   <span className="text-xs text-surface-500 mt-0.5 block">
                     Enter partial installment
                   </span>
@@ -588,7 +551,7 @@ export default function PatientBillingPage() {
                 <div className="pt-1">
                   <label
                     htmlFor="custom-payment-amount"
-                    className="block text-xs font-semibold text-surface-700 mb-1"
+                    className="block text-xs font-medium text-surface-700 mb-1"
                   >
                     Installment Amount ({paymentModalBill.currency})
                   </label>
@@ -601,14 +564,13 @@ export default function PatientBillingPage() {
                     value={customAmount}
                     onChange={(e) => setCustomAmount(e.target.value)}
                     placeholder={`Up to ${modalDue.toFixed(2)}`}
-                    className="w-full min-h-11 px-3.5 bg-white border border-surface-300 rounded-xl text-xs font-bold text-surface-900 tabular-nums focus:outline-none focus:border-primary-600"
+                    className="w-full min-h-11 px-3 bg-white border border-surface-300 rounded-md text-sm text-surface-900 tabular-nums focus:outline-none focus:border-primary-600"
                     required
                   />
                 </div>
               )}
             </fieldset>
 
-            {/* Custom Select for Payment Method */}
             <Select
               label="Settlement Method"
               options={PAYMENT_METHOD_OPTIONS}
@@ -617,53 +579,51 @@ export default function PatientBillingPage() {
               required
             />
 
-            {/* Contextual Wire Transfer / Insurance Guidance */}
             {paymentMethod === 'WIRE_TRANSFER' && (
-              <div className="p-4 rounded-2xl bg-info-50 border border-info-200 text-xs text-info-900 space-y-2">
-                <div className="flex items-center gap-2 font-bold">
-                  <Landmark className="w-4 h-4 text-info-700 shrink-0" aria-hidden="true" />
+              <div className="p-3.5 rounded-md bg-surface-50 border border-surface-200 text-xs text-surface-700 space-y-2">
+                <div className="flex items-center gap-2 font-medium text-surface-900">
+                  <Landmark className="w-4 h-4 text-primary-600 shrink-0" aria-hidden="true" />
                   <span>International Wire Beneficiary Details</span>
                 </div>
                 <dl className="grid grid-cols-1 sm:grid-cols-2 gap-x-4 gap-y-1.5 text-[11px]">
                   <div>
-                    <dt className="text-info-700 font-medium">Beneficiary</dt>
-                    <dd className="font-bold text-surface-900">Afzal Healthcare Escrow</dd>
+                    <dt className="text-surface-500">Beneficiary</dt>
+                    <dd className="font-medium text-surface-900">Afzal Healthcare Escrow</dd>
                   </div>
                   <div>
-                    <dt className="text-info-700 font-medium">Bank &amp; Branch</dt>
-                    <dd className="font-bold text-surface-900">HDFC Bank, Fort Mumbai</dd>
+                    <dt className="text-surface-500">Bank &amp; Branch</dt>
+                    <dd className="font-medium text-surface-900">HDFC Bank, Fort Mumbai</dd>
                   </div>
                   <div>
-                    <dt className="text-info-700 font-medium">SWIFT / BIC Code</dt>
-                    <dd className="font-mono font-bold text-surface-900">HDFCINBBXXX</dd>
+                    <dt className="text-surface-500">SWIFT / BIC Code</dt>
+                    <dd className="font-mono font-medium text-surface-900">HDFCINBBXXX</dd>
                   </div>
                   <div>
-                    <dt className="text-info-700 font-medium">Escrow Account</dt>
-                    <dd className="font-mono font-bold text-surface-900 tabular-nums">
+                    <dt className="text-surface-500">Escrow Account</dt>
+                    <dd className="font-mono font-medium text-surface-900 tabular-nums">
                       50200078419204
                     </dd>
                   </div>
                 </dl>
-                <p className="text-[11px] text-info-800 pt-1 border-t border-info-200/70">
-                  Include invoice reference <strong>{paymentModalBill.billNumber}</strong> in the transfer memo, then enter your bank UTR/SWIFT reference below.
+                <p className="text-[11px] text-surface-600 pt-1.5 border-t border-surface-200">
+                  Include invoice reference <strong className="font-medium text-surface-900">{paymentModalBill.billNumber}</strong> in the transfer memo, then enter your bank UTR/SWIFT reference below.
                 </p>
               </div>
             )}
 
             {paymentMethod === 'INSURANCE_DIRECT' && (
-              <div className="p-3.5 rounded-2xl bg-primary-50 border border-primary-200 text-xs text-primary-900 flex items-start gap-2.5">
-                <FileCheck className="w-4 h-4 text-primary-700 shrink-0 mt-0.5" aria-hidden="true" />
+              <div className="p-3.5 rounded-md bg-surface-50 border border-surface-200 text-xs text-surface-700 flex items-start gap-2.5">
+                <FileCheck className="w-4 h-4 text-primary-600 shrink-0 mt-0.5" aria-hidden="true" />
                 <p className="leading-relaxed">
                   Enter your insurer&apos;s Guarantee of Payment (GOP) or pre-authorization claim number below so hospital billing can reconcile coverage directly.
                 </p>
               </div>
             )}
 
-            {/* Payment Reference */}
             <div className="space-y-1.5">
               <label
                 htmlFor="payment-reference-input"
-                className="text-xs font-bold text-surface-700 block"
+                className="text-xs font-medium text-surface-700 block"
               >
                 {paymentMethod === 'WIRE_TRANSFER'
                   ? 'SWIFT / Bank Wire Reference'
@@ -684,25 +644,22 @@ export default function PatientBillingPage() {
                     ? 'e.g. GOP-AXA-44109'
                     : 'Optional card receipt or authorization code'
                 }
-                className="w-full min-h-11 px-3.5 bg-white border border-surface-300 rounded-xl text-xs font-medium text-surface-900 focus:outline-none focus:border-primary-600"
+                className="w-full min-h-11 px-3 bg-white border border-surface-300 rounded-md text-sm text-surface-900 focus:outline-none focus:border-primary-600"
               />
             </div>
 
-            <div className="flex items-center justify-end gap-3 pt-2 border-t border-surface-100">
+            <div className="flex items-center justify-end gap-2.5 pt-3 border-t border-surface-100">
               <Button
                 type="button"
                 variant="secondary"
+                size="sm"
                 onClick={() => setPaymentModalBill(null)}
                 disabled={isPaying}
               >
                 Cancel
               </Button>
-              <Button
-                type="submit"
-                isLoading={isPaying}
-                className="bg-success-600 hover:bg-success-700 text-white"
-              >
-                <CheckCircle2 className="w-4 h-4" aria-hidden="true" />
+              <Button type="submit" size="sm" isLoading={isPaying}>
+                <CheckCircle2 className="w-3.5 h-3.5" aria-hidden="true" />
                 <span>{isPaying ? 'Recording…' : 'Record Payment'}</span>
               </Button>
             </div>

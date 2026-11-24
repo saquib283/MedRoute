@@ -133,9 +133,9 @@ export default function DoctorPatientsPage() {
   return (
     <div className="space-y-6 animate-fade-in">
       {/* Header & Search */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-5 border-b border-surface-200">
         <div>
-          <h1 className="text-2xl font-bold text-surface-900">My Patients</h1>
+          <h1 className="text-xl sm:text-2xl font-semibold text-surface-900 tracking-tight">My patients</h1>
           <p className="text-sm text-surface-500 mt-0.5">
             Clinical safety profiles, decrypted allergies &amp; medications, and active treatment cases.
           </p>
@@ -148,14 +148,14 @@ export default function DoctorPatientsPage() {
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             placeholder="Search patient, country, allergy..."
-            className="w-full pl-10 pr-9 py-2.5 rounded-xl border border-surface-200 bg-white text-xs text-surface-900 focus:border-primary-600 focus:outline-none"
+            className="w-full min-h-11 pl-10 pr-10 py-2 rounded-md border border-surface-300 bg-white text-sm text-surface-900 placeholder:text-surface-400 focus:border-primary-600 focus:outline-none transition-colors"
           />
           {searchQuery && (
             <button
               type="button"
               onClick={() => setSearchQuery('')}
               aria-label="Clear search"
-              className="absolute right-3 top-1/2 -translate-y-1/2 text-surface-400 hover:text-surface-600"
+              className="absolute right-0 top-0 w-11 h-11 flex items-center justify-center text-surface-400 hover:text-surface-700"
             >
               <X className="w-4 h-4" />
             </button>
@@ -166,7 +166,7 @@ export default function DoctorPatientsPage() {
       {loading ? (
         <div className="flex items-center justify-center py-20">
           <div className="flex flex-col items-center gap-3">
-            <div className="w-8 h-8 border-4 border-primary-600 border-t-transparent rounded-full animate-spin" />
+            <div className="w-7 h-7 border-2 border-primary-600 border-t-transparent rounded-full animate-spin" />
             <span className="text-sm font-medium text-surface-500">Loading clinical profiles...</span>
           </div>
         </div>
@@ -189,13 +189,13 @@ export default function DoctorPatientsPage() {
               <Card key={patient.id} className="p-5 space-y-4 flex flex-col justify-between">
                 <div className="space-y-4">
                   {/* Patient Header */}
-                  <div className="flex flex-wrap items-start justify-between gap-2 pb-3 border-b border-surface-100">
+                  <div className="flex flex-wrap items-start justify-between gap-2 pb-3 border-b border-surface-200">
                     <div>
-                      <h2 className="text-base font-bold text-surface-900">
+                      <h2 className="text-base font-semibold text-surface-900">
                         {patient.user.fullName}
                       </h2>
                       <p className="text-xs text-surface-500 mt-0.5">
-                        {patient.nationality} • Passport: {patient.passportNo || '—'}
+                        {patient.nationality} • Passport: <span className="font-mono">{patient.passportNo || '—'}</span>
                       </p>
                       {patient.medicalCondition && (
                         <p className="text-xs font-medium text-surface-700 mt-1">
@@ -216,18 +216,17 @@ export default function DoctorPatientsPage() {
 
                   {/* Clinical Safety Alerts */}
                   <div className="space-y-2.5 text-xs">
-                    {/* Allergies highlighted in rose */}
                     <div
-                      className={`p-3 rounded-xl border ${
+                      className={`p-3 rounded-md border ${
                         allergies.length > 0
-                          ? 'bg-rose-50 border-rose-200 text-rose-900'
+                          ? 'bg-danger-50/70 border-danger-200 text-danger-900'
                           : 'bg-surface-50 border-surface-200 text-surface-600'
                       }`}
                     >
-                      <p className="font-bold flex items-center gap-1.5 mb-1">
+                      <p className="font-semibold flex items-center gap-1.5 mb-1">
                         <AlertTriangle
                           className={`w-3.5 h-3.5 ${
-                            allergies.length > 0 ? 'text-rose-600' : 'text-surface-400'
+                            allergies.length > 0 ? 'text-danger-600' : 'text-surface-400'
                           }`}
                         />
                         Allergies
@@ -237,7 +236,7 @@ export default function DoctorPatientsPage() {
                           {allergies.map((allergy, idx) => (
                             <span
                               key={`${patient.id}-allergy-${idx}`}
-                              className="px-2 py-0.5 rounded-md bg-rose-100 text-rose-800 border border-rose-200 font-semibold"
+                              className="px-2 py-0.5 rounded bg-danger-100 text-danger-800 border border-danger-200 font-medium"
                             >
                               {allergy}
                             </span>
@@ -249,9 +248,9 @@ export default function DoctorPatientsPage() {
                     </div>
 
                     <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
-                      <div className="p-2.5 rounded-xl bg-surface-50 border border-surface-200/80">
-                        <p className="font-bold text-surface-700 flex items-center gap-1 mb-1">
-                          <HeartPulse className="w-3.5 h-3.5 text-amber-600" />
+                      <div className="p-2.5 rounded-md bg-surface-50 border border-surface-200">
+                        <p className="font-medium text-surface-700 flex items-center gap-1.5 mb-1">
+                          <HeartPulse className="w-3.5 h-3.5 text-surface-500" />
                           Chronic
                         </p>
                         <p className="text-surface-600">
@@ -259,9 +258,9 @@ export default function DoctorPatientsPage() {
                         </p>
                       </div>
 
-                      <div className="p-2.5 rounded-xl bg-surface-50 border border-surface-200/80">
-                        <p className="font-bold text-surface-700 flex items-center gap-1 mb-1">
-                          <Pill className="w-3.5 h-3.5 text-primary-600" />
+                      <div className="p-2.5 rounded-md bg-surface-50 border border-surface-200">
+                        <p className="font-medium text-surface-700 flex items-center gap-1.5 mb-1">
+                          <Pill className="w-3.5 h-3.5 text-surface-500" />
                           Medications
                         </p>
                         <p className="text-surface-600">
@@ -269,10 +268,10 @@ export default function DoctorPatientsPage() {
                         </p>
                       </div>
 
-                      <div className="p-2.5 rounded-xl bg-surface-50 border border-surface-200/80">
-                        <p className="font-bold text-surface-700 flex items-center gap-1 mb-1">
-                          <Scissors className="w-3.5 h-3.5 text-teal-600" />
-                          Prior Surgeries
+                      <div className="p-2.5 rounded-md bg-surface-50 border border-surface-200">
+                        <p className="font-medium text-surface-700 flex items-center gap-1.5 mb-1">
+                          <Scissors className="w-3.5 h-3.5 text-surface-500" />
+                          Prior surgeries
                         </p>
                         <p className="text-surface-600">
                           {surgeries.length > 0 ? surgeries.join(', ') : 'None listed'}
@@ -283,9 +282,9 @@ export default function DoctorPatientsPage() {
                 </div>
 
                 {/* Active Cases */}
-                <div className="pt-3 border-t border-surface-100 space-y-2">
-                  <p className="text-[11px] font-bold uppercase tracking-wider text-surface-500">
-                    Active Clinical Cases ({activeCases.length})
+                <div className="pt-3 border-t border-surface-200 space-y-2">
+                  <p className="text-xs font-medium text-surface-500">
+                    Active clinical cases ({activeCases.length})
                   </p>
                   {activeCases.length === 0 ? (
                     <p className="text-xs text-surface-400">No open cases linked to this patient.</p>
@@ -294,7 +293,7 @@ export default function DoctorPatientsPage() {
                       {activeCases.map((c) => (
                         <div
                           key={c.id}
-                          className="flex flex-wrap items-center justify-between gap-2 p-2.5 rounded-xl bg-surface-50 border border-surface-200/80"
+                          className="flex flex-wrap items-center justify-between gap-2 p-2.5 rounded-md bg-surface-50 border border-surface-200"
                         >
                           <div className="flex flex-wrap items-center gap-1.5">
                             <CaseStatusBadge status={c.status} />

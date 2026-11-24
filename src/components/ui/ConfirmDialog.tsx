@@ -2,7 +2,7 @@
 
 /**
  * Afzal Healthcare — Confirmation Dialog
- * Built on the native <dialog> element with initial focus placed on the safe Cancel action.
+ * Restrained native <dialog> confirmation with 8px panel radius and 6px buttons.
  */
 
 import React, { useEffect, useId, useRef } from 'react';
@@ -83,49 +83,51 @@ export function ConfirmDialog({
         }
       }}
       {...({ closedby: loading ? 'none' : 'closerequest' } as Record<string, unknown>)}
-      className="m-auto w-[calc(100%-2rem)] max-w-sm rounded-3xl border border-surface-200 bg-white p-0 text-surface-900 shadow-2xl open:animate-scale-in"
+      className="m-auto w-[calc(100%-2rem)] max-w-md rounded-lg border border-surface-200 bg-white p-0 text-surface-900 shadow-md open:animate-scale-in"
     >
-      <div className="p-6 space-y-5">
-        <div
-          className={`w-12 h-12 rounded-2xl flex items-center justify-center mx-auto ${
-            variant === 'danger'
-              ? 'bg-danger-100 text-danger-600 border border-danger-200'
-              : 'bg-warning-100 text-warning-700 border border-warning-200'
-          }`}
-        >
-          <svg
-            className="w-6 h-6"
-            fill="none"
-            viewBox="0 0 24 24"
-            stroke="currentColor"
-            strokeWidth={2}
-            aria-hidden="true"
+      <div className="p-5 space-y-4">
+        <div className="flex items-start gap-3.5">
+          <div
+            className={`w-10 h-10 rounded-md flex items-center justify-center shrink-0 ${
+              variant === 'danger'
+                ? 'bg-danger-50 text-danger-600 border border-danger-200'
+                : 'bg-warning-50 text-warning-700 border border-warning-200'
+            }`}
           >
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"
-            />
-          </svg>
+            <svg
+              className="w-5 h-5"
+              fill="none"
+              viewBox="0 0 24 24"
+              stroke="currentColor"
+              strokeWidth={1.75}
+              aria-hidden="true"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"
+              />
+            </svg>
+          </div>
+
+          <div className="min-w-0 flex-1">
+            <h2 id={titleId} className="text-base font-semibold text-surface-900">
+              {title}
+            </h2>
+            <p id={descId} className="text-xs text-surface-600 mt-1 leading-relaxed">
+              {message}
+            </p>
+          </div>
         </div>
 
-        <div className="text-center">
-          <h2 id={titleId} className="text-lg font-bold text-surface-900">
-            {title}
-          </h2>
-          <p id={descId} className="text-sm text-surface-600 mt-1.5 leading-relaxed">
-            {message}
-          </p>
-        </div>
-
-        <div className="flex gap-3 pt-1">
+        <div className="flex items-center justify-end gap-2.5 pt-3 border-t border-surface-100">
           <button
             ref={cancelBtnRef}
             type="button"
             autoFocus
             onClick={onCancel}
             disabled={loading}
-            className="flex-1 min-h-[44px] px-4 py-2.5 rounded-xl text-sm font-semibold bg-white hover:bg-surface-100 text-surface-700 border border-surface-300 transition-[color,background-color,border-color,transform] duration-150 active:scale-[0.96] disabled:opacity-50"
+            className="min-h-[44px] px-4 py-2 rounded-md text-xs font-medium bg-white hover:bg-surface-100 text-surface-700 border border-surface-300 transition-colors disabled:opacity-50"
           >
             {cancelLabel}
           </button>
@@ -133,16 +135,9 @@ export function ConfirmDialog({
             type="button"
             onClick={onConfirm}
             disabled={loading}
-            className={`flex-1 min-h-[44px] px-4 py-2.5 rounded-xl text-sm font-semibold transition-[color,background-color,transform] duration-150 active:scale-[0.96] disabled:opacity-50 ${confirmColor}`}
+            className={`min-h-[44px] px-4 py-2 rounded-md text-xs font-medium transition-colors disabled:opacity-50 ${confirmColor}`}
           >
-            {loading ? (
-              <span className="flex items-center justify-center gap-2">
-                <span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                Processing…
-              </span>
-            ) : (
-              confirmLabel
-            )}
+            {loading ? 'Processing…' : confirmLabel}
           </button>
         </div>
       </div>

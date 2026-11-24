@@ -2,7 +2,7 @@
 
 /**
  * Afzal Healthcare — Doctor Portal Dashboard
- * Displays specialist greeting banner, 4 clinical KPIs, upcoming encounters,
+ * Displays specialist clinical header, 4 clinical KPIs, upcoming encounters,
  * and active cases requiring physician review or Fit-to-Fly sign-off.
  */
 
@@ -130,7 +130,7 @@ export default function DoctorDashboardPage() {
     return (
       <div className="flex items-center justify-center py-20">
         <div className="flex flex-col items-center gap-3">
-          <div className="w-8 h-8 border-4 border-primary-600 border-t-transparent rounded-full animate-spin" />
+          <div className="w-7 h-7 border-2 border-primary-600 border-t-transparent rounded-full animate-spin" />
           <span className="text-sm font-medium text-surface-500">Loading clinical overview...</span>
         </div>
       </div>
@@ -139,9 +139,9 @@ export default function DoctorDashboardPage() {
 
   if (errorMsg) {
     return (
-      <Card className="p-6 border-rose-200 bg-rose-50/40">
+      <Card className="p-5 border-danger-200 bg-danger-50/50">
         <div className="flex flex-wrap items-center justify-between gap-4">
-          <p className="text-sm font-medium text-rose-700">{errorMsg}</p>
+          <p className="text-sm font-medium text-danger-800">{errorMsg}</p>
           <Button size="sm" variant="secondary" onClick={() => void loadDashboard()}>
             Retry
           </Button>
@@ -151,116 +151,103 @@ export default function DoctorDashboardPage() {
   }
 
   return (
-    <div className="space-y-8 animate-fade-in">
-      {/* Specialist Greeting Banner */}
-      <Card className="bg-gradient-to-r from-primary-700 via-primary-600 to-teal-600 text-white border-0 p-6 sm:p-7">
-        <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
-          <div className="space-y-1.5">
-            <p className="text-xs font-bold uppercase tracking-widest text-primary-100">
-              Attending Specialist Command Center
-            </p>
-            <h1 className="text-2xl sm:text-3xl font-bold tracking-tight">
-              Welcome, {formatDoctorDisplayName(doctorProfile?.fullName || '')}
-            </h1>
-            <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs sm:text-sm text-primary-50">
-              {doctorProfile?.specialisation?.name && (
-                <span className="inline-flex items-center gap-1.5">
-                  <Stethoscope className="w-4 h-4 text-primary-200" />
-                  {doctorProfile.specialisation.name}
-                </span>
-              )}
-              {doctorProfile?.hospital?.name && (
-                <span className="inline-flex items-center gap-1.5">
-                  <Building2 className="w-4 h-4 text-primary-200" />
-                  {doctorProfile.hospital.name}
-                  {doctorProfile.hospital.city ? `, ${doctorProfile.hospital.city}` : ''}
-                </span>
-              )}
-              {doctorProfile?.qualification && (
-                <span className="text-primary-100">{doctorProfile.qualification}</span>
-              )}
-            </div>
-          </div>
-
-          <div className="flex flex-wrap items-center gap-2.5 shrink-0">
-            <Link href="/doctor/appointments">
-              <Button
-                variant="secondary"
-                size="sm"
-                className="!bg-white !text-primary-700 hover:!bg-primary-50 !border-0"
-              >
-                <Calendar className="w-4 h-4" />
-                View Schedule
-              </Button>
-            </Link>
-            <Link href="/doctor/patients">
-              <Button
-                variant="ghost"
-                size="sm"
-                className="!text-white hover:!bg-white/15 border border-white/25"
-              >
-                My Patients
-              </Button>
-            </Link>
+    <div className="space-y-6 animate-fade-in">
+      {/* Flat Institutional Specialist Header */}
+      <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 pb-5 border-b border-surface-200">
+        <div className="space-y-1">
+          <h1 className="text-xl sm:text-2xl font-semibold text-surface-900 tracking-tight">
+            Welcome, {formatDoctorDisplayName(doctorProfile?.fullName || '')}
+          </h1>
+          <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-sm text-surface-500">
+            {doctorProfile?.specialisation?.name && (
+              <span className="inline-flex items-center gap-1.5">
+                <Stethoscope className="w-4 h-4 text-surface-400" />
+                {doctorProfile.specialisation.name}
+              </span>
+            )}
+            {doctorProfile?.hospital?.name && (
+              <span className="inline-flex items-center gap-1.5">
+                <Building2 className="w-4 h-4 text-surface-400" />
+                {doctorProfile.hospital.name}
+                {doctorProfile.hospital.city ? `, ${doctorProfile.hospital.city}` : ''}
+              </span>
+            )}
+            {doctorProfile?.qualification && (
+              <span className="text-surface-500">{doctorProfile.qualification}</span>
+            )}
           </div>
         </div>
-      </Card>
+
+        <div className="flex flex-wrap items-center gap-2.5 shrink-0">
+          <Link href="/doctor/appointments">
+            <Button variant="secondary" size="sm">
+              <Calendar className="w-4 h-4" />
+              View Schedule
+            </Button>
+          </Link>
+          <Link href="/doctor/patients">
+            <Button size="sm">
+              My Patients
+            </Button>
+          </Link>
+        </div>
+      </div>
 
       {/* 4 KPI Cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4 sm:gap-5">
-        <Card className="p-5 flex items-center justify-between">
+      <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
+        <Card className="p-4 flex items-start justify-between gap-3">
           <div>
-            <p className="text-xs font-bold text-surface-500 uppercase tracking-wider">
-              Today&apos;s Encounters
+            <p className="text-xs font-medium text-surface-500">
+              Today&apos;s encounters
             </p>
-            <p className="text-3xl font-bold text-surface-900 mt-2">
+            <p className="text-2xl font-semibold text-surface-900 tabular-nums mt-1.5">
               {metrics?.todayAppointments ?? 0}
             </p>
           </div>
-          <div className="p-3 bg-primary-50 rounded-xl text-primary-700 border border-primary-100">
-            <Calendar className="w-6 h-6" />
+          <div className="w-9 h-9 rounded-md bg-surface-100 border border-surface-200 flex items-center justify-center text-surface-600 shrink-0">
+            <Calendar className="w-4 h-4" />
           </div>
         </Card>
 
-        <Card className="p-5 flex items-center justify-between">
+        <Card className="p-4 flex items-start justify-between gap-3">
           <div>
-            <p className="text-xs font-bold text-surface-500 uppercase tracking-wider">
-              Pending Assessments
+            <p className="text-xs font-medium text-surface-500">
+              Pending assessments
             </p>
-            <p className="text-3xl font-bold text-surface-900 mt-2">
+            <p className="text-2xl font-semibold text-surface-900 tabular-nums mt-1.5">
               {metrics?.pendingAssessments ?? 0}
             </p>
           </div>
-          <div className="p-3 bg-amber-50 rounded-xl text-amber-700 border border-amber-100">
-            <ClipboardCheck className="w-6 h-6" />
+          <div className="w-9 h-9 rounded-md bg-surface-100 border border-surface-200 flex items-center justify-center text-surface-600 shrink-0">
+            <ClipboardCheck className="w-4 h-4" />
           </div>
         </Card>
 
-        <Card className="p-5 flex items-center justify-between">
+        <Card className="p-4 flex items-start justify-between gap-3">
           <div>
-            <p className="text-xs font-bold text-surface-500 uppercase tracking-wider">
-              Upcoming Surgeries
+            <p className="text-xs font-medium text-surface-500">
+              Upcoming surgeries
             </p>
-            <p className="text-3xl font-bold text-surface-900 mt-2">
+            <p className="text-2xl font-semibold text-surface-900 tabular-nums mt-1.5">
               {metrics?.upcomingSurgeries ?? 0}
             </p>
           </div>
-          <div className="p-3 bg-rose-50 rounded-xl text-rose-700 border border-rose-100">
-            <Activity className="w-6 h-6" />
+          <div className="w-9 h-9 rounded-md bg-surface-100 border border-surface-200 flex items-center justify-center text-surface-600 shrink-0">
+            <Activity className="w-4 h-4" />
           </div>
         </Card>
 
-        <Card className="p-5 flex items-center justify-between">
+        <Card className="p-4 flex items-start justify-between gap-3">
           <div>
-            <p className="text-xs font-bold text-surface-500 uppercase tracking-wider">
-              Active Clinical Cases
+            <p className="text-xs font-medium text-surface-500">
+              Active clinical cases
             </p>
-            <p className="text-3xl font-bold text-surface-900 mt-2">
+            <p className="text-2xl font-semibold text-surface-900 tabular-nums mt-1.5">
               {metrics?.activeCases ?? 0}
             </p>
           </div>
-          <div className="p-3 bg-teal-50 rounded-xl text-teal-700 border border-teal-100">
-            <BriefcaseMedical className="w-6 h-6" />
+          <div className="w-9 h-9 rounded-md bg-surface-100 border border-surface-200 flex items-center justify-center text-surface-600 shrink-0">
+            <BriefcaseMedical className="w-4 h-4" />
           </div>
         </Card>
       </div>
@@ -268,24 +255,24 @@ export default function DoctorDashboardPage() {
       {/* Two-Column Clinical Queues */}
       <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
         {/* Today / Upcoming Schedule */}
-        <Card className="p-6 space-y-4">
-          <div className="flex items-center justify-between gap-2 pb-3 border-b border-surface-100">
+        <Card className="p-5 space-y-4">
+          <div className="flex items-center justify-between gap-2 pb-3 border-b border-surface-200">
             <div>
-              <h2 className="text-lg font-bold text-surface-900">Today &amp; Upcoming Schedule</h2>
-              <p className="text-xs text-surface-500">
+              <h2 className="text-base font-semibold text-surface-900">Today &amp; upcoming schedule</h2>
+              <p className="text-xs text-surface-500 mt-0.5">
                 Next clinical encounters assigned to you
               </p>
             </div>
             <Link
               href="/doctor/appointments"
-              className="text-xs font-semibold text-primary-600 hover:text-primary-700 inline-flex items-center gap-1"
+              className="min-h-9 text-xs font-medium text-primary-600 hover:text-primary-700 inline-flex items-center gap-1"
             >
-              All Appointments <ArrowRight className="w-3.5 h-3.5" />
+              All appointments <ArrowRight className="w-3.5 h-3.5" />
             </Link>
           </div>
 
           {upcomingSchedule.length === 0 ? (
-            <div className="py-10 text-center rounded-xl bg-surface-50 border border-dashed border-surface-200 text-sm text-surface-500">
+            <div className="py-10 text-center rounded-md bg-surface-50 border border-dashed border-surface-200 text-sm text-surface-500">
               No upcoming appointments scheduled.
             </div>
           ) : (
@@ -295,11 +282,11 @@ export default function DoctorDashboardPage() {
                 return (
                   <div
                     key={appt.id}
-                    className="p-4 rounded-xl border border-surface-200 bg-surface-50/40 flex flex-col sm:flex-row sm:items-center justify-between gap-3"
+                    className="p-3.5 rounded-lg border border-surface-200 bg-surface-50/50 flex flex-col sm:flex-row sm:items-center justify-between gap-3"
                   >
                     <div className="space-y-1 min-w-0">
                       <div className="flex flex-wrap items-center gap-2">
-                        <span className="font-bold text-sm text-surface-900">
+                        <span className="font-semibold text-sm text-surface-900">
                           {appt.patient.user.fullName}
                         </span>
                         <span className="text-xs text-surface-500">
@@ -312,11 +299,11 @@ export default function DoctorDashboardPage() {
                         )}
                       </div>
                       <div className="flex flex-wrap items-center gap-2 text-xs text-surface-600">
-                        <span className="font-semibold text-primary-700">
+                        <span className="font-medium text-primary-700">
                           {APPOINTMENT_TYPE_LABELS[appt.appointmentType] || appt.appointmentType}
                         </span>
                         <span>•</span>
-                        <span>{new Date(appt.scheduledAt).toLocaleString()}</span>
+                        <span className="tabular-nums">{new Date(appt.scheduledAt).toLocaleString()}</span>
                         <span>•</span>
                         <span>{APPOINTMENT_STATUS_LABELS[appt.status] || appt.status}</span>
                       </div>
@@ -337,26 +324,26 @@ export default function DoctorDashboardPage() {
         </Card>
 
         {/* Active Cases Requiring Physician Review */}
-        <Card className="p-6 space-y-4">
-          <div className="flex items-center justify-between gap-2 pb-3 border-b border-surface-100">
+        <Card className="p-5 space-y-4">
+          <div className="flex items-center justify-between gap-2 pb-3 border-b border-surface-200">
             <div>
-              <h2 className="text-lg font-bold text-surface-900">
-                Active Cases Requiring Physician Review
+              <h2 className="text-base font-semibold text-surface-900">
+                Cases requiring physician review
               </h2>
-              <p className="text-xs text-surface-500">
+              <p className="text-xs text-surface-500 mt-0.5">
                 Sign pathway milestones, issue medical opinions, or certify Fit-to-Fly
               </p>
             </div>
             <Link
               href="/doctor/patients"
-              className="text-xs font-semibold text-primary-600 hover:text-primary-700 inline-flex items-center gap-1"
+              className="min-h-9 text-xs font-medium text-primary-600 hover:text-primary-700 inline-flex items-center gap-1"
             >
-              Patient Roster <ArrowRight className="w-3.5 h-3.5" />
+              Patient roster <ArrowRight className="w-3.5 h-3.5" />
             </Link>
           </div>
 
           {pendingCases.length === 0 ? (
-            <div className="py-10 text-center rounded-xl bg-surface-50 border border-dashed border-surface-200 text-sm text-surface-500">
+            <div className="py-10 text-center rounded-md bg-surface-50 border border-dashed border-surface-200 text-sm text-surface-500">
               No active clinical cases currently assigned.
             </div>
           ) : (
@@ -368,12 +355,12 @@ export default function DoctorDashboardPage() {
                 return (
                   <div
                     key={c.id}
-                    className="p-4 rounded-xl border border-surface-200 bg-surface-50/40 space-y-3"
+                    className="p-3.5 rounded-lg border border-surface-200 bg-surface-50/50 space-y-3"
                   >
                     <div className="flex flex-wrap items-start justify-between gap-2">
-                      <div className="space-y-1">
+                      <div className="space-y-1.5">
                         <div className="flex flex-wrap items-center gap-2">
-                          <span className="font-bold text-sm text-surface-900">
+                          <span className="font-semibold text-sm text-surface-900">
                             {c.patient.user.fullName}
                           </span>
                           <span className="text-xs text-surface-500">
@@ -385,7 +372,7 @@ export default function DoctorDashboardPage() {
                             </Badge>
                           )}
                         </div>
-                        <div className="flex flex-wrap items-center gap-2">
+                        <div className="flex flex-wrap items-center gap-1.5">
                           <CaseStatusBadge status={c.status} />
                           {c.fitToFlyClearance?.isCleared ? (
                             <Badge variant="success" size="sm">
@@ -407,9 +394,9 @@ export default function DoctorDashboardPage() {
                     </div>
 
                     {doctorPendingSteps.length > 0 && (
-                      <div className="pt-2 border-t border-surface-200/70">
-                        <p className="text-[11px] font-bold uppercase tracking-wider text-surface-500 mb-1.5">
-                          Pending Physician Milestones ({doctorPendingSteps.length})
+                      <div className="pt-2.5 border-t border-surface-200/80">
+                        <p className="text-xs font-medium text-surface-500 mb-1.5">
+                          Pending physician milestones ({doctorPendingSteps.length})
                         </p>
                         <ul className="space-y-1">
                           {doctorPendingSteps.slice(0, 3).map((step) => (
@@ -418,7 +405,7 @@ export default function DoctorDashboardPage() {
                               className="text-xs text-surface-700 flex items-center justify-between gap-2"
                             >
                               <span className="truncate">• {step.title}</span>
-                              <span className="text-[11px] font-semibold text-amber-700 shrink-0">
+                              <span className="text-xs font-medium text-warning-700 shrink-0">
                                 {step.status}
                               </span>
                             </li>

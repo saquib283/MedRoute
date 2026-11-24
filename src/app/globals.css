@@ -13,32 +13,32 @@
   initial-value: 0px;
 }
 
-/* ─── Clinical Design System — Tailwind v4 CSS-first Config ──────── */
+/* ─── Clinical Design System — Restrained Institutional Palette ──── */
 @theme inline {
   --font-sans: var(--font-jakarta), "Plus Jakarta Sans", ui-sans-serif, system-ui, sans-serif;
 }
 
 @theme {
-  /* ── Primary (restrained teal — clinical, trustworthy) ─────────── */
-  --color-primary-50: #f0fdfa;
-  --color-primary-100: #ccfbf1;
-  --color-primary-200: #99f6e4;
-  --color-primary-300: #5eead4;
-  --color-primary-400: #2dd4bf;
-  --color-primary-500: #0d9488;
-  --color-primary-600: #0f766e;
-  --color-primary-700: #115e59;
-  --color-primary-800: #134e4a;
-  --color-primary-850: #0b3b38;
-  --color-primary-900: #042f2e;
-  --color-primary-950: #021c1b;
+  /* ── Primary (restrained deep clinical teal — 10% accent rule) ─── */
+  --color-primary-50: #f2fbf9;
+  --color-primary-100: #d9f2ee;
+  --color-primary-200: #b6e4dd;
+  --color-primary-300: #84cfc5;
+  --color-primary-400: #4eb3a6;
+  --color-primary-500: #1f8a7e;
+  --color-primary-600: #146c62;
+  --color-primary-700: #115750;
+  --color-primary-800: #104641;
+  --color-primary-850: #0c3733;
+  --color-primary-900: #0b2e2b;
+  --color-primary-950: #061c1a;
 
-  /* ── Surface (white → cool-slate scale for light-mode canvas) ───── */
+  /* ── Surface (clean cool-slate neutral hierarchy — 90% canvas) ─── */
   --color-surface-50: #ffffff;
   --color-surface-100: #f8fafc;
-  --color-surface-150: #f4f7fa;
-  --color-surface-200: #f1f5f9;
-  --color-surface-300: #e2e8f0;
+  --color-surface-150: #f3f6f9;
+  --color-surface-200: #e2e8f0;
+  --color-surface-300: #cbd5e1;
   --color-surface-400: #94a3b8;
   --color-surface-500: #64748b;
   --color-surface-600: #475569;
@@ -47,65 +47,65 @@
   --color-surface-900: #0f172a;
   --color-surface-950: #020617;
 
-  /* ── Semantic — Danger ─────────────────────────────────────────── */
+  /* ── Semantic — Danger (muted clinical crimson) ────────────────── */
   --color-danger-50: #fef2f2;
   --color-danger-100: #fee2e2;
   --color-danger-200: #fecaca;
   --color-danger-300: #fca5a5;
   --color-danger-400: #f87171;
-  --color-danger-500: #ef4444;
-  --color-danger-600: #dc2626;
-  --color-danger-700: #b91c1c;
-  --color-danger-800: #991b1b;
-  --color-danger-900: #7f1d1d;
+  --color-danger-500: #dc2626;
+  --color-danger-600: #b91c1c;
+  --color-danger-700: #991b1b;
+  --color-danger-800: #7f1d1d;
+  --color-danger-900: #651717;
 
-  /* ── Semantic — Success ────────────────────────────────────────── */
+  /* ── Semantic — Success (muted clinical forest green) ──────────── */
   --color-success-50: #f0fdf4;
   --color-success-100: #dcfce7;
   --color-success-200: #bbf7d0;
   --color-success-300: #86efac;
   --color-success-400: #4ade80;
-  --color-success-500: #22c55e;
-  --color-success-600: #16a34a;
-  --color-success-700: #15803d;
-  --color-success-800: #166534;
-  --color-success-900: #14532d;
+  --color-success-500: #16a34a;
+  --color-success-600: #15803d;
+  --color-success-700: #166534;
+  --color-success-800: #14532d;
+  --color-success-900: #0f3f22;
 
-  /* ── Semantic — Warning ────────────────────────────────────────── */
+  /* ── Semantic — Warning (muted clinical ochre) ─────────────────── */
   --color-warning-50: #fffbeb;
   --color-warning-100: #fef3c7;
   --color-warning-200: #fde68a;
   --color-warning-300: #fcd34d;
   --color-warning-400: #fbbf24;
-  --color-warning-500: #f59e0b;
-  --color-warning-600: #d97706;
-  --color-warning-700: #b45309;
-  --color-warning-800: #92400e;
-  --color-warning-900: #78350f;
+  --color-warning-500: #d97706;
+  --color-warning-600: #b45309;
+  --color-warning-700: #92400e;
+  --color-warning-800: #78350f;
+  --color-warning-900: #632c0d;
 
-  /* ── Semantic — Info ───────────────────────────────────────────── */
+  /* ── Semantic — Info (muted clinical slate-blue) ───────────────── */
   --color-info-50: #eff6ff;
   --color-info-100: #dbeafe;
   --color-info-200: #bfdbfe;
   --color-info-300: #93c5fd;
   --color-info-400: #60a5fa;
-  --color-info-500: #3b82f6;
-  --color-info-600: #2563eb;
-  --color-info-700: #1d4ed8;
-  --color-info-800: #1e40af;
-  --color-info-900: #1e3a8a;
+  --color-info-500: #2563eb;
+  --color-info-600: #1d4ed8;
+  --color-info-700: #1e40af;
+  --color-info-800: #1e3a8a;
+  --color-info-900: #172e6e;
 
-  /* ── Shadows — 3-level elevation system with soft offset blur ──── */
-  --shadow-2xs: 0 1px 2px rgba(15, 23, 42, 0.04);
-  --shadow-xs: 0 1px 2px rgba(15, 23, 42, 0.05);
-  --shadow-sm: 0 1px 3px rgba(15, 23, 42, 0.08), 0 1px 2px rgba(15, 23, 42, 0.04);
-  --shadow-md: 0 4px 10px rgba(15, 23, 42, 0.06), 0 2px 4px rgba(15, 23, 42, 0.04);
+  /* ── Shadows — Subtle, low-glare elevation ─────────────────────── */
+  --shadow-2xs: 0 1px 1px rgba(15, 23, 42, 0.03);
+  --shadow-xs: 0 1px 2px rgba(15, 23, 42, 0.04);
+  --shadow-sm: 0 1px 3px rgba(15, 23, 42, 0.06), 0 1px 2px rgba(15, 23, 42, 0.03);
+  --shadow-md: 0 4px 12px rgba(15, 23, 42, 0.07), 0 1px 3px rgba(15, 23, 42, 0.04);
 
-  /* ── Animation ─────────────────────────────────────────────────── */
-  --animate-fade-in: fade-in 0.22s cubic-bezier(0.2, 0, 0, 1);
-  --animate-slide-up: slide-up 0.25s cubic-bezier(0.2, 0, 0, 1);
-  --animate-slide-down: slide-down 0.2s cubic-bezier(0.2, 0, 0, 1);
-  --animate-scale-in: scale-in 0.18s cubic-bezier(0.2, 0, 0, 1);
+  /* ── Understated Functional Transitions (ease-out-quart) ───────── */
+  --animate-fade-in: fade-in 0.16s cubic-bezier(0.25, 1, 0.5, 1);
+  --animate-slide-up: slide-up 0.18s cubic-bezier(0.25, 1, 0.5, 1);
+  --animate-slide-down: slide-down 0.16s cubic-bezier(0.25, 1, 0.5, 1);
+  --animate-scale-in: scale-in 0.15s cubic-bezier(0.25, 1, 0.5, 1);
 }
 
 /* ─── Base Border & Browser-Generated UI Defaults ───────────────── */
@@ -122,7 +122,7 @@
   color-scheme: light;
   accent-color: var(--color-primary-600);
   caret-color: var(--color-primary-600);
-  scrollbar-color: var(--color-surface-400) var(--color-surface-200);
+  scrollbar-color: var(--color-surface-300) var(--color-surface-100);
 }
 
 ::selection {
@@ -152,7 +152,7 @@
 @keyframes slide-up {
   from {
     opacity: 0;
-    transform: translateY(8px);
+    transform: translateY(4px);
   }
   to {
     opacity: 1;
@@ -163,7 +163,7 @@
 @keyframes slide-down {
   from {
     opacity: 0;
-    transform: translateY(-6px);
+    transform: translateY(-4px);
   }
   to {
     opacity: 1;
@@ -174,7 +174,7 @@
 @keyframes scale-in {
   from {
     opacity: 0;
-    transform: scale(0.98);
+    transform: scale(0.99);
   }
   to {
     opacity: 1;
@@ -197,8 +197,10 @@
 /* ─── Base Typography & Layout Hygiene ──────────────────────────── */
 html {
   scroll-behavior: smooth;
-  scroll-padding-top: 5rem;
-  scroll-padding-bottom: calc(6rem + env(safe-area-inset-bottom, 0px));
+  scroll-padding-top: 4.5rem;
+  scroll-padding-bottom: calc(5.5rem + env(safe-area-inset-bottom, 0px));
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
 }
 
 body,
@@ -249,13 +251,12 @@ dialog:modal {
 dialog::backdrop {
   overflow: hidden;
   overscroll-behavior: contain;
-  background-color: rgba(15, 23, 42, 0.5);
-  backdrop-filter: blur(4px);
+  background-color: rgba(15, 23, 42, 0.4);
 }
 
 /* ─── Focus Ring & Input Normalization ──────────────────────────── */
 *:focus-visible {
-  outline: 2px solid var(--color-primary-500);
+  outline: 2px solid var(--color-primary-600);
   outline-offset: 2px;
 }
 
@@ -268,11 +269,11 @@ textarea:focus {
 input:focus-visible,
 select:focus-visible,
 textarea:focus-visible {
-  outline: 2px solid var(--color-primary-500);
-  outline-offset: 1px;
+  outline: 2px solid var(--color-primary-600);
+  outline-offset: 0px;
 }
 
-/* ─── Touch Target (44x44 per WCAG 2.5.5 / PRD) ─────────────────── */
+/* ─── Touch Target (44x44 per WCAG 2.5.5) ───────────────────────── */
 .touch-target {
   min-height: 44px;
   min-width: 44px;
@@ -283,7 +284,7 @@ textarea:focus-visible {
   overflow-x: auto;
   scrollbar-width: none;
   scroll-snap-type: inline proximity;
-  --fade-size: 2.25rem;
+  --fade-size: 2rem;
   --fade-dir: right;
   --fade-start-pos: 0;
   --fade-end-pos: 100%;
@@ -295,7 +296,7 @@ textarea:focus-visible {
   animation: reveal-fade-start linear both, hide-fade-end linear both;
   animation-timeline: scroll(self inline);
   animation-range: 0 var(--fade-size), calc(100% - var(--fade-size)) 100%;
-  transition: --fade-start 0.2s ease-out, --fade-end 0.2s ease-out;
+  transition: --fade-start 0.16s ease-out, --fade-end 0.16s ease-out;
 }
 
 .edge-fade-scroller::-webkit-scrollbar {
@@ -310,23 +311,22 @@ textarea:focus-visible {
   --fade-end: var(--fade-size);
 }
 
-/* ─── Forced-Colors-Safe Accessible Tab Indicator ───────────────── */
+/* ─── Forced-Colors-Safe Accessible Underline Tab ───────────────── */
 .clinical-tab {
   position: relative;
 }
 
 .clinical-tab[aria-selected="true"] {
-  color: var(--color-primary-800);
-  background-color: var(--color-primary-50);
-  border-color: var(--color-primary-300);
+  color: var(--color-surface-900);
+  background-color: var(--color-surface-50);
+  border-color: var(--color-surface-300);
 }
 
 .clinical-tab[aria-selected="true"]::after {
   content: "";
   position: absolute;
-  inset: auto 0.625rem 0;
-  border-block-end: 3px solid var(--color-primary-600);
-  border-radius: 999px;
+  inset: auto 0.5rem 0;
+  border-block-end: 2px solid var(--color-primary-600);
 }
 
 /* ─── Container-Adaptive Responsive Invoice Breakdown Table ─────── */
@@ -352,7 +352,7 @@ textarea:focus-visible {
   }
 
   .invoice-table-region tbody tr {
-    padding: 0.875rem 1rem;
+    padding: 0.75rem 1rem;
     border-bottom: 1px solid var(--color-surface-200);
   }
 
@@ -363,7 +363,7 @@ textarea:focus-visible {
   .invoice-table-region tbody th[scope="row"] {
     padding: 0 0 0.5rem 0;
     text-align: left;
-    border-bottom: 1px dashed var(--color-surface-200);
+    border-bottom: 1px solid var(--color-surface-150);
     margin-bottom: 0.5rem;
   }
 
@@ -378,10 +378,8 @@ textarea:focus-visible {
 
   .invoice-table-region tbody td::before {
     content: attr(data-label);
-    font-weight: 700;
+    font-weight: 500;
     font-size: 0.6875rem;
-    text-transform: uppercase;
-    letter-spacing: 0.04em;
     color: var(--color-surface-500);
     text-align: left;
   }
@@ -391,7 +389,7 @@ textarea:focus-visible {
     align-items: center;
     justify-content: space-between;
     gap: 0.75rem;
-    padding: 0.875rem 1rem;
+    padding: 0.75rem 1rem;
   }
 
   .invoice-table-region tfoot td {

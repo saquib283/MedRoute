@@ -15,20 +15,16 @@ import {
   previewHotelStayCost,
 } from '@/lib/validation/booking-helpers';
 import {
-  Building2,
   Plus,
   Star,
   DollarSign,
   MapPin,
   Percent,
-  Sparkles,
-  TrendingUp,
   X,
   Bed,
   Pencil,
   Power,
   RotateCcw,
-  Calendar,
 } from 'lucide-react';
 
 interface Hotel {
@@ -126,15 +122,15 @@ function formatDateInput(iso: string): string {
 function getBookingStatusBadgeClass(status: string): string {
   switch (status) {
     case 'COMPLETED':
-      return 'bg-emerald-100 text-emerald-800 border-emerald-200';
+      return 'bg-emerald-50 text-emerald-700 border-emerald-200';
     case 'CHECKED_IN':
-      return 'bg-indigo-100 text-indigo-800 border-indigo-200';
+      return 'bg-indigo-50 text-indigo-700 border-indigo-200';
     case 'CONFIRMED':
-      return 'bg-primary-100 text-primary-800 border-primary-200';
+      return 'bg-primary-50 text-primary-700 border-primary-200';
     case 'CANCELLED':
-      return 'bg-rose-100 text-rose-800 border-rose-200';
+      return 'bg-rose-50 text-rose-700 border-rose-200';
     default:
-      return 'bg-amber-100 text-amber-800 border-amber-200';
+      return 'bg-amber-50 text-amber-700 border-amber-200';
   }
 }
 
@@ -408,32 +404,28 @@ export default function PartnerAccommodationsWorkspace() {
 
   if (isLoading) {
     return (
-      <div className="flex flex-col items-center justify-center min-h-[400px] gap-4">
-        <div className="w-10 h-10 border-4 border-primary-600 border-t-transparent rounded-full animate-spin" />
-        <p className="text-sm font-medium text-surface-600">Loading Accommodations Workspace...</p>
+      <div className="flex flex-col items-center justify-center min-h-[400px] gap-3">
+        <div className="w-7 h-7 border-2 border-primary-600 border-t-transparent rounded-full animate-spin" />
+        <p className="text-xs font-medium text-surface-500">Loading accommodations workspace...</p>
       </div>
     );
   }
 
   return (
-    <div className="space-y-8 max-w-7xl mx-auto pb-12 animate-fade-in">
+    <div className="space-y-6">
       {/* ─── Header ───────────────────────────────────────────────────── */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-5 border-b border-surface-200">
         <div>
-          <span className="px-2.5 py-0.5 bg-primary-100 text-primary-800 rounded-md text-[11px] font-black uppercase tracking-wider">
-            Revenue & Operations
-          </span>
-          <h1 className="text-2xl font-extrabold text-surface-900 tracking-tight flex items-center gap-2 mt-1">
-            <Building2 className="w-7 h-7 text-primary-600" />
-            Partner Accommodations & Commission Workspace
+          <h1 className="text-xl font-semibold tracking-tight text-surface-900">
+            Partner Accommodations &amp; Commission Workspace
           </h1>
-          <p className="text-xs text-surface-500 mt-0.5">
+          <p className="text-xs sm:text-sm text-surface-500 mt-1">
             Manage healthcare-friendly hotels, nightly rates, active status, and Afzal Healthcare commission earnings.
           </p>
         </div>
 
-        <div className="flex items-center gap-3">
-          <label className="flex items-center gap-2 px-3 py-2 bg-white border border-surface-200 rounded-xl text-xs font-bold text-surface-700 cursor-pointer select-none">
+        <div className="flex items-center gap-2.5 shrink-0">
+          <label className="flex items-center gap-2 px-3 min-h-[44px] bg-white border border-surface-300 rounded-md text-xs font-medium text-surface-700 cursor-pointer select-none">
             <input
               type="checkbox"
               checked={showInactive}
@@ -443,67 +435,65 @@ export default function PartnerAccommodationsWorkspace() {
             Show Inactive
           </label>
 
-          <Button
-            onClick={openAddModal}
-            className="px-5 py-2.5 bg-primary-600 hover:bg-primary-700 text-white font-bold rounded-xl text-xs flex items-center gap-2 shadow-xs"
-          >
+          <Button size="sm" onClick={openAddModal}>
             <Plus className="w-4 h-4" /> Add Partner Hotel
           </Button>
         </div>
       </div>
 
       {/* ─── Revenue & Commission Metrics Cards ───────────────────────── */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        <Card className="p-6 rounded-3xl border border-surface-200 bg-white shadow-xs space-y-2">
-          <div className="flex items-center justify-between">
-            <span className="text-xs font-black text-surface-400 uppercase tracking-widest">
-              Total Accommodations
-            </span>
-            <Bed className="w-5 h-5 text-primary-600" />
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+        <Card className="p-5 flex items-start justify-between gap-4">
+          <div>
+            <p className="text-xs font-medium text-surface-500">Total Accommodations</p>
+            <p className="text-2xl font-semibold tracking-tight tabular-nums text-surface-900 mt-1.5">
+              {metrics.totalBookings} Stays Booked
+            </p>
+            <p className="text-xs text-surface-500 mt-1">Across {hotels.length} partner hotels</p>
           </div>
-          <p className="text-2xl font-black text-surface-900">{metrics.totalBookings} Stays Booked</p>
-          <p className="text-xs text-surface-500 font-medium">Across {hotels.length} partner hotels</p>
+          <div className="w-9 h-9 rounded-md bg-surface-100 text-surface-600 border border-surface-200 flex items-center justify-center shrink-0">
+            <Bed className="w-4 h-4" />
+          </div>
         </Card>
 
-        <Card className="p-6 rounded-3xl border border-surface-200 bg-white shadow-xs space-y-2">
-          <div className="flex items-center justify-between">
-            <span className="text-xs font-black text-surface-400 uppercase tracking-widest">
-              Gross Booking Volume
-            </span>
-            <DollarSign className="w-5 h-5 text-emerald-600" />
+        <Card className="p-5 flex items-start justify-between gap-4">
+          <div>
+            <p className="text-xs font-medium text-surface-500">Gross Booking Volume</p>
+            <p className="text-2xl font-semibold tracking-tight tabular-nums text-surface-900 mt-1.5">
+              ${metrics.totalGrossRevenue.toLocaleString()} USD
+            </p>
+            <p className="text-xs text-surface-500 mt-1">
+              Active &amp; completed accommodation volume
+            </p>
           </div>
-          <p className="text-2xl font-black text-emerald-800">
-            ${metrics.totalGrossRevenue.toLocaleString()} USD
-          </p>
-          <p className="text-xs text-surface-500 font-medium">
-            Active & completed accommodation volume
-          </p>
+          <div className="w-9 h-9 rounded-md bg-surface-100 text-surface-600 border border-surface-200 flex items-center justify-center shrink-0">
+            <DollarSign className="w-4 h-4" />
+          </div>
         </Card>
 
-        <Card className="p-6 rounded-3xl border border-primary-200 bg-gradient-to-r from-primary-900 to-primary-950 text-white shadow-md space-y-2 relative overflow-hidden">
-          <div className="flex items-center justify-between relative z-10">
-            <span className="text-xs font-black text-primary-300 uppercase tracking-widest flex items-center gap-1">
-              <Sparkles className="w-3.5 h-3.5 text-amber-400" /> Partner Commission Cut Earned
-            </span>
-            <Percent className="w-5 h-5 text-primary-300" />
+        <Card className="p-5 flex items-start justify-between gap-4">
+          <div>
+            <p className="text-xs font-medium text-surface-500">Partner Commission Cut Earned</p>
+            <p className="text-2xl font-semibold tracking-tight tabular-nums text-surface-900 mt-1.5">
+              ${metrics.totalCommissionEarned.toLocaleString()} USD
+            </p>
+            <p className="text-xs text-surface-500 mt-1">
+              Net revenue earned from hotel partners
+            </p>
           </div>
-          <p className="text-2xl font-black text-white relative z-10">
-            ${metrics.totalCommissionEarned.toLocaleString()} USD
-          </p>
-          <p className="text-xs text-primary-200 font-medium relative z-10">
-            Net revenue earned from hotel partners
-          </p>
+          <div className="w-9 h-9 rounded-md bg-surface-100 text-surface-600 border border-surface-200 flex items-center justify-center shrink-0">
+            <Percent className="w-4 h-4" />
+          </div>
         </Card>
       </div>
 
       {/* ─── Partner Hotels Directory Grid ────────────────────────────── */}
       <div className="space-y-4">
-        <h2 className="text-lg font-extrabold text-surface-900 flex items-center gap-2">
-          <Building2 className="w-5 h-5 text-primary-600" />
+        <h2 className="text-sm sm:text-base font-semibold text-surface-900">
           Partner Hotels Directory ({hotels.length})
         </h2>
 
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
           {hotels.map((hotel) => {
             const imageList = Array.isArray(hotel.images) ? hotel.images : [];
             const amenityList = Array.isArray(hotel.amenities) ? hotel.amenities : [];
@@ -513,8 +503,8 @@ export default function PartnerAccommodationsWorkspace() {
             return (
               <Card
                 key={hotel.id}
-                className={`rounded-3xl border overflow-hidden bg-white shadow-xs hover:shadow-md transition-all flex flex-col justify-between ${
-                  isActive ? 'border-surface-200' : 'border-surface-300 opacity-75'
+                className={`!p-0 overflow-hidden transition-colors flex flex-col justify-between ${
+                  isActive ? 'hover:border-surface-300' : 'border-surface-300 opacity-75'
                 }`}
               >
                 <div>
@@ -522,19 +512,19 @@ export default function PartnerAccommodationsWorkspace() {
                   <div
                     role="img"
                     aria-label={hotel.name}
-                    className="relative h-48 w-full bg-surface-100 bg-cover bg-center overflow-hidden"
+                    className="relative h-44 w-full bg-surface-100 bg-cover bg-center border-b border-surface-200 overflow-hidden"
                     style={safeImg ? { backgroundImage: `url("${safeImg}")` } : undefined}
                   >
-                    <div className="absolute top-3 right-3 bg-slate-900/80 backdrop-blur-xs text-amber-400 px-2.5 py-1 rounded-xl text-xs font-black flex items-center gap-1 border border-white/20">
-                      <Star className="w-3.5 h-3.5 fill-amber-400" /> {hotel.starRating}
+                    <div className="absolute top-3 right-3 bg-surface-900/85 text-white px-2 py-0.5 rounded-md text-xs font-medium tabular-nums flex items-center gap-1">
+                      <Star className="w-3 h-3 fill-amber-400 text-amber-400" /> {hotel.starRating}
                     </div>
                     {hotel.commissionPercent !== undefined && (
-                      <div className="absolute bottom-3 left-3 bg-primary-900/90 text-white px-2.5 py-1 rounded-xl text-xs font-bold border border-white/20">
+                      <div className="absolute bottom-3 left-3 bg-surface-900/85 text-white px-2 py-0.5 rounded-md text-[11px] font-medium tabular-nums">
                         {hotel.commissionPercent}% Partner Commission Cut
                       </div>
                     )}
                     {!isActive && (
-                      <div className="absolute top-3 left-3 bg-rose-700 text-white px-2.5 py-1 rounded-xl text-xs font-bold">
+                      <div className="absolute top-3 left-3 bg-rose-700 text-white px-2 py-0.5 rounded-md text-[11px] font-medium">
                         Inactive
                       </div>
                     )}
@@ -543,12 +533,12 @@ export default function PartnerAccommodationsWorkspace() {
                   {/* Details */}
                   <div className="p-5 space-y-3">
                     <div>
-                      <h3 className="text-base font-extrabold text-surface-900 leading-snug">
+                      <h3 className="text-sm sm:text-base font-semibold text-surface-900 leading-snug">
                         {hotel.name}
                       </h3>
-                      <p className="text-xs text-surface-500 flex items-center gap-1 mt-0.5">
-                        <MapPin className="w-3.5 h-3.5 text-primary-600 shrink-0" />
-                        {hotel.address} ({hotel.distanceKm} km to hospital)
+                      <p className="text-xs text-surface-500 flex items-center gap-1 mt-1">
+                        <MapPin className="w-3.5 h-3.5 text-surface-400 shrink-0" />
+                        <span>{hotel.address} ({hotel.distanceKm} km to hospital)</span>
                       </p>
                     </div>
 
@@ -561,13 +551,13 @@ export default function PartnerAccommodationsWorkspace() {
                       {amenityList.slice(0, 3).map((amenity, idx) => (
                         <span
                           key={idx}
-                          className="px-2 py-0.5 bg-surface-100 text-surface-700 rounded-md text-xs font-semibold border border-surface-200"
+                          className="px-2 py-0.5 bg-surface-50 text-surface-700 rounded text-[11px] font-medium border border-surface-200"
                         >
                           {amenity}
                         </span>
                       ))}
                       {amenityList.length > 3 && (
-                        <span className="text-xs font-semibold text-surface-500">
+                        <span className="text-[11px] font-medium text-surface-500">
                           +{amenityList.length - 3} more
                         </span>
                       )}
@@ -576,22 +566,22 @@ export default function PartnerAccommodationsWorkspace() {
                 </div>
 
                 {/* Footer Pricing & Actions */}
-                <div className="p-5 pt-3 border-t border-surface-100 mt-3 space-y-3">
+                <div className="p-5 pt-3.5 border-t border-surface-200 space-y-3">
                   <div className="flex items-center justify-between">
                     <div>
-                      <span className="text-xs font-bold text-surface-500 uppercase tracking-wider block">
+                      <span className="text-xs font-medium text-surface-500 block">
                         Nightly Rate
                       </span>
-                      <span className="text-lg font-black text-surface-900">
+                      <span className="text-lg font-semibold tracking-tight tabular-nums text-surface-900">
                         ${Number(hotel.nightlyRateUsd)}{' '}
-                        <span className="text-xs text-surface-500 font-semibold">/ night</span>
+                        <span className="text-xs text-surface-500 font-normal">/ night</span>
                       </span>
                     </div>
 
                     <span
-                      className={`px-2.5 py-1 text-xs font-extrabold rounded-xl border ${
+                      className={`px-2 py-0.5 text-[11px] font-medium rounded border ${
                         isActive
-                          ? 'bg-emerald-100 text-emerald-800 border-emerald-200'
+                          ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
                           : 'bg-surface-100 text-surface-600 border-surface-200'
                       }`}
                     >
@@ -602,18 +592,20 @@ export default function PartnerAccommodationsWorkspace() {
                   <div className="flex items-center gap-2">
                     <Button
                       type="button"
+                      size="sm"
                       variant="secondary"
                       onClick={() => openEditModal(hotel)}
-                      className="flex-1 px-3 py-1.5 text-xs font-bold rounded-xl flex items-center justify-center gap-1.5"
+                      className="flex-1"
                     >
                       <Pencil className="w-3.5 h-3.5" /> Edit
                     </Button>
                     <Button
                       type="button"
+                      size="sm"
                       variant="secondary"
                       disabled={togglingHotelId === hotel.id}
                       onClick={() => handleToggleHotelActive(hotel)}
-                      className={`flex-1 px-3 py-1.5 text-xs font-bold rounded-xl flex items-center justify-center gap-1.5 ${
+                      className={`flex-1 ${
                         isActive
                           ? 'text-rose-700 hover:bg-rose-50'
                           : 'text-emerald-700 hover:bg-emerald-50'
@@ -640,28 +632,27 @@ export default function PartnerAccommodationsWorkspace() {
       </div>
 
       {/* ─── Recent Accommodation Bookings & Commission Table ────────── */}
-      <div className="space-y-4 pt-4">
-        <h2 className="text-lg font-extrabold text-surface-900 flex items-center gap-2">
-          <TrendingUp className="w-5 h-5 text-emerald-600" />
-          Recent Accommodation Bookings & Commission Ledger
+      <div className="space-y-4 pt-2">
+        <h2 className="text-sm sm:text-base font-semibold text-surface-900">
+          Recent Accommodation Bookings &amp; Commission Ledger
         </h2>
 
-        <Card className="rounded-3xl border border-surface-200 overflow-hidden bg-white shadow-xs">
+        <Card className="!p-0 overflow-hidden">
           <div className="overflow-x-auto">
-            <table className="w-full text-left border-collapse">
+            <table className="w-full text-left border-collapse text-xs">
               <thead>
-                <tr className="bg-surface-50 border-b border-surface-200 text-xs font-bold uppercase text-surface-500 tracking-wider">
-                  <th className="p-4">Booking No</th>
-                  <th className="p-4">Patient Name</th>
-                  <th className="p-4">Hotel Property</th>
-                  <th className="p-4">Stay Dates</th>
-                  <th className="p-4">Total Stay ($)</th>
-                  <th className="p-4">Commission Cut ($)</th>
-                  <th className="p-4">Status</th>
-                  <th className="p-4 text-right">Actions</th>
+                <tr className="bg-surface-50 border-b border-surface-200">
+                  <th className="px-4 py-3 text-[11px] font-medium uppercase tracking-wide text-surface-500">Booking No</th>
+                  <th className="px-4 py-3 text-[11px] font-medium uppercase tracking-wide text-surface-500">Patient Name</th>
+                  <th className="px-4 py-3 text-[11px] font-medium uppercase tracking-wide text-surface-500">Hotel Property</th>
+                  <th className="px-4 py-3 text-[11px] font-medium uppercase tracking-wide text-surface-500">Stay Dates</th>
+                  <th className="px-4 py-3 text-[11px] font-medium uppercase tracking-wide text-surface-500">Total Stay ($)</th>
+                  <th className="px-4 py-3 text-[11px] font-medium uppercase tracking-wide text-surface-500">Commission Cut ($)</th>
+                  <th className="px-4 py-3 text-[11px] font-medium uppercase tracking-wide text-surface-500">Status</th>
+                  <th className="px-4 py-3 text-[11px] font-medium uppercase tracking-wide text-surface-500 text-right">Actions</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-surface-100 text-xs font-semibold text-surface-700">
+              <tbody className="divide-y divide-surface-200 text-surface-700">
                 {bookings.length === 0 ? (
                   <tr>
                     <td colSpan={8} className="p-8 text-center text-surface-500">
@@ -678,42 +669,42 @@ export default function PartnerAccommodationsWorkspace() {
                       b.status === 'PENDING' || b.status === 'CONFIRMED' || b.status === 'CHECKED_IN';
 
                     return (
-                      <tr key={b.id} className="hover:bg-surface-50/60 transition-colors">
-                        <td className="p-4 font-black text-surface-900">{b.bookingNo}</td>
-                        <td className="p-4">
-                          <p className="font-extrabold text-surface-900">{b.patient?.user?.fullName}</p>
-                          <p className="text-xs text-surface-500 font-medium">{b.patient?.user?.email}</p>
+                      <tr key={b.id} className="hover:bg-surface-50 transition-colors">
+                        <td className="px-4 py-3.5 font-mono font-medium text-surface-900">{b.bookingNo}</td>
+                        <td className="px-4 py-3.5">
+                          <p className="font-semibold text-surface-900">{b.patient?.user?.fullName}</p>
+                          <p className="text-xs text-surface-500">{b.patient?.user?.email}</p>
                         </td>
-                        <td className="p-4 font-extrabold text-surface-900">{b.hotel?.name}</td>
-                        <td className="p-4 text-surface-600">
-                          {new Date(b.checkInDate).toLocaleDateString()} -{' '}
+                        <td className="px-4 py-3.5 font-medium text-surface-900">{b.hotel?.name}</td>
+                        <td className="px-4 py-3.5 text-surface-600 tabular-nums">
+                          {new Date(b.checkInDate).toLocaleDateString()} –{' '}
                           {new Date(b.checkOutDate).toLocaleDateString()} ({b.numNights} nights)
                         </td>
-                        <td className="p-4 font-black text-surface-900">
+                        <td className="px-4 py-3.5 font-semibold tabular-nums text-surface-900">
                           ${Number(b.totalAmountUsd).toFixed(2)} USD
                         </td>
-                        <td className="p-4">
-                          <span className="inline-block font-black text-emerald-700 bg-emerald-50/60 px-3 py-1 rounded-xl border border-emerald-200">
+                        <td className="px-4 py-3.5">
+                          <span className="inline-block font-medium tabular-nums text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded border border-emerald-200">
                             +${Number(b.commissionAmountUsd).toFixed(2)} USD Cut
                           </span>
                         </td>
-                        <td className="p-4">
+                        <td className="px-4 py-3.5">
                           <span
-                            className={`px-2.5 py-0.5 rounded-md text-xs font-bold uppercase tracking-wider border ${getBookingStatusBadgeClass(
+                            className={`inline-flex items-center px-2 py-0.5 rounded text-[11px] font-medium border ${getBookingStatusBadgeClass(
                               b.status
                             )}`}
                           >
                             {b.status}
                           </span>
                         </td>
-                        <td className="p-4">
+                        <td className="px-4 py-3.5">
                           <div className="flex items-center justify-end gap-1.5 flex-wrap">
                             {canEditStay && (
                               <button
                                 type="button"
                                 disabled={isBusy}
                                 onClick={() => openEditBookingModal(b)}
-                                className="px-2.5 py-1 bg-surface-100 hover:bg-surface-200 text-surface-800 rounded-lg text-[11px] font-bold transition-colors disabled:opacity-50"
+                                className="px-2.5 py-1 bg-white hover:bg-surface-50 text-surface-700 border border-surface-300 rounded-md text-[11px] font-medium transition-colors disabled:opacity-50"
                               >
                                 Edit Dates
                               </button>
@@ -723,7 +714,7 @@ export default function PartnerAccommodationsWorkspace() {
                                 type="button"
                                 disabled={isBusy}
                                 onClick={() => handleBookingStatusChange(b.id, 'CHECKED_IN')}
-                                className="px-2.5 py-1 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 border border-indigo-200 rounded-lg text-[11px] font-bold transition-colors disabled:opacity-50"
+                                className="px-2.5 py-1 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 border border-indigo-200 rounded-md text-[11px] font-medium transition-colors disabled:opacity-50"
                               >
                                 Check In
                               </button>
@@ -733,7 +724,7 @@ export default function PartnerAccommodationsWorkspace() {
                                 type="button"
                                 disabled={isBusy}
                                 onClick={() => handleBookingStatusChange(b.id, 'COMPLETED')}
-                                className="px-2.5 py-1 bg-emerald-50 hover:bg-emerald-100 text-emerald-700 border border-emerald-200 rounded-lg text-[11px] font-bold transition-colors disabled:opacity-50"
+                                className="px-2.5 py-1 bg-emerald-50 hover:bg-emerald-100 text-emerald-700 border border-emerald-200 rounded-md text-[11px] font-medium transition-colors disabled:opacity-50"
                               >
                                 Complete
                               </button>
@@ -743,7 +734,7 @@ export default function PartnerAccommodationsWorkspace() {
                                 type="button"
                                 disabled={isBusy}
                                 onClick={() => handleBookingStatusChange(b.id, 'CANCELLED')}
-                                className="px-2.5 py-1 bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 rounded-lg text-[11px] font-bold transition-colors disabled:opacity-50"
+                                className="px-2.5 py-1 bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 rounded-md text-[11px] font-medium transition-colors disabled:opacity-50"
                               >
                                 Cancel
                               </button>
@@ -762,11 +753,10 @@ export default function PartnerAccommodationsWorkspace() {
 
       {/* ─── Add / Edit Partner Hotel Modal ───────────────────────────── */}
       {isHotelModalOpen && (
-        <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4">
-          <div className="bg-white rounded-3xl max-w-2xl w-full p-6 space-y-6 shadow-2xl border border-surface-200 max-h-[90vh] overflow-y-auto animate-scale-up">
-            <div className="flex items-center justify-between border-b border-surface-100 pb-4">
-              <h3 className="text-lg font-extrabold text-surface-900 flex items-center gap-2">
-                <Building2 className="w-5 h-5 text-primary-600" />
+        <div className="fixed inset-0 z-50 bg-surface-900/40 flex items-center justify-center p-4">
+          <div className="bg-white rounded-lg max-w-2xl w-full p-6 space-y-5 shadow-md border border-surface-200 max-h-[90vh] overflow-y-auto">
+            <div className="flex items-center justify-between border-b border-surface-200 pb-4">
+              <h3 className="text-base font-semibold text-surface-900">
                 {editingHotel ? `Edit Partner Hotel — ${editingHotel.name}` : 'Register New Partner Hotel'}
               </h3>
               <button
@@ -776,67 +766,67 @@ export default function PartnerAccommodationsWorkspace() {
                   setIsHotelModalOpen(false);
                   setEditingHotel(null);
                 }}
-                className="p-1 text-surface-400 hover:text-surface-900 rounded-lg"
+                className="p-1.5 text-surface-400 hover:text-surface-900 rounded-md"
               >
-                <X className="w-5 h-5" />
+                <X className="w-4 h-4" />
               </button>
             </div>
 
             <form onSubmit={handleSaveHotel} className="space-y-4">
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div className="space-y-1">
-                  <label className="text-xs font-bold text-surface-700">Hotel Name</label>
+                  <label className="text-xs font-medium text-surface-700 block">Hotel Name</label>
                   <input
                     type="text"
                     value={formData.name}
                     onChange={(e) => setFormData({ ...formData, name: e.target.value })}
                     placeholder="e.g. Taj Palace Recovery Suites"
-                    className="w-full px-3 py-2 bg-surface-50 border border-surface-300 rounded-xl text-xs font-bold text-surface-900 focus:outline-none focus:border-primary-600"
+                    className="w-full px-3 py-2 bg-white border border-surface-300 rounded-md text-xs font-medium text-surface-900 focus:outline-none focus:border-primary-600"
                     required
                   />
                 </div>
 
                 <div className="space-y-1">
-                  <label className="text-xs font-bold text-surface-700">City</label>
+                  <label className="text-xs font-medium text-surface-700 block">City</label>
                   <input
                     type="text"
                     value={formData.city}
                     onChange={(e) => setFormData({ ...formData, city: e.target.value })}
                     placeholder="e.g. New Delhi"
-                    className="w-full px-3 py-2 bg-surface-50 border border-surface-300 rounded-xl text-xs font-bold text-surface-900 focus:outline-none focus:border-primary-600"
+                    className="w-full px-3 py-2 bg-white border border-surface-300 rounded-md text-xs font-medium text-surface-900 focus:outline-none focus:border-primary-600"
                     required
                   />
                 </div>
               </div>
 
               <div className="space-y-1">
-                <label className="text-xs font-bold text-surface-700">Address</label>
+                <label className="text-xs font-medium text-surface-700 block">Address</label>
                 <input
                   type="text"
                   value={formData.address}
                   onChange={(e) => setFormData({ ...formData, address: e.target.value })}
                   placeholder="Street address & nearby landmarks"
-                  className="w-full px-3 py-2 bg-surface-50 border border-surface-300 rounded-xl text-xs font-medium text-surface-900 focus:outline-none focus:border-primary-600"
+                  className="w-full px-3 py-2 bg-white border border-surface-300 rounded-md text-xs text-surface-900 focus:outline-none focus:border-primary-600"
                   required
                 />
               </div>
 
               <div className="grid grid-cols-1 sm:grid-cols-4 gap-4">
                 <div className="space-y-1">
-                  <label className="text-xs font-bold text-surface-700">Distance (km)</label>
+                  <label className="text-xs font-medium text-surface-700 block">Distance (km)</label>
                   <input
                     type="number"
                     step="0.1"
                     min="0"
                     value={formData.distanceKm}
                     onChange={(e) => setFormData({ ...formData, distanceKm: e.target.value })}
-                    className="w-full px-3 py-2 bg-surface-50 border border-surface-300 rounded-xl text-xs font-bold text-surface-900 focus:outline-none"
+                    className="w-full px-3 py-2 bg-white border border-surface-300 rounded-md text-xs font-medium tabular-nums text-surface-900 focus:outline-none focus:border-primary-600"
                     required
                   />
                 </div>
 
                 <div className="space-y-1">
-                  <label className="text-xs font-bold text-surface-700">Star Rating</label>
+                  <label className="text-xs font-medium text-surface-700 block">Star Rating</label>
                   <input
                     type="number"
                     step="0.1"
@@ -844,26 +834,26 @@ export default function PartnerAccommodationsWorkspace() {
                     max="5"
                     value={formData.starRating}
                     onChange={(e) => setFormData({ ...formData, starRating: e.target.value })}
-                    className="w-full px-3 py-2 bg-surface-50 border border-surface-300 rounded-xl text-xs font-bold text-surface-900 focus:outline-none"
+                    className="w-full px-3 py-2 bg-white border border-surface-300 rounded-md text-xs font-medium tabular-nums text-surface-900 focus:outline-none focus:border-primary-600"
                     required
                   />
                 </div>
 
                 <div className="space-y-1">
-                  <label className="text-xs font-bold text-surface-700">Nightly Rate ($)</label>
+                  <label className="text-xs font-medium text-surface-700 block">Nightly Rate ($)</label>
                   <input
                     type="number"
                     step="0.01"
                     min="1"
                     value={formData.nightlyRateUsd}
                     onChange={(e) => setFormData({ ...formData, nightlyRateUsd: e.target.value })}
-                    className="w-full px-3 py-2 bg-surface-50 border border-surface-300 rounded-xl text-xs font-bold text-surface-900 focus:outline-none"
+                    className="w-full px-3 py-2 bg-white border border-surface-300 rounded-md text-xs font-medium tabular-nums text-surface-900 focus:outline-none focus:border-primary-600"
                     required
                   />
                 </div>
 
                 <div className="space-y-1">
-                  <label className="text-xs font-bold text-surface-700">Commission Cut (%)</label>
+                  <label className="text-xs font-medium text-surface-700 block">Commission Cut (%)</label>
                   <input
                     type="number"
                     step="0.1"
@@ -871,7 +861,7 @@ export default function PartnerAccommodationsWorkspace() {
                     max="100"
                     value={formData.commissionPercent}
                     onChange={(e) => setFormData({ ...formData, commissionPercent: e.target.value })}
-                    className="w-full px-3 py-2 bg-surface-50 border border-surface-300 rounded-xl text-xs font-black text-emerald-700 focus:outline-none"
+                    className="w-full px-3 py-2 bg-white border border-surface-300 rounded-md text-xs font-semibold tabular-nums text-surface-900 focus:outline-none focus:border-primary-600"
                     required
                   />
                 </div>
@@ -879,79 +869,75 @@ export default function PartnerAccommodationsWorkspace() {
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div className="space-y-1">
-                  <label className="text-xs font-bold text-surface-700">Concierge Phone</label>
+                  <label className="text-xs font-medium text-surface-700 block">Concierge Phone</label>
                   <input
                     type="text"
                     value={formData.contactPhone}
                     onChange={(e) => setFormData({ ...formData, contactPhone: e.target.value })}
-                    className="w-full px-3 py-2 bg-surface-50 border border-surface-300 rounded-xl text-xs font-medium text-surface-900 focus:outline-none"
+                    className="w-full px-3 py-2 bg-white border border-surface-300 rounded-md text-xs tabular-nums text-surface-900 focus:outline-none focus:border-primary-600"
                   />
                 </div>
 
                 <div className="space-y-1">
-                  <label className="text-xs font-bold text-surface-700">Concierge Email</label>
+                  <label className="text-xs font-medium text-surface-700 block">Concierge Email</label>
                   <input
                     type="email"
                     value={formData.contactEmail}
                     onChange={(e) => setFormData({ ...formData, contactEmail: e.target.value })}
-                    className="w-full px-3 py-2 bg-surface-50 border border-surface-300 rounded-xl text-xs font-medium text-surface-900 focus:outline-none"
+                    className="w-full px-3 py-2 bg-white border border-surface-300 rounded-md text-xs text-surface-900 focus:outline-none focus:border-primary-600"
                   />
                 </div>
               </div>
 
               <div className="space-y-1">
-                <label className="text-xs font-bold text-surface-700">
-                  Medical & Hospitality Amenities (Comma-separated)
+                <label className="text-xs font-medium text-surface-700 block">
+                  Medical &amp; Hospitality Amenities (Comma-separated)
                 </label>
                 <input
                   type="text"
                   value={formData.amenitiesInput}
                   onChange={(e) => setFormData({ ...formData, amenitiesInput: e.target.value })}
-                  className="w-full px-3 py-2 bg-surface-50 border border-surface-300 rounded-xl text-xs font-medium text-surface-900 focus:outline-none"
+                  className="w-full px-3 py-2 bg-white border border-surface-300 rounded-md text-xs text-surface-900 focus:outline-none focus:border-primary-600"
                 />
               </div>
 
               <div className="space-y-1">
-                <label className="text-xs font-bold text-surface-700">
+                <label className="text-xs font-medium text-surface-700 block">
                   Photo Gallery Image URLs (1 URL per line)
                 </label>
                 <textarea
                   rows={3}
                   value={formData.imageUrlsInput}
                   onChange={(e) => setFormData({ ...formData, imageUrlsInput: e.target.value })}
-                  className="w-full px-3 py-2 bg-surface-50 border border-surface-300 rounded-xl text-xs font-mono text-surface-900 focus:outline-none"
+                  className="w-full px-3 py-2 bg-white border border-surface-300 rounded-md text-xs font-mono text-surface-900 focus:outline-none focus:border-primary-600"
                 />
               </div>
 
               <div className="space-y-1">
-                <label className="text-xs font-bold text-surface-700">
-                  Hotel Description & Recovery Features
+                <label className="text-xs font-medium text-surface-700 block">
+                  Hotel Description &amp; Recovery Features
                 </label>
                 <textarea
                   rows={2}
                   value={formData.description}
                   onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-                  className="w-full px-3 py-2 bg-surface-50 border border-surface-300 rounded-xl text-xs font-medium text-surface-900 focus:outline-none"
+                  className="w-full px-3 py-2 bg-white border border-surface-300 rounded-md text-xs text-surface-900 focus:outline-none focus:border-primary-600"
                 />
               </div>
 
-              <div className="flex items-center justify-end gap-3 pt-3 border-t border-surface-100">
+              <div className="flex items-center justify-end gap-2.5 pt-3 border-t border-surface-200">
                 <Button
                   type="button"
+                  size="sm"
                   onClick={() => {
                     setIsHotelModalOpen(false);
                     setEditingHotel(null);
                   }}
                   variant="secondary"
-                  className="px-4 py-2 text-xs font-bold rounded-xl"
                 >
                   Cancel
                 </Button>
-                <Button
-                  type="submit"
-                  disabled={isSavingHotel}
-                  className="px-5 py-2 bg-primary-600 hover:bg-primary-700 text-white font-bold rounded-xl text-xs flex items-center gap-2"
-                >
+                <Button type="submit" size="sm" disabled={isSavingHotel}>
                   {isSavingHotel
                     ? 'Saving...'
                     : editingHotel
@@ -966,77 +952,76 @@ export default function PartnerAccommodationsWorkspace() {
 
       {/* ─── Edit Booking Stay Dates & Details Modal ──────────────────── */}
       {editingBooking && (
-        <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4">
-          <div className="bg-white rounded-3xl max-w-lg w-full p-6 space-y-5 shadow-2xl border border-surface-200 animate-scale-up">
-            <div className="flex items-center justify-between border-b border-surface-100 pb-4">
+        <div className="fixed inset-0 z-50 bg-surface-900/40 flex items-center justify-center p-4">
+          <div className="bg-white rounded-lg max-w-lg w-full p-6 space-y-5 shadow-md border border-surface-200">
+            <div className="flex items-center justify-between border-b border-surface-200 pb-4">
               <div>
-                <span className="text-xs font-bold uppercase text-primary-700 tracking-wider">
-                  Update Reservation {editingBooking.bookingNo}
-                </span>
-                <h3 className="text-lg font-extrabold text-surface-900 mt-0.5 flex items-center gap-2">
-                  <Calendar className="w-5 h-5 text-primary-600" />
+                <h3 className="text-base font-semibold text-surface-900">
                   {editingBooking.hotel?.name}
                 </h3>
+                <p className="text-xs text-surface-500 mt-0.5 font-mono">
+                  Reservation {editingBooking.bookingNo}
+                </p>
               </div>
               <button
                 type="button"
                 aria-label="Close booking edit modal"
                 onClick={() => setEditingBooking(null)}
-                className="p-1 text-surface-400 hover:text-surface-900 rounded-lg"
+                className="p-1.5 text-surface-400 hover:text-surface-900 rounded-md"
               >
-                <X className="w-5 h-5" />
+                <X className="w-4 h-4" />
               </button>
             </div>
 
             <form onSubmit={handleSaveBookingEdit} className="space-y-4">
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div className="space-y-1">
-                  <label className="text-xs font-bold text-surface-700">Check-In Date</label>
+                  <label className="text-xs font-medium text-surface-700 block">Check-In Date</label>
                   <input
                     type="date"
                     value={bookingForm.checkInDate}
                     onChange={(e) =>
                       setBookingForm({ ...bookingForm, checkInDate: e.target.value })
                     }
-                    className="w-full px-3 py-2 bg-surface-50 border border-surface-300 rounded-xl text-xs font-bold text-surface-900 focus:outline-none"
+                    className="w-full px-3 py-2 bg-white border border-surface-300 rounded-md text-xs font-medium tabular-nums text-surface-900 focus:outline-none focus:border-primary-600"
                     required
                   />
                 </div>
                 <div className="space-y-1">
-                  <label className="text-xs font-bold text-surface-700">Check-Out Date</label>
+                  <label className="text-xs font-medium text-surface-700 block">Check-Out Date</label>
                   <input
                     type="date"
                     value={bookingForm.checkOutDate}
                     onChange={(e) =>
                       setBookingForm({ ...bookingForm, checkOutDate: e.target.value })
                     }
-                    className="w-full px-3 py-2 bg-surface-50 border border-surface-300 rounded-xl text-xs font-bold text-surface-900 focus:outline-none"
+                    className="w-full px-3 py-2 bg-white border border-surface-300 rounded-md text-xs font-medium tabular-nums text-surface-900 focus:outline-none focus:border-primary-600"
                     required
                   />
                 </div>
               </div>
 
               {!bookingStayPreview.valid && (
-                <p className="text-xs font-bold text-rose-600 bg-rose-50 border border-rose-200 rounded-xl px-3 py-2">
+                <p className="text-xs font-medium text-rose-700 bg-rose-50 border border-rose-200 rounded-md px-3 py-2">
                   {bookingStayPreview.error || 'Check-out date must be after check-in date'}
                 </p>
               )}
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div className="space-y-1">
-                  <label className="text-xs font-bold text-surface-700">Room Type</label>
+                  <label className="text-xs font-medium text-surface-700 block">Room Type</label>
                   <input
                     type="text"
                     value={bookingForm.roomType}
                     onChange={(e) =>
                       setBookingForm({ ...bookingForm, roomType: e.target.value })
                     }
-                    className="w-full px-3 py-2 bg-surface-50 border border-surface-300 rounded-xl text-xs font-bold text-surface-900 focus:outline-none"
+                    className="w-full px-3 py-2 bg-white border border-surface-300 rounded-md text-xs font-medium text-surface-900 focus:outline-none focus:border-primary-600"
                     required
                   />
                 </div>
                 <div className="space-y-1">
-                  <label className="text-xs font-bold text-surface-700">Guests</label>
+                  <label className="text-xs font-medium text-surface-700 block">Guests</label>
                   <input
                     type="number"
                     min="1"
@@ -1045,48 +1030,48 @@ export default function PartnerAccommodationsWorkspace() {
                     onChange={(e) =>
                       setBookingForm({ ...bookingForm, numGuests: e.target.value })
                     }
-                    className="w-full px-3 py-2 bg-surface-50 border border-surface-300 rounded-xl text-xs font-bold text-surface-900 focus:outline-none"
+                    className="w-full px-3 py-2 bg-white border border-surface-300 rounded-md text-xs font-medium tabular-nums text-surface-900 focus:outline-none focus:border-primary-600"
                     required
                   />
                 </div>
               </div>
 
               <div className="space-y-1">
-                <label className="text-xs font-bold text-surface-700">Special Requests / Notes</label>
+                <label className="text-xs font-medium text-surface-700 block">Special Requests / Notes</label>
                 <textarea
                   rows={2}
                   value={bookingForm.specialRequests}
                   onChange={(e) =>
                     setBookingForm({ ...bookingForm, specialRequests: e.target.value })
                   }
-                  className="w-full px-3 py-2 bg-surface-50 border border-surface-300 rounded-xl text-xs font-medium text-surface-900 focus:outline-none"
+                  className="w-full px-3 py-2 bg-white border border-surface-300 rounded-md text-xs text-surface-900 focus:outline-none focus:border-primary-600"
                 />
               </div>
 
               {bookingStayPreview.valid && Number(editingBooking.hotel?.nightlyRateUsd ?? 0) > 0 && (
-                <div className="p-3 bg-emerald-50 border border-emerald-200 rounded-xl flex items-center justify-between text-xs">
-                  <span className="font-bold text-emerald-800">
+                <div className="p-3 bg-surface-50 border border-surface-200 rounded-md flex items-center justify-between text-xs">
+                  <span className="font-medium text-surface-600">
                     Recalculated Stay ({bookingStayPreview.numNights} nights)
                   </span>
-                  <span className="font-black text-emerald-900">
+                  <span className="font-semibold tabular-nums text-surface-900">
                     ${bookingStayPreview.totalUsd.toFixed(2)} USD
                   </span>
                 </div>
               )}
 
-              <div className="flex items-center justify-end gap-3 pt-2 border-t border-surface-100">
+              <div className="flex items-center justify-end gap-2.5 pt-3 border-t border-surface-200">
                 <Button
                   type="button"
+                  size="sm"
                   variant="secondary"
                   onClick={() => setEditingBooking(null)}
-                  className="px-4 py-2 text-xs font-bold rounded-xl"
                 >
                   Cancel
                 </Button>
                 <Button
                   type="submit"
+                  size="sm"
                   disabled={isSavingBooking || !bookingStayPreview.valid}
-                  className="px-5 py-2 bg-primary-600 hover:bg-primary-700 text-white font-bold rounded-xl text-xs"
                 >
                   {isSavingBooking ? 'Updating...' : 'Save Stay Update'}
                 </Button>

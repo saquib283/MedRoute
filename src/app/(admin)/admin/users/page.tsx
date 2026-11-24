@@ -333,11 +333,11 @@ export default function AdminUsersPage() {
   const availableRoles = isSuperAdmin ? ROLE_OPTIONS : ROLE_OPTIONS.filter(r => r !== 'ADMIN' && r !== 'ADMIN');
 
   return (
-    <div className="max-w-7xl mx-auto space-y-6 animate-fade-in">
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+    <div className="space-y-6 animate-fade-in">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-5 border-b border-surface-200">
         <div>
-          <h1 className="text-2xl font-bold text-surface-900 tracking-tight">User Management</h1>
-          <p className="text-sm text-surface-500 mt-1">Create, edit, and manage all platform user accounts.</p>
+          <h1 className="text-xl font-semibold tracking-tight text-surface-900">User Management</h1>
+          <p className="text-xs sm:text-sm text-surface-500 mt-1">Create, edit, and manage all platform user accounts.</p>
         </div>
         <div className="flex gap-2">
           {isSuperAdmin && (
@@ -359,8 +359,9 @@ export default function AdminUsersPage() {
       {isSuperAdmin && (
         <div className="flex border-b border-surface-200 gap-4">
           <button
+            type="button"
             onClick={() => setActiveTab('users')}
-            className={`px-4 py-2.5 text-sm font-bold border-b-2 transition-all ${
+            className={`px-4 py-2.5 text-sm font-medium border-b-2 transition-colors ${
               activeTab === 'users'
                 ? 'border-primary-600 text-primary-700'
                 : 'border-transparent text-surface-500 hover:text-surface-900'
@@ -369,8 +370,9 @@ export default function AdminUsersPage() {
             Users Directory
           </button>
           <button
+            type="button"
             onClick={() => setActiveTab('reassign')}
-            className={`px-4 py-2.5 text-sm font-bold border-b-2 transition-all ${
+            className={`px-4 py-2.5 text-sm font-medium border-b-2 transition-colors ${
               activeTab === 'reassign'
                 ? 'border-primary-600 text-primary-700'
                 : 'border-transparent text-surface-500 hover:text-surface-900'
@@ -384,13 +386,13 @@ export default function AdminUsersPage() {
       {activeTab === 'users' ? (
         <>
           {/* Filters */}
-          <Card className="p-4 bg-white border border-surface-200 flex flex-col sm:flex-row gap-3">
+          <Card padding="sm" className="flex flex-col sm:flex-row gap-3">
             <input
               type="text"
               placeholder="Search by name or email..."
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              className="flex-1 px-3 py-2 border border-surface-300 rounded-lg text-sm focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500"
+              className="flex-1 px-3 py-2 border border-surface-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-600"
             />
             <Select
               value={roleFilter}
@@ -417,37 +419,37 @@ export default function AdminUsersPage() {
           </Card>
 
           {/* Table */}
-          <Card className="bg-white border border-surface-200 overflow-hidden">
+          <Card className="p-0! overflow-hidden">
             {loading ? (
               <div className="flex items-center justify-center py-16">
-                <div className="w-8 h-8 border-4 border-primary-600 border-t-transparent rounded-full animate-spin" />
+                <div className="w-7 h-7 border-2 border-primary-600 border-t-transparent rounded-full animate-spin" />
               </div>
             ) : (
               <div className="overflow-x-auto">
                 <table className="w-full text-sm">
                   <thead>
-                    <tr className="border-b border-surface-100 bg-surface-50">
-                      <th className="px-5 py-3 text-left text-xs font-bold text-surface-500 uppercase tracking-wider">Name</th>
-                      <th className="px-5 py-3 text-left text-xs font-bold text-surface-500 uppercase tracking-wider">Email</th>
-                      <th className="px-5 py-3 text-left text-xs font-bold text-surface-500 uppercase tracking-wider">Role</th>
-                      <th className="px-5 py-3 text-left text-xs font-bold text-surface-500 uppercase tracking-wider">Status</th>
-                      <th className="px-5 py-3 text-left text-xs font-bold text-surface-500 uppercase tracking-wider">Joined</th>
-                      <th className="px-5 py-3 text-right text-xs font-bold text-surface-500 uppercase tracking-wider">Actions</th>
+                    <tr className="border-b border-surface-200 bg-surface-100">
+                      <th className="px-5 py-3 text-left text-[11px] font-medium uppercase tracking-wide text-surface-500">Name</th>
+                      <th className="px-5 py-3 text-left text-[11px] font-medium uppercase tracking-wide text-surface-500">Email</th>
+                      <th className="px-5 py-3 text-left text-[11px] font-medium uppercase tracking-wide text-surface-500">Role</th>
+                      <th className="px-5 py-3 text-left text-[11px] font-medium uppercase tracking-wide text-surface-500">Status</th>
+                      <th className="px-5 py-3 text-left text-[11px] font-medium uppercase tracking-wide text-surface-500">Joined</th>
+                      <th className="px-5 py-3 text-right text-[11px] font-medium uppercase tracking-wide text-surface-500">Actions</th>
                     </tr>
                   </thead>
-                  <tbody className="divide-y divide-surface-100">
+                  <tbody className="divide-y divide-surface-200">
                     {users.length === 0 ? (
                       <tr><td colSpan={6} className="px-5 py-12 text-center text-surface-500">No users found.</td></tr>
                     ) : (
                       users.map((u) => (
-                        <tr key={u.id} className="hover:bg-surface-50 transition-colors">
-                          <td className="px-5 py-3.5 font-semibold text-surface-900">{u.fullName}</td>
+                        <tr key={u.id} className="hover:bg-surface-100/60 transition-colors">
+                          <td className="px-5 py-3.5 font-medium text-surface-900">{u.fullName}</td>
                           <td className="px-5 py-3.5 text-surface-600">{u.email}</td>
                           <td className="px-5 py-3.5"><Badge variant={ROLE_COLORS[u.role] || 'default'}>{u.role}</Badge></td>
                           <td className="px-5 py-3.5">
                             <Badge variant={u.isActive ? 'success' : 'danger'} dot>{u.isActive ? 'Active' : 'Inactive'}</Badge>
                           </td>
-                          <td className="px-5 py-3.5 text-surface-500 text-xs">{new Date(u.createdAt).toLocaleDateString()}</td>
+                          <td className="px-5 py-3.5 text-surface-500 text-xs tabular-nums">{new Date(u.createdAt).toLocaleDateString()}</td>
                           <td className="px-5 py-3.5 text-right">
                             <div className="flex items-center justify-end gap-1">
                               {canEditUser(u) && (
@@ -477,8 +479,8 @@ export default function AdminUsersPage() {
             )}
             {/* Pagination */}
             {pagination.totalPages > 1 && (
-              <div className="px-5 py-3 border-t border-surface-100 flex items-center justify-between text-sm">
-                <span className="text-surface-500">Page {pagination.page} of {pagination.totalPages} ({pagination.total} total)</span>
+              <div className="px-5 py-3 border-t border-surface-200 flex items-center justify-between text-sm">
+                <span className="text-surface-500 tabular-nums">Page {pagination.page} of {pagination.totalPages} ({pagination.total} total)</span>
                 <div className="flex gap-2">
                   <Button variant="secondary" size="sm" disabled={pagination.page <= 1} onClick={() => fetchUsers(pagination.page - 1)}>Previous</Button>
                   <Button variant="secondary" size="sm" disabled={pagination.page >= pagination.totalPages} onClick={() => fetchUsers(pagination.page + 1)}>Next</Button>
@@ -490,8 +492,8 @@ export default function AdminUsersPage() {
       ) : (
         /* Workload Reassignment Panel */
         <form onSubmit={handleBulkReassign} className="space-y-6">
-          <Card className="p-6 bg-white border border-surface-200 space-y-6">
-            <h2 className="text-sm font-bold text-surface-900 border-b border-surface-100 pb-3 uppercase tracking-wider">Manager Load Balancer</h2>
+          <Card padding="lg" className="space-y-6">
+            <h2 className="text-sm sm:text-base font-semibold text-surface-900 border-b border-surface-200 pb-3">Manager load balancer</h2>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <Select
                 label="Source Manager (Transfer From)"
@@ -520,21 +522,21 @@ export default function AdminUsersPage() {
           </Card>
 
           {sourceManagerId && (
-            <Card className="p-6 bg-white border border-surface-200 space-y-4">
-              <div className="flex items-center justify-between border-b border-surface-100 pb-3">
-                <h3 className="text-sm font-bold text-surface-900">Active Cases Assigned to Source Manager</h3>
+            <Card padding="lg" className="space-y-4">
+              <div className="flex items-center justify-between border-b border-surface-200 pb-3">
+                <h3 className="text-sm sm:text-base font-semibold text-surface-900">Active cases assigned to source manager</h3>
                 <div className="flex items-center gap-4 text-xs">
                   <button
                     type="button"
                     onClick={() => setSelectedCaseIds(sourceCases.map((c) => c.id))}
-                    className="text-primary-600 hover:text-primary-700 font-bold"
+                    className="text-primary-600 hover:text-primary-700 font-medium"
                   >
                     Select All
                   </button>
                   <button
                     type="button"
                     onClick={() => setSelectedCaseIds([])}
-                    className="text-surface-500 hover:text-surface-700 font-bold"
+                    className="text-surface-500 hover:text-surface-700 font-medium"
                   >
                     Deselect All
                   </button>
@@ -543,7 +545,7 @@ export default function AdminUsersPage() {
 
               {loadingCases ? (
                 <div className="flex items-center justify-center py-10">
-                  <div className="w-6 h-6 border-4 border-primary-600 border-t-transparent rounded-full animate-spin" />
+                  <div className="w-6 h-6 border-2 border-primary-600 border-t-transparent rounded-full animate-spin" />
                 </div>
               ) : sourceCases.length === 0 ? (
                 <p className="text-sm text-surface-500 text-center py-6">No active cases assigned to this manager.</p>
@@ -554,8 +556,8 @@ export default function AdminUsersPage() {
                     return (
                       <label
                         key={c.id}
-                        className={`flex items-start gap-3 p-3 rounded-lg border cursor-pointer hover:bg-surface-50 transition-colors ${
-                          isChecked ? 'border-primary-500 bg-primary-50/20' : 'border-surface-200'
+                        className={`flex items-start gap-3 p-3 rounded-md border cursor-pointer hover:bg-surface-100/60 transition-colors ${
+                          isChecked ? 'border-primary-500 bg-primary-50/40' : 'border-surface-200'
                         }`}
                       >
                         <input
@@ -568,10 +570,10 @@ export default function AdminUsersPage() {
                               setSelectedCaseIds(selectedCaseIds.filter((id) => id !== c.id));
                             }
                           }}
-                          className="mt-1 accent-primary-600 w-4 h-4 shrink-0"
+                          className="mt-1 accent-primary-600 w-4 h-4 shrink-0 rounded"
                         />
                         <div className="text-xs">
-                          <p className="font-bold text-surface-900">Case #{c.id.substring(0, 8)}</p>
+                          <p className="font-semibold text-surface-900 tabular-nums">Case #{c.id.substring(0, 8)}</p>
                           <p className="text-surface-600 font-medium mt-0.5">Patient: {c.patient?.user?.fullName || 'Unknown'}</p>
                           <p className="text-xs text-surface-500 mt-0.5">Status: {c.status} • Urgency: {c.isUrgent ? 'URGENT' : 'ROUTINE'}</p>
                         </div>
@@ -582,8 +584,8 @@ export default function AdminUsersPage() {
               )}
 
               {selectedCaseIds.length > 0 && (
-                <div className="flex justify-end pt-4 border-t border-surface-100">
-                  <Button type="submit" isLoading={transferring} className="px-8">
+                <div className="flex justify-end pt-4 border-t border-surface-200">
+                  <Button type="submit" isLoading={transferring} className="px-6">
                     Transfer {selectedCaseIds.length} Selected Cases
                   </Button>
                 </div>
@@ -595,14 +597,14 @@ export default function AdminUsersPage() {
 
       {/* Create/Edit Modal */}
       {showModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-surface-900/40 backdrop-blur-xs">
-          <div className="bg-white rounded-2xl shadow-2xl border border-surface-200 w-full max-w-md animate-scale-up max-h-[90vh] overflow-y-auto">
-            <div className="px-6 py-4 border-b border-surface-100 flex items-center justify-between">
-              <h3 className="text-sm font-bold text-surface-900">{editingUser ? 'Edit User' : 'Create New User'}</h3>
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-surface-900/40">
+          <div className="bg-white rounded-lg shadow-md border border-surface-200 w-full max-w-md animate-scale-in max-h-[90vh] overflow-y-auto">
+            <div className="px-6 py-4 border-b border-surface-200 flex items-center justify-between">
+              <h3 className="text-sm sm:text-base font-semibold text-surface-900">{editingUser ? 'Edit user' : 'Create new user'}</h3>
               <button
                 onClick={() => setShowModal(false)}
                 aria-label="Close"
-                className="text-surface-400 hover:text-surface-600 p-1 rounded-lg hover:bg-surface-100 transition-colors"
+                className="text-surface-400 hover:text-surface-600 p-1 rounded-md hover:bg-surface-100 transition-colors"
               >
                 <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2} aria-hidden="true">
                   <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
@@ -611,17 +613,17 @@ export default function AdminUsersPage() {
             </div>
             <form onSubmit={handleSave} className="p-6 space-y-4">
               <div className="space-y-1.5">
-                <label className="block text-xs font-semibold text-surface-700">Full Name</label>
-                <input type="text" required value={formData.fullName} onChange={(e) => setFormData({ ...formData, fullName: e.target.value })} className="w-full p-2.5 border border-surface-200 rounded-xl text-sm focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500" />
+                <label className="block text-xs font-medium text-surface-700">Full Name</label>
+                <input type="text" required value={formData.fullName} onChange={(e) => setFormData({ ...formData, fullName: e.target.value })} className="w-full p-2.5 border border-surface-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-600" />
               </div>
               <div className="space-y-1.5">
-                <label className="block text-xs font-semibold text-surface-700">Email</label>
-                <input type="email" required value={formData.email} onChange={(e) => setFormData({ ...formData, email: e.target.value })} className="w-full p-2.5 border border-surface-200 rounded-xl text-sm focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500" />
+                <label className="block text-xs font-medium text-surface-700">Email</label>
+                <input type="email" required value={formData.email} onChange={(e) => setFormData({ ...formData, email: e.target.value })} className="w-full p-2.5 border border-surface-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-600" />
               </div>
               {!editingUser && (
                 <div className="space-y-1.5">
-                  <label className="block text-xs font-semibold text-surface-700">Password</label>
-                  <input type="password" required value={formData.password} onChange={(e) => setFormData({ ...formData, password: e.target.value })} className="w-full p-2.5 border border-surface-200 rounded-xl text-sm focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500" placeholder="Min 8 characters" />
+                  <label className="block text-xs font-medium text-surface-700">Password</label>
+                  <input type="password" required value={formData.password} onChange={(e) => setFormData({ ...formData, password: e.target.value })} className="w-full p-2.5 border border-surface-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-600" placeholder="Min 8 characters" />
                 </div>
               )}
               <div className="grid grid-cols-2 gap-4">
@@ -634,51 +636,51 @@ export default function AdminUsersPage() {
                   className="col-span-1"
                 />
                 <div className="space-y-1.5">
-                  <label className="block text-xs font-semibold text-surface-700">Phone</label>
-                  <input type="text" value={formData.phone} onChange={(e) => setFormData({ ...formData, phone: e.target.value })} className="w-full p-2.5 border border-surface-200 rounded-xl text-sm focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500" />
+                  <label className="block text-xs font-medium text-surface-700">Phone</label>
+                  <input type="text" value={formData.phone} onChange={(e) => setFormData({ ...formData, phone: e.target.value })} className="w-full p-2.5 border border-surface-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-600" />
                 </div>
               </div>
               {!editingUser && formData.role === 'PATIENT' && (
-                <div className="space-y-3 pt-2 border-t border-surface-100">
-                  <p className="text-xs font-bold text-surface-700 uppercase tracking-wider">Patient Onboarding Details</p>
+                <div className="space-y-3 pt-3 border-t border-surface-200">
+                  <p className="text-xs font-semibold text-surface-700">Patient onboarding details</p>
                   <div className="grid grid-cols-2 gap-3">
                     <div className="space-y-1.5">
-                      <label className="block text-xs font-semibold text-surface-700">Nationality *</label>
+                      <label className="block text-xs font-medium text-surface-700">Nationality *</label>
                       <input
                         type="text"
                         required
                         value={formData.nationality}
                         onChange={(e) => setFormData({ ...formData, nationality: e.target.value })}
-                        className="w-full p-2.5 border border-surface-200 rounded-xl text-sm focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500"
+                        className="w-full p-2.5 border border-surface-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-600"
                       />
                     </div>
                     <div className="space-y-1.5">
-                      <label className="block text-xs font-semibold text-surface-700">Passport No *</label>
+                      <label className="block text-xs font-medium text-surface-700">Passport No *</label>
                       <input
                         type="text"
                         required
                         minLength={5}
                         value={formData.passportNo}
                         onChange={(e) => setFormData({ ...formData, passportNo: e.target.value })}
-                        className="w-full p-2.5 border border-surface-200 rounded-xl text-sm focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500"
+                        className="w-full p-2.5 border border-surface-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-600"
                       />
                     </div>
                   </div>
                   <div className="space-y-1.5">
-                    <label className="block text-xs font-semibold text-surface-700">Date of Birth *</label>
+                    <label className="block text-xs font-medium text-surface-700">Date of Birth *</label>
                     <input
                       type="date"
                       required
                       value={formData.dob}
                       onChange={(e) => setFormData({ ...formData, dob: e.target.value })}
-                      className="w-full p-2.5 border border-surface-200 rounded-xl text-sm focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500"
+                      className="w-full p-2.5 border border-surface-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-600"
                     />
                   </div>
                 </div>
               )}
               {editingUser && (
                 <div className="flex items-center gap-2">
-                  <input type="checkbox" id="isActive" checked={formData.isActive} onChange={(e) => setFormData({ ...formData, isActive: e.target.checked })} />
+                  <input type="checkbox" id="isActive" checked={formData.isActive} onChange={(e) => setFormData({ ...formData, isActive: e.target.checked })} className="rounded accent-primary-600" />
                   <label htmlFor="isActive" className="text-sm font-medium text-surface-700">Account Active</label>
                 </div>
               )}
@@ -705,20 +707,20 @@ export default function AdminUsersPage() {
 
       {/* Password Reset Result */}
       {resetResult.open && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-surface-900/40 backdrop-blur-xs">
-          <div className="bg-white rounded-2xl shadow-2xl border border-surface-200 w-full max-w-sm animate-scale-up p-6 space-y-4">
-            <div className="w-12 h-12 rounded-full bg-success-100 text-success-600 flex items-center justify-center mx-auto">
-              <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-surface-900/40">
+          <div className="bg-white rounded-lg shadow-md border border-surface-200 w-full max-w-sm animate-scale-in p-6 space-y-4">
+            <div className="w-10 h-10 rounded-md bg-success-50 border border-success-200 text-success-600 flex items-center justify-center mx-auto">
+              <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                 <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
               </svg>
             </div>
             <div className="text-center">
-              <h3 className="text-lg font-bold text-surface-900">Password Reset</h3>
-              <p className="text-sm text-surface-600 mt-1">Temporary password for <strong>{resetResult.userName}</strong>:</p>
-              <div className="mt-3 p-3 bg-surface-100 rounded-lg border border-surface-200">
-                <code className="text-lg font-mono font-bold text-primary-700 select-all">{resetResult.password}</code>
+              <h3 className="text-base font-semibold text-surface-900">Password reset</h3>
+              <p className="text-sm text-surface-600 mt-1">Temporary password for <span className="font-semibold text-surface-900">{resetResult.userName}</span>:</p>
+              <div className="mt-3 p-3 bg-surface-100 rounded-md border border-surface-200">
+                <code className="text-base font-mono font-semibold text-primary-700 select-all">{resetResult.password}</code>
               </div>
-              <p className="text-xs text-surface-400 mt-2">This password is shown only once. Share it securely with the user.</p>
+              <p className="text-xs text-surface-500 mt-2">This password is shown only once. Share it securely with the user.</p>
             </div>
             <Button className="w-full" onClick={() => setResetResult({ open: false, password: '', userName: '' })}>Done</Button>
           </div>

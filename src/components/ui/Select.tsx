@@ -1,8 +1,8 @@
 'use client';
 
 /**
- * Afzal Healthcare — Premium Select Dropdown Component
- * Accessible custom dropdown UI with search filtering, Lucide icons, and keyboard support.
+ * Afzal Healthcare — Select Dropdown Component
+ * Clean institutional select control with 6px radius, restrained typography, and keyboard support.
  */
 
 import React, { useState, useRef, useEffect, useId } from 'react';
@@ -51,14 +51,12 @@ export function Select({
 
   const selectedOption = options.find((opt) => opt.value === value);
 
-  // Filter options based on search term
   const filteredOptions = options.filter(
     (opt) =>
       opt.label.toLowerCase().includes(searchTerm.toLowerCase()) ||
       (opt.description && opt.description.toLowerCase().includes(searchTerm.toLowerCase()))
   );
 
-  // Close dropdown on outside click or escape
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       if (containerRef.current && !containerRef.current.contains(event.target as Node)) {
@@ -89,13 +87,12 @@ export function Select({
   return (
     <div className={`space-y-1.5 ${className}`} ref={containerRef}>
       {label && (
-        <label className="block text-xs font-bold text-surface-700">
+        <label className="block text-xs font-medium text-surface-700">
           {label} {required && <span className="text-danger-500">*</span>}
         </label>
       )}
 
       <div className="relative">
-        {/* Trigger Button */}
         <button
           type="button"
           onClick={() => !disabled && setIsOpen(!isOpen)}
@@ -105,55 +102,54 @@ export function Select({
           aria-controls={listboxId}
           aria-haspopup="listbox"
           className={`
-            w-full min-h-[46px] px-3.5 py-2.5 rounded-xl border text-xs font-medium text-left flex items-center justify-between gap-2 transition-all
+            w-full min-h-[44px] px-3 py-2 rounded-md border text-sm text-left flex items-center justify-between gap-2 transition-colors
             ${
               disabled
                 ? 'bg-surface-100 border-surface-200 text-surface-400 cursor-not-allowed'
                 : isOpen
-                ? 'bg-white border-primary-600 text-surface-900 shadow-xs'
+                ? 'bg-white border-primary-600 text-surface-900'
                 : error
-                ? 'bg-white border-danger-300 text-surface-900 hover:border-danger-400'
-                : 'bg-white border-surface-200 text-surface-900 hover:border-surface-300'
+                ? 'bg-white border-danger-400 text-surface-900 hover:border-danger-500'
+                : 'bg-white border-surface-300 text-surface-900 hover:border-surface-400'
             }
           `}
         >
-          <div className="flex items-center gap-2.5 min-w-0">
+          <div className="flex items-center gap-2 min-w-0">
             {icon && <span className="text-surface-400 shrink-0">{icon}</span>}
             {selectedOption?.icon && <span className="shrink-0">{selectedOption.icon}</span>}
 
-            <span className={`truncate ${!selectedOption ? 'text-surface-500 font-normal' : 'font-semibold'}`}>
+            <span className={`truncate ${!selectedOption ? 'text-surface-400 font-normal' : 'font-normal text-surface-900'}`}>
               {selectedOption ? selectedOption.label : placeholder}
             </span>
           </div>
 
           <ChevronDown
-            className={`w-4 h-4 text-surface-400 shrink-0 transition-transform duration-200 ${
-              isOpen ? 'rotate-180 text-primary-600' : ''
+            className={`w-4 h-4 text-surface-400 shrink-0 transition-transform duration-150 ${
+              isOpen ? 'rotate-180 text-surface-700' : ''
             }`}
           />
         </button>
 
-        {/* Dropdown Menu */}
         {isOpen && (
-          <div className="absolute z-50 left-0 right-0 mt-1 bg-white border border-surface-200 rounded-2xl shadow-xl max-h-60 overflow-hidden flex flex-col animate-scale-in">
-            {/* Optional Search Bar */}
+          <div className="absolute z-50 left-0 right-0 mt-1 bg-white border border-surface-200 rounded-lg shadow-md max-h-60 overflow-hidden flex flex-col animate-scale-in">
             {searchable && (
               <div className="p-2 border-b border-surface-100 bg-surface-50 shrink-0">
                 <div className="relative flex items-center">
-                  <Search className="w-3.5 h-3.5 text-surface-400 absolute left-3 pointer-events-none" />
+                  <Search className="w-3.5 h-3.5 text-surface-400 absolute left-2.5 pointer-events-none" />
                   <input
                     type="text"
-                    placeholder="Search options..."
+                    placeholder="Filter options..."
                     value={searchTerm}
                     onChange={(e) => setSearchTerm(e.target.value)}
-                    className="w-full pl-8 pr-8 py-1.5 bg-white border border-surface-200 rounded-lg text-xs text-surface-900 focus:outline-none focus:ring-1 focus:ring-primary-500"
+                    className="w-full pl-8 pr-7 py-1.5 bg-white border border-surface-300 rounded-md text-xs text-surface-900 focus:outline-none focus:border-primary-600"
                     autoFocus
                   />
                   {searchTerm && (
                     <button
                       type="button"
                       onClick={() => setSearchTerm('')}
-                      className="absolute right-2.5 text-surface-400 hover:text-surface-600"
+                      aria-label="Clear filter"
+                      className="absolute right-2 text-surface-400 hover:text-surface-600"
                     >
                       <X className="w-3.5 h-3.5" />
                     </button>
@@ -162,8 +158,7 @@ export function Select({
               </div>
             )}
 
-            {/* Options List */}
-            <div id={listboxId} className="overflow-y-auto p-1.5 space-y-0.5" role="listbox">
+            <div id={listboxId} className="overflow-y-auto p-1 space-y-0.5" role="listbox">
               {filteredOptions.length > 0 ? (
                 filteredOptions.map((opt) => {
                   const isSelected = opt.value === value;
@@ -175,11 +170,11 @@ export function Select({
                       aria-selected={isSelected}
                       onClick={() => handleSelect(opt.value)}
                       className={`
-                        w-full px-3 py-2.5 rounded-xl text-xs flex items-center justify-between gap-2 transition-all text-left
+                        w-full px-3 py-2 rounded-md text-xs flex items-center justify-between gap-2 transition-colors text-left
                         ${
                           isSelected
-                            ? 'bg-primary-50 text-primary-900 font-bold'
-                            : 'hover:bg-surface-50 text-surface-700 font-medium'
+                            ? 'bg-primary-50 text-primary-900 font-medium'
+                            : 'hover:bg-surface-100 text-surface-700 font-normal'
                         }
                       `}
                     >
@@ -188,7 +183,7 @@ export function Select({
                         <div className="min-w-0">
                           <p className="truncate">{opt.label}</p>
                           {opt.description && (
-                            <p className="text-xs text-surface-500 font-normal truncate mt-0.5">
+                            <p className="text-[11px] text-surface-500 font-normal truncate mt-0.5">
                               {opt.description}
                             </p>
                           )}
@@ -200,15 +195,15 @@ export function Select({
                   );
                 })
               ) : (
-                <div className="p-4 text-center text-xs text-surface-400">No options found</div>
+                <div className="p-4 text-center text-xs text-surface-500">No matching options</div>
               )}
             </div>
           </div>
         )}
       </div>
 
-      {error && <p className="text-[11px] text-danger-600 font-semibold mt-1">{error}</p>}
-      {!error && helperText && <p className="text-xs text-surface-600 font-medium mt-1">{helperText}</p>}
+      {error && <p className="text-xs text-danger-600 mt-1">{error}</p>}
+      {!error && helperText && <p className="text-xs text-surface-500 mt-1">{helperText}</p>}
     </div>
   );
 }

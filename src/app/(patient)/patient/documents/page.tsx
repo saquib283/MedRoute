@@ -2,13 +2,14 @@
 
 /**
  * Afzal Healthcare — Travel & Medical Document Vault
- * High-contrast travel readiness checklist, keyboard-accessible file uploader,
- * 44px touch controls, and ConfirmDialog deletion guardrail.
+ * Flat institutional header, crisp 8px/6px document cards, keyboard-accessible dropzone,
+ * and ConfirmDialog deletion guardrail.
  */
 
 import { useState, useEffect, useMemo, useRef, useCallback } from 'react';
 import { Card } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
+import { Badge } from '@/components/ui/Badge';
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
 import { Select, SelectOption } from '@/components/ui/Select';
 import { toast } from '@/components/ui/Toast';
@@ -27,12 +28,9 @@ import {
   Trash2,
   CheckCircle2,
   AlertCircle,
-  Plane,
-  Building2,
   Clock,
   FileCheck,
   FolderLock,
-  XCircle,
   RefreshCw,
 } from 'lucide-react';
 
@@ -87,26 +85,26 @@ const UPLOAD_CATEGORY_OPTIONS: SelectOption[] = [
 ];
 
 const REQUIRED_TRAVEL_DOCS = [
-  { key: 'PASSPORT', label: 'Passport Copy', role: 'Patient Upload', uploadable: true },
+  { key: 'PASSPORT', label: 'Passport Copy', role: 'Patient upload', uploadable: true },
   {
     key: 'VISA_INVITATION_LETTER',
     label: 'Visa Invitation Letter (VIL)',
-    role: 'Hospital Issued',
+    role: 'Hospital issued',
     uploadable: false,
   },
   {
     key: 'PROFORMA_INVOICE',
     label: 'Treatment Cost Estimate',
-    role: 'Hospital Issued',
+    role: 'Hospital issued',
     uploadable: false,
   },
   {
     key: 'MEDICAL_REPORT',
     label: 'Diagnostic Reports',
-    role: 'Patient Upload',
+    role: 'Patient upload',
     uploadable: true,
   },
-  { key: 'VISA', label: 'Medical Visa / e-Visa', role: 'Patient Upload', uploadable: true },
+  { key: 'VISA', label: 'Medical Visa / e-Visa', role: 'Patient upload', uploadable: true },
 ];
 
 export default function DocumentVaultPage() {
@@ -114,16 +112,13 @@ export default function DocumentVaultPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
 
-  // Upload Form state
   const [selectedCategory, setSelectedCategory] = useState('PASSPORT');
   const [fileToUpload, setFileToUpload] = useState<File | null>(null);
   const [isUploading, setIsUploading] = useState(false);
 
-  // Deletion confirmation state
   const [deleteTarget, setDeleteTarget] = useState<{ id: string; name: string } | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
 
-  // Filters & Views
   const [activeCategoryFilter, setActiveCategoryFilter] = useState('ALL');
   const [searchQuery, setSearchQuery] = useState('');
   const [viewMode, setViewMode] = useState<'grid' | 'table'>('grid');
@@ -252,7 +247,6 @@ export default function DocumentVaultPage() {
     }
   };
 
-  // Travel Readiness Calculation
   const readinessMetrics = useMemo(() => {
     const verifiedOrIssued = documents.filter(
       (d) => d.verificationStatus === 'VERIFIED' || d.verificationStatus === 'ISSUED_BY_HOSPITAL'
@@ -268,7 +262,6 @@ export default function DocumentVaultPage() {
     return { count, total: REQUIRED_TRAVEL_DOCS.length, percent, uploadedCategories };
   }, [documents]);
 
-  // Filtered Documents
   const filteredDocuments = useMemo(() => {
     return documents.filter((doc) => {
       if (!matchesPatientDocumentCategoryFilter(doc.category, activeCategoryFilter)) {
@@ -294,106 +287,65 @@ export default function DocumentVaultPage() {
   const renderStatusBadge = (status: string) => {
     switch (status) {
       case 'ISSUED_BY_HOSPITAL':
-        return (
-          <span className="inline-flex items-center gap-1 bg-info-50 text-info-800 border border-info-200 px-2.5 py-0.5 rounded-full text-[11px] font-semibold">
-            <Building2 className="w-3 h-3 text-info-600" aria-hidden="true" />
-            Hospital Official
-          </span>
-        );
+        return <Badge variant="info" dot>Hospital Official</Badge>;
       case 'VERIFIED':
-        return (
-          <span className="inline-flex items-center gap-1 bg-success-50 text-success-800 border border-success-200 px-2.5 py-0.5 rounded-full text-[11px] font-semibold">
-            <CheckCircle2 className="w-3 h-3 text-success-600" aria-hidden="true" />
-            Verified
-          </span>
-        );
+        return <Badge variant="success" dot>Verified</Badge>;
       case 'REJECTED':
-        return (
-          <span className="inline-flex items-center gap-1 bg-danger-50 text-danger-800 border border-danger-200 px-2.5 py-0.5 rounded-full text-[11px] font-semibold">
-            <XCircle className="w-3 h-3 text-danger-600" aria-hidden="true" />
-            Re-upload Needed
-          </span>
-        );
+        return <Badge variant="danger" dot>Re-upload Needed</Badge>;
       default:
-        return (
-          <span className="inline-flex items-center gap-1 bg-warning-50 text-warning-800 border border-warning-200 px-2.5 py-0.5 rounded-full text-[11px] font-semibold">
-            <Clock className="w-3 h-3 text-warning-600" aria-hidden="true" />
-            Under Review
-          </span>
-        );
+        return <Badge variant="warning" dot>Under Review</Badge>;
     }
   };
 
   if (isLoading) {
     return (
-      <div className="max-w-7xl mx-auto space-y-6 py-2">
-        <div className="h-40 rounded-3xl bg-primary-900/90 animate-pulse" />
-        <div className="h-44 rounded-3xl bg-white border border-surface-200 animate-pulse" />
-        <div className="h-72 rounded-3xl bg-white border border-surface-200 animate-pulse" />
+      <div className="space-y-6">
+        <div className="h-16 rounded-lg bg-surface-200/70 animate-pulse" />
+        <div className="h-36 rounded-lg bg-white border border-surface-200 animate-pulse" />
+        <div className="h-64 rounded-lg bg-white border border-surface-200 animate-pulse" />
       </div>
     );
   }
 
   return (
-    <div className="space-y-8 max-w-7xl mx-auto pb-12 animate-fade-in">
-      {/* ─── High-Contrast Hero Banner (Fixed to-primary-800 token) ─────── */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 bg-gradient-to-r from-primary-950 via-primary-900 to-primary-800 p-6 sm:p-8 rounded-3xl text-white shadow-md">
-        <div className="space-y-2 max-w-2xl">
-          <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight">
+    <div className="space-y-6 pb-10 animate-fade-in">
+      {/* ─── Clean Flat Page Header with Compact Readiness Meter ────────── */}
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 pb-5 border-b border-surface-200">
+        <div className="max-w-2xl">
+          <h1 className="text-xl sm:text-2xl font-semibold text-surface-900 tracking-tight">
             Travel &amp; Medical Document Vault
           </h1>
-          <p className="text-xs sm:text-sm text-primary-100 leading-relaxed">
-            Upload your passport, diagnostic scans, and prescriptions, and download official Visa Invitation Letters and Fit-to-Fly certificates issued by your hospital.
+          <p className="text-xs sm:text-sm text-surface-500 mt-1">
+            Upload your passport, diagnostic scans, and prescriptions, and download official Visa Invitation Letters and Fit-to-Fly certificates.
           </p>
         </div>
 
-        <div className="flex items-center gap-4 p-4 bg-primary-900/80 border border-primary-700 rounded-2xl self-start md:self-auto shrink-0">
-          <div className="relative w-12 h-12 flex items-center justify-center shrink-0">
-            <svg className="w-12 h-12 -rotate-90" aria-hidden="true">
-              <circle
-                cx="24"
-                cy="24"
-                r="18"
-                stroke="currentColor"
-                strokeWidth="4"
-                className="text-primary-950"
-                fill="transparent"
-              />
-              <circle
-                cx="24"
-                cy="24"
-                r="18"
-                stroke="currentColor"
-                strokeWidth="4"
-                className="text-success-400 transition-all duration-500"
-                fill="transparent"
-                strokeDasharray={113.1}
-                strokeDashoffset={113.1 - (113.1 * readinessMetrics.percent) / 100}
-              />
-            </svg>
-            <span className="absolute text-[11px] font-extrabold text-white tabular-nums">
-              {readinessMetrics.percent}%
+        <div className="bg-white border border-surface-200 rounded-lg px-4 py-3 shadow-2xs shrink-0 sm:min-w-[220px]">
+          <div className="flex items-center justify-between text-xs mb-1.5">
+            <span className="font-medium text-surface-600">Travel Clearance</span>
+            <span className="font-semibold text-surface-900 tabular-nums">
+              {readinessMetrics.count} of {readinessMetrics.total} ready
             </span>
           </div>
-          <div>
-            <p className="text-xs font-semibold text-primary-200">Travel Clearance</p>
-            <p className="text-sm font-bold text-white tabular-nums">
-              {readinessMetrics.count} of {readinessMetrics.total} Ready
-            </p>
+          <div className="w-full h-1.5 bg-surface-150 rounded-full overflow-hidden">
+            <div
+              className="h-full bg-primary-600 rounded-full transition-[width] duration-300"
+              style={{ width: `${readinessMetrics.percent}%` }}
+            />
           </div>
         </div>
       </div>
 
-      {/* ─── Error Recovery Banner ──────────────────────────────────────── */}
+      {/* Error Recovery Banner */}
       {loadError && (
         <div
           role="alert"
-          className="p-5 rounded-2xl bg-danger-50 border border-danger-200 text-danger-900 flex flex-col sm:flex-row sm:items-center justify-between gap-4"
+          className="p-4 rounded-lg bg-danger-50 border border-danger-200 text-danger-900 flex flex-col sm:flex-row sm:items-center justify-between gap-4"
         >
           <div className="flex items-start gap-3">
-            <AlertCircle className="w-5 h-5 text-danger-600 shrink-0 mt-0.5" aria-hidden="true" />
+            <AlertCircle className="w-4 h-4 text-danger-600 shrink-0 mt-0.5" aria-hidden="true" />
             <div>
-              <h2 className="text-sm font-bold">Could not load your documents</h2>
+              <h2 className="text-sm font-semibold">Could not load your documents</h2>
               <p className="text-xs text-danger-800 mt-0.5">{loadError}</p>
             </div>
           </div>
@@ -403,25 +355,24 @@ export default function DocumentVaultPage() {
             size="sm"
             onClick={() => void fetchDocuments()}
           >
-            <RefreshCw className="w-4 h-4" aria-hidden="true" />
+            <RefreshCw className="w-3.5 h-3.5" aria-hidden="true" />
             <span>Retry</span>
           </Button>
         </div>
       )}
 
-      {/* ─── Pre-Travel Clearance Checklist ─────────────────────────────── */}
-      <Card className="p-6 rounded-3xl border border-surface-200 shadow-xs space-y-4">
+      {/* Pre-Travel Document Checklist */}
+      <Card className="p-5 space-y-4">
         <div className="flex items-center justify-between flex-wrap gap-2">
-          <h2 className="text-base font-bold text-surface-900 flex items-center gap-2">
-            <Plane className="w-5 h-5 text-primary-600" aria-hidden="true" />
-            <span>Pre-Travel Document Checklist</span>
+          <h2 className="text-sm font-semibold text-surface-900">
+            Pre-Travel Document Checklist
           </h2>
-          <span className="text-xs font-medium text-surface-500">
+          <span className="text-xs text-surface-500">
             Required for Indian Medical Visa (M-Visa) &amp; hospital admission
           </span>
         </div>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3.5 pt-1">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3">
           {REQUIRED_TRAVEL_DOCS.map((doc) => {
             const isVerified = readinessMetrics.uploadedCategories.has(doc.key);
             const canQuickSelect = !isVerified && doc.uploadable;
@@ -432,17 +383,17 @@ export default function DocumentVaultPage() {
                   key={doc.key}
                   type="button"
                   onClick={() => handleSelectChecklistCategory(doc.key)}
-                  className="p-4 rounded-2xl border border-warning-200 bg-warning-50/50 hover:bg-warning-50 hover:border-warning-300 text-left flex flex-col justify-between space-y-3 transition-colors min-h-[108px]"
+                  className="p-3.5 rounded-md border border-warning-200 bg-warning-50/40 hover:bg-warning-50/80 text-left flex flex-col justify-between space-y-2.5 transition-colors min-h-[96px]"
                 >
                   <div className="flex items-start justify-between gap-2 w-full">
-                    <span className="text-[11px] font-semibold text-surface-600">{doc.role}</span>
-                    <AlertCircle className="w-4 h-4 text-warning-600 shrink-0" aria-hidden="true" />
+                    <span className="text-[11px] text-surface-500">{doc.role}</span>
+                    <AlertCircle className="w-3.5 h-3.5 text-warning-600 shrink-0" aria-hidden="true" />
                   </div>
                   <div>
-                    <h3 className="text-xs font-bold text-surface-900 leading-snug">
+                    <h3 className="text-xs font-medium text-surface-900 leading-snug">
                       {DOCUMENT_CATEGORY_LABELS[doc.key] || doc.label}
                     </h3>
-                    <p className="text-xs font-semibold text-primary-700 mt-1">
+                    <p className="text-[11px] font-medium text-primary-700 mt-0.5">
                       Select to upload →
                     </p>
                   </div>
@@ -453,27 +404,27 @@ export default function DocumentVaultPage() {
             return (
               <div
                 key={doc.key}
-                className={`p-4 rounded-2xl border flex flex-col justify-between space-y-3 min-h-[108px] ${
+                className={`p-3.5 rounded-md border flex flex-col justify-between space-y-2.5 min-h-[96px] ${
                   isVerified
-                    ? 'bg-success-50/60 border-success-200'
-                    : 'bg-surface-50 border-surface-200'
+                    ? 'bg-surface-50 border-surface-200'
+                    : 'bg-white border-surface-200'
                 }`}
               >
                 <div className="flex items-start justify-between gap-2">
-                  <span className="text-[11px] font-semibold text-surface-600">{doc.role}</span>
+                  <span className="text-[11px] text-surface-500">{doc.role}</span>
                   {isVerified ? (
-                    <CheckCircle2 className="w-4 h-4 text-success-600 shrink-0" aria-hidden="true" />
+                    <CheckCircle2 className="w-3.5 h-3.5 text-success-600 shrink-0" aria-hidden="true" />
                   ) : (
-                    <Clock className="w-4 h-4 text-surface-400 shrink-0" aria-hidden="true" />
+                    <Clock className="w-3.5 h-3.5 text-surface-400 shrink-0" aria-hidden="true" />
                   )}
                 </div>
 
                 <div>
-                  <h3 className="text-xs font-bold text-surface-900 leading-snug">
+                  <h3 className="text-xs font-medium text-surface-900 leading-snug">
                     {DOCUMENT_CATEGORY_LABELS[doc.key] || doc.label}
                   </h3>
-                  <p className="text-xs text-surface-600 mt-1">
-                    {isVerified ? 'Verified & Ready' : 'Issued by hospital'}
+                  <p className="text-[11px] text-surface-500 mt-0.5">
+                    {isVerified ? 'Verified' : 'Issued by hospital'}
                   </p>
                 </div>
               </div>
@@ -482,33 +433,30 @@ export default function DocumentVaultPage() {
         </div>
       </Card>
 
-      {/* ─── Keyboard-Accessible Document Upload Card ───────────────────── */}
+      {/* Keyboard-Accessible Document Upload Card */}
       <div ref={uploadCardRef} id="document-upload-section">
-        <Card className="p-6 rounded-3xl border border-surface-200 shadow-xs space-y-6">
+        <Card className="p-5 space-y-5">
           <div>
-            <h2 className="text-base font-bold text-surface-900 flex items-center gap-2">
-              <UploadCloud className="w-5 h-5 text-primary-600" aria-hidden="true" />
-              <span>Upload a Document</span>
-            </h2>
-            <p className="text-xs text-surface-600 mt-0.5">
+            <h2 className="text-sm font-semibold text-surface-900">Upload a Document</h2>
+            <p className="text-xs text-surface-500 mt-0.5">
               Files are encrypted automatically and reviewed by your case coordinator.
             </p>
           </div>
 
-          <form onSubmit={handleUploadSubmit} className="space-y-5">
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-              <div className="md:col-span-1 space-y-2">
+          <form onSubmit={handleUploadSubmit} className="space-y-4">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
+              <div className="md:col-span-1">
                 <Select
                   label="Document Type"
                   options={UPLOAD_CATEGORY_OPTIONS}
                   value={selectedCategory}
                   onChange={setSelectedCategory}
-                  helperText="Choose the matching category so your coordinator can verify it quickly."
+                  helperText="Choose the matching category for faster verification."
                 />
               </div>
 
               <div className="md:col-span-2 space-y-1.5">
-                <span className="text-xs font-bold text-surface-700 block">Document File</span>
+                <span className="text-xs font-medium text-surface-700 block">Document File</span>
                 <input
                   ref={fileInputRef}
                   type="file"
@@ -524,17 +472,17 @@ export default function DocumentVaultPage() {
                     onDragLeave={handleDrag}
                     onDragOver={handleDrag}
                     onDrop={handleDrop}
-                    className="border-2 border-success-500 bg-success-50/40 rounded-2xl p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-4"
+                    className="border border-primary-300 bg-primary-50/40 rounded-md p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-4"
                   >
                     <div className="flex items-center gap-3 min-w-0">
-                      <div className="w-11 h-11 rounded-xl bg-white border border-success-200 text-success-700 flex items-center justify-center shrink-0">
-                        <FileText className="w-5 h-5" aria-hidden="true" />
+                      <div className="w-9 h-9 rounded-md bg-white border border-surface-200 text-primary-700 flex items-center justify-center shrink-0">
+                        <FileText className="w-4 h-4" aria-hidden="true" />
                       </div>
                       <div className="min-w-0">
-                        <p className="text-xs font-bold text-surface-900 truncate">
+                        <p className="text-xs font-medium text-surface-900 truncate">
                           {fileToUpload.name}
                         </p>
-                        <p className="text-xs text-surface-600 tabular-nums">
+                        <p className="text-xs text-surface-500 tabular-nums">
                           {formatFileSize(fileToUpload.size)} • Ready to upload
                         </p>
                       </div>
@@ -559,7 +507,7 @@ export default function DocumentVaultPage() {
                         }}
                         className="text-danger-700 hover:bg-danger-50"
                       >
-                        <Trash2 className="w-4 h-4" aria-hidden="true" />
+                        <Trash2 className="w-3.5 h-3.5" aria-hidden="true" />
                         <span>Remove</span>
                       </Button>
                     </div>
@@ -574,20 +522,20 @@ export default function DocumentVaultPage() {
                     onDrop={handleDrop}
                     onClick={() => fileInputRef.current?.click()}
                     className={`
-                      w-full min-h-[140px] border-2 border-dashed rounded-2xl p-6 text-center cursor-pointer
-                      transition-colors flex flex-col items-center justify-center gap-3
+                      w-full min-h-[124px] border border-dashed rounded-md p-5 text-center cursor-pointer
+                      transition-colors flex flex-col items-center justify-center gap-2
                       ${
                         dragActive
-                          ? 'border-primary-600 bg-primary-50/70 ring-4 ring-primary-100'
-                          : 'border-surface-300 hover:border-primary-500 bg-surface-50/60 hover:bg-white'
+                          ? 'border-primary-600 bg-primary-50/50'
+                          : 'border-surface-300 hover:border-surface-400 bg-surface-50/50 hover:bg-surface-50'
                       }
                     `}
                   >
-                    <div className="w-12 h-12 rounded-2xl bg-primary-50 text-primary-700 border border-primary-200 flex items-center justify-center">
-                      <UploadCloud className="w-6 h-6" aria-hidden="true" />
+                    <div className="w-9 h-9 rounded-md bg-white text-surface-600 border border-surface-200 flex items-center justify-center">
+                      <UploadCloud className="w-4 h-4" aria-hidden="true" />
                     </div>
                     <div>
-                      <span className="text-xs sm:text-sm font-bold text-surface-900 block">
+                      <span className="text-xs sm:text-sm font-medium text-surface-900 block">
                         Browse files or drag &amp; drop here
                       </span>
                       <span className="text-xs text-surface-500 mt-0.5 block">
@@ -602,19 +550,19 @@ export default function DocumentVaultPage() {
             <div className="flex justify-end pt-1">
               <Button
                 type="submit"
-                size="md"
+                size="sm"
                 isLoading={isUploading}
                 disabled={isUploading || !fileToUpload}
               >
-                <FileCheck className="w-4 h-4" aria-hidden="true" />
-                <span>{isUploading ? 'Encrypting & Uploading…' : 'Upload for Verification'}</span>
+                <FileCheck className="w-3.5 h-3.5" aria-hidden="true" />
+                <span>{isUploading ? 'Uploading…' : 'Upload for Verification'}</span>
               </Button>
             </div>
           </form>
         </Card>
       </div>
 
-      {/* ─── Vault Explorer & Filters ───────────────────────────────────── */}
+      {/* Vault Explorer & Filters */}
       <div className="space-y-4">
         <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-3">
           <div
@@ -628,10 +576,10 @@ export default function DocumentVaultPage() {
                 type="button"
                 aria-pressed={activeCategoryFilter === cat.id}
                 onClick={() => setActiveCategoryFilter(cat.id)}
-                className={`min-h-11 px-4 rounded-xl text-xs font-semibold whitespace-nowrap shrink-0 transition-colors border ${
+                className={`min-h-11 px-3.5 rounded-md text-xs font-medium whitespace-nowrap shrink-0 transition-colors border ${
                   activeCategoryFilter === cat.id
-                    ? 'bg-primary-700 text-white border-primary-700 shadow-2xs'
-                    : 'bg-white text-surface-700 hover:bg-surface-50 border-surface-200'
+                    ? 'bg-primary-50 text-primary-900 border-primary-300'
+                    : 'bg-white text-surface-600 hover:bg-surface-50 border-surface-200'
                 }`}
               >
                 {cat.label}
@@ -639,10 +587,10 @@ export default function DocumentVaultPage() {
             ))}
           </div>
 
-          <div className="flex items-center gap-2.5 shrink-0">
+          <div className="flex items-center gap-2 shrink-0">
             <div className="relative flex-1 sm:flex-initial">
               <Search
-                className="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-surface-400 pointer-events-none"
+                className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-surface-400 pointer-events-none"
                 aria-hidden="true"
               />
               <input
@@ -651,23 +599,23 @@ export default function DocumentVaultPage() {
                 placeholder="Search documents..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="w-full sm:w-60 min-h-11 pl-10 pr-4 bg-white border border-surface-200 rounded-xl text-xs text-surface-900 placeholder:text-surface-400 focus:outline-none focus:border-primary-600"
+                className="w-full sm:w-56 min-h-11 pl-9 pr-3 bg-white border border-surface-300 rounded-md text-xs text-surface-900 placeholder:text-surface-400 focus:outline-none focus:border-primary-600"
               />
             </div>
 
             <div
               role="group"
               aria-label="Document list layout"
-              className="flex items-center bg-surface-100 p-1 rounded-xl border border-surface-200 shrink-0"
+              className="flex items-center bg-surface-100 p-0.5 rounded-md border border-surface-200 shrink-0"
             >
               <button
                 type="button"
                 aria-label="Grid view"
                 aria-pressed={viewMode === 'grid'}
                 onClick={() => setViewMode('grid')}
-                className={`w-11 h-11 rounded-lg flex items-center justify-center transition-colors ${
+                className={`w-11 h-11 rounded flex items-center justify-center transition-colors ${
                   viewMode === 'grid'
-                    ? 'bg-white text-primary-700 shadow-2xs'
+                    ? 'bg-white text-surface-900 shadow-2xs'
                     : 'text-surface-500 hover:text-surface-900'
                 }`}
               >
@@ -678,9 +626,9 @@ export default function DocumentVaultPage() {
                 aria-label="Table view"
                 aria-pressed={viewMode === 'table'}
                 onClick={() => setViewMode('table')}
-                className={`w-11 h-11 rounded-lg flex items-center justify-center transition-colors ${
+                className={`w-11 h-11 rounded flex items-center justify-center transition-colors ${
                   viewMode === 'table'
-                    ? 'bg-white text-primary-700 shadow-2xs'
+                    ? 'bg-white text-surface-900 shadow-2xs'
                     : 'text-surface-500 hover:text-surface-900'
                 }`}
               >
@@ -690,14 +638,14 @@ export default function DocumentVaultPage() {
           </div>
         </div>
 
-        {/* ─── Files Grid / Table ──────────────────────────────────────── */}
+        {/* Files Grid / Table */}
         {filteredDocuments.length === 0 ? (
-          <Card className="p-12 text-center rounded-3xl border border-surface-200 space-y-3">
-            <div className="w-12 h-12 rounded-2xl bg-surface-100 text-surface-500 flex items-center justify-center mx-auto">
-              <FolderLock className="w-6 h-6" aria-hidden="true" />
+          <Card className="p-10 text-center space-y-2.5">
+            <div className="w-10 h-10 rounded-md bg-surface-100 text-surface-500 border border-surface-200 flex items-center justify-center mx-auto">
+              <FolderLock className="w-5 h-5" aria-hidden="true" />
             </div>
-            <h3 className="text-sm font-bold text-surface-900">No documents match this view</h3>
-            <p className="text-xs text-surface-600 max-w-sm mx-auto">
+            <h3 className="text-sm font-semibold text-surface-900">No documents match this view</h3>
+            <p className="text-xs text-surface-500 max-w-sm mx-auto">
               {searchQuery
                 ? 'Try clearing your search filter or switching categories.'
                 : 'Upload your passport or diagnostic scans above to begin travel verification.'}
@@ -708,27 +656,28 @@ export default function DocumentVaultPage() {
             {filteredDocuments.map((doc) => (
               <Card
                 key={doc.id}
-                className="p-5 rounded-3xl border border-surface-200 hover:border-primary-300 shadow-xs hover:shadow-md transition-shadow flex flex-col justify-between space-y-4"
+                hover
+                className="p-4 flex flex-col justify-between space-y-4"
               >
-                <div className="space-y-3">
-                  <div className="flex items-start justify-between gap-3">
-                    <div className="p-3 bg-primary-50 rounded-2xl text-primary-700 border border-primary-200 shrink-0">
-                      <FileText className="w-5 h-5" aria-hidden="true" />
+                <div className="space-y-2.5">
+                  <div className="flex items-start justify-between gap-2">
+                    <div className="w-9 h-9 bg-surface-100 rounded-md text-surface-600 border border-surface-200 flex items-center justify-center shrink-0">
+                      <FileText className="w-4 h-4" aria-hidden="true" />
                     </div>
                     {renderStatusBadge(doc.verificationStatus)}
                   </div>
 
                   <div>
-                    <span className="text-xs font-semibold text-surface-500">
+                    <span className="text-[11px] font-medium text-surface-500">
                       {DOCUMENT_CATEGORY_LABELS[doc.category] || doc.category}
                     </span>
                     <h3
-                      className="text-sm font-bold text-surface-900 truncate mt-0.5"
+                      className="text-sm font-medium text-surface-900 truncate mt-0.5"
                       title={doc.fileName}
                     >
                       {doc.fileName}
                     </h3>
-                    <p className="text-xs text-surface-500 mt-1 tabular-nums">
+                    <p className="text-xs text-surface-500 mt-0.5 tabular-nums">
                       {formatFileSize(doc.fileSize)} •{' '}
                       {new Date(doc.createdAt).toLocaleDateString('en-US', {
                         month: 'short',
@@ -739,8 +688,8 @@ export default function DocumentVaultPage() {
                   </div>
 
                   {doc.verificationNotes && (
-                    <div className="p-3 bg-surface-50 rounded-xl border border-surface-200 text-xs text-surface-700">
-                      <strong className="text-surface-900">Coordinator Note:</strong>{' '}
+                    <div className="p-2.5 bg-surface-50 rounded-md border border-surface-200 text-xs text-surface-600">
+                      <span className="font-medium text-surface-800">Note:</span>{' '}
                       {doc.verificationNotes}
                     </div>
                   )}
@@ -751,9 +700,9 @@ export default function DocumentVaultPage() {
                     href={doc.fileUrl}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="inline-flex items-center justify-center gap-2 min-h-11 px-4 rounded-xl bg-primary-50 hover:bg-primary-100 text-primary-800 border border-primary-200 text-xs font-semibold transition-colors"
+                    className="inline-flex items-center justify-center gap-1.5 min-h-11 px-3 rounded-md bg-white hover:bg-surface-100 text-surface-700 border border-surface-300 text-xs font-medium transition-colors"
                   >
-                    <Download className="w-4 h-4" aria-hidden="true" />
+                    <Download className="w-3.5 h-3.5" aria-hidden="true" />
                     <span>Download</span>
                   </a>
 
@@ -761,7 +710,7 @@ export default function DocumentVaultPage() {
                     <button
                       type="button"
                       onClick={() => setDeleteTarget({ id: doc.id, name: doc.fileName })}
-                      className="inline-flex items-center justify-center w-11 h-11 text-surface-500 hover:text-danger-700 hover:bg-danger-50 rounded-xl transition-colors"
+                      className="inline-flex items-center justify-center w-11 h-11 text-surface-400 hover:text-danger-700 hover:bg-danger-50 rounded-md transition-colors"
                       aria-label={`Delete ${doc.fileName}`}
                     >
                       <Trash2 className="w-4 h-4" aria-hidden="true" />
@@ -772,7 +721,7 @@ export default function DocumentVaultPage() {
             ))}
           </div>
         ) : (
-          <Card className="p-0 rounded-3xl border border-surface-200 overflow-hidden shadow-xs">
+          <Card className="p-0 overflow-hidden">
             <div
               tabIndex={0}
               role="region"
@@ -780,24 +729,24 @@ export default function DocumentVaultPage() {
               className="overflow-x-auto"
             >
               <table className="w-full text-left text-xs">
-                <thead className="bg-surface-50 border-b border-surface-200 text-surface-600 font-semibold uppercase tracking-wider">
+                <thead className="bg-surface-50 border-b border-surface-200 text-[11px] font-medium uppercase tracking-wide text-surface-500">
                   <tr>
-                    <th scope="col" className="p-4">
+                    <th scope="col" className="px-4 py-3">
                       Document Name
                     </th>
-                    <th scope="col" className="p-4">
+                    <th scope="col" className="px-4 py-3">
                       Category
                     </th>
-                    <th scope="col" className="p-4">
+                    <th scope="col" className="px-4 py-3">
                       Status
                     </th>
-                    <th scope="col" className="p-4">
+                    <th scope="col" className="px-4 py-3">
                       Size
                     </th>
-                    <th scope="col" className="p-4">
+                    <th scope="col" className="px-4 py-3">
                       Uploaded
                     </th>
-                    <th scope="col" className="p-4 text-right">
+                    <th scope="col" className="px-4 py-3 text-right">
                       Actions
                     </th>
                   </tr>
@@ -805,36 +754,36 @@ export default function DocumentVaultPage() {
                 <tbody className="divide-y divide-surface-100">
                   {filteredDocuments.map((doc) => (
                     <tr key={doc.id} className="hover:bg-surface-50/70 transition-colors">
-                      <td className="p-4 font-bold text-surface-900">
+                      <td className="px-4 py-3.5 font-medium text-surface-900">
                         <div className="flex items-center gap-2">
                           <FileText
-                            className="w-4 h-4 text-primary-600 shrink-0"
+                            className="w-4 h-4 text-surface-400 shrink-0"
                             aria-hidden="true"
                           />
                           <span className="truncate max-w-xs">{doc.fileName}</span>
                         </div>
                       </td>
-                      <td className="p-4 text-surface-700">
+                      <td className="px-4 py-3.5 text-surface-600">
                         {DOCUMENT_CATEGORY_LABELS[doc.category] || doc.category}
                       </td>
-                      <td className="p-4">{renderStatusBadge(doc.verificationStatus)}</td>
-                      <td className="p-4 text-surface-600 tabular-nums">
+                      <td className="px-4 py-3.5">{renderStatusBadge(doc.verificationStatus)}</td>
+                      <td className="px-4 py-3.5 text-surface-500 tabular-nums">
                         {formatFileSize(doc.fileSize)}
                       </td>
-                      <td className="p-4 text-surface-600 tabular-nums">
+                      <td className="px-4 py-3.5 text-surface-500 tabular-nums">
                         {new Date(doc.createdAt).toLocaleDateString('en-US', {
                           month: 'short',
                           day: 'numeric',
                           year: 'numeric',
                         })}
                       </td>
-                      <td className="p-4 text-right">
-                        <div className="flex items-center justify-end gap-1.5">
+                      <td className="px-4 py-3.5 text-right">
+                        <div className="flex items-center justify-end gap-1">
                           <a
                             href={doc.fileUrl}
                             target="_blank"
                             rel="noopener noreferrer"
-                            className="inline-flex items-center justify-center w-11 h-11 text-primary-700 hover:bg-primary-50 rounded-xl transition-colors"
+                            className="inline-flex items-center justify-center w-11 h-11 text-surface-600 hover:text-primary-700 hover:bg-surface-100 rounded-md transition-colors"
                             aria-label={`Download ${doc.fileName}`}
                           >
                             <Download className="w-4 h-4" aria-hidden="true" />
@@ -843,7 +792,7 @@ export default function DocumentVaultPage() {
                             <button
                               type="button"
                               onClick={() => setDeleteTarget({ id: doc.id, name: doc.fileName })}
-                              className="inline-flex items-center justify-center w-11 h-11 text-surface-500 hover:text-danger-700 hover:bg-danger-50 rounded-xl transition-colors"
+                              className="inline-flex items-center justify-center w-11 h-11 text-surface-400 hover:text-danger-700 hover:bg-danger-50 rounded-md transition-colors"
                               aria-label={`Delete ${doc.fileName}`}
                             >
                               <Trash2 className="w-4 h-4" aria-hidden="true" />
@@ -860,7 +809,6 @@ export default function DocumentVaultPage() {
         )}
       </div>
 
-      {/* ─── Document Deletion Confirmation Dialog ──────────────────────── */}
       <ConfirmDialog
         open={Boolean(deleteTarget)}
         title="Remove document from vault?"

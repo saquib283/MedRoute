@@ -85,23 +85,23 @@ export default function RegisterPage() {
 
   return (
     <div className="space-y-5">
-      <div className="text-center space-y-1">
-        <h2 className="text-2xl font-bold text-surface-900 tracking-tight">Patient Registration</h2>
-        <p className="text-xs text-surface-500">
-          Create your Afzal Healthcare account to start your medical care inquiry.
+      <div className="space-y-1">
+        <h2 className="text-xl font-semibold text-surface-900 tracking-tight">Patient registration</h2>
+        <p className="text-sm text-surface-500">
+          Create your Afzal Healthcare account to begin your medical care inquiry.
         </p>
       </div>
 
       <form onSubmit={handleSubmit} className="space-y-3.5">
         {error && (
-          <div className="bg-danger-50 border border-danger-200 text-danger-800 p-3 rounded-xl text-xs flex items-center gap-2 animate-slide-down">
-            <AlertCircle className="w-4 h-4 text-danger-600 shrink-0" />
+          <div className="bg-danger-50 border border-danger-200 text-danger-800 p-3 rounded-md text-xs flex items-start gap-2 animate-slide-down">
+            <AlertCircle className="w-4 h-4 text-danger-600 shrink-0 mt-0.5" />
             <span>{error}</span>
           </div>
         )}
 
         <Input
-          label="Full Name"
+          label="Full name"
           type="text"
           placeholder="Sara Ali"
           value={formData.fullName}
@@ -113,7 +113,7 @@ export default function RegisterPage() {
 
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
           <Input
-            label="Email Address"
+            label="Email address"
             type="email"
             placeholder="patient@example.com"
             value={formData.email}
@@ -124,7 +124,7 @@ export default function RegisterPage() {
           />
 
           <Input
-            label="Phone Number"
+            label="Phone number"
             type="tel"
             placeholder="+96891234567"
             value={formData.phone}
@@ -157,7 +157,7 @@ export default function RegisterPage() {
           />
 
           <Input
-            label="Passport Number"
+            label="Passport number"
             type="text"
             placeholder="OM998877"
             value={formData.passportNo}
@@ -169,7 +169,7 @@ export default function RegisterPage() {
 
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
           <Input
-            label="Date of Birth"
+            label="Date of birth"
             type="date"
             value={formData.dob}
             onChange={(e) => setFormData({ ...formData, dob: e.target.value })}
@@ -178,7 +178,7 @@ export default function RegisterPage() {
           />
 
           <Input
-            label="Primary Language"
+            label="Primary language"
             type="text"
             placeholder="Arabic / English"
             value={formData.primaryLanguage}
@@ -188,8 +188,8 @@ export default function RegisterPage() {
         </div>
 
         <div className="space-y-1.5">
-          <label htmlFor="medical-condition" className="block text-sm font-medium text-surface-700">
-            Medical Condition / Inquiry Notes
+          <label htmlFor="medical-condition" className="block text-xs font-medium text-surface-700">
+            Medical condition / inquiry notes
           </label>
           <textarea
             id="medical-condition"
@@ -197,7 +197,7 @@ export default function RegisterPage() {
             placeholder="Briefly describe your symptoms, diagnosis, or desired treatment..."
             value={formData.medicalCondition}
             onChange={(e) => setFormData({ ...formData, medicalCondition: e.target.value })}
-            className="w-full px-4 py-2.5 bg-white border border-surface-200 hover:border-surface-300 rounded-xl text-sm text-surface-900 placeholder:text-surface-500 focus:outline-none focus:border-primary-600 transition-colors"
+            className="w-full px-3.5 py-2.5 bg-white border border-surface-300 hover:border-surface-400 rounded-md text-sm text-surface-900 placeholder:text-surface-400 focus:outline-none focus:border-primary-600 transition-colors"
           />
         </div>
 
@@ -207,7 +207,7 @@ export default function RegisterPage() {
 
         <p className="text-xs text-center text-surface-500 pt-1">
           Already have an account?{' '}
-          <Link href="/login" className="font-bold text-primary-600 hover:text-primary-700 transition-colors">
+          <Link href="/login" className="font-medium text-primary-600 hover:text-primary-700 transition-colors">
             Sign in here
           </Link>
         </p>

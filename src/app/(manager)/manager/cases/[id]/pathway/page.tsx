@@ -2,6 +2,7 @@
 
 /**
  * Afzal Healthcare — Manager Configurable Patient Clinical Pathway Page
+ * Flush grid wrapper delegating to the shared PathwayBuilderEditor workspace.
  */
 
 import { use } from 'react';

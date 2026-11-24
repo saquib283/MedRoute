@@ -72,11 +72,11 @@ const PERIODS = [
 ];
 
 function TrendBadge({ value }: { value: number }) {
-  if (value === 0) return <span className="text-xs text-surface-500 font-semibold">—</span>;
+  if (value === 0) return <span className="text-xs text-surface-400 font-medium">—</span>;
   const isUp = value > 0;
   return (
-    <span className={`inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-md text-xs font-bold ${
-      isUp ? 'bg-success-50 text-success-700' : 'bg-danger-50 text-danger-700'
+    <span className={`inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded text-xs font-medium tabular-nums ${
+      isUp ? 'bg-success-50 text-success-700 border border-success-200' : 'bg-danger-50 text-danger-700 border border-danger-200'
     }`}>
       {isUp ? '↑' : '↓'} {Math.abs(value)}%
     </span>
@@ -107,46 +107,47 @@ export default function AdminDashboardPage() {
   if (loading) {
     return (
       <div className="flex items-center justify-center min-h-[400px]">
-        <div className="w-8 h-8 border-4 border-primary-600 border-t-transparent rounded-full animate-spin" />
+        <div className="w-7 h-7 border-2 border-primary-600 border-t-transparent rounded-full animate-spin" />
       </div>
     );
   }
 
   const m = data?.metrics;
   const kpis = [
-    { label: 'Total Users', value: m?.totalUsers || 0, color: 'from-primary-500/10 to-primary-600/5 text-primary-700 border-primary-200/50', icon: UsersIcon },
-    { label: 'Active Patients', value: m?.totalPatients || 0, color: 'from-blue-500/10 to-blue-600/5 text-blue-700 border-blue-200/50', icon: PatientIcon },
-    { label: 'Active Managers', value: m?.totalManagers || 0, color: 'from-primary-500/10 to-primary-600/5 text-primary-700 border-primary-200/50', icon: ChecklistIcon },
-    { label: 'Active Doctors', value: m?.totalDoctors || 0, color: 'from-emerald-500/10 to-emerald-600/5 text-emerald-700 border-emerald-200/50', icon: DoctorIcon },
-    { label: 'Active Cases', value: m?.activeCases || 0, color: 'from-amber-500/10 to-amber-600/5 text-amber-700 border-amber-200/50', icon: CasesIcon, trend: data?.trends.cases },
-    { label: `Appointments`, value: m?.appointmentsThisPeriod || 0, color: 'from-cyan-500/10 to-cyan-600/5 text-cyan-700 border-cyan-200/50', icon: CalendarIcon, trend: data?.trends.appointments },
-    { label: 'Pending Escalations', value: m?.pendingEscalations || 0, color: 'from-red-500/10 to-red-600/5 text-red-700 border-red-200/50', icon: EscalationIcon },
+    { label: 'Total users', value: m?.totalUsers || 0, icon: UsersIcon },
+    { label: 'Active patients', value: m?.totalPatients || 0, icon: PatientIcon },
+    { label: 'Active managers', value: m?.totalManagers || 0, icon: ChecklistIcon },
+    { label: 'Active doctors', value: m?.totalDoctors || 0, icon: DoctorIcon },
+    { label: 'Active cases', value: m?.activeCases || 0, icon: CasesIcon, trend: data?.trends.cases },
+    { label: 'Appointments', value: m?.appointmentsThisPeriod || 0, icon: CalendarIcon, trend: data?.trends.appointments },
+    { label: 'Pending escalations', value: m?.pendingEscalations || 0, icon: EscalationIcon },
   ];
 
   // For segmented bar representation
   const statusTotal = data?.statusDistribution.reduce((s, d) => s + d.count, 0) || 0;
 
   return (
-    <div className="max-w-7xl mx-auto space-y-8 animate-fade-in">
-      {/* Premium Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-6 pb-2 border-b border-surface-200/60">
+    <div className="space-y-6 animate-fade-in">
+      {/* Header */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-5 border-b border-surface-200">
         <div>
-          <h1 className="text-3xl font-extrabold text-surface-900 tracking-tight">Operations Dashboard</h1>
-          <p className="text-sm text-surface-500 mt-1.5 font-medium">Real-time metrics, case flow, hospital assignments, and system audit feed.</p>
+          <h1 className="text-xl font-semibold tracking-tight text-surface-900">Operations Dashboard</h1>
+          <p className="text-xs sm:text-sm text-surface-500 mt-1">Real-time metrics, case flow, hospital assignments, and system audit feed.</p>
         </div>
-        
-        {/* Glassmorphism Period Picker */}
-        <div className="flex bg-white/70 backdrop-blur-md border border-surface-300/80 p-1 rounded-xl shadow-xs self-start sm:self-center">
+
+        {/* Period Switcher */}
+        <div className="flex bg-surface-100 p-1 rounded-md border border-surface-200 self-start sm:self-center">
           {PERIODS.map((p) => {
             const isActive = period === p.value;
             return (
               <button
                 key={p.value}
+                type="button"
                 onClick={() => setPeriod(p.value)}
-                className={`relative px-4 py-2 text-xs font-bold rounded-lg transition-all ${
+                className={`px-3 py-1.5 text-xs font-medium rounded-md transition-colors ${
                   isActive
-                    ? 'bg-primary-600 text-white shadow-sm'
-                    : 'text-surface-600 hover:text-surface-900 hover:bg-surface-100/50'
+                    ? 'bg-white text-surface-900 shadow-2xs border border-surface-200'
+                    : 'text-surface-600 hover:text-surface-900'
                 }`}
               >
                 {p.label}
@@ -156,34 +157,29 @@ export default function AdminDashboardPage() {
         </div>
       </div>
 
-      {/* Premium KPI Cards Grid */}
+      {/* KPI Cards Grid */}
       <div className="grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-4 gap-4">
         {kpis.map((kpi) => {
           const Icon = kpi.icon;
           return (
-            <Card 
-              key={kpi.label} 
-              className="group relative overflow-hidden bg-white border border-surface-200/80 p-5 hover:-translate-y-1 hover:shadow-md hover:border-primary-300 transition-all duration-300"
-            >
-              <div className="flex items-start justify-between">
+            <Card key={kpi.label} padding="md">
+              <div className="flex items-start justify-between gap-3">
                 <div className="space-y-1">
-                  <p className="text-xs font-bold text-surface-600 uppercase tracking-wider">{kpi.label}</p>
-                  <p className="text-3xl font-extrabold text-surface-900 tracking-tight mt-1">{kpi.value}</p>
+                  <p className="text-xs font-medium text-surface-500">{kpi.label}</p>
+                  <p className="text-2xl font-semibold tracking-tight tabular-nums text-surface-900">{kpi.value}</p>
                 </div>
-                <div className={`w-10 h-10 rounded-xl bg-gradient-to-br ${kpi.color} flex items-center justify-center border shrink-0`}>
-                  <Icon className="w-5 h-5" />
+                <div className="w-9 h-9 rounded-md bg-surface-100 text-surface-600 border border-surface-200 flex items-center justify-center shrink-0">
+                  <Icon className="w-4 h-4" />
                 </div>
               </div>
-              
-              {/* Sparkline & Trend Info */}
-              {'trend' in kpi && kpi.trend !== undefined && kpi.trend !== null && (
-                <div className="flex items-center gap-2 mt-4 pt-3 border-t border-surface-100/80">
+
+              {'trend' in kpi && kpi.trend !== undefined && kpi.trend !== null ? (
+                <div className="flex items-center gap-2 mt-4 pt-3 border-t border-surface-200">
                   <TrendBadge value={kpi.trend} />
-                  <span className="text-xs text-surface-500 font-semibold">vs previous period</span>
+                  <span className="text-xs text-surface-500 font-medium">vs previous period</span>
                 </div>
-              )}
-              {!('trend' in kpi) && (
-                <div className="h-4 mt-4" /> // empty spacer for matching layout height
+              ) : (
+                <div className="h-4 mt-4" />
               )}
             </Card>
           );
@@ -192,28 +188,26 @@ export default function AdminDashboardPage() {
 
       {/* Row 2: Analytics Panels */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        
         {/* Case Status Distribution */}
-        <Card className="p-6 bg-white border border-surface-200">
-          <div className="flex items-center justify-between mb-6">
+        <Card padding="lg">
+          <div className="flex items-center justify-between mb-5">
             <div>
-              <h2 className="text-sm font-bold text-surface-900 uppercase tracking-wider">Case Status Proportions</h2>
-              <p className="text-xs text-surface-400 mt-0.5">Platform cases status segment breakdown</p>
+              <h2 className="text-sm sm:text-base font-semibold text-surface-900">Case status proportions</h2>
+              <p className="text-xs text-surface-500 mt-0.5">Platform case status segment breakdown</p>
             </div>
             <Badge variant="primary">{statusTotal} Active Cases</Badge>
           </div>
 
-          {/* Segmented Timeline Bar */}
           {statusTotal > 0 ? (
-            <div className="space-y-6">
-              <div className="h-4 bg-surface-100 rounded-full flex overflow-hidden shadow-inner border border-surface-200/50">
+            <div className="space-y-5">
+              <div className="h-2.5 bg-surface-100 rounded-full flex overflow-hidden border border-surface-200">
                 {data?.statusDistribution.map((d) => {
                   const pct = (d.count / statusTotal) * 100;
                   const color = STATUS_COLORS[d.status]?.hex || '#cbd5e1';
                   return (
                     <div
                       key={d.status}
-                      className="h-full transition-all hover:brightness-95 cursor-pointer first:rounded-l-full last:rounded-r-full"
+                      className="h-full transition-opacity hover:opacity-90 first:rounded-l-full last:rounded-r-full"
                       style={{ width: `${pct}%`, backgroundColor: color }}
                       title={`${STATUS_LABELS[d.status] || d.status}: ${d.count} cases (${Math.round(pct)}%)`}
                     />
@@ -221,20 +215,19 @@ export default function AdminDashboardPage() {
                 })}
               </div>
 
-              {/* Status List Legend Grid */}
-              <div className="grid grid-cols-2 gap-3.5">
+              <div className="grid grid-cols-2 gap-3">
                 {data?.statusDistribution.map((d) => {
                   const pct = Math.round((d.count / statusTotal) * 100);
                   const style = STATUS_COLORS[d.status] || { bg: 'bg-surface-200', text: 'text-surface-700', hex: '#94a3b8' };
                   return (
-                    <div key={d.status} className="flex items-center justify-between p-2.5 rounded-lg border border-surface-100 bg-surface-50/50">
-                      <div className="flex items-center gap-2">
-                        <span className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: style.hex }} />
-                        <span className="text-xs font-bold text-surface-700">{STATUS_LABELS[d.status] || d.status}</span>
+                    <div key={d.status} className="flex items-center justify-between p-2.5 rounded-md border border-surface-200 bg-surface-100/60">
+                      <div className="flex items-center gap-2 min-w-0">
+                        <span className="w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: style.hex }} />
+                        <span className="text-xs font-medium text-surface-700 truncate">{STATUS_LABELS[d.status] || d.status}</span>
                       </div>
-                      <div className="text-right">
-                        <span className="text-xs font-bold text-surface-950 block">{d.count}</span>
-                        <span className="text-xs text-surface-500 block mt-0.5">{pct}%</span>
+                      <div className="text-right shrink-0 ml-2">
+                        <span className="text-xs font-semibold tabular-nums text-surface-900">{d.count}</span>
+                        <span className="text-[11px] text-surface-500 tabular-nums ml-1">({pct}%)</span>
                       </div>
                     </div>
                   );
@@ -247,34 +240,32 @@ export default function AdminDashboardPage() {
         </Card>
 
         {/* Manager Workload */}
-        <Card className="p-6 bg-white border border-surface-200">
-          <div>
-            <h2 className="text-sm font-bold text-surface-900 uppercase tracking-wider mb-1">Manager Load Leaderboard</h2>
-            <p className="text-xs text-surface-400 mb-6">Active case distribution across operations managers</p>
+        <Card padding="lg">
+          <div className="mb-5">
+            <h2 className="text-sm sm:text-base font-semibold text-surface-900">Manager workload</h2>
+            <p className="text-xs text-surface-500 mt-0.5">Active case distribution across operations managers</p>
           </div>
           {data?.managerWorkload && data.managerWorkload.length > 0 ? (
             <div className="space-y-4">
               {data.managerWorkload.slice(0, 5).map((mw, i) => {
                 const maxCases = data.managerWorkload[0]?.activeCases || 1;
                 const pct = Math.round((mw.activeCases / maxCases) * 100);
-                const colors = ['bg-primary-500', 'bg-blue-500', 'bg-violet-500', 'bg-emerald-500', 'bg-amber-500'];
                 return (
                   <div key={mw.managerId} className="flex items-center gap-3">
-                    <span className="text-xs font-bold text-surface-400 w-4 text-center">{i + 1}</span>
-                    
-                    {/* Avatars */}
-                    <div className="w-8 h-8 rounded-full bg-surface-100 flex items-center justify-center text-surface-700 font-extrabold text-xs shrink-0 border border-surface-200 shadow-xs">
+                    <span className="text-xs font-medium tabular-nums text-surface-400 w-4 text-center">{i + 1}</span>
+
+                    <div className="w-8 h-8 rounded-full bg-surface-100 flex items-center justify-center text-surface-700 font-semibold text-xs shrink-0 border border-surface-200">
                       {mw.managerName.charAt(0)}
                     </div>
 
-                    <div className="flex-1">
-                      <div className="flex items-center justify-between text-xs mb-1">
-                        <span className="font-semibold text-surface-700">{mw.managerName}</span>
-                        <span className="text-surface-950 font-bold">{mw.activeCases} active cases</span>
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center justify-between text-xs mb-1.5">
+                        <span className="font-medium text-surface-700 truncate">{mw.managerName}</span>
+                        <span className="text-surface-900 font-semibold tabular-nums">{mw.activeCases} active</span>
                       </div>
-                      <div className="h-2 bg-surface-100 rounded-full overflow-hidden">
+                      <div className="h-1.5 bg-surface-100 rounded-full overflow-hidden">
                         <div
-                          className={`h-full rounded-full transition-all duration-700 ${colors[i % colors.length]}`}
+                          className="h-full rounded-full bg-primary-600 transition-all duration-500"
                           style={{ width: `${pct}%` }}
                         />
                       </div>
@@ -284,44 +275,46 @@ export default function AdminDashboardPage() {
               })}
             </div>
           ) : (
-            <p className="text-sm text-surface-400 text-center py-10">No active manager assignments.</p>
+            <p className="text-sm text-surface-500 text-center py-10">No active manager assignments.</p>
           )}
         </Card>
       </div>
 
       {/* Row 3: Top Hospitals Table */}
-      <Card className="bg-white border border-surface-200 overflow-hidden shadow-xs">
-        <div className="px-6 py-4 border-b border-surface-150 flex items-center justify-between">
+      <Card className="p-0! overflow-hidden">
+        <div className="px-5 py-4 border-b border-surface-200 flex items-center justify-between">
           <div>
-            <h2 className="text-sm font-bold text-surface-900 uppercase tracking-wider">Top Hospital Partners</h2>
-            <p className="text-xs text-surface-400 mt-0.5">Top-performing healthcare providers based on bookings</p>
+            <h2 className="text-sm sm:text-base font-semibold text-surface-900">Top hospital partners</h2>
+            <p className="text-xs text-surface-500 mt-0.5">Healthcare providers ranked by appointment volume</p>
           </div>
-          <Badge variant="info">Hospital Partnerships</Badge>
+          <Badge variant="info">Partnerships</Badge>
         </div>
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
             <thead>
-              <tr className="border-b border-surface-200 bg-surface-50">
-                <th className="px-6 py-3 text-left text-xs font-bold text-surface-500 uppercase tracking-wider">Hospital Name</th>
-                <th className="px-6 py-3 text-left text-xs font-bold text-surface-500 uppercase tracking-wider">City Location</th>
-                <th className="px-6 py-3 text-left text-xs font-bold text-surface-500 uppercase tracking-wider">Total Appointments</th>
-                <th className="px-6 py-3 text-left text-xs font-bold text-surface-500 uppercase tracking-wider">Active Staff Doctors</th>
+              <tr className="border-b border-surface-200 bg-surface-100">
+                <th className="px-5 py-3 text-left text-[11px] font-medium uppercase tracking-wide text-surface-500">Hospital Name</th>
+                <th className="px-5 py-3 text-left text-[11px] font-medium uppercase tracking-wide text-surface-500">City Location</th>
+                <th className="px-5 py-3 text-left text-[11px] font-medium uppercase tracking-wide text-surface-500">Total Appointments</th>
+                <th className="px-5 py-3 text-left text-[11px] font-medium uppercase tracking-wide text-surface-500">Active Staff Doctors</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-surface-100">
+            <tbody className="divide-y divide-surface-200">
               {data?.topHospitals && data.topHospitals.length > 0 ? (
                 data.topHospitals.map((h) => (
-                  <tr key={h.id} className="hover:bg-surface-50/50 transition-colors">
-                    <td className="px-6 py-4 font-semibold text-surface-900">{h.name}</td>
-                    <td className="px-6 py-4 text-surface-600 font-medium flex items-center gap-1">
-                      <MapPinIcon className="w-3.5 h-3.5 text-surface-400" /> {h.city}
+                  <tr key={h.id} className="hover:bg-surface-100/60 transition-colors">
+                    <td className="px-5 py-3.5 font-medium text-surface-900">{h.name}</td>
+                    <td className="px-5 py-3.5 text-surface-600">
+                      <span className="inline-flex items-center gap-1.5">
+                        <MapPinIcon className="w-3.5 h-3.5 text-surface-400" /> {h.city}
+                      </span>
                     </td>
-                    <td className="px-6 py-4 text-surface-900 font-bold">{h.appointments}</td>
-                    <td className="px-6 py-4 text-surface-500 font-medium">{h.doctors} doctors</td>
+                    <td className="px-5 py-3.5 text-surface-900 font-semibold tabular-nums">{h.appointments}</td>
+                    <td className="px-5 py-3.5 text-surface-600 tabular-nums">{h.doctors} doctors</td>
                   </tr>
                 ))
               ) : (
-                <tr><td colSpan={4} className="px-6 py-10 text-center text-surface-400">No partner hospitals records.</td></tr>
+                <tr><td colSpan={4} className="px-5 py-10 text-center text-surface-500">No partner hospital records.</td></tr>
               )}
             </tbody>
           </table>
@@ -329,55 +322,52 @@ export default function AdminDashboardPage() {
       </Card>
 
       {/* Row 4: Recent Activities Timeline */}
-      <Card className="bg-white border border-surface-200 overflow-hidden shadow-xs">
-        <div className="px-6 py-4 border-b border-surface-150">
-          <h2 className="text-sm font-bold text-surface-900 uppercase tracking-wider">Operational Audit Activity</h2>
-          <p className="text-xs text-surface-400 mt-0.5">Real-time log of administrative modifications and platform actions</p>
+      <Card className="p-0! overflow-hidden">
+        <div className="px-5 py-4 border-b border-surface-200">
+          <h2 className="text-sm sm:text-base font-semibold text-surface-900">Operational audit activity</h2>
+          <p className="text-xs text-surface-500 mt-0.5">Recent administrative modifications and platform actions</p>
         </div>
-        <div className="p-6 relative">
-          <div className="absolute top-6 bottom-6 left-12 w-0.5 bg-surface-200/70" />
-          
-          <div className="space-y-6 relative">
-            {data?.recentActivity && data.recentActivity.length > 0 ? (
-              data.recentActivity.map((log) => {
+        <div className="p-5 relative">
+          {data?.recentActivity && data.recentActivity.length > 0 ? (
+            <div className="space-y-4 relative">
+              <div className="absolute top-4 bottom-4 left-6 w-px bg-surface-200" />
+              {data.recentActivity.map((log) => {
                 const isSystemAction = ['DEACTIVATE', 'DELETE', 'ESCALATION'].some(act => log.action.includes(act));
                 const isCreateAction = ['CREATE', 'ACTIVATE'].some(act => log.action.includes(act));
                 const actionBadgeColor = isSystemAction ? 'danger' : isCreateAction ? 'success' : 'primary';
 
                 return (
-                  <div key={log.id} className="flex gap-4 items-start hover:bg-surface-50/40 p-2.5 rounded-xl transition-colors">
-                    {/* Circle Avatar */}
-                    <div className="w-8 h-8 rounded-full bg-primary-50 border border-primary-200 text-primary-700 font-extrabold text-xs flex items-center justify-center shrink-0 z-10 shadow-xs">
+                  <div key={log.id} className="flex gap-3.5 items-start hover:bg-surface-100/60 p-2 rounded-md transition-colors relative">
+                    <div className="w-8 h-8 rounded-full bg-surface-100 border border-surface-200 text-surface-700 font-semibold text-xs flex items-center justify-center shrink-0 z-10">
                       {log.actor.fullName.charAt(0)}
                     </div>
-                    
-                    {/* Activity Content */}
+
                     <div className="flex-1 min-w-0">
                       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1">
-                        <p className="text-sm text-surface-800 font-semibold">
-                          {log.actor.fullName}{' '}
-                          <span className="text-surface-500 font-medium">performed action</span>{' '}
-                          <span className="text-surface-900 font-bold bg-surface-100 px-1.5 py-0.5 rounded-md text-xs">{log.action}</span>
+                        <p className="text-sm text-surface-800 font-medium">
+                          <span className="font-semibold text-surface-900">{log.actor.fullName}</span>{' '}
+                          <span className="text-surface-500">performed</span>{' '}
+                          <span className="text-surface-800 font-medium bg-surface-100 border border-surface-200 px-1.5 py-0.5 rounded text-xs font-mono">{log.action}</span>
                         </p>
-                        <span className="text-xs text-surface-500 font-semibold sm:text-right">
+                        <span className="text-xs text-surface-500 tabular-nums sm:text-right">
                           {new Date(log.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })} • {new Date(log.createdAt).toLocaleDateString()}
                         </span>
                       </div>
-                      
-                      <div className="flex items-center gap-2 mt-2">
+
+                      <div className="flex items-center gap-2 mt-1.5">
                         <Badge variant={actionBadgeColor} size="sm">{log.entityType}</Badge>
-                        <span className="text-xs text-surface-500 font-medium">Entity Reference: {log.entityId}</span>
+                        <span className="text-xs text-surface-500 tabular-nums">Ref: {log.entityId}</span>
                       </div>
                     </div>
                   </div>
                 );
-              })
-            ) : (
-              <div className="py-10 text-center text-sm text-surface-500">
-                No activity logs recorded.
-              </div>
-            )}
-          </div>
+              })}
+            </div>
+          ) : (
+            <div className="py-10 text-center text-sm text-surface-500">
+              No activity logs recorded.
+            </div>
+          )}
         </div>
       </Card>
     </div>

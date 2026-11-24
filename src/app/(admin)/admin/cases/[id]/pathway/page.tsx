@@ -14,10 +14,12 @@ export default function AdminCasePathwayPage({
 }) {
   const { id: caseId } = use(params);
   return (
-    <PathwayBuilderEditor
-      caseId={caseId}
-      backHref="/admin/cases"
-      backLabel="Back to All Cases"
-    />
+    <div className="space-y-6">
+      <PathwayBuilderEditor
+        caseId={caseId}
+        backHref="/admin/cases"
+        backLabel="Back to All Cases"
+      />
+    </div>
   );
 }

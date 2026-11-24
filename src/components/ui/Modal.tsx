@@ -2,9 +2,7 @@
 
 /**
  * Afzal Healthcare — Accessible Native Modal Dialog
- * Built on the native HTML <dialog> element opened via showModal() so the browser
- * provides top-layer rendering, inert page background, focus containment, Esc / back-gesture
- * dismissal, and focus restoration without fragile manual traps.
+ * Crisp 8px radius, hairline border, and restrained institutional header.
  */
 
 import React, { useEffect, useId, useRef } from 'react';
@@ -58,7 +56,6 @@ export function Modal({
     }
   }, [open]);
 
-  // Progressive-enhancement fallback for light dismiss where native <dialog closedby="any"> is unavailable
   useEffect(() => {
     const dialog = dialogRef.current;
     if (!dialog || !open || !lightDismiss) return;
@@ -125,22 +122,22 @@ export function Modal({
       {...({ closedby: closedByMode } as Record<string, unknown>)}
       className={`
         m-auto w-[calc(100%-2rem)] ${maxWidthClass}
-        rounded-3xl border border-surface-200 bg-white p-0 text-surface-900 shadow-2xl
+        rounded-lg border border-surface-200 bg-white p-0 text-surface-900 shadow-md
         max-h-[min(90dvh,48rem)] overflow-y-auto
         open:animate-scale-in
       `}
     >
-      <div className="flex items-start justify-between gap-4 border-b border-surface-200 px-6 py-4 bg-surface-50/70">
+      <div className="flex items-start justify-between gap-4 border-b border-surface-200 px-5 py-4 bg-white">
         <div className="min-w-0">
           <h2
             id={titleId}
-            className="text-base sm:text-lg font-bold text-surface-900 flex items-center gap-2"
+            className="text-base font-semibold text-surface-900 flex items-center gap-2"
           >
             {icon && <span className="text-primary-600 shrink-0" aria-hidden="true">{icon}</span>}
             <span>{title}</span>
           </h2>
           {subtitle && (
-            <p id={descId} className="text-xs text-surface-600 mt-1">
+            <p id={descId} className="text-xs text-surface-500 mt-1">
               {subtitle}
             </p>
           )}
@@ -153,14 +150,13 @@ export function Modal({
           }}
           disabled={preventClose}
           aria-label="Close dialog"
-          className="inline-flex items-center justify-center w-11 h-11 -mr-2 -mt-1 rounded-xl text-surface-500 hover:text-surface-900 hover:bg-surface-200/70 transition-colors disabled:opacity-50"
+          className="inline-flex items-center justify-center w-11 h-11 -mr-2 -mt-1.5 rounded-md text-surface-400 hover:text-surface-700 hover:bg-surface-100 transition-colors disabled:opacity-50"
         >
-          <X className="w-5 h-5" aria-hidden="true" />
+          <X className="w-4 h-4" aria-hidden="true" />
         </button>
       </div>
 
-      <div className="p-6">{children}</div>
+      <div className="p-5">{children}</div>
     </dialog>
   );
 }
-

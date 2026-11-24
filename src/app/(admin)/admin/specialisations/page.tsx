@@ -140,57 +140,57 @@ export default function AdminSpecialisationsPage() {
   };
 
   return (
-    <div className="max-w-5xl mx-auto space-y-6 animate-fade-in">
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+    <div className="space-y-6 animate-fade-in">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-5 border-b border-surface-200">
         <div>
-          <h1 className="text-2xl font-bold text-surface-900 tracking-tight">Specialisations</h1>
-          <p className="text-sm text-surface-500 mt-1">Manage medical classifications used across clinics and doctors.</p>
+          <h1 className="text-xl font-semibold tracking-tight text-surface-900">Specialisations</h1>
+          <p className="text-xs sm:text-sm text-surface-500 mt-1">Manage medical classifications used across partner hospitals and doctors.</p>
         </div>
         <Button onClick={openCreate}>+ Add Specialisation</Button>
       </div>
 
       {/* Filter */}
-      <Card className="p-4 bg-white border border-surface-200 flex flex-col sm:flex-row gap-3">
+      <Card padding="sm" className="flex flex-col sm:flex-row gap-3">
         <input
           type="text"
           placeholder="Search specialisation name..."
           value={search}
           onChange={(e) => setSearch(e.target.value)}
-          className="flex-1 px-3 py-2 border border-surface-300 rounded-lg text-sm focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500"
+          className="flex-1 px-3 py-2 border border-surface-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-600"
         />
         <Button variant="secondary" size="sm" onClick={() => fetchSpecs()}>
           Search
         </Button>
       </Card>
 
-      <Card className="bg-white border border-surface-200 overflow-hidden">
+      <Card className="p-0! overflow-hidden">
         {loading ? (
           <div className="flex items-center justify-center py-16">
-            <div className="w-8 h-8 border-4 border-primary-600 border-t-transparent rounded-full animate-spin" />
+            <div className="w-7 h-7 border-2 border-primary-600 border-t-transparent rounded-full animate-spin" />
           </div>
         ) : (
-          <div className="divide-y divide-surface-100">
+          <div className="divide-y divide-surface-200">
             {specs.length === 0 ? (
               <div className="px-6 py-12 text-center text-sm text-surface-500">No specialisations found.</div>
             ) : (
               specs.map((s) => (
                 <div
                   key={s.id}
-                  className="px-6 py-4 flex items-center justify-between hover:bg-surface-50 transition-colors"
+                  className="px-5 py-4 flex items-center justify-between gap-4 hover:bg-surface-100/60 transition-colors"
                 >
-                  <div className="flex items-center gap-4">
-                    <div className="w-10 h-10 bg-primary-50 rounded-lg flex items-center justify-center text-primary-600 font-bold text-sm">
+                  <div className="flex items-center gap-3.5 min-w-0">
+                    <div className="w-9 h-9 bg-surface-100 border border-surface-200 rounded-md flex items-center justify-center text-surface-600 font-semibold text-xs shrink-0">
                       {s.name.charAt(0)}
                     </div>
-                    <div>
-                      <p className="font-semibold text-surface-900">{s.name}</p>
-                      <p className="text-xs text-surface-500">
-                        {s.description || 'No description'} • {s._count.doctors} doctor
+                    <div className="min-w-0">
+                      <p className="text-sm font-medium text-surface-900 truncate">{s.name}</p>
+                      <p className="text-xs text-surface-500 truncate">
+                        {s.description || 'No description'} • <span className="tabular-nums">{s._count.doctors}</span> doctor
                         {s._count.doctors !== 1 ? 's' : ''}
                       </p>
                     </div>
                   </div>
-                  <div className="flex items-center gap-3">
+                  <div className="flex items-center gap-3 shrink-0">
                     <Badge variant={s.isActive ? 'success' : 'danger'} dot>
                       {s.isActive ? 'Active' : 'Inactive'}
                     </Badge>
@@ -218,14 +218,14 @@ export default function AdminSpecialisationsPage() {
       </Card>
 
       {showModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-surface-900/40 backdrop-blur-xs">
-          <div className="bg-white rounded-2xl shadow-2xl border border-surface-200 w-full max-w-sm animate-scale-up">
-            <div className="px-6 py-4 border-b border-surface-100 flex items-center justify-between sticky top-0 bg-white z-10">
-              <h3 className="text-sm font-bold text-surface-900">{editing ? 'Edit' : 'Add'} Specialisation</h3>
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-surface-900/40">
+          <div className="bg-white rounded-lg shadow-md border border-surface-200 w-full max-w-sm animate-scale-in">
+            <div className="px-6 py-4 border-b border-surface-200 flex items-center justify-between sticky top-0 bg-white z-10">
+              <h3 className="text-sm sm:text-base font-semibold text-surface-900">{editing ? 'Edit specialisation' : 'Add specialisation'}</h3>
               <button
                 onClick={() => setShowModal(false)}
                 aria-label="Close"
-                className="text-surface-400 hover:text-surface-600 p-1 rounded-lg hover:bg-surface-100 transition-colors"
+                className="text-surface-400 hover:text-surface-600 p-1 rounded-md hover:bg-surface-100 transition-colors"
               >
                 <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2} aria-hidden="true">
                   <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
@@ -234,22 +234,22 @@ export default function AdminSpecialisationsPage() {
             </div>
             <form onSubmit={handleSave} className="p-6 space-y-4">
               <div className="space-y-1.5">
-                <label className="block text-xs font-semibold text-surface-700">Name</label>
+                <label className="block text-xs font-medium text-surface-700">Name</label>
                 <input
                   type="text"
                   required
                   value={form.name}
                   onChange={(e) => setForm({ ...form, name: e.target.value })}
-                  className="w-full p-2.5 border border-surface-200 rounded-xl text-sm focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500"
+                  className="w-full p-2.5 border border-surface-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-600"
                 />
               </div>
               <div className="space-y-1.5">
-                <label className="block text-xs font-semibold text-surface-700">Description</label>
+                <label className="block text-xs font-medium text-surface-700">Description</label>
                 <textarea
                   rows={3}
                   value={form.description}
                   onChange={(e) => setForm({ ...form, description: e.target.value })}
-                  className="w-full p-2.5 border border-surface-200 rounded-xl text-sm focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500"
+                  className="w-full p-2.5 border border-surface-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-600"
                 />
               </div>
               {editing && (
@@ -259,6 +259,7 @@ export default function AdminSpecialisationsPage() {
                     id="specActive"
                     checked={form.isActive}
                     onChange={(e) => setForm({ ...form, isActive: e.target.checked })}
+                    className="rounded accent-primary-600"
                   />
                   <label htmlFor="specActive" className="text-sm font-medium text-surface-700">
                     Active

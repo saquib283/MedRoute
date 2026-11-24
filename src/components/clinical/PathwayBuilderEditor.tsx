@@ -18,8 +18,6 @@ import {
   ArrowLeft,
   MoveUp,
   MoveDown,
-  Layers,
-  Wand2,
 } from 'lucide-react';
 
 interface ClinicalStepConfig {
@@ -402,24 +400,24 @@ export function PathwayBuilderEditor({
 
   if (isLoading) {
     return (
-      <div className="flex flex-col items-center justify-center min-h-[400px] gap-4">
-        <div className="w-10 h-10 border-4 border-primary-600 border-t-transparent rounded-full animate-spin" />
-        <p className="text-sm font-medium text-surface-600">Loading Clinical Pathway Builder...</p>
+      <div className="flex flex-col items-center justify-center min-h-[400px] gap-3">
+        <div className="w-7 h-7 border-2 border-primary-600 border-t-transparent rounded-full animate-spin" />
+        <p className="text-xs font-medium text-surface-500">Loading clinical pathway builder...</p>
       </div>
     );
   }
 
   if (loadError && !caseDetails) {
     return (
-      <div className="max-w-3xl mx-auto py-12 space-y-4">
+      <div className="space-y-4">
         <Link
           href={backHref}
-          className="inline-flex items-center gap-1 text-xs font-bold text-surface-500 hover:text-surface-900"
+          className="inline-flex items-center gap-1.5 text-xs font-medium text-surface-500 hover:text-surface-900"
         >
           <ArrowLeft className="w-3.5 h-3.5" /> {backLabel}
         </Link>
-        <Card className="p-8 rounded-3xl border border-rose-200 bg-rose-50 text-center space-y-2">
-          <h2 className="text-base font-bold text-rose-900">Unable to Open Pathway Builder</h2>
+        <Card className="p-6 border-rose-200 bg-rose-50 text-center space-y-1.5">
+          <h2 className="text-sm sm:text-base font-semibold text-rose-900">Unable to Open Pathway Builder</h2>
           <p className="text-xs text-rose-700">{loadError}</p>
         </Card>
       </div>
@@ -429,69 +427,57 @@ export function PathwayBuilderEditor({
   const isClosed = caseDetails?.status === 'CLOSED';
 
   return (
-    <div className="space-y-8 max-w-6xl mx-auto pb-12 animate-fade-in">
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+    <div className="space-y-6">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-5 border-b border-surface-200">
         <div>
           <Link
             href={backHref}
-            className="inline-flex items-center gap-1 text-xs font-bold text-surface-500 hover:text-surface-900 mb-2"
+            className="inline-flex items-center gap-1.5 text-xs font-medium text-surface-500 hover:text-surface-900 mb-2 transition-colors"
           >
             <ArrowLeft className="w-3.5 h-3.5" /> {backLabel}
           </Link>
-          <h1 className="text-2xl font-extrabold text-surface-900 tracking-tight flex items-center gap-2">
-            <Layers className="w-7 h-7 text-primary-600" />
+          <h1 className="text-xl font-semibold tracking-tight text-surface-900">
             Configurable Patient Pathway &amp; Action Builder
           </h1>
-          <p className="text-xs text-surface-500 mt-1">
-            Patient: <strong className="text-surface-900">{caseDetails?.patient?.user?.fullName}</strong> (
+          <p className="text-xs sm:text-sm text-surface-500 mt-1">
+            Patient: <span className="font-medium text-surface-900">{caseDetails?.patient?.user?.fullName}</span> (
             {caseDetails?.patient?.user?.email})
           </p>
         </div>
 
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-2.5 shrink-0">
           <Button
             onClick={() => addCustomStage()}
             variant="secondary"
+            size="sm"
             disabled={isClosed}
-            className="px-4 py-2.5 text-xs font-bold rounded-xl flex items-center gap-1.5"
           >
-            <Plus className="w-4 h-4 text-primary-600" /> Add Custom Stage
+            <Plus className="w-4 h-4" /> Add Custom Stage
           </Button>
           <Button
             onClick={handleSavePathway}
+            size="sm"
+            isLoading={isSaving}
             disabled={isSaving || isClosed}
-            className="px-5 py-2.5 bg-primary-600 hover:bg-primary-700 text-white font-bold rounded-xl text-xs flex items-center gap-2 shadow-xs"
           >
-            {isSaving ? (
-              <>
-                <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                <span>Saving Pathway...</span>
-              </>
-            ) : (
-              <>
-                <Save className="w-4 h-4" />
-                <span>Save Patient Pathway</span>
-              </>
-            )}
+            {!isSaving && <Save className="w-4 h-4" />}
+            <span>{isSaving ? 'Saving Pathway...' : 'Save Patient Pathway'}</span>
           </Button>
         </div>
       </div>
 
       {isClosed && (
-        <Card className="p-4 rounded-2xl border border-amber-200 bg-amber-50 text-xs font-semibold text-amber-900">
+        <Card className="p-4 border-amber-200 bg-amber-50 text-xs font-medium text-amber-900">
           This case is closed. Pathway stages and milestones are read-only.
         </Card>
       )}
 
-      <Card className="p-5 rounded-3xl border border-primary-200 bg-gradient-to-r from-primary-50/80 to-white shadow-2xs space-y-4">
-        <div className="flex flex-col md:flex-row md:items-center justify-between gap-3">
-          <div className="flex items-center gap-2">
-            <Wand2 className="w-5 h-5 text-primary-600 animate-pulse" />
-            <h3 className="text-sm font-extrabold text-surface-900">
-              Apply Specialty Preset Templates or Add Situational Stages
-            </h3>
-          </div>
-          <span className="text-xs font-bold text-surface-500">
+      <Card className="p-5 bg-surface-50 border-surface-200 space-y-4">
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-2">
+          <h2 className="text-sm sm:text-base font-semibold text-surface-900">
+            Apply Specialty Preset Templates or Add Situational Stages
+          </h2>
+          <span className="text-xs font-medium text-surface-500">
             Configurable by Admin &amp; Case Manager
           </span>
         </div>
@@ -503,9 +489,9 @@ export function PathwayBuilderEditor({
               type="button"
               disabled={isClosed}
               onClick={() => applyPresetTemplate(tpl)}
-              className="p-3.5 rounded-2xl bg-white border border-surface-200 hover:border-primary-400 text-left transition-all shadow-2xs hover:shadow-xs space-y-1 disabled:opacity-50"
+              className="p-3.5 rounded-lg bg-white border border-surface-200 hover:border-primary-400 text-left transition-colors shadow-2xs space-y-1 disabled:opacity-50"
             >
-              <h4 className="text-xs font-extrabold text-primary-800">{tpl.specialtyName}</h4>
+              <h3 className="text-xs font-semibold text-surface-900">{tpl.specialtyName}</h3>
               <p className="text-[11px] text-surface-500 line-clamp-2 leading-relaxed">
                 {tpl.description}
               </p>
@@ -513,9 +499,9 @@ export function PathwayBuilderEditor({
           ))}
         </div>
 
-        <div className="pt-2 border-t border-primary-100 flex items-center gap-2 flex-wrap">
-          <span className="text-xs font-black text-surface-700 uppercase tracking-wider">
-            Quick-Add Situational Stage:
+        <div className="pt-3 border-t border-surface-200 flex items-center gap-2 flex-wrap">
+          <span className="text-xs font-medium text-surface-600">
+            Quick-add stage:
           </span>
           <button
             type="button"
@@ -527,7 +513,7 @@ export function PathwayBuilderEditor({
                 'Added for unexpected complication triage.'
               )
             }
-            className="px-3 py-1 bg-amber-100 hover:bg-amber-200 text-amber-900 rounded-xl text-xs font-bold transition-colors border border-amber-300 disabled:opacity-50"
+            className="px-3 py-1.5 bg-white hover:bg-surface-100 text-surface-700 rounded-md text-xs font-medium transition-colors border border-surface-300 disabled:opacity-50"
           >
             Emergency Complication Stage
           </button>
@@ -541,7 +527,7 @@ export function PathwayBuilderEditor({
                 'Added for additional chemotherapy cycle.'
               )
             }
-            className="px-3 py-1 bg-rose-100 hover:bg-rose-200 text-rose-900 rounded-xl text-xs font-bold transition-colors border border-rose-300 disabled:opacity-50"
+            className="px-3 py-1.5 bg-white hover:bg-surface-100 text-surface-700 rounded-md text-xs font-medium transition-colors border border-surface-300 disabled:opacity-50"
           >
             Secondary Chemotherapy Stage
           </button>
@@ -555,7 +541,7 @@ export function PathwayBuilderEditor({
                 'Added for secondary revision procedure.'
               )
             }
-            className="px-3 py-1 bg-purple-100 hover:bg-purple-200 text-purple-900 rounded-xl text-xs font-bold transition-colors border border-purple-300 disabled:opacity-50"
+            className="px-3 py-1.5 bg-white hover:bg-surface-100 text-surface-700 rounded-md text-xs font-medium transition-colors border border-surface-300 disabled:opacity-50"
           >
             Revision Surgery Stage
           </button>
@@ -569,45 +555,42 @@ export function PathwayBuilderEditor({
                 'Added for extended CCU/ICU telemetry monitoring.'
               )
             }
-            className="px-3 py-1 bg-sky-100 hover:bg-sky-200 text-sky-900 rounded-xl text-xs font-bold transition-colors border border-sky-300 disabled:opacity-50"
+            className="px-3 py-1.5 bg-white hover:bg-surface-100 text-surface-700 rounded-md text-xs font-medium transition-colors border border-surface-300 disabled:opacity-50"
           >
             Extended ICU Telemetry Stage
           </button>
         </div>
       </Card>
 
-      <div className="space-y-6">
+      <div className="space-y-5">
         {stages.map((stage, stageIdx) => (
-          <Card
-            key={stageIdx}
-            className="p-6 rounded-3xl border border-surface-200 shadow-xs space-y-6 bg-white"
-          >
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-surface-100 pb-4">
+          <Card key={stageIdx} className="p-5 space-y-5">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-surface-200 pb-4">
               <div className="flex items-center gap-3 flex-1">
-                <span className="w-8 h-8 rounded-xl bg-primary-100 text-primary-800 font-black text-xs flex items-center justify-center shrink-0">
+                <span className="w-8 h-8 rounded-md bg-surface-100 text-surface-700 border border-surface-200 font-semibold text-xs tabular-nums flex items-center justify-center shrink-0">
                   {stageIdx + 1}
                 </span>
                 <div className="flex-1">
-                  <label className="text-xs font-bold uppercase tracking-wider text-surface-600 block mb-1">
-                    Stage Name (Editable)
+                  <label className="text-xs font-medium text-surface-500 block mb-1">
+                    Stage Name
                   </label>
                   <input
                     type="text"
                     value={stage.stageName}
                     onChange={(e) => updateStageName(stageIdx, e.target.value)}
                     disabled={isClosed}
-                    className="w-full text-sm font-extrabold text-surface-900 bg-surface-50 border border-surface-300 rounded-xl px-3 py-1.5 focus:outline-none focus:border-primary-600 disabled:opacity-60"
+                    className="w-full text-sm font-semibold text-surface-900 bg-white border border-surface-300 rounded-md px-3 py-1.5 focus:outline-none focus:border-primary-600 disabled:opacity-60"
                     placeholder="Enter stage title (e.g. Stage 1: Pre-Procedure Triage)"
                   />
                 </div>
               </div>
 
-              <div className="flex items-center gap-2 shrink-0">
+              <div className="flex items-center gap-1.5 shrink-0">
                 <button
                   type="button"
                   onClick={() => moveStageUp(stageIdx)}
                   disabled={stageIdx === 0 || isClosed}
-                  className="p-1.5 text-surface-500 hover:text-surface-900 hover:bg-surface-100 rounded-lg disabled:opacity-30"
+                  className="p-1.5 text-surface-500 hover:text-surface-900 hover:bg-surface-100 rounded-md disabled:opacity-30"
                   title="Move Stage Up"
                 >
                   <MoveUp className="w-4 h-4" />
@@ -616,7 +599,7 @@ export function PathwayBuilderEditor({
                   type="button"
                   onClick={() => moveStageDown(stageIdx)}
                   disabled={stageIdx === stages.length - 1 || isClosed}
-                  className="p-1.5 text-surface-500 hover:text-surface-900 hover:bg-surface-100 rounded-lg disabled:opacity-30"
+                  className="p-1.5 text-surface-500 hover:text-surface-900 hover:bg-surface-100 rounded-md disabled:opacity-30"
                   title="Move Stage Down"
                 >
                   <MoveDown className="w-4 h-4" />
@@ -624,18 +607,18 @@ export function PathwayBuilderEditor({
 
                 <Button
                   type="button"
+                  size="sm"
                   onClick={() => addSubStepToStage(stageIdx)}
                   variant="secondary"
                   disabled={isClosed}
-                  className="px-3 py-1.5 text-xs font-bold rounded-xl flex items-center gap-1"
                 >
-                  <Plus className="w-3.5 h-3.5 text-primary-600" /> Add Milestone
+                  <Plus className="w-3.5 h-3.5" /> Add Milestone
                 </Button>
                 {stages.length > 1 && !isClosed && (
                   <button
                     type="button"
                     onClick={() => removeStage(stageIdx)}
-                    className="p-2 text-surface-400 hover:text-rose-600 hover:bg-rose-50 rounded-xl transition-colors"
+                    className="p-2 text-surface-400 hover:text-rose-600 hover:bg-rose-50 rounded-md transition-colors"
                     title="Delete Stage"
                   >
                     <Trash2 className="w-4 h-4" />
@@ -644,15 +627,15 @@ export function PathwayBuilderEditor({
               </div>
             </div>
 
-            <div className="space-y-4 relative border-l-2 border-primary-200 ml-4 pl-4 pt-2">
+            <div className="space-y-3 relative border-l-2 border-surface-200 ml-4 pl-4">
               {stage.steps.map((step, stepIdx) => (
                 <div
                   key={step.id || stepIdx}
-                  className="p-4 bg-surface-50 rounded-2xl border border-surface-200 space-y-3 relative"
+                  className="p-4 bg-surface-50 rounded-lg border border-surface-200 space-y-3 relative"
                 >
                   <div className="grid grid-cols-1 md:grid-cols-12 gap-3 items-center">
                     <div className="md:col-span-5 space-y-1">
-                      <label className="text-xs font-semibold text-surface-600 block">
+                      <label className="text-xs font-medium text-surface-600 block">
                         Milestone Title
                       </label>
                       <input
@@ -660,14 +643,14 @@ export function PathwayBuilderEditor({
                         value={step.title}
                         onChange={(e) => updateSubStep(stageIdx, stepIdx, 'title', e.target.value)}
                         disabled={isClosed}
-                        className="w-full px-3 py-1.5 bg-white border border-surface-300 rounded-xl text-xs font-extrabold text-surface-900 focus:outline-none focus:border-primary-600 disabled:opacity-60"
+                        className="w-full px-3 py-1.5 bg-white border border-surface-300 rounded-md text-xs font-medium text-surface-900 focus:outline-none focus:border-primary-600 disabled:opacity-60"
                         placeholder="e.g. MDT Board Clearance"
                         required
                       />
                     </div>
 
                     <div className="md:col-span-3 space-y-1">
-                      <label className="text-xs font-semibold text-surface-600 block">
+                      <label className="text-xs font-medium text-surface-600 block">
                         Category
                       </label>
                       <select
@@ -676,7 +659,7 @@ export function PathwayBuilderEditor({
                           updateSubStep(stageIdx, stepIdx, 'category', e.target.value)
                         }
                         disabled={isClosed}
-                        className="w-full px-2.5 py-1.5 bg-white border border-surface-300 rounded-xl text-xs font-bold text-surface-900 focus:outline-none disabled:opacity-60"
+                        className="w-full px-2.5 py-1.5 bg-white border border-surface-300 rounded-md text-xs font-medium text-surface-900 focus:outline-none disabled:opacity-60"
                       >
                         {CATEGORY_OPTIONS.map((opt) => (
                           <option key={opt.value} value={opt.value}>
@@ -687,14 +670,14 @@ export function PathwayBuilderEditor({
                     </div>
 
                     <div className="md:col-span-3 space-y-1">
-                      <label className="text-xs font-semibold text-surface-600 block">
+                      <label className="text-xs font-medium text-surface-600 block">
                         Milestone Status
                       </label>
                       <select
                         value={step.status}
                         onChange={(e) => updateSubStep(stageIdx, stepIdx, 'status', e.target.value)}
                         disabled={isClosed}
-                        className="w-full px-2.5 py-1.5 bg-white border border-surface-300 rounded-xl text-xs font-bold text-surface-900 focus:outline-none disabled:opacity-60"
+                        className="w-full px-2.5 py-1.5 bg-white border border-surface-300 rounded-md text-xs font-medium text-surface-900 focus:outline-none disabled:opacity-60"
                       >
                         <option value="PENDING">PENDING</option>
                         <option value="IN_PROGRESS">IN PROGRESS (Active)</option>
@@ -708,7 +691,7 @@ export function PathwayBuilderEditor({
                         <button
                           type="button"
                           onClick={() => removeSubStep(stageIdx, stepIdx)}
-                          className="p-1.5 text-surface-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg"
+                          className="p-1.5 text-surface-400 hover:text-rose-600 hover:bg-rose-50 rounded-md"
                         >
                           <Trash2 className="w-4 h-4" />
                         </button>
@@ -716,9 +699,9 @@ export function PathwayBuilderEditor({
                     </div>
                   </div>
 
-                  <div className="grid grid-cols-1 md:grid-cols-4 gap-3 pt-1 border-t border-surface-200/60">
+                  <div className="grid grid-cols-1 md:grid-cols-4 gap-3 pt-2 border-t border-surface-200">
                     <div className="space-y-1">
-                      <label className="text-xs font-semibold text-surface-600 block">
+                      <label className="text-xs font-medium text-surface-600 block">
                         Decision Clearance Tag
                       </label>
                       <select
@@ -727,7 +710,7 @@ export function PathwayBuilderEditor({
                           updateSubStep(stageIdx, stepIdx, 'decisionBranch', e.target.value)
                         }
                         disabled={isClosed}
-                        className="w-full px-2.5 py-1.5 bg-white border border-surface-300 rounded-xl text-xs font-medium focus:outline-none disabled:opacity-60"
+                        className="w-full px-2.5 py-1.5 bg-white border border-surface-300 rounded-md text-xs font-medium text-surface-900 focus:outline-none disabled:opacity-60"
                       >
                         {DECISION_BRANCHES.map((b) => (
                           <option key={b.value} value={b.value}>
@@ -738,7 +721,7 @@ export function PathwayBuilderEditor({
                     </div>
 
                     <div className="space-y-1">
-                      <label className="text-xs font-semibold text-surface-600 block">
+                      <label className="text-xs font-medium text-surface-600 block">
                         Interactive Action Button
                       </label>
                       <select
@@ -747,7 +730,7 @@ export function PathwayBuilderEditor({
                           updateSubStep(stageIdx, stepIdx, 'actionType', e.target.value)
                         }
                         disabled={isClosed}
-                        className="w-full px-2.5 py-1.5 bg-white border border-surface-300 rounded-xl text-xs font-bold text-primary-700 focus:outline-none disabled:opacity-60"
+                        className="w-full px-2.5 py-1.5 bg-white border border-surface-300 rounded-md text-xs font-medium text-primary-700 focus:outline-none disabled:opacity-60"
                       >
                         {ACTION_TYPES.map((a) => (
                           <option key={a.value} value={a.value}>
@@ -758,7 +741,7 @@ export function PathwayBuilderEditor({
                     </div>
 
                     <div className="space-y-1">
-                      <label className="text-xs font-semibold text-surface-600 block">
+                      <label className="text-xs font-medium text-surface-600 block">
                         Responsible Role
                       </label>
                       <select
@@ -767,7 +750,7 @@ export function PathwayBuilderEditor({
                           updateSubStep(stageIdx, stepIdx, 'requiredRole', e.target.value)
                         }
                         disabled={isClosed}
-                        className="w-full px-2.5 py-1.5 bg-white border border-surface-300 rounded-xl text-xs font-bold text-surface-900 focus:outline-none disabled:opacity-60"
+                        className="w-full px-2.5 py-1.5 bg-white border border-surface-300 rounded-md text-xs font-medium text-surface-900 focus:outline-none disabled:opacity-60"
                       >
                         {ROLE_OPTIONS.map((r) => (
                           <option key={r.value} value={r.value}>
@@ -778,7 +761,7 @@ export function PathwayBuilderEditor({
                     </div>
 
                     <div className="space-y-1">
-                      <label className="text-xs font-semibold text-surface-600 block">
+                      <label className="text-xs font-medium text-surface-600 block">
                         Doctor&apos;s Clinical Notes
                       </label>
                       <input
@@ -788,7 +771,7 @@ export function PathwayBuilderEditor({
                           updateSubStep(stageIdx, stepIdx, 'doctorNotes', e.target.value)
                         }
                         disabled={isClosed}
-                        className="w-full px-3 py-1.5 bg-white border border-surface-300 rounded-xl text-xs font-medium focus:outline-none disabled:opacity-60"
+                        className="w-full px-3 py-1.5 bg-white border border-surface-300 rounded-md text-xs text-surface-900 focus:outline-none disabled:opacity-60"
                         placeholder="Log clinical notes for patient view..."
                       />
                     </div>

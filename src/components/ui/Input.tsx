@@ -1,7 +1,6 @@
 /**
  * Afzal Healthcare — Input Component
- * Accessible form input with label, error state, and icons.
- * Clinical design system — light-mode, white background, subtle borders.
+ * Clean institutional form input with 6px radius, medium label weight, and 44px height.
  */
 
 import React from 'react';
@@ -15,13 +14,13 @@ interface InputProps extends React.InputHTMLAttributes<HTMLInputElement> {
 
 export const Input = React.forwardRef<HTMLInputElement, InputProps>(
   ({ label, error, icon, helperText, className = '', id, ...props }, ref) => {
-    const inputId = id || label.toLowerCase().replace(/\s+/g, '-');
+    const inputId = id || label.toLowerCase().replace(/[^a-z0-9]+/g, '-');
 
     return (
       <div className="space-y-1.5">
         <label
           htmlFor={inputId}
-          className="block text-sm font-medium text-surface-700"
+          className="block text-xs font-medium text-surface-700"
         >
           {label}
           {props.required && (
@@ -31,7 +30,7 @@ export const Input = React.forwardRef<HTMLInputElement, InputProps>(
 
         <div className="relative">
           {icon && (
-            <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-surface-500">
+            <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-surface-400">
               {icon}
             </div>
           )}
@@ -40,15 +39,17 @@ export const Input = React.forwardRef<HTMLInputElement, InputProps>(
             ref={ref}
             id={inputId}
             className={`
-              w-full min-h-[44px] px-4 py-2.5
-              ${icon ? 'pl-11' : ''}
-              bg-white border rounded-xl
-              text-surface-900 placeholder:text-surface-500
+              w-full min-h-[44px] px-3 py-2 text-sm
+              ${icon ? 'pl-9' : ''}
+              bg-white border rounded-md
+              text-surface-900 placeholder:text-surface-400
+              disabled:bg-surface-100 disabled:text-surface-500
               transition-colors duration-150
               focus:outline-none focus:border-primary-600
-              ${error
-                ? 'border-danger-500 focus:border-danger-600'
-                : 'border-surface-200 hover:border-surface-300 focus:border-primary-600'
+              ${
+                error
+                  ? 'border-danger-500 focus:border-danger-600'
+                  : 'border-surface-300 hover:border-surface-400 focus:border-primary-600'
               }
               ${className}
             `}
@@ -67,13 +68,14 @@ export const Input = React.forwardRef<HTMLInputElement, InputProps>(
         {error && (
           <p
             id={`${inputId}-error`}
-            className="text-sm text-danger-600 flex items-center gap-1"
+            className="text-xs text-danger-600 flex items-center gap-1"
             role="alert"
           >
             <svg
-              className="w-4 h-4 shrink-0"
+              className="w-3.5 h-3.5 shrink-0"
               fill="currentColor"
               viewBox="0 0 20 20"
+              aria-hidden="true"
             >
               <path
                 fillRule="evenodd"
@@ -88,7 +90,7 @@ export const Input = React.forwardRef<HTMLInputElement, InputProps>(
         {helperText && !error && (
           <p
             id={`${inputId}-helper`}
-            className="text-xs text-surface-600 font-medium"
+            className="text-xs text-surface-500"
           >
             {helperText}
           </p>

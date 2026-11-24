@@ -1,6 +1,6 @@
 /**
  * Afzal Healthcare — Button Component
- * Clinical design system button with consistent variants, tactile feedback, and 44px min touch target.
+ * Clean institutional button with architectural 6px radius, restrained medium weight, and 44px touch target.
  */
 
 import React from 'react';
@@ -16,19 +16,19 @@ interface ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
 
 const variantStyles: Record<string, string> = {
   primary:
-    'bg-primary-600 hover:bg-primary-700 text-white shadow-2xs',
+    'bg-primary-600 hover:bg-primary-700 text-white border border-primary-700/20 shadow-2xs',
   secondary:
-    'bg-white hover:bg-surface-100 text-surface-700 border border-surface-300 hover:border-surface-400',
+    'bg-white hover:bg-surface-100 text-surface-700 border border-surface-300 hover:border-surface-400 shadow-2xs',
   ghost:
-    'bg-transparent hover:bg-surface-200 text-surface-600 hover:text-surface-800',
+    'bg-transparent hover:bg-surface-150 text-surface-600 hover:text-surface-900 border border-transparent',
   danger:
-    'bg-danger-600 hover:bg-danger-700 text-white shadow-2xs',
+    'bg-danger-600 hover:bg-danger-700 text-white border border-danger-700/20 shadow-2xs',
 };
 
 const sizeStyles: Record<string, string> = {
-  sm: 'px-3.5 py-2 text-xs min-h-[44px]',
-  md: 'px-5 py-2.5 text-sm min-h-[44px]',
-  lg: 'px-6 py-3 text-sm min-h-[48px]',
+  sm: 'px-3 py-1.5 text-xs min-h-[44px]',
+  md: 'px-4 py-2 text-sm min-h-[44px]',
+  lg: 'px-5 py-2.5 text-sm min-h-[44px]',
 };
 
 export function Button({
@@ -36,7 +36,6 @@ export function Button({
   size = 'md',
   isLoading = false,
   fullWidth = false,
-  staticMotion = false,
   children,
   className = '',
   disabled,
@@ -46,10 +45,9 @@ export function Button({
     <button
       className={`
         inline-flex items-center justify-center gap-2
-        font-semibold rounded-xl
-        transition-[color,background-color,border-color,transform] duration-150 ease-out
-        ${staticMotion ? '' : 'active:scale-[0.96] disabled:active:scale-100'}
-        focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-500
+        font-medium rounded-md
+        transition-colors duration-150 ease-out
+        focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-600
         disabled:opacity-50 disabled:cursor-not-allowed
         ${variantStyles[variant]}
         ${sizeStyles[size]}
@@ -73,7 +71,7 @@ export function Button({
             cy="12"
             r="10"
             stroke="currentColor"
-            strokeWidth="4"
+            strokeWidth="3"
           />
           <path
             className="opacity-75"

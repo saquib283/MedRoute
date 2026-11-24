@@ -1,11 +1,11 @@
 'use client';
 
 /**
- * Afzal Healthcare — Doctor Portal Sidebar & Layout Container
- * Restrained clinical light-mode layout for treating specialists.
+ * Afzal Healthcare — Doctor Portal Shell
+ * Unified 240px sidebar, 56px hairline-aligned header bar, and max-w-6xl content alignment.
  */
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
 import logoImg from '../../../../public/assets/logo.png';
@@ -14,9 +14,10 @@ import {
   LayoutDashboard,
   Calendar,
   Users,
-  Stethoscope,
   LogOut,
   Menu,
+  X,
+  ChevronRight,
 } from 'lucide-react';
 import { formatDoctorDisplayName } from '@/lib/validation/booking-helpers';
 import { GlobalAlertBanner } from '@/components/ui/GlobalAlertBanner';
@@ -25,8 +26,14 @@ import { NotificationBell } from '@/components/notifications/NotificationBell';
 interface NavItem {
   label: string;
   href: string;
-  icon: React.ReactNode;
+  Icon: React.ComponentType<{ className?: string }>;
 }
+
+const NAV_ITEMS: NavItem[] = [
+  { label: 'Overview', href: '/doctor/dashboard', Icon: LayoutDashboard },
+  { label: 'Appointments', href: '/doctor/appointments', Icon: Calendar },
+  { label: 'My Patients', href: '/doctor/patients', Icon: Users },
+];
 
 export default function DoctorLayout({
   children,
@@ -94,61 +101,17 @@ export default function DoctorLayout({
     }
   };
 
-  const navItems: NavItem[] = [
-    {
-      label: 'Overview',
-      href: '/doctor/dashboard',
-      icon: <LayoutDashboard className="w-5 h-5" />,
-    },
-    {
-      label: 'Appointments',
-      href: '/doctor/appointments',
-      icon: <Calendar className="w-5 h-5" />,
-    },
-    {
-      label: 'My Patients',
-      href: '/doctor/patients',
-      icon: <Users className="w-5 h-5" />,
-    },
-  ];
-
-  const getHeaderMeta = () => {
-    if (pathname === '/doctor/appointments') {
-      return {
-        eyebrow: 'Clinical Schedule',
-        title: 'Consultations & Surgical Encounters',
-        icon: <Calendar className="w-4 h-4" />,
-      };
-    }
-    if (pathname === '/doctor/patients') {
-      return {
-        eyebrow: 'Clinical Roster',
-        title: 'My Patients & Safety Alerts',
-        icon: <Users className="w-4 h-4" />,
-      };
-    }
-    if (pathname.startsWith('/doctor/cases/')) {
-      return {
-        eyebrow: 'Case Workspace',
-        title: 'Clinical Pathway & Fit-to-Fly Clearance',
-        icon: <Stethoscope className="w-4 h-4" />,
-      };
-    }
-    return {
-      eyebrow: 'Doctor Portal',
-      title: 'Specialist Clinical Overview',
-      icon: <LayoutDashboard className="w-4 h-4" />,
-    };
-  };
-
-  const headerMeta = getHeaderMeta();
+  const activeLabel = useMemo(() => {
+    if (pathname.startsWith('/doctor/cases/')) return 'Case Review & Clearance';
+    return NAV_ITEMS.find((item) => item.href === pathname)?.label || 'Overview';
+  }, [pathname]);
 
   if (loading) {
     return (
       <div className="min-h-screen bg-surface-100 flex items-center justify-center">
-        <div className="flex flex-col items-center gap-3">
-          <div className="w-8 h-8 border-4 border-primary-600 border-t-transparent rounded-full animate-spin" />
-          <span className="text-sm font-medium text-surface-600">Verifying physician session...</span>
+        <div className="flex items-center gap-2.5 text-xs text-surface-600">
+          <div className="w-4 h-4 border-2 border-primary-600 border-t-transparent rounded-full animate-spin" />
+          <span>Verifying specialist session…</span>
         </div>
       </div>
     );
@@ -156,57 +119,77 @@ export default function DoctorLayout({
 
   return (
     <div className="min-h-screen flex bg-surface-100 font-sans">
-      {/* ─── Sidebar Navigation ────────────────────────────────────────── */}
+      {/* ─── Sidebar Navigation (240px) ────────────────────────────────── */}
       <aside
+        aria-label="Specialist navigation"
         className={`
-          fixed inset-y-0 left-0 z-40 w-64 bg-surface-50 border-r border-surface-200/80
-          flex flex-col justify-between transition-transform duration-200 lg:translate-x-0 lg:sticky lg:top-0 lg:h-screen lg:shrink-0
+          fixed inset-y-0 left-0 z-40 w-60 bg-white border-r border-surface-200
+          flex flex-col justify-between transition-transform duration-150 ease-out
+          lg:translate-x-0 lg:sticky lg:top-0 lg:h-screen lg:shrink-0
           ${isSidebarOpen ? 'translate-x-0' : '-translate-x-full'}
         `}
       >
-        <div>
-          <div className="flex items-center justify-between px-6 h-16 border-b border-surface-200/60 bg-white">
-            <Image
-              src={logoImg}
-              alt="Afzal Healthcare Logo"
-              width={110}
-              height={36}
-              className="h-9 w-auto object-contain shrink-0"
-              priority
-            />
-            <span className="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full bg-primary-50 text-primary-700 border border-primary-200">
-              Doctor
-            </span>
+        <div className="flex flex-col min-h-0 flex-1">
+          <div className="flex items-center justify-between px-4 h-14 border-b border-surface-200 bg-white shrink-0">
+            <Link
+              href="/doctor/dashboard"
+              onClick={() => setIsSidebarOpen(false)}
+              className="inline-flex items-center min-h-11 px-1 rounded-md"
+            >
+              <Image
+                src={logoImg}
+                alt="Afzal Healthcare"
+                width={108}
+                height={32}
+                className="h-7 w-auto object-contain shrink-0"
+                priority
+              />
+            </Link>
+
+            <button
+              type="button"
+              onClick={() => setIsSidebarOpen(false)}
+              aria-label="Close navigation menu"
+              className="inline-flex lg:hidden items-center justify-center w-11 h-11 -mr-1.5 rounded-md text-surface-500 hover:text-surface-900 hover:bg-surface-100"
+            >
+              <X className="w-4 h-4" aria-hidden="true" />
+            </button>
           </div>
 
-          <nav className="p-4 space-y-6">
-            <div className="space-y-2">
-              <span className="px-3 text-[11px] font-bold text-surface-400 uppercase tracking-widest block mb-2">
+          <nav className="p-3 space-y-5 overflow-y-auto flex-1">
+            <div className="space-y-1">
+              <p className="px-2.5 text-[11px] font-medium text-surface-400 uppercase tracking-wide mb-1.5">
                 Clinical Workspace
-              </span>
-              <div className="space-y-1">
-                {navItems.map((item) => {
+              </p>
+              <div className="space-y-0.5">
+                {NAV_ITEMS.map((item) => {
                   const isActive =
                     pathname === item.href ||
-                    (item.href !== '/doctor/dashboard' && pathname.startsWith(item.href));
+                    (item.href !== '/doctor/dashboard' && pathname.startsWith(item.href)) ||
+                    (item.href === '/doctor/patients' && pathname.startsWith('/doctor/cases/'));
+                  const ItemIcon = item.Icon;
                   return (
                     <Link
                       key={item.href}
                       href={item.href}
+                      aria-current={isActive ? 'page' : undefined}
                       onClick={() => setIsSidebarOpen(false)}
                       className={`
-                        flex items-center gap-3 px-3 py-2.5 text-sm font-semibold rounded-md transition-colors duration-150
+                        flex items-center gap-2.5 px-2.5 min-h-11 text-xs font-medium rounded-md transition-colors duration-150
                         ${
                           isActive
-                            ? 'bg-primary-50 text-primary-700'
-                            : 'text-surface-600 hover:bg-surface-200/50 hover:text-surface-900'
+                            ? 'bg-primary-50/90 text-primary-900 border border-primary-200/80'
+                            : 'text-surface-600 hover:bg-surface-100 hover:text-surface-900 border border-transparent'
                         }
                       `}
                     >
-                      <span className={isActive ? 'text-primary-600' : 'text-surface-400'}>
-                        {item.icon}
-                      </span>
-                      {item.label}
+                      <ItemIcon
+                        className={`w-4 h-4 shrink-0 ${
+                          isActive ? 'text-primary-700' : 'text-surface-400'
+                        }`}
+                        aria-hidden="true"
+                      />
+                      <span className="truncate">{item.label}</span>
                     </Link>
                   );
                 })}
@@ -215,17 +198,16 @@ export default function DoctorLayout({
           </nav>
         </div>
 
-        {/* Physician Profile & Sign Out */}
-        <div className="border-t border-surface-200/60 p-4 bg-white space-y-3">
-          <div className="flex items-center gap-3 px-3 py-2 bg-surface-50 border border-surface-200/40 rounded-md">
-            <div className="w-9 h-9 rounded-full bg-primary-100 text-primary-700 flex items-center justify-center font-bold text-sm shrink-0">
+        <div className="border-t border-surface-200 p-3 bg-surface-50/60 space-y-1.5 shrink-0">
+          <div className="flex items-center gap-2.5 px-2.5 py-2 bg-white border border-surface-200 rounded-md">
+            <div className="w-8 h-8 rounded-full bg-primary-50 text-primary-800 border border-primary-200 flex items-center justify-center font-semibold text-xs shrink-0">
               {userName.replace(/^Dr\.\s*/i, '').charAt(0) || 'D'}
             </div>
             <div className="min-w-0 flex-1">
-              <p className="text-sm font-semibold text-surface-900 truncate" title={userName}>
+              <p className="text-xs font-medium text-surface-900 truncate" title={userName}>
                 {userName}
               </p>
-              <p className="text-xs text-surface-500 truncate" title={userEmail}>
+              <p className="text-[11px] text-surface-500 truncate" title={userEmail}>
                 {userEmail}
               </p>
             </div>
@@ -234,62 +216,66 @@ export default function DoctorLayout({
           <button
             type="button"
             onClick={() => void handleLogout()}
-            className="w-full flex items-center gap-3 px-3 py-2.5 text-sm font-semibold text-surface-500 hover:text-surface-900 hover:bg-surface-100 rounded-md transition-colors text-left"
+            className="w-full flex items-center gap-2.5 px-2.5 min-h-11 text-xs font-medium text-surface-600 hover:text-surface-900 hover:bg-surface-200/60 rounded-md transition-colors text-left"
           >
-            <LogOut className="w-5 h-5 text-surface-400" />
-            Sign Out
+            <LogOut className="w-4 h-4 text-surface-400 shrink-0" aria-hidden="true" />
+            <span>Sign out</span>
           </button>
         </div>
       </aside>
 
-      {/* Mobile Backdrop */}
       {isSidebarOpen && (
         <div
-          className="fixed inset-0 z-30 bg-surface-900/20 backdrop-blur-xs lg:hidden"
+          aria-hidden="true"
+          className="fixed inset-0 z-30 bg-surface-900/30 lg:hidden"
           onClick={() => setIsSidebarOpen(false)}
         />
       )}
 
-      {/* ─── Main Viewport ─────────────────────────────────────────────── */}
-      <div className="flex-1 flex flex-col min-w-0 overflow-y-auto">
-        <header className="h-16 bg-white border-b border-surface-200/60 flex items-center justify-between px-4 sm:px-6 lg:px-8 z-10 shrink-0">
-          <div className="flex items-center gap-3">
-            <button
-              type="button"
-              className="p-1.5 text-surface-500 hover:text-surface-700 rounded-lg lg:hidden"
-              onClick={() => setIsSidebarOpen(true)}
-              aria-label="Toggle Navigation"
-            >
-              <Menu className="w-6 h-6" />
-            </button>
+      {/* ─── Main Viewport Area ────────────────────────────────────────── */}
+      <div className="flex-1 flex flex-col min-w-0">
+        <header className="sticky top-0 z-20 min-h-14 bg-white border-b border-surface-200 flex items-center px-4 sm:px-6 lg:px-8 shrink-0">
+          <div className="max-w-6xl mx-auto w-full flex items-center justify-between gap-3">
+            <div className="flex items-center gap-2 min-w-0">
+              <button
+                type="button"
+                className="inline-flex lg:hidden items-center justify-center w-11 h-11 -ml-2 rounded-md text-surface-600 hover:text-surface-900 hover:bg-surface-100"
+                onClick={() => setIsSidebarOpen(true)}
+                aria-label="Open navigation menu"
+              >
+                <Menu className="w-5 h-5" aria-hidden="true" />
+              </button>
 
-            <div className="flex items-center gap-2.5">
-              <div className="w-8 h-8 rounded-xl bg-primary-50 text-primary-600 border border-primary-100 flex items-center justify-center font-bold shrink-0">
-                {headerMeta.icon}
-              </div>
-              <div>
-                <span className="text-xs font-bold text-primary-700 uppercase tracking-wider block mb-0.5">
-                  {headerMeta.eyebrow}
-                </span>
-                <h2 className="text-base font-bold text-surface-900 tracking-tight">
-                  {headerMeta.title}
-                </h2>
-              </div>
+              <nav aria-label="Breadcrumb" className="flex items-center gap-1.5 text-xs min-w-0">
+                <Link
+                  href="/doctor/dashboard"
+                  className="hidden sm:inline-flex items-center min-h-11 px-1.5 rounded-md text-surface-500 hover:text-surface-900 transition-colors shrink-0"
+                >
+                  Specialist Portal
+                </Link>
+                <ChevronRight
+                  className="hidden sm:block w-3.5 h-3.5 text-surface-400 shrink-0"
+                  aria-hidden="true"
+                />
+                <span className="font-medium text-surface-900 truncate">{activeLabel}</span>
+              </nav>
             </div>
-          </div>
 
-          <div className="flex items-center gap-3 text-xs text-surface-500">
-            <span className="hidden sm:inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200 font-semibold">
-              <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
-              Attending Specialist
-            </span>
-            <NotificationBell />
+            <div className="flex items-center gap-2.5 text-xs shrink-0">
+              <span className="hidden sm:inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-surface-100 text-surface-700 border border-surface-200 font-medium">
+                <span className="w-1.5 h-1.5 rounded-full bg-success-600" aria-hidden="true" />
+                Attending Physician
+              </span>
+              <NotificationBell />
+            </div>
           </div>
         </header>
 
         <GlobalAlertBanner text={alertBannerText} />
 
-        <main className="flex-1 p-4 sm:p-6 lg:p-8">{children}</main>
+        <main className="flex-1 px-4 sm:px-6 lg:px-8 py-6 min-w-0">
+          <div className="max-w-6xl mx-auto w-full">{children}</div>
+        </main>
       </div>
     </div>
   );

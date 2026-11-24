@@ -288,12 +288,14 @@ export default function AdminHospitalsPage() {
     } finally {
       setDeactivating(false);
     }
-  };  return (
-    <div className="max-w-7xl mx-auto space-y-6 animate-fade-in">
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+  };
+
+  return (
+    <div className="space-y-6 animate-fade-in">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-5 border-b border-surface-200">
         <div>
-          <h1 className="text-2xl font-bold text-surface-900 tracking-tight">Hospitals</h1>
-          <p className="text-sm text-surface-500 mt-1">Manage hospital partners, commissions, and overrides.</p>
+          <h1 className="text-xl font-semibold tracking-tight text-surface-900">Hospitals</h1>
+          <p className="text-xs sm:text-sm text-surface-500 mt-1">Manage hospital partners, commissions, and scheduled rate overrides.</p>
         </div>
         <Button onClick={openCreate}>+ Add Hospital</Button>
       </div>
@@ -302,8 +304,9 @@ export default function AdminHospitalsPage() {
       {userRole === 'ADMIN' && (
         <div className="flex border-b border-surface-200 gap-4">
           <button
+            type="button"
             onClick={() => setActiveTab('hospitals')}
-            className={`px-4 py-2.5 text-sm font-bold border-b-2 transition-all ${
+            className={`px-4 py-2.5 text-sm font-medium border-b-2 transition-colors ${
               activeTab === 'hospitals'
                 ? 'border-primary-600 text-primary-700'
                 : 'border-transparent text-surface-500 hover:text-surface-900'
@@ -312,8 +315,9 @@ export default function AdminHospitalsPage() {
             Hospitals Directory
           </button>
           <button
+            type="button"
             onClick={() => setActiveTab('overrides')}
-            className={`px-4 py-2.5 text-sm font-bold border-b-2 transition-all ${
+            className={`px-4 py-2.5 text-sm font-medium border-b-2 transition-colors ${
               activeTab === 'overrides'
                 ? 'border-primary-600 text-primary-700'
                 : 'border-transparent text-surface-500 hover:text-surface-900'
@@ -327,20 +331,20 @@ export default function AdminHospitalsPage() {
       {activeTab === 'hospitals' ? (
         <>
           {/* Filters */}
-          <Card className="p-4 bg-white border border-surface-200 flex flex-col sm:flex-row gap-3">
+          <Card padding="sm" className="flex flex-col sm:flex-row gap-3">
             <input
               type="text"
               placeholder="Search by hospital name..."
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              className="flex-1 px-3 py-2 border border-surface-300 rounded-lg text-sm focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500"
+              className="flex-1 px-3 py-2 border border-surface-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-600"
             />
             <input
               type="text"
               placeholder="Filter by city..."
               value={cityFilter}
               onChange={(e) => setCityFilter(e.target.value)}
-              className="px-3 py-2 border border-surface-300 rounded-lg text-sm focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500"
+              className="px-3 py-2 border border-surface-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-600"
             />
             <Button variant="secondary" size="sm" onClick={() => fetchHospitals()}>
               Search
@@ -350,41 +354,41 @@ export default function AdminHospitalsPage() {
           <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
             {loading ? (
               <div className="col-span-full flex items-center justify-center py-16">
-                <div className="w-8 h-8 border-4 border-primary-600 border-t-transparent rounded-full animate-spin" />
+                <div className="w-7 h-7 border-2 border-primary-600 border-t-transparent rounded-full animate-spin" />
               </div>
             ) : hospitals.length === 0 ? (
-              <div className="col-span-full border border-dashed border-surface-200 rounded-lg p-12 text-center text-sm text-surface-500 bg-white">
+              <div className="col-span-full border border-dashed border-surface-300 rounded-lg p-12 text-center text-sm text-surface-500 bg-white">
                 No hospitals found.
               </div>
             ) : (
               hospitals.map((h) => (
-                <Card key={h.id} className="p-5 bg-white border border-surface-200 flex flex-col hover:shadow-md transition-shadow">
-                  <div className="flex justify-between items-start mb-2">
-                    <h3 className="font-bold text-surface-900 text-lg">{h.name}</h3>
+                <Card key={h.id} padding="md" hover className="flex flex-col">
+                  <div className="flex justify-between items-start gap-2 mb-1.5">
+                    <h3 className="font-semibold text-surface-900 text-sm sm:text-base">{h.name}</h3>
                     <Badge variant={h.isActive ? 'success' : 'danger'} dot>
                       {h.isActive ? 'Active' : 'Inactive'}
                     </Badge>
                   </div>
-                  <p className="text-sm text-surface-500 mb-3">
+                  <p className="text-xs text-surface-500 mb-3">
                     {h.city} • {h.accreditation || 'No accreditation'}
                   </p>
-                  <div className="text-xs text-surface-600 bg-surface-50 p-3 rounded-lg border border-surface-200 space-y-1 mb-4">
-                    <p>
-                      <span className="font-semibold">Doctors:</span> {h._count.doctors} • <span className="font-semibold">Appointments:</span>{' '}
+                  <div className="text-xs text-surface-600 bg-surface-100 p-3 rounded-md border border-surface-200 space-y-1 mb-4">
+                    <p className="tabular-nums">
+                      <span className="font-medium text-surface-700">Doctors:</span> {h._count.doctors} • <span className="font-medium text-surface-700">Appointments:</span>{' '}
                       {h._count.appointments}
                     </p>
                     {h.commissionRate && (
-                      <p>
-                        <span className="font-semibold">Commission:</span> {Number(h.commissionRate)}%
+                      <p className="tabular-nums">
+                        <span className="font-medium text-surface-700">Commission:</span> {Number(h.commissionRate)}%
                       </p>
                     )}
                     {Array.isArray(h.departments) && h.departments.length > 0 && (
                       <p>
-                        <span className="font-semibold">Depts:</span> {h.departments.join(', ')}
+                        <span className="font-medium text-surface-700">Departments:</span> {h.departments.join(', ')}
                       </p>
                     )}
                   </div>
-                  <div className="mt-auto pt-3 border-t border-surface-100 flex gap-2">
+                  <div className="mt-auto pt-3 border-t border-surface-200 flex gap-2">
                     <Button variant="secondary" size="sm" className="flex-1" onClick={() => openEdit(h)}>
                       Edit
                     </Button>
@@ -408,9 +412,9 @@ export default function AdminHospitalsPage() {
         /* Commission Overrides Tab */
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           <div className="lg:col-span-1 space-y-6">
-            <Card className="p-6 bg-white border border-surface-200 space-y-4">
-              <h3 className="text-sm font-bold text-surface-900 border-b border-surface-100 pb-2.5 uppercase tracking-wider">Configure Rate Override</h3>
-              
+            <Card padding="lg" className="space-y-4">
+              <h3 className="text-sm sm:text-base font-semibold text-surface-900 border-b border-surface-200 pb-3">Configure rate override</h3>
+
               <Select
                 label="Select Hospital"
                 value={selectedHospitalId}
@@ -428,7 +432,7 @@ export default function AdminHospitalsPage() {
               {selectedHospitalId && (
                 <form onSubmit={handleAddOverride} className="space-y-4 animate-fade-in">
                   <div className="space-y-1.5">
-                    <label className="block text-xs font-bold text-surface-700 uppercase">Override Commission Rate (%)</label>
+                    <label className="block text-xs font-medium text-surface-700">Override Commission Rate (%)</label>
                     <input
                       type="number"
                       step="0.01"
@@ -436,7 +440,7 @@ export default function AdminHospitalsPage() {
                       placeholder="e.g. 12.5"
                       value={overrideForm.rate}
                       onChange={(e) => setOverrideForm({ ...overrideForm, rate: e.target.value })}
-                      className="w-full p-2.5 border border-surface-200 rounded-xl text-sm focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500"
+                      className="w-full p-2.5 border border-surface-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-600"
                     />
                   </div>
 
@@ -457,12 +461,12 @@ export default function AdminHospitalsPage() {
                   />
 
                   <div className="space-y-1.5">
-                    <label className="block text-xs font-bold text-surface-700 uppercase">Override Reason / Notes</label>
+                    <label className="block text-xs font-medium text-surface-700">Override Reason / Notes</label>
                     <textarea
                       placeholder="e.g., Promotional wellness package rate."
                       value={overrideForm.notes}
                       onChange={(e) => setOverrideForm({ ...overrideForm, notes: e.target.value })}
-                      className="w-full p-2.5 border border-surface-200 rounded-xl text-sm focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500 min-h-[80px]"
+                      className="w-full p-2.5 border border-surface-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-600 min-h-[80px]"
                     />
                   </div>
 
@@ -475,41 +479,43 @@ export default function AdminHospitalsPage() {
           </div>
 
           <div className="lg:col-span-2">
-            <Card className="p-6 bg-white border border-surface-200 space-y-4">
-              <h3 className="text-sm font-bold text-surface-900 border-b border-surface-100 pb-2.5 uppercase tracking-wider">Active & Scheduled Overrides</h3>
-              
+            <Card className="p-0! overflow-hidden">
+              <div className="px-5 py-4 border-b border-surface-200">
+                <h3 className="text-sm sm:text-base font-semibold text-surface-900">Active &amp; scheduled overrides</h3>
+              </div>
+
               {!selectedHospitalId ? (
-                <p className="text-sm text-surface-500 text-center py-12">Please select a hospital from the left panel to manage overrides.</p>
+                <p className="text-sm text-surface-500 text-center py-12 px-5">Please select a hospital from the left panel to manage overrides.</p>
               ) : loadingOverrides ? (
                 <div className="flex items-center justify-center py-12">
-                  <div className="w-6 h-6 border-4 border-primary-600 border-t-transparent rounded-full animate-spin" />
+                  <div className="w-6 h-6 border-2 border-primary-600 border-t-transparent rounded-full animate-spin" />
                 </div>
               ) : overrides.length === 0 ? (
-                <p className="text-sm text-surface-500 text-center py-12">No commission overrides configured for this hospital.</p>
+                <p className="text-sm text-surface-500 text-center py-12 px-5">No commission overrides configured for this hospital.</p>
               ) : (
                 <div className="overflow-x-auto">
-                  <table className="w-full text-xs text-left">
+                  <table className="w-full text-sm text-left">
                     <thead>
-                      <tr className="border-b border-surface-100 bg-surface-50">
-                        <th className="px-4 py-2.5 font-bold text-surface-600">Rate (%)</th>
-                        <th className="px-4 py-2.5 font-bold text-surface-600">Start Date</th>
-                        <th className="px-4 py-2.5 font-bold text-surface-600">End Date</th>
-                        <th className="px-4 py-2.5 font-bold text-surface-600">Notes</th>
-                        <th className="px-4 py-2.5 font-bold text-surface-600 text-right">Action</th>
+                      <tr className="border-b border-surface-200 bg-surface-100">
+                        <th className="px-5 py-3 text-[11px] font-medium uppercase tracking-wide text-surface-500">Rate (%)</th>
+                        <th className="px-5 py-3 text-[11px] font-medium uppercase tracking-wide text-surface-500">Start Date</th>
+                        <th className="px-5 py-3 text-[11px] font-medium uppercase tracking-wide text-surface-500">End Date</th>
+                        <th className="px-5 py-3 text-[11px] font-medium uppercase tracking-wide text-surface-500">Notes</th>
+                        <th className="px-5 py-3 text-[11px] font-medium uppercase tracking-wide text-surface-500 text-right">Action</th>
                       </tr>
                     </thead>
-                    <tbody className="divide-y divide-surface-100 font-medium">
+                    <tbody className="divide-y divide-surface-200">
                       {overrides.map((o) => (
-                        <tr key={o.id} className="hover:bg-surface-50">
-                          <td className="px-4 py-3 font-mono font-bold text-primary-700">{Number(o.rate)}%</td>
-                          <td className="px-4 py-3 text-surface-600">{new Date(o.startDate).toLocaleDateString()}</td>
-                          <td className="px-4 py-3 text-surface-600">{new Date(o.endDate).toLocaleDateString()}</td>
-                          <td className="px-4 py-3 text-surface-500 italic max-w-[150px] truncate" title={o.notes || undefined}>{o.notes || '—'}</td>
-                          <td className="px-4 py-3 text-right">
+                        <tr key={o.id} className="hover:bg-surface-100/60">
+                          <td className="px-5 py-3 font-mono font-semibold tabular-nums text-primary-700">{Number(o.rate)}%</td>
+                          <td className="px-5 py-3 text-surface-600 text-xs tabular-nums">{new Date(o.startDate).toLocaleDateString()}</td>
+                          <td className="px-5 py-3 text-surface-600 text-xs tabular-nums">{new Date(o.endDate).toLocaleDateString()}</td>
+                          <td className="px-5 py-3 text-surface-500 text-xs max-w-[180px] truncate" title={o.notes || undefined}>{o.notes || '—'}</td>
+                          <td className="px-5 py-3 text-right">
                             <button
                               type="button"
                               onClick={() => handleDeleteOverride(o.id)}
-                              className="text-danger-600 hover:text-danger-700 font-bold"
+                              className="text-xs text-danger-600 hover:text-danger-700 font-medium"
                             >
                               Remove
                             </button>
@@ -526,14 +532,14 @@ export default function AdminHospitalsPage() {
       )}
 
       {showModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-surface-900/40 backdrop-blur-xs">
-          <div className="bg-white rounded-2xl shadow-2xl border border-surface-200 w-full max-w-lg animate-scale-up max-h-[90vh] overflow-y-auto">
-            <div className="px-6 py-4 border-b border-surface-100 flex items-center justify-between sticky top-0 bg-white z-10">
-              <h3 className="text-sm font-bold text-surface-900">{editing ? 'Edit Hospital' : 'Add Hospital'}</h3>
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-surface-900/40">
+          <div className="bg-white rounded-lg shadow-md border border-surface-200 w-full max-w-lg animate-scale-in max-h-[90vh] overflow-y-auto">
+            <div className="px-6 py-4 border-b border-surface-200 flex items-center justify-between sticky top-0 bg-white z-10">
+              <h3 className="text-sm sm:text-base font-semibold text-surface-900">{editing ? 'Edit hospital' : 'Add hospital'}</h3>
               <button
                 onClick={() => setShowModal(false)}
                 aria-label="Close"
-                className="text-surface-400 hover:text-surface-600 p-1 rounded-lg hover:bg-surface-100 transition-colors"
+                className="text-surface-400 hover:text-surface-600 p-1 rounded-md hover:bg-surface-100 transition-colors"
               >
                 <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2} aria-hidden="true">
                   <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
@@ -542,74 +548,74 @@ export default function AdminHospitalsPage() {
             </div>
             <form onSubmit={handleSave} className="p-6 space-y-4">
               <div className="space-y-1.5">
-                <label className="block text-xs font-semibold text-surface-700">Name</label>
+                <label className="block text-xs font-medium text-surface-700">Name</label>
                 <input
                   type="text"
                   required
                   value={form.name}
                   onChange={(e) => setForm({ ...form, name: e.target.value })}
-                  className="w-full p-2.5 border border-surface-200 rounded-xl text-sm focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500"
+                  className="w-full p-2.5 border border-surface-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-600"
                 />
               </div>
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-1.5">
-                  <label className="block text-xs font-semibold text-surface-700">City</label>
+                  <label className="block text-xs font-medium text-surface-700">City</label>
                   <input
                     type="text"
                     required
                     value={form.city}
                     onChange={(e) => setForm({ ...form, city: e.target.value })}
-                    className="w-full p-2.5 border border-surface-200 rounded-xl text-sm focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500"
+                    className="w-full p-2.5 border border-surface-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-600"
                   />
                 </div>
                 <div className="space-y-1.5">
-                  <label className="block text-xs font-semibold text-surface-700">Accreditation</label>
+                  <label className="block text-xs font-medium text-surface-700">Accreditation</label>
                   <input
                     type="text"
                     value={form.accreditation}
                     onChange={(e) => setForm({ ...form, accreditation: e.target.value })}
-                    className="w-full p-2.5 border border-surface-200 rounded-xl text-sm focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500"
+                    className="w-full p-2.5 border border-surface-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-600"
                   />
                 </div>
               </div>
               <div className="space-y-1.5">
-                <label className="block text-xs font-semibold text-surface-700">Address</label>
+                <label className="block text-xs font-medium text-surface-700">Address</label>
                 <textarea
                   rows={2}
                   required
                   value={form.address}
                   onChange={(e) => setForm({ ...form, address: e.target.value })}
-                  className="w-full p-2.5 border border-surface-200 rounded-xl text-sm focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500"
+                  className="w-full p-2.5 border border-surface-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-600"
                 />
               </div>
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-1.5">
-                  <label className="block text-xs font-semibold text-surface-700">Contact Person</label>
+                  <label className="block text-xs font-medium text-surface-700">Contact Person</label>
                   <input
                     type="text"
                     value={form.contactPerson}
                     onChange={(e) => setForm({ ...form, contactPerson: e.target.value })}
-                    className="w-full p-2.5 border border-surface-200 rounded-xl text-sm focus:border-primary-600 focus:outline-none"
+                    className="w-full p-2.5 border border-surface-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-600"
                   />
                 </div>
                 <div className="space-y-1.5">
-                  <label className="block text-xs font-semibold text-surface-700">Commission %</label>
+                  <label className="block text-xs font-medium text-surface-700">Commission %</label>
                   <input
                     type="number"
                     step="0.01"
                     value={form.commissionRate}
                     onChange={(e) => setForm({ ...form, commissionRate: e.target.value })}
-                    className="w-full p-2.5 border border-surface-200 rounded-xl text-sm focus:border-primary-600 focus:outline-none"
+                    className="w-full p-2.5 border border-surface-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-600"
                   />
                 </div>
               </div>
               <div className="space-y-1.5">
-                <label className="block text-xs font-semibold text-surface-700">Departments (comma-separated)</label>
+                <label className="block text-xs font-medium text-surface-700">Departments (comma-separated)</label>
                 <input
                   type="text"
                   value={form.departments}
                   onChange={(e) => setForm({ ...form, departments: e.target.value })}
-                  className="w-full p-2.5 border border-surface-200 rounded-xl text-sm focus:border-primary-600 focus:outline-none"
+                  className="w-full p-2.5 border border-surface-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-600"
                   placeholder="Cardiology, Neurology, Orthopaedics"
                 />
               </div>
@@ -620,6 +626,7 @@ export default function AdminHospitalsPage() {
                     id="hospActive"
                     checked={form.isActive}
                     onChange={(e) => setForm({ ...form, isActive: e.target.checked })}
+                    className="rounded accent-primary-600"
                   />
                   <label htmlFor="hospActive" className="text-sm font-medium text-surface-700">
                     Active

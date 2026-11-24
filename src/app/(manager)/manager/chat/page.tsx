@@ -159,29 +159,33 @@ export default function ChatCenter() {
     return (
       <div className="flex items-center justify-center py-20">
         <div className="flex flex-col items-center gap-3">
-          <div className="w-8 h-8 border-4 border-primary-600 border-t-transparent rounded-full animate-spin" />
-          <span className="text-sm font-medium text-surface-500">Loading chat inbox...</span>
+          <div className="w-7 h-7 border-2 border-primary-600 border-t-transparent rounded-full animate-spin" />
+          <span className="text-xs font-medium text-surface-500">Loading chat inbox...</span>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="space-y-6 animate-fade-in relative text-xs">
-      <div>
-        <h1 className="text-2xl font-bold text-surface-900">Coordination Chat Center</h1>
-        <p className="text-sm text-surface-500 mt-1">Unified secure communications hub to check in and converse with your cohort.</p>
+    <div className="space-y-6">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-5 border-b border-surface-200">
+        <div>
+          <h1 className="text-xl font-semibold tracking-tight text-surface-900">Coordination Chat Center</h1>
+          <p className="text-xs sm:text-sm text-surface-500 mt-1">
+            Unified secure communications hub to check in and converse with your cohort.
+          </p>
+        </div>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6 h-[600px] items-stretch">
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6 h-[600px] items-stretch text-xs">
         {/* Threads Side Panel */}
-        <Card className="bg-white overflow-y-auto border border-surface-200/80 p-0 flex flex-col md:col-span-1">
-          <div className="p-4 border-b border-surface-100 bg-surface-50">
-            <h3 className="font-bold text-surface-900 text-sm">Patient Threads</h3>
+        <Card className="!p-0 overflow-hidden flex flex-col md:col-span-1">
+          <div className="px-4 py-3.5 border-b border-surface-200 bg-surface-50">
+            <h2 className="font-semibold text-surface-900 text-sm">Patient Threads</h2>
           </div>
-          <div className="divide-y divide-surface-100 flex-1 overflow-y-auto">
+          <div className="divide-y divide-surface-200 flex-1 overflow-y-auto">
             {threads.length === 0 ? (
-              <div className="p-8 text-center text-surface-400 font-medium">
+              <div className="p-8 text-center text-surface-500 font-medium">
                 No active patient channels.
               </div>
             ) : (
@@ -189,28 +193,28 @@ export default function ChatCenter() {
                 <div
                   key={thread.patientUserId}
                   onClick={() => handleSelectThread(thread)}
-                  className={`p-4 cursor-pointer transition-colors flex justify-between items-start gap-3 hover:bg-surface-50/50 ${
-                    selectedThread?.patientUserId === thread.patientUserId ? 'bg-primary-50/30' : ''
+                  className={`p-4 cursor-pointer transition-colors flex justify-between items-start gap-3 hover:bg-surface-50 ${
+                    selectedThread?.patientUserId === thread.patientUserId ? 'bg-primary-50/40' : ''
                   }`}
                 >
                   <div className="min-w-0 flex-1">
                     <div className="flex items-center gap-2">
-                      <p className="font-semibold text-surface-900 truncate">{thread.fullName}</p>
+                      <p className="font-semibold text-surface-900 truncate text-sm">{thread.fullName}</p>
                       {thread.unreadCount > 0 && (
-                        <span className="bg-primary-600 text-white font-bold text-xs w-5 h-5 rounded-full flex items-center justify-center shrink-0">
+                        <span className="bg-primary-600 text-white font-medium text-[11px] px-1.5 py-0.5 rounded tabular-nums shrink-0">
                           {thread.unreadCount}
                         </span>
                       )}
                     </div>
                     <p className="text-xs text-surface-500 truncate mt-0.5">{thread.email}</p>
                     {thread.lastMessage && (
-                      <p className="text-xs text-surface-600 mt-2 truncate font-medium">
+                      <p className="text-xs text-surface-600 mt-1.5 truncate">
                         {thread.lastMessage}
                       </p>
                     )}
                   </div>
                   {thread.lastMessageTime && (
-                    <span className="text-xs text-surface-500 whitespace-nowrap">
+                    <span className="text-[11px] text-surface-500 whitespace-nowrap tabular-nums">
                       {new Date(thread.lastMessageTime).toLocaleDateString(undefined, {
                         month: 'short',
                         day: 'numeric',
@@ -224,28 +228,28 @@ export default function ChatCenter() {
         </Card>
 
         {/* Message Feed Display */}
-        <Card className="bg-white border border-surface-200/80 p-0 flex flex-col md:col-span-2 h-full overflow-hidden">
+        <Card className="!p-0 flex flex-col md:col-span-2 h-full overflow-hidden">
           {selectedThread ? (
             <div className="flex flex-col h-full overflow-hidden">
               {/* Header */}
-              <div className="p-4 border-b border-surface-100 bg-surface-50 shrink-0 flex items-center gap-3">
-                <div className="w-8 h-8 rounded-full bg-primary-100 text-primary-700 flex items-center justify-center font-bold text-xs shrink-0">
+              <div className="px-4 py-3 border-b border-surface-200 bg-surface-50 shrink-0 flex items-center gap-3">
+                <div className="w-8 h-8 rounded-full bg-surface-100 text-surface-700 border border-surface-200 flex items-center justify-center font-semibold text-xs shrink-0">
                   {selectedThread.fullName.charAt(0)}
                 </div>
-                <div>
-                  <h3 className="font-bold text-surface-900 text-sm">{selectedThread.fullName}</h3>
-                  <p className="text-xs text-surface-500">{selectedThread.email}</p>
+                <div className="min-w-0">
+                  <h2 className="font-semibold text-surface-900 text-sm truncate">{selectedThread.fullName}</h2>
+                  <p className="text-xs text-surface-500 truncate">{selectedThread.email}</p>
                 </div>
               </div>
 
               {/* Feed logs */}
-              <div className="flex-1 overflow-y-auto p-4 space-y-3.5 bg-surface-50/20">
+              <div className="flex-1 overflow-y-auto p-4 space-y-3 bg-surface-50/30">
                 {loadingMessages ? (
                   <div className="flex justify-center items-center h-full">
                     <div className="w-6 h-6 border-2 border-primary-600 border-t-transparent rounded-full animate-spin" />
                   </div>
                 ) : messages.length === 0 ? (
-                  <div className="flex items-center justify-center h-full text-surface-400 font-medium">
+                  <div className="flex items-center justify-center h-full text-surface-500 font-medium">
                     No conversation history. Send a secure greeting below.
                   </div>
                 ) : (
@@ -254,15 +258,15 @@ export default function ChatCenter() {
                     return (
                       <div key={msg.id} className={`flex ${isSelf ? 'justify-end' : 'justify-start'}`}>
                         <div
-                          className={`max-w-[70%] p-3.5 rounded-lg border text-xs leading-relaxed ${
+                          className={`max-w-[70%] p-3 rounded-lg border text-xs leading-relaxed ${
                             isSelf
-                              ? 'bg-primary-600 text-white border-primary-700 rounded-br-none'
-                              : 'bg-white text-surface-800 border-surface-200 rounded-bl-none font-medium'
+                              ? 'bg-primary-600 text-white border-primary-700'
+                              : 'bg-white text-surface-800 border-surface-200'
                           }`}
                         >
                           <p>{msg.body}</p>
                           <p
-                            className={`text-xs mt-1 text-right block ${
+                            className={`text-[11px] mt-1 text-right block tabular-nums ${
                               isSelf ? 'text-primary-100' : 'text-surface-500'
                             }`}
                           >
@@ -280,28 +284,28 @@ export default function ChatCenter() {
               </div>
 
               {/* Input section */}
-              <form onSubmit={handleSendMessage} className="p-3 border-t border-surface-100 bg-white flex gap-2 shrink-0">
+              <form onSubmit={handleSendMessage} className="p-3 border-t border-surface-200 bg-white flex gap-2 shrink-0">
                 <input
                   type="text"
                   placeholder={`Send a secure coordination update to ${selectedThread.fullName}...`}
-                  className="flex-1 px-4 py-2.5 rounded-xl border border-surface-200 font-medium text-surface-800 focus:outline-none focus:border-primary-600 text-xs"
+                  className="flex-1 px-3.5 py-2 rounded-md border border-surface-300 bg-white text-surface-900 focus:outline-none focus:border-primary-600 text-xs"
                   value={inputText}
                   onChange={(e) => setInputText(e.target.value)}
                   disabled={sending}
                   required
                 />
-                <Button type="submit" disabled={sending || !inputText.trim()}>
+                <Button type="submit" size="sm" disabled={sending || !inputText.trim()}>
                   {sending ? 'Sending...' : 'Send'}
                 </Button>
               </form>
             </div>
           ) : (
             <div className="flex flex-col items-center justify-center h-full p-6 text-center">
-              <svg className="w-12 h-12 text-surface-300 mb-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+              <svg className="w-10 h-10 text-surface-400 mb-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
                 <path strokeLinecap="round" strokeLinejoin="round" d="M8.625 12a.375.375 0 11-.75 0 .375.375 0 01.75 0zm0 0H8.25m4.125 0a.375.375 0 11-.75 0 .375.375 0 01.75 0zm0 0H12m4.125 0a.375.375 0 11-.75 0 .375.375 0 01.75 0zm0 0h-.375M21 12c0 4.556-4.03 8.25-9 8.25a9.764 9.764 0 01-2.555-.337A5.972 5.972 0 015.41 20.97a5.969 5.969 0 01-.474-.065 4.48 4.48 0 00.978-2.025c.09-.457-.133-.901-.467-1.226C3.93 16.178 3 14.189 3 12c0-4.556 4.03-8.25 9-8.25s9 3.694 9 8.25z" />
               </svg>
-              <h3 className="text-sm font-semibold text-surface-700 mb-1">No Conversation Active</h3>
-              <p className="text-xs text-surface-400 max-w-xs mx-auto">
+              <h2 className="text-sm font-semibold text-surface-700 mb-1">No Conversation Active</h2>
+              <p className="text-xs text-surface-500 max-w-xs mx-auto">
                 Select a patient record from the sidebar list to retrieve conversation history and respond to diagnostic inquiries.
               </p>
             </div>

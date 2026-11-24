@@ -1,8 +1,8 @@
 'use client';
 
 /**
- * Afzal Healthcare — Patient Care Concierge Shell
- * Calm clinical light-mode layout with single-hierarchy navigation context and 44px touch targets.
+ * Afzal Healthcare — Patient Portal Shell
+ * Unified 240px sidebar, 56px hairline-aligned header bar, and max-w-6xl content alignment.
  */
 
 import { useState, useEffect, useMemo } from 'react';
@@ -147,7 +147,6 @@ export default function PatientLayout({
     };
   }, [router]);
 
-  // Close mobile navigation drawer on Escape
   useEffect(() => {
     if (!isSidebarOpen) return;
     const handleKeyDown = (event: KeyboardEvent) => {
@@ -184,35 +183,35 @@ export default function PatientLayout({
     [userId, userName, userEmail, isUserLoading]
   );
 
-  const userInitial = userName ? userName.trim().charAt(0).toUpperCase() : 'A';
+  const userInitial = userName ? userName.trim().charAt(0).toUpperCase() : 'P';
 
   return (
     <PatientSessionContext.Provider value={sessionValue}>
       <div className="min-h-screen flex bg-surface-100 font-sans">
-        {/* ─── Sidebar Navigation ────────────────────────────────────────── */}
+        {/* ─── Sidebar Navigation (240px) ────────────────────────────────── */}
         <aside
           aria-label="Patient portal navigation"
           className={`
-            fixed inset-y-0 left-0 z-40 w-64 bg-white border-r border-surface-200
-            flex flex-col justify-between transition-transform duration-200 ease-out
-            lg:translate-x-0 lg:sticky lg:top-0 lg:h-screen lg:shrink-0 shadow-xs
+            fixed inset-y-0 left-0 z-40 w-60 bg-white border-r border-surface-200
+            flex flex-col justify-between transition-transform duration-150 ease-out
+            lg:translate-x-0 lg:sticky lg:top-0 lg:h-screen lg:shrink-0
             ${isSidebarOpen ? 'translate-x-0' : '-translate-x-full'}
           `}
         >
           <div className="flex flex-col min-h-0 flex-1">
-            {/* Brand Header */}
-            <div className="flex items-center justify-between px-5 min-h-16 border-b border-surface-200 bg-white shrink-0">
+            {/* 56px Brand Header — Hairline aligned with top bar */}
+            <div className="flex items-center justify-between px-4 h-14 border-b border-surface-200 bg-white shrink-0">
               <Link
                 href="/patient/dashboard"
                 onClick={() => setIsSidebarOpen(false)}
-                className="inline-flex items-center min-h-11 rounded-xl focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-500"
+                className="inline-flex items-center min-h-11 px-1 rounded-md focus-visible:outline-2 focus-visible:outline-primary-600"
               >
                 <Image
                   src={logoImg}
                   alt="Afzal Healthcare"
-                  width={120}
-                  height={38}
-                  className="h-9 w-auto object-contain shrink-0"
+                  width={108}
+                  height={32}
+                  className="h-7 w-auto object-contain shrink-0"
                   priority
                 />
               </Link>
@@ -221,20 +220,20 @@ export default function PatientLayout({
                 type="button"
                 onClick={() => setIsSidebarOpen(false)}
                 aria-label="Close navigation menu"
-                className="inline-flex lg:hidden items-center justify-center w-11 h-11 -mr-2 rounded-xl text-surface-500 hover:text-surface-900 hover:bg-surface-100 transition-colors"
+                className="inline-flex lg:hidden items-center justify-center w-11 h-11 -mr-1.5 rounded-md text-surface-500 hover:text-surface-900 hover:bg-surface-100 transition-colors"
               >
-                <X className="w-5 h-5" aria-hidden="true" />
+                <X className="w-4 h-4" aria-hidden="true" />
               </button>
             </div>
 
             {/* Navigation Links */}
-            <nav aria-label="Care sections" className="p-3.5 space-y-6 overflow-y-auto flex-1">
+            <nav aria-label="Care sections" className="p-3 space-y-5 overflow-y-auto flex-1">
               {NAV_SECTIONS.map((section) => (
-                <div key={section.title} className="space-y-1.5">
-                  <p className="px-3 text-[11px] font-bold text-surface-500 uppercase tracking-wider">
+                <div key={section.title} className="space-y-1">
+                  <p className="px-2.5 text-[11px] font-medium text-surface-400 uppercase tracking-wide mb-1.5">
                     {section.title}
                   </p>
-                  <div className="space-y-1">
+                  <div className="space-y-0.5">
                     {section.items.map((item) => {
                       const isActive = pathname === item.href;
                       const ItemIcon = item.Icon;
@@ -245,18 +244,18 @@ export default function PatientLayout({
                           aria-current={isActive ? 'page' : undefined}
                           onClick={() => setIsSidebarOpen(false)}
                           className={`
-                            flex items-center gap-3 px-3.5 min-h-11 text-xs font-semibold rounded-xl
+                            flex items-center gap-2.5 px-2.5 min-h-11 text-xs font-medium rounded-md
                             transition-colors duration-150
                             ${
                               isActive
-                                ? 'bg-primary-50 text-primary-900 border border-primary-200/80 shadow-2xs'
-                                : 'text-surface-700 hover:bg-surface-100 hover:text-surface-900 border border-transparent'
+                                ? 'bg-primary-50/90 text-primary-900 border border-primary-200/80'
+                                : 'text-surface-600 hover:bg-surface-100 hover:text-surface-900 border border-transparent'
                             }
                           `}
                         >
                           <ItemIcon
                             className={`w-4 h-4 shrink-0 ${
-                              isActive ? 'text-primary-700' : 'text-surface-500'
+                              isActive ? 'text-primary-700' : 'text-surface-400'
                             }`}
                             aria-hidden="true"
                           />
@@ -270,32 +269,32 @@ export default function PatientLayout({
             </nav>
           </div>
 
-          {/* Patient Account Summary & Sign Out */}
-          <div className="border-t border-surface-200 p-3.5 bg-surface-50/70 space-y-2 shrink-0">
+          {/* Account Summary & Sign Out */}
+          <div className="border-t border-surface-200 p-3 bg-surface-50/60 space-y-1.5 shrink-0">
             <Link
               href="/patient/profile"
               onClick={() => setIsSidebarOpen(false)}
-              className="flex items-center gap-3 px-3 py-2.5 min-h-12 bg-white border border-surface-200 hover:border-primary-300 rounded-xl shadow-2xs transition-colors"
+              className="flex items-center gap-2.5 px-2.5 py-2 min-h-11 bg-white border border-surface-200 hover:border-surface-300 rounded-md transition-colors"
             >
               {isUserLoading ? (
                 <>
-                  <div className="w-9 h-9 rounded-full bg-surface-200 animate-pulse shrink-0" />
+                  <div className="w-8 h-8 rounded-full bg-surface-200 animate-pulse shrink-0" />
                   <div className="min-w-0 flex-1 space-y-1.5">
                     <div className="h-3 w-24 rounded bg-surface-200 animate-pulse" />
-                    <div className="h-2.5 w-32 rounded bg-surface-100 animate-pulse" />
+                    <div className="h-2.5 w-28 rounded bg-surface-100 animate-pulse" />
                   </div>
                 </>
               ) : (
                 <>
-                  <div className="w-9 h-9 rounded-full bg-primary-100 text-primary-800 flex items-center justify-center font-bold text-xs shrink-0 border border-primary-200">
+                  <div className="w-8 h-8 rounded-full bg-primary-50 text-primary-800 flex items-center justify-center font-semibold text-xs shrink-0 border border-primary-200">
                     {userInitial}
                   </div>
                   <div className="min-w-0 flex-1">
-                    <p className="text-xs font-bold text-surface-900 truncate">
+                    <p className="text-xs font-medium text-surface-900 truncate">
                       {userName || 'My Care Account'}
                     </p>
                     <p className="text-[11px] text-surface-500 truncate">
-                      {userEmail || 'View medical profile'}
+                      {userEmail || 'View profile'}
                     </p>
                   </div>
                 </>
@@ -305,10 +304,10 @@ export default function PatientLayout({
             <button
               type="button"
               onClick={handleLogout}
-              className="w-full flex items-center gap-3 px-3.5 min-h-11 text-xs font-semibold text-surface-700 hover:text-surface-900 hover:bg-surface-200/60 rounded-xl transition-colors text-left"
+              className="w-full flex items-center gap-2.5 px-2.5 min-h-11 text-xs font-medium text-surface-600 hover:text-surface-900 hover:bg-surface-200/60 rounded-md transition-colors text-left"
             >
-              <LogOut className="w-4 h-4 text-surface-500 shrink-0" aria-hidden="true" />
-              <span>Sign Out</span>
+              <LogOut className="w-4 h-4 text-surface-400 shrink-0" aria-hidden="true" />
+              <span>Sign out</span>
             </button>
           </div>
         </aside>
@@ -317,63 +316,67 @@ export default function PatientLayout({
         {isSidebarOpen && (
           <div
             aria-hidden="true"
-            className="fixed inset-0 z-30 bg-surface-900/30 backdrop-blur-xs lg:hidden"
+            className="fixed inset-0 z-30 bg-surface-900/30 lg:hidden"
             onClick={() => setIsSidebarOpen(false)}
           />
         )}
 
-        {/* ─── Viewport Area ────────────────────────────────────────────── */}
+        {/* ─── Main Viewport Area ────────────────────────────────────────── */}
         <div className="flex-1 flex flex-col min-w-0">
-          {/* Lightweight Context Bar (no duplicate stacked page titles) */}
-          <header className="sticky top-0 z-20 min-h-16 py-2 bg-white/95 backdrop-blur-xs border-b border-surface-200 flex items-center justify-between gap-3 px-4 sm:px-6 lg:px-8 shrink-0">
-            <div className="flex items-center gap-2.5 min-w-0">
-              <button
-                type="button"
-                className="inline-flex lg:hidden items-center justify-center w-11 h-11 -ml-1.5 rounded-xl text-surface-600 hover:text-surface-900 hover:bg-surface-100 transition-colors shrink-0"
-                onClick={() => setIsSidebarOpen(true)}
-                aria-label="Open navigation menu"
-                aria-expanded={isSidebarOpen}
-              >
-                <Menu className="w-5 h-5" aria-hidden="true" />
-              </button>
-
-              <nav aria-label="Breadcrumb" className="flex items-center gap-1.5 text-xs min-w-0">
-                <Link
-                  href="/patient/dashboard"
-                  className="hidden sm:inline-flex items-center min-h-11 px-2 rounded-lg font-medium text-surface-500 hover:text-surface-900 transition-colors shrink-0"
+          {/* 56px Top Bar — Hairline aligned with sidebar header & content grid */}
+          <header className="sticky top-0 z-20 min-h-14 bg-white border-b border-surface-200 flex items-center px-4 sm:px-6 lg:px-8 shrink-0">
+            <div className="max-w-6xl mx-auto w-full flex items-center justify-between gap-3">
+              <div className="flex items-center gap-2 min-w-0">
+                <button
+                  type="button"
+                  className="inline-flex lg:hidden items-center justify-center w-11 h-11 -ml-2 rounded-md text-surface-600 hover:text-surface-900 hover:bg-surface-100 transition-colors shrink-0"
+                  onClick={() => setIsSidebarOpen(true)}
+                  aria-label="Open navigation menu"
+                  aria-expanded={isSidebarOpen}
                 >
-                  Care Portal
+                  <Menu className="w-5 h-5" aria-hidden="true" />
+                </button>
+
+                <nav aria-label="Breadcrumb" className="flex items-center gap-1.5 text-xs min-w-0">
+                  <Link
+                    href="/patient/dashboard"
+                    className="hidden sm:inline-flex items-center min-h-11 px-1.5 rounded-md font-normal text-surface-500 hover:text-surface-900 transition-colors shrink-0"
+                  >
+                    Care Portal
+                  </Link>
+                  <ChevronRight
+                    className="hidden sm:block w-3.5 h-3.5 text-surface-400 shrink-0"
+                    aria-hidden="true"
+                  />
+                  <span className="font-medium text-surface-900 truncate">
+                    <span className="sm:hidden">{activeNavItem.shortLabel}</span>
+                    <span className="hidden sm:inline">{activeNavItem.label}</span>
+                  </span>
+                </nav>
+              </div>
+
+              <div className="flex items-center gap-2 shrink-0">
+                <NotificationBell />
+
+                <Link
+                  href="/patient/appointments"
+                  className="inline-flex items-center justify-center gap-1.5 min-h-11 px-3 sm:px-3.5 rounded-md bg-primary-600 hover:bg-primary-700 text-white text-xs font-medium border border-primary-700/20 shadow-2xs transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-600"
+                >
+                  <Calendar className="w-3.5 h-3.5 shrink-0" aria-hidden="true" />
+                  <span className="sm:hidden">Book</span>
+                  <span className="hidden sm:inline">Book Consultation</span>
                 </Link>
-                <ChevronRight
-                  className="hidden sm:block w-3.5 h-3.5 text-surface-400 shrink-0"
-                  aria-hidden="true"
-                />
-                <span className="font-bold text-surface-900 truncate">
-                  <span className="sm:hidden">{activeNavItem.shortLabel}</span>
-                  <span className="hidden sm:inline">{activeNavItem.label}</span>
-                </span>
-              </nav>
-            </div>
-
-            <div className="flex items-center gap-2 sm:gap-3 shrink-0">
-              <NotificationBell />
-
-              <Link
-                href="/patient/appointments"
-                className="inline-flex items-center justify-center gap-2 min-h-11 px-3.5 sm:px-4 rounded-xl bg-primary-600 hover:bg-primary-700 active:scale-[0.96] text-white text-xs font-semibold shadow-2xs transition-[background-color,transform] duration-150 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-500"
-              >
-                <Calendar className="w-4 h-4 shrink-0" aria-hidden="true" />
-                <span className="sm:hidden">Book</span>
-                <span className="hidden sm:inline">Book Consultation</span>
-              </Link>
+              </div>
             </div>
           </header>
 
           <GlobalAlertBanner text={alertBannerText} />
 
-          {/* Main Content Area */}
-          <main className="flex-1 p-4 sm:p-6 lg:p-8 min-w-0">
-            {children}
+          {/* Strictly Aligned Main Content Container */}
+          <main className="flex-1 px-4 sm:px-6 lg:px-8 py-6 min-w-0">
+            <div className="max-w-6xl mx-auto w-full">
+              {children}
+            </div>
           </main>
         </div>
       </div>

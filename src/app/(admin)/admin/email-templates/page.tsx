@@ -145,27 +145,24 @@ export default function EmailTemplatesPage() {
   };
 
   return (
-    <div className="max-w-7xl mx-auto space-y-6 animate-fade-in">
+    <div className="space-y-6 animate-fade-in">
       {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-5 border-b border-surface-200">
         <div>
-          <div className="flex items-center gap-3 mb-1">
-            <h1 className="text-2xl font-bold text-surface-900 tracking-tight">Email Templates</h1>
-            <span className="px-2.5 py-0.5 rounded-full text-xs font-bold uppercase tracking-wider bg-primary-50 text-primary-700 border border-primary-200">Admin</span>
-          </div>
-          <p className="text-sm text-surface-500">Create and manage reusable email templates for campaigns.</p>
+          <h1 className="text-xl font-semibold tracking-tight text-surface-900">Email Templates</h1>
+          <p className="text-xs sm:text-sm text-surface-500 mt-1">Create and manage reusable email templates for automated and broadcast campaigns.</p>
         </div>
         <Button onClick={openCreate}>+ New Template</Button>
       </div>
 
       {/* Filters */}
-      <Card className="p-4 bg-white border border-surface-200 flex flex-col sm:flex-row gap-3">
+      <Card padding="sm" className="flex flex-col sm:flex-row gap-3">
         <input
           type="text"
           placeholder="Search templates..."
           value={search}
           onChange={(e) => setSearch(e.target.value)}
-          className="flex-1 px-3 py-2 border border-surface-300 rounded-lg text-sm focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500"
+          className="flex-1 px-3 py-2 border border-surface-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-600"
         />
         <Select
           value={categoryFilter}
@@ -181,33 +178,33 @@ export default function EmailTemplatesPage() {
       </Card>
 
       {/* Table */}
-      <Card className="bg-white border border-surface-200 overflow-hidden">
+      <Card className="p-0! overflow-hidden">
         {loading ? (
           <div className="flex items-center justify-center py-16">
-            <div className="w-8 h-8 border-4 border-primary-600 border-t-transparent rounded-full animate-spin" />
+            <div className="w-7 h-7 border-2 border-primary-600 border-t-transparent rounded-full animate-spin" />
           </div>
         ) : (
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
               <thead>
-                <tr className="border-b border-surface-100 bg-surface-50">
-                  <th className="px-5 py-3 text-left text-xs font-bold text-surface-500 uppercase tracking-wider">Name</th>
-                  <th className="px-5 py-3 text-left text-xs font-bold text-surface-500 uppercase tracking-wider">Subject</th>
-                  <th className="px-5 py-3 text-left text-xs font-bold text-surface-500 uppercase tracking-wider">Category</th>
-                  <th className="px-5 py-3 text-left text-xs font-bold text-surface-500 uppercase tracking-wider">Updated</th>
-                  <th className="px-5 py-3 text-right text-xs font-bold text-surface-500 uppercase tracking-wider">Actions</th>
+                <tr className="border-b border-surface-200 bg-surface-100">
+                  <th className="px-5 py-3 text-left text-[11px] font-medium uppercase tracking-wide text-surface-500">Name</th>
+                  <th className="px-5 py-3 text-left text-[11px] font-medium uppercase tracking-wide text-surface-500">Subject</th>
+                  <th className="px-5 py-3 text-left text-[11px] font-medium uppercase tracking-wide text-surface-500">Category</th>
+                  <th className="px-5 py-3 text-left text-[11px] font-medium uppercase tracking-wide text-surface-500">Updated</th>
+                  <th className="px-5 py-3 text-right text-[11px] font-medium uppercase tracking-wide text-surface-500">Actions</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-surface-100">
+              <tbody className="divide-y divide-surface-200">
                 {templates.length === 0 ? (
                   <tr><td colSpan={5} className="px-5 py-12 text-center text-surface-500">No templates found. Create your first template to get started.</td></tr>
                 ) : (
                   templates.map((t) => (
-                    <tr key={t.id} className="hover:bg-surface-50 transition-colors">
-                      <td className="px-5 py-3.5 font-semibold text-surface-900">{t.name}</td>
-                      <td className="px-5 py-3.5 text-surface-600 max-w-[200px] truncate">{t.subject}</td>
+                    <tr key={t.id} className="hover:bg-surface-100/60 transition-colors">
+                      <td className="px-5 py-3.5 font-medium text-surface-900">{t.name}</td>
+                      <td className="px-5 py-3.5 text-surface-600 max-w-[240px] truncate">{t.subject}</td>
                       <td className="px-5 py-3.5"><Badge variant="primary">{t.category}</Badge></td>
-                      <td className="px-5 py-3.5 text-surface-500 text-xs">{new Date(t.updatedAt).toLocaleDateString()}</td>
+                      <td className="px-5 py-3.5 text-surface-500 text-xs tabular-nums">{new Date(t.updatedAt).toLocaleDateString()}</td>
                       <td className="px-5 py-3.5 text-right">
                         <div className="flex items-center justify-end gap-1">
                           <Button variant="ghost" size="sm" onClick={() => openEdit(t)}>Edit</Button>
@@ -229,8 +226,8 @@ export default function EmailTemplatesPage() {
           </div>
         )}
         {pagination.totalPages > 1 && (
-          <div className="px-5 py-3 border-t border-surface-100 flex items-center justify-between text-sm">
-            <span className="text-surface-500">Page {pagination.page} of {pagination.totalPages} ({pagination.total} total)</span>
+          <div className="px-5 py-3 border-t border-surface-200 flex items-center justify-between text-sm">
+            <span className="text-surface-500 tabular-nums">Page {pagination.page} of {pagination.totalPages} ({pagination.total} total)</span>
             <div className="flex gap-2">
               <Button variant="secondary" size="sm" disabled={pagination.page <= 1} onClick={() => fetchTemplates(pagination.page - 1)}>Previous</Button>
               <Button variant="secondary" size="sm" disabled={pagination.page >= pagination.totalPages} onClick={() => fetchTemplates(pagination.page + 1)}>Next</Button>
@@ -241,14 +238,14 @@ export default function EmailTemplatesPage() {
 
       {/* Create/Edit Modal */}
       {showModal && (
-        <div className="fixed inset-0 z-50 flex items-start justify-center p-4 pt-[5vh] bg-surface-900/40 backdrop-blur-xs overflow-y-auto">
-          <div className="bg-white rounded-2xl shadow-2xl border border-surface-200 w-full max-w-3xl animate-scale-up my-8">
-            <div className="px-6 py-4 border-b border-surface-100 flex items-center justify-between">
-              <h3 className="text-sm font-bold text-surface-900">{editing ? 'Edit Template' : 'Create New Template'}</h3>
+        <div className="fixed inset-0 z-50 flex items-start justify-center p-4 pt-[5vh] bg-surface-900/40 overflow-y-auto">
+          <div className="bg-white rounded-lg shadow-md border border-surface-200 w-full max-w-3xl animate-scale-in my-8">
+            <div className="px-6 py-4 border-b border-surface-200 flex items-center justify-between">
+              <h3 className="text-sm sm:text-base font-semibold text-surface-900">{editing ? 'Edit template' : 'Create new template'}</h3>
               <button
                 onClick={() => setShowModal(false)}
                 aria-label="Close"
-                className="text-surface-400 hover:text-surface-600 p-1 rounded-lg hover:bg-surface-100 transition-colors"
+                className="text-surface-400 hover:text-surface-600 p-1 rounded-md hover:bg-surface-100 transition-colors"
               >
                 <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2} aria-hidden="true">
                   <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
@@ -258,8 +255,8 @@ export default function EmailTemplatesPage() {
             <form onSubmit={handleSave} className="p-6 space-y-4">
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div className="space-y-1.5">
-                  <label className="block text-xs font-semibold text-surface-700">Template Name *</label>
-                  <input type="text" required value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} className="w-full p-2.5 border border-surface-200 rounded-xl text-sm focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500" placeholder="e.g., Welcome Email" />
+                  <label className="block text-xs font-medium text-surface-700">Template Name *</label>
+                  <input type="text" required value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} className="w-full p-2.5 border border-surface-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-600" placeholder="e.g., Welcome Email" />
                 </div>
                 <Select
                   label="Category"
@@ -271,19 +268,19 @@ export default function EmailTemplatesPage() {
               </div>
 
               <div className="space-y-1.5">
-                <label className="block text-xs font-semibold text-surface-700">Subject Line *</label>
-                <input type="text" required value={form.subject} onChange={(e) => setForm({ ...form, subject: e.target.value })} className="w-full p-2.5 border border-surface-200 rounded-xl text-sm focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500" placeholder="e.g., Welcome to Afzal Healthcare, {{fullName}}" />
+                <label className="block text-xs font-medium text-surface-700">Subject Line *</label>
+                <input type="text" required value={form.subject} onChange={(e) => setForm({ ...form, subject: e.target.value })} className="w-full p-2.5 border border-surface-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-600" placeholder="e.g., Welcome to Afzal Healthcare, {{fullName}}" />
               </div>
 
               {/* Placeholder Hints */}
               <div className="flex flex-wrap gap-1.5">
-                <span className="text-xs font-bold text-surface-500 uppercase tracking-wider self-center mr-1">Placeholders:</span>
+                <span className="text-xs font-medium text-surface-500 self-center mr-1">Placeholders:</span>
                 {PLACEHOLDER_HINTS.map((ph) => (
                   <button
                     key={ph}
                     type="button"
                     onClick={() => setForm({ ...form, body: form.body + ph })}
-                    className="px-2.5 py-1 bg-primary-50 text-primary-700 border border-primary-200 rounded-lg text-xs font-mono font-bold hover:bg-primary-100 transition-colors"
+                    className="px-2 py-1 bg-surface-100 text-surface-700 border border-surface-200 rounded-md text-xs font-mono font-medium hover:bg-surface-200 transition-colors"
                   >
                     {ph}
                   </button>
@@ -292,13 +289,13 @@ export default function EmailTemplatesPage() {
 
               <div className="space-y-1.5">
                 <div className="flex items-center justify-between">
-                  <label className="block text-xs font-semibold text-surface-700">Email Body (HTML) *</label>
-                  <button type="button" onClick={() => setShowPreview(!showPreview)} className="text-xs font-semibold text-primary-600 hover:text-primary-700">
-                    {showPreview ? '← Back to Editor' : 'Preview →'}
+                  <label className="block text-xs font-medium text-surface-700">Email Body (HTML) *</label>
+                  <button type="button" onClick={() => setShowPreview(!showPreview)} className="text-xs font-medium text-primary-600 hover:text-primary-700">
+                    {showPreview ? '← Back to Editor' : 'Preview →'}
                   </button>
                 </div>
                 {showPreview ? (
-                  <div className="w-full min-h-[200px] max-h-[400px] overflow-auto p-4 border border-surface-200 rounded-xl bg-white text-sm">
+                  <div className="w-full min-h-[200px] max-h-[400px] overflow-auto p-4 border border-surface-300 rounded-md bg-white text-sm">
                     <div dangerouslySetInnerHTML={{ __html: sanitizeEmailHtml(form.body) }} />
                   </div>
                 ) : (
@@ -307,15 +304,15 @@ export default function EmailTemplatesPage() {
                     value={form.body}
                     onChange={(e) => setForm({ ...form, body: e.target.value })}
                     rows={10}
-                    className="w-full p-3 border border-surface-200 rounded-xl text-sm font-mono focus:border-primary-600 focus:outline-none resize-y"
+                    className="w-full p-3 border border-surface-300 rounded-md text-sm font-mono focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-600 resize-y"
                     placeholder="<h1>Hello {{fullName}},</h1><p>Welcome to Afzal Healthcare...</p>"
                   />
                 )}
               </div>
 
               <div className="space-y-1.5">
-                <label className="block text-xs font-semibold text-surface-700">Tracked Placeholders (comma-separated)</label>
-                <input type="text" value={form.placeholders} onChange={(e) => setForm({ ...form, placeholders: e.target.value })} className="w-full p-2.5 border border-surface-200 rounded-xl text-sm focus:border-primary-600 focus:outline-none" placeholder="fullName, email, caseStatus, portalUrl" />
+                <label className="block text-xs font-medium text-surface-700">Tracked Placeholders (comma-separated)</label>
+                <input type="text" value={form.placeholders} onChange={(e) => setForm({ ...form, placeholders: e.target.value })} className="w-full p-2.5 border border-surface-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-600" placeholder="fullName, email, caseStatus, portalUrl" />
               </div>
 
               <div className="flex gap-3 pt-2">

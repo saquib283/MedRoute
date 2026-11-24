@@ -86,7 +86,7 @@ export default function AdminSettingsPage() {
   if (loading) {
     return (
       <div className="flex items-center justify-center min-h-[400px]">
-        <div className="w-8 h-8 border-4 border-primary-600 border-t-transparent rounded-full animate-spin" />
+        <div className="w-7 h-7 border-2 border-primary-600 border-t-transparent rounded-full animate-spin" />
       </div>
     );
   }
@@ -94,99 +94,101 @@ export default function AdminSettingsPage() {
   if (userRole !== 'ADMIN') {
     return (
       <div className="max-w-md mx-auto text-center py-16 animate-fade-in">
-        <div className="w-16 h-16 rounded-full bg-danger-100 text-danger-600 flex items-center justify-center mx-auto mb-4">
-          <svg className="w-8 h-8" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+        <div className="w-12 h-12 rounded-md bg-danger-50 border border-danger-200 text-danger-600 flex items-center justify-center mx-auto mb-4">
+          <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
             <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
           </svg>
         </div>
-        <h2 className="text-xl font-bold text-surface-900">Access Denied</h2>
-        <p className="text-sm text-surface-500 mt-2">Only Administrators are authorized to view or edit system settings.</p>
+        <h2 className="text-base font-semibold text-surface-900">Access denied</h2>
+        <p className="text-sm text-surface-500 mt-1.5">Only administrators are authorized to view or edit system settings.</p>
       </div>
     );
   }
 
   return (
-    <div className="max-w-3xl mx-auto space-y-6 animate-fade-in">
-      <div>
-        <h1 className="text-2xl font-bold text-surface-900 tracking-tight">System Settings</h1>
-        <p className="text-sm text-surface-500 mt-1">Configure global application variables, business limits, and deployment states.</p>
+    <div className="space-y-6 animate-fade-in">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-5 border-b border-surface-200">
+        <div>
+          <h1 className="text-xl font-semibold tracking-tight text-surface-900">System Settings</h1>
+          <p className="text-xs sm:text-sm text-surface-500 mt-1">Configure global application variables, business limits, and deployment states.</p>
+        </div>
       </div>
 
       {settings && (
         <form onSubmit={handleSave} className="space-y-6">
-          <Card className="p-6 bg-white border border-surface-200 space-y-6">
-            <h2 className="text-sm font-bold text-surface-900 border-b border-surface-100 pb-3">Operational Thresholds</h2>
+          <Card padding="lg" className="space-y-6">
+            <h2 className="text-sm sm:text-base font-semibold text-surface-900 border-b border-surface-200 pb-3">Operational thresholds</h2>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div className="space-y-1.5">
-                <label className="block text-xs font-bold text-surface-700 uppercase">Max Patients Per Manager</label>
+                <label className="block text-xs font-medium text-surface-700">Max Patients Per Manager</label>
                 <input
                   type="number"
                   required
                   value={settings.maxPatientsPerManager}
                   onChange={(e) => setSettings({ ...settings, maxPatientsPerManager: parseInt(e.target.value, 10) })}
-                  className="w-full p-2.5 border border-surface-200 rounded-xl text-sm focus:border-primary-600 focus:outline-none"
+                  className="w-full p-2.5 border border-surface-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-600"
                 />
-                <p className="text-[11px] text-surface-400">Hard limit on total patients assignable to an operations manager.</p>
+                <p className="text-xs text-surface-500">Hard limit on total patients assignable to an operations manager.</p>
               </div>
 
               <div className="space-y-1.5">
-                <label className="block text-xs font-bold text-surface-700 uppercase">Default Commission Rate (%)</label>
+                <label className="block text-xs font-medium text-surface-700">Default Commission Rate (%)</label>
                 <input
                   type="number"
                   step="0.01"
                   required
                   value={settings.defaultCommissionRate}
                   onChange={(e) => setSettings({ ...settings, defaultCommissionRate: parseFloat(e.target.value) })}
-                  className="w-full p-2.5 border border-surface-200 rounded-xl text-sm focus:border-primary-600 focus:outline-none"
+                  className="w-full p-2.5 border border-surface-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-600"
                 />
-                <p className="text-[11px] text-surface-400">Default rate applied to new hospital bookings if no custom commission is set.</p>
+                <p className="text-xs text-surface-500">Default rate applied to new hospital bookings if no custom commission is set.</p>
               </div>
             </div>
           </Card>
 
-          <Card className="p-6 bg-white border border-surface-200 space-y-6">
-            <h2 className="text-sm font-bold text-surface-900 border-b border-surface-100 pb-3">Security & Operations</h2>
+          <Card padding="lg" className="space-y-6">
+            <h2 className="text-sm sm:text-base font-semibold text-surface-900 border-b border-surface-200 pb-3">Security &amp; operations</h2>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div className="space-y-1.5">
-                <label className="block text-xs font-bold text-surface-700 uppercase">Session Idle Timeout (Minutes)</label>
+                <label className="block text-xs font-medium text-surface-700">Session Idle Timeout (Minutes)</label>
                 <input
                   type="number"
                   required
                   value={settings.sessionTimeoutMinutes}
                   onChange={(e) => setSettings({ ...settings, sessionTimeoutMinutes: parseInt(e.target.value, 10) })}
-                  className="w-full p-2.5 border border-surface-200 rounded-xl text-sm focus:border-primary-600 focus:outline-none"
+                  className="w-full p-2.5 border border-surface-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-600"
                 />
-                <p className="text-[11px] text-surface-400">Idle duration before active JSON Web Tokens are invalidated.</p>
+                <p className="text-xs text-surface-500">Idle duration before active JSON Web Tokens are invalidated.</p>
               </div>
 
-              <div className="flex items-center justify-between p-4 bg-surface-50 border border-surface-200 rounded-lg">
+              <div className="flex items-center justify-between p-4 bg-surface-100 border border-surface-200 rounded-md">
                 <div className="space-y-0.5">
-                  <p className="text-sm font-semibold text-surface-900">System Maintenance Mode</p>
+                  <p className="text-sm font-medium text-surface-900">System Maintenance Mode</p>
                   <p className="text-xs text-surface-500">Locks login and APIs for regular users.</p>
                 </div>
                 <input
                   type="checkbox"
                   checked={settings.maintenanceMode}
                   onChange={(e) => setSettings({ ...settings, maintenanceMode: e.target.checked })}
-                  className="w-5 h-5 accent-primary-600 rounded-md cursor-pointer"
+                  className="w-4 h-4 accent-primary-600 rounded cursor-pointer"
                 />
               </div>
             </div>
           </Card>
 
-          <Card className="p-6 bg-white border border-surface-200 space-y-6">
-            <h2 className="text-sm font-bold text-surface-900 border-b border-surface-100 pb-3">Scheduled Maintenance & Alert Banner</h2>
+          <Card padding="lg" className="space-y-6">
+            <h2 className="text-sm sm:text-base font-semibold text-surface-900 border-b border-surface-200 pb-3">Scheduled maintenance &amp; alert banner</h2>
             <div className="space-y-4">
               <div className="space-y-1.5">
-                <label className="block text-xs font-bold text-surface-700 uppercase">Global Alert Banner Text</label>
+                <label className="block text-xs font-medium text-surface-700">Global Alert Banner Text</label>
                 <input
                   type="text"
                   value={settings.alertBannerText}
                   onChange={(e) => setSettings({ ...settings, alertBannerText: e.target.value })}
-                  className="w-full p-2.5 border border-surface-200 rounded-xl text-sm focus:border-primary-600 focus:outline-none"
+                  className="w-full p-2.5 border border-surface-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-600"
                   placeholder="e.g., Scheduled maintenance this Sunday from 2 AM to 4 AM IST."
                 />
-                <p className="text-[11px] text-surface-400">If set, this warning message will be rendered as a global header alert across all admin dashboards.</p>
+                <p className="text-xs text-surface-500">If set, this warning message will be rendered as a global header alert across all admin dashboards.</p>
               </div>
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -212,7 +214,7 @@ export default function AdminSettingsPage() {
           </Card>
 
           <div className="flex justify-end">
-            <Button type="submit" isLoading={saving} className="px-8">
+            <Button type="submit" isLoading={saving} className="px-6">
               Save Global Configuration
             </Button>
           </div>

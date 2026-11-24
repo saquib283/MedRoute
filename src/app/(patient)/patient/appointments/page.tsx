@@ -2,8 +2,7 @@
 
 /**
  * Afzal Healthcare — Consultations & Care Schedule
- * Accessible appointment timeline, 44px filter & view controls, keyboard-scrollable table,
- * and native <dialog> booking and cancellation flows.
+ * Clean architectural 8px/6px schedule layout, aligned grid, and restrained typography.
  */
 
 import { useState, useEffect, useMemo, useCallback } from 'react';
@@ -97,13 +96,11 @@ export default function AppointmentsPage() {
   const [viewMode, setViewMode] = useState<'cards' | 'table'>('cards');
   const [errorMsg, setErrorMsg] = useState('');
 
-  // Form states for booking modal
   const [selectedHospital, setSelectedHospital] = useState('');
   const [selectedDoctor, setSelectedDoctor] = useState('');
   const [selectedType, setSelectedType] = useState('CONSULTATION');
   const [scheduledAt, setScheduledAt] = useState('');
 
-  // Self-cancellation modal state
   const [cancelTarget, setCancelTarget] = useState<Appointment | null>(null);
   const [cancelReason, setCancelReason] = useState('');
   const [cancelError, setCancelError] = useState('');
@@ -281,37 +278,37 @@ export default function AppointmentsPage() {
 
   if (isLoading) {
     return (
-      <div className="max-w-7xl mx-auto space-y-6 py-2">
-        <div className="h-24 rounded-3xl bg-white border border-surface-200 animate-pulse" />
+      <div className="space-y-6">
+        <div className="h-14 rounded-lg bg-surface-200/70 animate-pulse" />
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
           {[0, 1, 2, 3].map((idx) => (
             <div
               key={idx}
-              className="h-24 rounded-2xl bg-white border border-surface-200 animate-pulse"
+              className="h-20 rounded-lg bg-white border border-surface-200 animate-pulse"
             />
           ))}
         </div>
-        <div className="h-64 rounded-3xl bg-white border border-surface-200 animate-pulse" />
+        <div className="h-64 rounded-lg bg-white border border-surface-200 animate-pulse" />
       </div>
     );
   }
 
   return (
-    <div className="space-y-8 max-w-7xl mx-auto pb-12 animate-fade-in">
-      {/* Single Authoritative Page Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+    <div className="space-y-6 pb-10 animate-fade-in">
+      {/* Flat Aligned Page Header */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-5 border-b border-surface-200">
         <div>
-          <h1 className="text-2xl sm:text-3xl font-extrabold text-surface-900 tracking-tight">
+          <h1 className="text-xl sm:text-2xl font-semibold text-surface-900 tracking-tight">
             Consultations &amp; Care Schedule
           </h1>
-          <p className="text-xs sm:text-sm text-surface-600 mt-1">
+          <p className="text-xs sm:text-sm text-surface-500 mt-1">
             Review specialist appointments, pre-procedure assessments, and follow-up hospital visits.
           </p>
         </div>
 
         <Button
           type="button"
-          size="md"
+          size="sm"
           onClick={() => setIsModalOpen(true)}
           className="self-start sm:self-auto"
         >
@@ -320,16 +317,15 @@ export default function AppointmentsPage() {
         </Button>
       </div>
 
-      {/* Error Recovery Banner */}
       {loadError && (
         <div
           role="alert"
-          className="p-5 rounded-2xl bg-danger-50 border border-danger-200 text-danger-900 flex flex-col sm:flex-row sm:items-center justify-between gap-4"
+          className="p-4 rounded-lg bg-danger-50 border border-danger-200 text-danger-900 flex flex-col sm:flex-row sm:items-center justify-between gap-4"
         >
           <div className="flex items-start gap-3">
-            <AlertCircle className="w-5 h-5 text-danger-600 shrink-0 mt-0.5" aria-hidden="true" />
+            <AlertCircle className="w-4 h-4 text-danger-600 shrink-0 mt-0.5" aria-hidden="true" />
             <div>
-              <h2 className="text-sm font-bold">Unable to load your schedule</h2>
+              <h2 className="text-sm font-semibold">Unable to load your schedule</h2>
               <p className="text-xs text-danger-800 mt-0.5">{loadError}</p>
             </div>
           </div>
@@ -339,63 +335,45 @@ export default function AppointmentsPage() {
             size="sm"
             onClick={() => void fetchAppointments()}
           >
-            <RefreshCw className="w-4 h-4" aria-hidden="true" />
+            <RefreshCw className="w-3.5 h-3.5" aria-hidden="true" />
             <span>Retry</span>
           </Button>
         </div>
       )}
 
-      {/* Summary Cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        <div className="bg-white p-5 rounded-2xl border border-surface-200 shadow-xs flex items-center gap-4">
-          <div className="w-12 h-12 rounded-2xl bg-primary-50 text-primary-700 border border-primary-200 flex items-center justify-center font-bold text-xl tabular-nums shrink-0">
+      {/* Restrained Neutral Summary Row */}
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+        <Card className="p-4">
+          <p className="text-xs font-medium text-surface-500">Upcoming Visits</p>
+          <p className="text-2xl font-semibold text-surface-900 mt-1 tabular-nums">
             {upcomingAppointments.length}
-          </div>
-          <div>
-            <p className="text-xs font-semibold text-surface-500">Upcoming</p>
-            <p className="text-sm font-bold text-surface-900 mt-0.5">
-              {upcomingAppointments.length > 0 ? 'Scheduled Visits' : 'No Upcoming Visits'}
-            </p>
-          </div>
-        </div>
+          </p>
+        </Card>
 
-        <div className="bg-white p-5 rounded-2xl border border-surface-200 shadow-xs flex items-center gap-4">
-          <div className="w-12 h-12 rounded-2xl bg-success-50 text-success-700 border border-success-200 flex items-center justify-center font-bold text-xl tabular-nums shrink-0">
-            {
-              appointments.filter(
-                (a) => a.status === 'CONFIRMED' || a.status === 'COMPLETED'
-              ).length
-            }
-          </div>
-          <div>
-            <p className="text-xs font-semibold text-surface-500">Confirmed &amp; Completed</p>
-            <p className="text-sm font-bold text-surface-900 mt-0.5">Hospital Confirmed</p>
-          </div>
-        </div>
+        <Card className="p-4">
+          <p className="text-xs font-medium text-surface-500">Confirmed &amp; Completed</p>
+          <p className="text-2xl font-semibold text-surface-900 mt-1 tabular-nums">
+            {appointments.filter((a) => a.status === 'CONFIRMED' || a.status === 'COMPLETED').length}
+          </p>
+        </Card>
 
-        <div className="bg-white p-5 rounded-2xl border border-surface-200 shadow-xs flex items-center gap-4">
-          <div className="w-12 h-12 rounded-2xl bg-info-50 text-info-700 border border-info-200 flex items-center justify-center font-bold text-xl tabular-nums shrink-0">
+        <Card className="p-4">
+          <p className="text-xs font-medium text-surface-500">Partner Hospitals</p>
+          <p className="text-2xl font-semibold text-surface-900 mt-1 tabular-nums">
             {hospitals.length}
-          </div>
-          <div>
-            <p className="text-xs font-semibold text-surface-500">Partner Hospitals</p>
-            <p className="text-sm font-bold text-surface-900 mt-0.5">Accredited Centers</p>
-          </div>
-        </div>
+          </p>
+        </Card>
 
-        <div className="bg-white p-5 rounded-2xl border border-surface-200 shadow-xs flex items-center gap-4">
-          <div className="w-12 h-12 rounded-2xl bg-warning-50 text-warning-700 border border-warning-200 flex items-center justify-center font-bold text-xl tabular-nums shrink-0">
+        <Card className="p-4">
+          <p className="text-xs font-medium text-surface-500">Past Visits</p>
+          <p className="text-2xl font-semibold text-surface-900 mt-1 tabular-nums">
             {pastAppointments.length}
-          </div>
-          <div>
-            <p className="text-xs font-semibold text-surface-500">Past Visits</p>
-            <p className="text-sm font-bold text-surface-900 mt-0.5">Clinical History</p>
-          </div>
-        </div>
+          </p>
+        </Card>
       </div>
 
       {/* Filter & View Switcher Bar */}
-      <div className="bg-white p-3.5 rounded-2xl border border-surface-200 shadow-xs flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div
           role="group"
           aria-label="Filter appointments by status"
@@ -407,10 +385,10 @@ export default function AppointmentsPage() {
               type="button"
               aria-pressed={selectedFilter === filter.id}
               onClick={() => setSelectedFilter(filter.id)}
-              className={`min-h-11 px-4 rounded-xl text-xs font-semibold whitespace-nowrap shrink-0 transition-colors ${
+              className={`min-h-11 px-3.5 rounded-md text-xs font-medium whitespace-nowrap shrink-0 transition-colors border ${
                 selectedFilter === filter.id
-                  ? 'bg-primary-600 text-white shadow-2xs'
-                  : 'bg-surface-100 text-surface-700 hover:bg-surface-200'
+                  ? 'bg-primary-50 text-primary-900 border-primary-300'
+                  : 'bg-white text-surface-600 hover:bg-surface-50 border-surface-200'
               }`}
             >
               {filter.label}
@@ -421,32 +399,32 @@ export default function AppointmentsPage() {
         <div
           role="group"
           aria-label="Appointment display layout"
-          className="flex items-center bg-surface-100 p-1 rounded-xl border border-surface-200 self-end sm:self-auto shrink-0"
+          className="flex items-center bg-surface-100 p-0.5 rounded-md border border-surface-200 self-end sm:self-auto shrink-0"
         >
           <button
             type="button"
             aria-pressed={viewMode === 'cards'}
             onClick={() => setViewMode('cards')}
-            className={`min-h-11 px-3.5 rounded-lg text-xs font-semibold transition-colors flex items-center gap-1.5 ${
+            className={`min-h-11 px-3 rounded text-xs font-medium transition-colors flex items-center gap-1.5 ${
               viewMode === 'cards'
                 ? 'bg-white text-surface-900 shadow-2xs'
                 : 'text-surface-600 hover:text-surface-900'
             }`}
           >
-            <LayoutGrid className="w-4 h-4" aria-hidden="true" />
+            <LayoutGrid className="w-3.5 h-3.5" aria-hidden="true" />
             <span>Cards</span>
           </button>
           <button
             type="button"
             aria-pressed={viewMode === 'table'}
             onClick={() => setViewMode('table')}
-            className={`min-h-11 px-3.5 rounded-lg text-xs font-semibold transition-colors flex items-center gap-1.5 ${
+            className={`min-h-11 px-3 rounded text-xs font-medium transition-colors flex items-center gap-1.5 ${
               viewMode === 'table'
                 ? 'bg-white text-surface-900 shadow-2xs'
                 : 'text-surface-600 hover:text-surface-900'
             }`}
           >
-            <Table className="w-4 h-4" aria-hidden="true" />
+            <Table className="w-3.5 h-3.5" aria-hidden="true" />
             <span>Table</span>
           </button>
         </div>
@@ -454,22 +432,19 @@ export default function AppointmentsPage() {
 
       {/* View 1: Cards */}
       {viewMode === 'cards' && filteredAppointmentsList.length > 0 && (
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           {filteredAppointmentsList.map((app) => (
-            <Card
-              key={app.id}
-              className="p-6 rounded-3xl shadow-xs hover:shadow-md transition-shadow border border-surface-200 flex flex-col justify-between space-y-5"
-            >
+            <Card key={app.id} hover className="p-5 flex flex-col justify-between space-y-4">
               <div className="flex items-start justify-between gap-3">
                 <div className="flex items-center gap-3 min-w-0">
-                  <div className="w-12 h-12 rounded-2xl bg-primary-100 text-primary-800 border border-primary-200 flex items-center justify-center font-bold text-sm shadow-2xs shrink-0">
+                  <div className="w-10 h-10 rounded-md bg-surface-100 text-surface-700 border border-surface-200 flex items-center justify-center font-semibold text-xs shrink-0">
                     Dr
                   </div>
                   <div className="min-w-0">
-                    <span className="text-xs text-primary-800 font-semibold bg-primary-50 px-2.5 py-0.5 rounded-md border border-primary-200 inline-block">
+                    <span className="text-[11px] text-surface-600 font-medium">
                       {APPOINTMENT_TYPE_LABELS[app.appointmentType] || app.appointmentType}
                     </span>
-                    <h2 className="text-base font-bold text-surface-900 mt-1 truncate">
+                    <h2 className="text-sm sm:text-base font-semibold text-surface-900 truncate">
                       {formatDoctorDisplayName(app.doctor.fullName)}
                     </h2>
                     {app.doctor.qualification && (
@@ -483,15 +458,15 @@ export default function AppointmentsPage() {
                 </Badge>
               </div>
 
-              <div className="bg-surface-50 p-4 rounded-2xl border border-surface-200/80 space-y-2 text-xs text-surface-700">
+              <div className="bg-surface-50 px-3.5 py-3 rounded-md border border-surface-200 space-y-1.5 text-xs text-surface-700">
                 <div className="flex items-center gap-2">
-                  <Building2 className="w-4 h-4 text-primary-600 shrink-0" aria-hidden="true" />
-                  <span className="font-semibold text-surface-900">{app.hospital.name}</span>
+                  <Building2 className="w-3.5 h-3.5 text-surface-500 shrink-0" aria-hidden="true" />
+                  <span className="font-medium text-surface-900">{app.hospital.name}</span>
                   <span className="text-surface-500">({app.hospital.city})</span>
                 </div>
 
-                <div className="flex items-center gap-2 font-medium tabular-nums">
-                  <Clock className="w-4 h-4 text-primary-600 shrink-0" aria-hidden="true" />
+                <div className="flex items-center gap-2 tabular-nums text-surface-600">
+                  <Clock className="w-3.5 h-3.5 text-surface-500 shrink-0" aria-hidden="true" />
                   <span>
                     {new Date(app.scheduledAt).toLocaleString('en-US', {
                       weekday: 'short',
@@ -506,8 +481,8 @@ export default function AppointmentsPage() {
               </div>
 
               {app.status === 'CANCELLED' && app.cancellationReason && (
-                <div className="p-3.5 bg-danger-50 border border-danger-200 rounded-2xl text-xs text-danger-800">
-                  <span className="font-bold">Cancellation Note: </span>
+                <div className="p-3 bg-danger-50 border border-danger-200 rounded-md text-xs text-danger-800">
+                  <span className="font-medium">Cancellation note: </span>
                   {app.cancellationReason}
                 </div>
               )}
@@ -536,7 +511,7 @@ export default function AppointmentsPage() {
 
       {/* View 2: Table */}
       {viewMode === 'table' && filteredAppointmentsList.length > 0 && (
-        <Card className="p-0 rounded-3xl overflow-hidden border border-surface-200 shadow-xs">
+        <Card className="p-0 overflow-hidden">
           <div
             tabIndex={0}
             role="region"
@@ -545,31 +520,31 @@ export default function AppointmentsPage() {
           >
             <table className="w-full text-left border-collapse text-xs">
               <thead>
-                <tr className="bg-surface-50 border-b border-surface-200 text-surface-600 font-semibold uppercase tracking-wider">
-                  <th scope="col" className="p-4">
+                <tr className="bg-surface-50 border-b border-surface-200 text-[11px] font-medium uppercase tracking-wide text-surface-500">
+                  <th scope="col" className="px-4 py-3">
                     Date &amp; Time
                   </th>
-                  <th scope="col" className="p-4">
+                  <th scope="col" className="px-4 py-3">
                     Specialist
                   </th>
-                  <th scope="col" className="p-4">
+                  <th scope="col" className="px-4 py-3">
                     Hospital
                   </th>
-                  <th scope="col" className="p-4">
+                  <th scope="col" className="px-4 py-3">
                     Session Type
                   </th>
-                  <th scope="col" className="p-4">
+                  <th scope="col" className="px-4 py-3">
                     Status
                   </th>
-                  <th scope="col" className="p-4 text-right">
+                  <th scope="col" className="px-4 py-3 text-right">
                     Actions
                   </th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-surface-100 text-surface-700">
                 {filteredAppointmentsList.map((app) => (
-                  <tr key={app.id} className="hover:bg-surface-50 transition-colors">
-                    <td className="p-4 whitespace-nowrap font-bold text-surface-900 tabular-nums">
+                  <tr key={app.id} className="hover:bg-surface-50/70 transition-colors">
+                    <td className="px-4 py-3.5 whitespace-nowrap font-medium text-surface-900 tabular-nums">
                       {new Date(app.scheduledAt).toLocaleString('en-US', {
                         month: 'short',
                         day: 'numeric',
@@ -578,26 +553,26 @@ export default function AppointmentsPage() {
                         minute: '2-digit',
                       })}
                     </td>
-                    <td className="p-4">
-                      <div className="font-bold text-surface-900">
+                    <td className="px-4 py-3.5">
+                      <div className="font-medium text-surface-900">
                         {formatDoctorDisplayName(app.doctor.fullName)}
                       </div>
                       {app.doctor.qualification && (
                         <div className="text-[11px] text-surface-500">{app.doctor.qualification}</div>
                       )}
                     </td>
-                    <td className="p-4 font-medium">
+                    <td className="px-4 py-3.5">
                       {app.hospital.name} ({app.hospital.city})
                     </td>
-                    <td className="p-4 font-medium">
+                    <td className="px-4 py-3.5">
                       {APPOINTMENT_TYPE_LABELS[app.appointmentType] || app.appointmentType}
                     </td>
-                    <td className="p-4">
-                      <Badge variant={getStatusBadgeVariant(app.status)}>
+                    <td className="px-4 py-3.5">
+                      <Badge variant={getStatusBadgeVariant(app.status)} dot>
                         {APPOINTMENT_STATUS_LABELS[app.status] || app.status}
                       </Badge>
                     </td>
-                    <td className="p-4 text-right">
+                    <td className="px-4 py-3.5 text-right">
                       {app.status !== 'CANCELLED' && app.status !== 'COMPLETED' && (
                         <Button
                           type="button"
@@ -624,36 +599,36 @@ export default function AppointmentsPage() {
 
       {/* Empty State */}
       {!loadError && filteredAppointmentsList.length === 0 && (
-        <div className="bg-white p-12 rounded-3xl border border-surface-200 text-center space-y-3 shadow-xs">
-          <div className="w-14 h-14 rounded-2xl bg-surface-100 text-surface-500 flex items-center justify-center mx-auto">
-            <Calendar className="w-7 h-7" aria-hidden="true" />
+        <Card className="p-10 text-center space-y-3">
+          <div className="w-10 h-10 rounded-md bg-surface-100 text-surface-500 border border-surface-200 flex items-center justify-center mx-auto">
+            <Calendar className="w-5 h-5" aria-hidden="true" />
           </div>
-          <h2 className="text-base font-bold text-surface-900">No Consultations Found</h2>
-          <p className="text-xs text-surface-600 max-w-sm mx-auto">
+          <h2 className="text-sm font-semibold text-surface-900">No Consultations Scheduled</h2>
+          <p className="text-xs text-surface-500 max-w-sm mx-auto">
             {selectedFilter === 'ALL'
               ? 'Request a video or in-person consultation with an accredited specialist.'
               : 'No consultations match this filter. Try viewing all sessions or request a new consultation.'}
           </p>
-          <Button type="button" size="md" onClick={() => setIsModalOpen(true)}>
+          <Button type="button" size="sm" onClick={() => setIsModalOpen(true)}>
             Request Consultation
           </Button>
-        </div>
+        </Card>
       )}
 
-      {/* Native <dialog> Booking Modal */}
+      {/* Booking Modal */}
       <Modal
         open={isModalOpen}
         onClose={() => setIsModalOpen(false)}
         preventClose={isSubmitLoading}
         title="Request Specialist Consultation"
         subtitle="Your care coordinator will confirm hospital availability and notify you once scheduled."
-        icon={<Stethoscope className="w-5 h-5" />}
+        icon={<Stethoscope className="w-4 h-4" />}
       >
         <form onSubmit={handleBook} className="space-y-4 text-xs">
           {errorMsg && (
             <div
               role="alert"
-              className="bg-danger-50 border border-danger-200 text-danger-800 p-3 rounded-xl flex items-center gap-2"
+              className="bg-danger-50 border border-danger-200 text-danger-800 p-3 rounded-md flex items-center gap-2"
             >
               <AlertCircle className="w-4 h-4 text-danger-600 shrink-0" aria-hidden="true" />
               <span>{errorMsg}</span>
@@ -704,23 +679,24 @@ export default function AppointmentsPage() {
             required
           />
 
-          <div className="flex items-center justify-end gap-3 pt-4 border-t border-surface-100">
+          <div className="flex items-center justify-end gap-2.5 pt-3 border-t border-surface-100">
             <Button
               type="button"
               variant="secondary"
+              size="sm"
               onClick={() => setIsModalOpen(false)}
               disabled={isSubmitLoading}
             >
               Cancel
             </Button>
-            <Button type="submit" isLoading={isSubmitLoading}>
+            <Button type="submit" size="sm" isLoading={isSubmitLoading}>
               Submit Request
             </Button>
           </div>
         </form>
       </Modal>
 
-      {/* Native <dialog> Self-Cancellation Modal */}
+      {/* Self-Cancellation Modal */}
       <Modal
         open={Boolean(cancelTarget)}
         onClose={() => setCancelTarget(null)}
@@ -732,12 +708,12 @@ export default function AppointmentsPage() {
           <form onSubmit={handleSelfCancel} className="space-y-4 text-xs">
             <p className="text-surface-700 leading-relaxed">
               Cancel your{' '}
-              <strong className="font-bold text-surface-900">
+              <strong className="font-semibold text-surface-900">
                 {APPOINTMENT_TYPE_LABELS[cancelTarget.appointmentType] ||
                   cancelTarget.appointmentType}
               </strong>{' '}
               with{' '}
-              <strong className="font-bold text-surface-900">
+              <strong className="font-semibold text-surface-900">
                 {formatDoctorDisplayName(cancelTarget.doctor.fullName)}
               </strong>
               ?
@@ -746,7 +722,7 @@ export default function AppointmentsPage() {
             {cancelError && (
               <div
                 role="alert"
-                className="bg-danger-50 border border-danger-200 text-danger-800 p-3 rounded-xl flex items-center gap-2"
+                className="bg-danger-50 border border-danger-200 text-danger-800 p-3 rounded-md flex items-center gap-2"
               >
                 <AlertCircle className="w-4 h-4 text-danger-600 shrink-0" aria-hidden="true" />
                 <span>{cancelError}</span>
@@ -754,7 +730,7 @@ export default function AppointmentsPage() {
             )}
 
             <div className="space-y-1.5">
-              <label htmlFor="patient-cancel-reason" className="block font-bold text-surface-700">
+              <label htmlFor="patient-cancel-reason" className="block font-medium text-surface-700">
                 Note for Your Coordinator
               </label>
               <textarea
@@ -764,20 +740,21 @@ export default function AppointmentsPage() {
                 value={cancelReason}
                 onChange={(e) => setCancelReason(e.target.value)}
                 placeholder="e.g. Flight schedule changed — requesting afternoon slot next Tuesday..."
-                className="w-full p-3.5 border border-surface-300 rounded-xl text-xs text-surface-900 focus:outline-none focus:border-primary-600"
+                className="w-full p-3 border border-surface-300 rounded-md text-sm text-surface-900 focus:outline-none focus:border-primary-600"
               />
             </div>
 
-            <div className="flex items-center justify-end gap-3 pt-3 border-t border-surface-100">
+            <div className="flex items-center justify-end gap-2.5 pt-3 border-t border-surface-100">
               <Button
                 type="button"
                 variant="secondary"
+                size="sm"
                 onClick={() => setCancelTarget(null)}
                 disabled={isCancelLoading}
               >
                 Keep Appointment
               </Button>
-              <Button type="submit" variant="danger" isLoading={isCancelLoading}>
+              <Button type="submit" variant="danger" size="sm" isLoading={isCancelLoading}>
                 Confirm Cancellation
               </Button>
             </div>

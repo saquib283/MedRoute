@@ -174,24 +174,24 @@ export default function DoctorAppointmentsPage() {
   return (
     <div className="space-y-6 animate-fade-in">
       {/* Header & Filter Tabs */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-5 border-b border-surface-200">
         <div>
-          <h1 className="text-2xl font-bold text-surface-900">Clinical Schedule</h1>
+          <h1 className="text-xl sm:text-2xl font-semibold text-surface-900 tracking-tight">Clinical schedule</h1>
           <p className="text-sm text-surface-500 mt-0.5">
             Manage encounter statuses, document clinical observations, and open patient case workspaces.
           </p>
         </div>
 
-        <div className="inline-flex p-1 bg-white border border-surface-200 rounded-xl shadow-xs self-start">
+        <div className="inline-flex p-1 bg-surface-100 border border-surface-200 rounded-md self-start">
           {(['upcoming', 'past', 'all'] as FilterTab[]).map((tab) => (
             <button
               key={tab}
               type="button"
               onClick={() => setFilter(tab)}
-              className={`px-4 py-1.5 rounded-lg text-xs font-bold capitalize transition-colors ${
+              className={`min-h-9 px-3.5 py-1.5 rounded text-xs font-medium capitalize transition-colors ${
                 filter === tab
-                  ? 'bg-primary-600 text-white'
-                  : 'text-surface-600 hover:text-surface-900 hover:bg-surface-50'
+                  ? 'bg-white text-surface-900 shadow-2xs'
+                  : 'text-surface-600 hover:text-surface-900'
               }`}
             >
               {tab}
@@ -204,7 +204,7 @@ export default function DoctorAppointmentsPage() {
       {loading ? (
         <div className="flex items-center justify-center py-20">
           <div className="flex flex-col items-center gap-3">
-            <div className="w-8 h-8 border-4 border-primary-600 border-t-transparent rounded-full animate-spin" />
+            <div className="w-7 h-7 border-2 border-primary-600 border-t-transparent rounded-full animate-spin" />
             <span className="text-sm font-medium text-surface-500">Loading encounters...</span>
           </div>
         </div>
@@ -224,7 +224,7 @@ export default function DoctorAppointmentsPage() {
                 <div className="flex flex-col lg:flex-row lg:items-start justify-between gap-4">
                   <div className="space-y-2 min-w-0 flex-1">
                     <div className="flex flex-wrap items-center gap-2">
-                      <h3 className="text-base font-bold text-surface-900">
+                      <h3 className="text-base font-semibold text-surface-900">
                         {appt.patient.user.fullName}
                       </h3>
                       <span className="text-xs font-medium text-surface-500">
@@ -242,7 +242,7 @@ export default function DoctorAppointmentsPage() {
                     </div>
 
                     <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-surface-600">
-                      <span className="inline-flex items-center gap-1.5 font-semibold text-primary-700">
+                      <span className="inline-flex items-center gap-1.5 font-medium text-primary-700 tabular-nums">
                         <Calendar className="w-3.5 h-3.5" />
                         {APPOINTMENT_TYPE_LABELS[appt.appointmentType] || appt.appointmentType} —{' '}
                         {new Date(appt.scheduledAt).toLocaleString()}
@@ -297,9 +297,9 @@ export default function DoctorAppointmentsPage() {
                 </div>
 
                 {/* Quick Transition Strip */}
-                <div className="flex flex-wrap items-center gap-2 pt-2 border-t border-surface-100">
-                  <span className="text-[11px] font-bold uppercase tracking-wider text-surface-400 mr-1">
-                    Quick Transitions:
+                <div className="flex flex-wrap items-center gap-2 pt-3 border-t border-surface-100">
+                  <span className="text-xs font-medium text-surface-500 mr-1">
+                    Quick status:
                   </span>
                   {(['CONFIRMED', 'IN_PROGRESS', 'COMPLETED', 'CANCELLED'] as const).map(
                     (statusOption) => (
@@ -308,7 +308,7 @@ export default function DoctorAppointmentsPage() {
                         type="button"
                         disabled={isSaving || appt.status === statusOption}
                         onClick={() => void handleUpdateAppointment(appt, statusOption)}
-                        className={`px-2.5 py-1 rounded-lg text-[11px] font-semibold border transition-colors ${
+                        className={`min-h-8 px-2.5 py-1 rounded-md text-xs font-medium border transition-colors ${
                           appt.status === statusOption
                             ? 'bg-primary-50 text-primary-700 border-primary-200 cursor-default'
                             : 'bg-white text-surface-600 border-surface-200 hover:bg-surface-50 hover:text-surface-900 disabled:opacity-50'
@@ -322,24 +322,25 @@ export default function DoctorAppointmentsPage() {
 
                 {/* Existing Notes Preview */}
                 {!isEditingNotes && appt.clinicalNotes && (
-                  <div className="p-3 rounded-xl bg-surface-50 border border-surface-200/80 text-xs text-surface-700">
-                    <span className="font-bold text-surface-900 block mb-1">Clinical Notes:</span>
+                  <div className="p-3 rounded-md bg-surface-50 border border-surface-200 text-xs text-surface-700">
+                    <span className="font-semibold text-surface-900 block mb-1">Clinical notes</span>
                     <p className="whitespace-pre-wrap">{appt.clinicalNotes}</p>
                   </div>
                 )}
 
                 {/* Inline Clinical Notes Editor */}
                 {isEditingNotes && (
-                  <div className="p-4 rounded-xl bg-surface-50 border border-surface-200 space-y-3">
-                    <label className="block text-xs font-bold text-surface-700">
-                      Clinical Encounter Notes
+                  <div className="p-4 rounded-md bg-surface-50 border border-surface-200 space-y-3">
+                    <label htmlFor={`notes-${appt.id}`} className="block text-xs font-medium text-surface-700">
+                      Clinical encounter notes
                     </label>
                     <textarea
+                      id={`notes-${appt.id}`}
                       rows={3}
                       value={notesDraft}
                       onChange={(e) => setNotesDraft(e.target.value)}
                       placeholder="Document assessment findings, vitals, operative summary, or post-op instructions..."
-                      className="w-full p-3 rounded-xl border border-surface-200 bg-white text-xs text-surface-800 focus:border-primary-600 focus:outline-none"
+                      className="w-full p-3 rounded-md border border-surface-300 bg-white text-sm text-surface-900 focus:border-primary-600 focus:outline-none"
                     />
                     <div className="flex items-center justify-end gap-2">
                       <Button

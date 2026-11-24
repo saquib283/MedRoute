@@ -364,7 +364,6 @@ export default function DoctorCaseWorkspacePage({
         'Fit-to-Fly Updated'
       );
 
-      // Refresh pathway so SIGN_FIT_TO_FLY milestone and case status reflect updates
       await loadCaseWorkspace({ silent: true });
     } catch (err) {
       toast.apiError(err, 'Network error updating Fit-to-Fly clearance');
@@ -377,7 +376,7 @@ export default function DoctorCaseWorkspacePage({
     return (
       <div className="flex items-center justify-center py-20">
         <div className="flex flex-col items-center gap-3">
-          <div className="w-8 h-8 border-4 border-primary-600 border-t-transparent rounded-full animate-spin" />
+          <div className="w-7 h-7 border-2 border-primary-600 border-t-transparent rounded-full animate-spin" />
           <span className="text-sm font-medium text-surface-500">
             Loading clinical case workspace...
           </span>
@@ -388,8 +387,8 @@ export default function DoctorCaseWorkspacePage({
 
   if (loadError || !caseData) {
     return (
-      <Card className="p-6 space-y-4 border-rose-200 bg-rose-50/40">
-        <p className="text-sm font-semibold text-rose-700">
+      <Card className="p-5 space-y-4 border-danger-200 bg-danger-50/50">
+        <p className="text-sm font-medium text-danger-800">
           {loadError || 'Case not found'}
         </p>
         <div className="flex items-center gap-3">
@@ -417,10 +416,10 @@ export default function DoctorCaseWorkspacePage({
       <div className="flex flex-wrap items-center justify-between gap-3">
         <Link
           href="/doctor/dashboard"
-          className="inline-flex items-center gap-1.5 text-xs font-bold text-surface-600 hover:text-primary-700"
+          className="min-h-9 inline-flex items-center gap-1.5 text-xs font-medium text-surface-600 hover:text-surface-900 transition-colors"
         >
           <ArrowLeft className="w-4 h-4" />
-          Back to Doctor Overview
+          Back to clinical overview
         </Link>
 
         <div className="flex flex-wrap items-center gap-2">
@@ -434,19 +433,19 @@ export default function DoctorCaseWorkspacePage({
       </div>
 
       {/* Patient Header + Clinical Safety Strip */}
-      <Card className="p-6 space-y-4">
-        <div className="flex flex-col md:flex-row md:items-center justify-between gap-3 pb-4 border-b border-surface-100">
+      <Card className="p-5 space-y-4">
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-3 pb-4 border-b border-surface-200">
           <div>
-            <h1 className="text-xl sm:text-2xl font-bold text-surface-900">
+            <h1 className="text-xl sm:text-2xl font-semibold text-surface-900 tracking-tight">
               {caseData.patient.user.fullName}
             </h1>
             <p className="text-xs sm:text-sm text-surface-500 mt-0.5">
-              {caseData.patient.nationality} • Passport: {caseData.patient.passportNo || '—'} • Case{' '}
+              {caseData.patient.nationality} • Passport: <span className="font-mono">{caseData.patient.passportNo || '—'}</span> • Case{' '}
               <span className="font-mono text-surface-700">{caseData.id}</span>
             </p>
             {caseData.patient.medicalCondition && (
-              <p className="text-xs font-semibold text-surface-700 mt-1">
-                Presenting Condition: {caseData.patient.medicalCondition}
+              <p className="text-xs font-medium text-surface-700 mt-1">
+                Presenting condition: {caseData.patient.medicalCondition}
               </p>
             )}
           </div>
@@ -455,7 +454,7 @@ export default function DoctorCaseWorkspacePage({
             <UrgencyBadge level={caseData.patient.urgencyLevel} />
             {caseData.patient.bloodGroup && (
               <Badge variant="info">
-                <Droplets className="w-3.5 h-3.5" /> Blood Group: {caseData.patient.bloodGroup}
+                <Droplets className="w-3.5 h-3.5" /> Blood group: {caseData.patient.bloodGroup}
               </Badge>
             )}
           </div>
@@ -464,39 +463,39 @@ export default function DoctorCaseWorkspacePage({
         {/* Decrypted ePHI Clinical Safety Strip */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-3 text-xs">
           <div
-            className={`p-3 rounded-xl border ${
+            className={`p-3 rounded-md border ${
               allergies.length > 0
-                ? 'bg-rose-50 border-rose-200 text-rose-900'
+                ? 'bg-danger-50/70 border-danger-200 text-danger-900'
                 : 'bg-surface-50 border-surface-200 text-surface-600'
             }`}
           >
-            <p className="font-bold flex items-center gap-1.5 mb-1">
+            <p className="font-semibold flex items-center gap-1.5 mb-1">
               <AlertTriangle
-                className={`w-4 h-4 ${allergies.length > 0 ? 'text-rose-600' : 'text-surface-400'}`}
+                className={`w-4 h-4 ${allergies.length > 0 ? 'text-danger-600' : 'text-surface-400'}`}
               />
-              Allergy Alert
+              Allergy alert
             </p>
             {allergies.length > 0 ? (
-              <p className="font-semibold text-rose-800">{allergies.join(', ')}</p>
+              <p className="font-medium text-danger-800">{allergies.join(', ')}</p>
             ) : (
               <p className="text-surface-500">No allergies reported</p>
             )}
           </div>
 
-          <div className="p-3 rounded-xl bg-surface-50 border border-surface-200">
-            <p className="font-bold text-surface-700 flex items-center gap-1.5 mb-1">
-              <Pill className="w-4 h-4 text-primary-600" />
-              Active Medications
+          <div className="p-3 rounded-md bg-surface-50 border border-surface-200">
+            <p className="font-semibold text-surface-700 flex items-center gap-1.5 mb-1">
+              <Pill className="w-4 h-4 text-surface-500" />
+              Active medications
             </p>
             <p className="text-surface-700">
               {medications.length > 0 ? medications.join(', ') : 'None listed'}
             </p>
           </div>
 
-          <div className="p-3 rounded-xl bg-surface-50 border border-surface-200">
-            <p className="font-bold text-surface-700 flex items-center gap-1.5 mb-1">
-              <HeartPulse className="w-4 h-4 text-amber-600" />
-              Chronic Conditions
+          <div className="p-3 rounded-md bg-surface-50 border border-surface-200">
+            <p className="font-semibold text-surface-700 flex items-center gap-1.5 mb-1">
+              <HeartPulse className="w-4 h-4 text-surface-500" />
+              Chronic conditions
             </p>
             <p className="text-surface-700">
               {chronicConditions.length > 0 ? chronicConditions.join(', ') : 'None listed'}
@@ -509,24 +508,24 @@ export default function DoctorCaseWorkspacePage({
       <div className="grid grid-cols-1 xl:grid-cols-3 gap-6 items-start">
         {/* Left / Main: Clinical Pathway Milestone Sign-Offs */}
         <div className="xl:col-span-2 space-y-6">
-          <Card className="p-6 space-y-5">
-            <div className="flex flex-wrap items-center justify-between gap-2 pb-3 border-b border-surface-100">
+          <Card className="p-5 space-y-5">
+            <div className="flex flex-wrap items-center justify-between gap-2 pb-3 border-b border-surface-200">
               <div>
-                <h2 className="text-lg font-bold text-surface-900 flex items-center gap-2">
-                  <Layers className="w-5 h-5 text-primary-600" />
-                  Clinical Pathway Milestone Sign-Offs
+                <h2 className="text-base font-semibold text-surface-900 flex items-center gap-2">
+                  <Layers className="w-4 h-4 text-primary-600" />
+                  Clinical pathway milestone sign-offs
                 </h2>
                 <p className="text-xs text-surface-500 mt-0.5">
                   Sign off physician-owned milestones, record decision branches, and add clinical notes.
                 </p>
               </div>
-              <span className="text-xs font-semibold text-surface-500">
+              <span className="text-xs font-medium text-surface-500 tabular-nums">
                 {caseData.clinicalSteps.length} steps
               </span>
             </div>
 
             {stageGroups.length === 0 ? (
-              <div className="p-8 text-center rounded-xl bg-surface-50 border border-dashed border-surface-200 text-sm text-surface-500">
+              <div className="p-8 text-center rounded-md bg-surface-50 border border-dashed border-surface-200 text-sm text-surface-500">
                 No clinical pathway stages have been configured for this case yet.
               </div>
             ) : (
@@ -534,13 +533,13 @@ export default function DoctorCaseWorkspacePage({
                 {stageGroups.map((stage) => (
                   <div key={stage.stageOrder} className="space-y-3">
                     <div className="flex items-center gap-2">
-                      <span className="px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-primary-50 text-primary-700 border border-primary-200">
+                      <span className="px-2 py-0.5 rounded text-xs font-medium bg-surface-100 text-surface-700 border border-surface-200 tabular-nums">
                         Stage {stage.stageOrder}
                       </span>
-                      <h3 className="text-sm font-bold text-surface-900">{stage.stageName}</h3>
+                      <h3 className="text-sm font-semibold text-surface-900">{stage.stageName}</h3>
                     </div>
 
-                    <div className="space-y-3 pl-2 border-l-2 border-surface-200">
+                    <div className="space-y-3 pl-3 border-l border-surface-200">
                       {stage.steps.map((step) => {
                         const canDoctorModify =
                           !isClosed && (!step.requiredRole || step.requiredRole === 'DOCTOR');
@@ -554,12 +553,12 @@ export default function DoctorCaseWorkspacePage({
                         return (
                           <div
                             key={step.id}
-                            className="p-4 rounded-xl border border-surface-200 bg-surface-50/40 space-y-3"
+                            className="p-4 rounded-lg border border-surface-200 bg-surface-50/50 space-y-3"
                           >
                             <div className="flex flex-wrap items-start justify-between gap-2">
                               <div className="space-y-1">
                                 <div className="flex flex-wrap items-center gap-2">
-                                  <span className="font-bold text-sm text-surface-900">
+                                  <span className="font-semibold text-sm text-surface-900">
                                     {step.title}
                                   </span>
                                   <Badge variant="default" size="sm">
@@ -575,7 +574,7 @@ export default function DoctorCaseWorkspacePage({
                                   )}
                                 </div>
                                 {step.completedAt && (
-                                  <p className="text-[11px] text-emerald-700 font-medium">
+                                  <p className="text-xs text-success-700 font-medium tabular-nums">
                                     Completed: {new Date(step.completedAt).toLocaleString()}
                                   </p>
                                 )}
@@ -598,10 +597,10 @@ export default function DoctorCaseWorkspacePage({
                             </div>
 
                             {canDoctorModify ? (
-                              <div className="space-y-3 pt-2 border-t border-surface-200/70">
+                              <div className="space-y-3 pt-3 border-t border-surface-200">
                                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                                   <Select
-                                    label="Milestone Status"
+                                    label="Milestone status"
                                     value={draft.status}
                                     onChange={(val) =>
                                       setStepDrafts((prev) => ({
@@ -614,7 +613,7 @@ export default function DoctorCaseWorkspacePage({
                                   />
 
                                   <Select
-                                    label="Clinical Decision Branch"
+                                    label="Clinical decision branch"
                                     value={draft.decisionBranch}
                                     onChange={(val) =>
                                       setStepDrafts((prev) => ({
@@ -628,10 +627,11 @@ export default function DoctorCaseWorkspacePage({
                                 </div>
 
                                 <div className="space-y-1">
-                                  <label className="block text-xs font-bold text-surface-700">
-                                    Doctor Clinical Notes
+                                  <label htmlFor={`step-notes-${step.id}`} className="block text-xs font-medium text-surface-700">
+                                    Doctor clinical notes
                                   </label>
                                   <textarea
+                                    id={`step-notes-${step.id}`}
                                     rows={2}
                                     value={draft.doctorNotes}
                                     onChange={(e) =>
@@ -641,7 +641,7 @@ export default function DoctorCaseWorkspacePage({
                                       }))
                                     }
                                     placeholder="Add clinical assessment, operative observations, or clearance remarks..."
-                                    className="w-full p-2.5 rounded-xl border border-surface-200 bg-white text-xs text-surface-800 focus:border-primary-600 focus:outline-none"
+                                    className="w-full p-2.5 rounded-md border border-surface-300 bg-white text-xs text-surface-900 focus:border-primary-600 focus:outline-none"
                                   />
                                 </div>
 
@@ -658,7 +658,7 @@ export default function DoctorCaseWorkspacePage({
                                 </div>
                               </div>
                             ) : (
-                              <div className="pt-2 border-t border-surface-200/70 flex flex-wrap items-center justify-between gap-2 text-xs text-surface-500">
+                              <div className="pt-2.5 border-t border-surface-200 flex flex-wrap items-center justify-between gap-2 text-xs text-surface-500">
                                 <span className="inline-flex items-center gap-1.5">
                                   <Lock className="w-3.5 h-3.5" />
                                   {isClosed
@@ -685,11 +685,11 @@ export default function DoctorCaseWorkspacePage({
         <div className="space-y-6">
           {/* Fit-to-Fly Travel Clearance Card */}
           <Card className="p-5 space-y-4">
-            <div className="flex items-start justify-between gap-2 pb-3 border-b border-surface-100">
+            <div className="flex items-start justify-between gap-2 pb-3 border-b border-surface-200">
               <div>
-                <h2 className="text-sm font-bold text-surface-900 flex items-center gap-2">
+                <h2 className="text-base font-semibold text-surface-900 flex items-center gap-2">
                   <Plane className="w-4 h-4 text-primary-600" />
-                  Fit-to-Fly Travel Clearance
+                  Fit-to-Fly clearance
                 </h2>
                 <p className="text-xs text-surface-500 mt-0.5">
                   Certify medical fitness for international air travel
@@ -707,7 +707,7 @@ export default function DoctorCaseWorkspacePage({
             </div>
 
             {fitToFly && (
-              <div className="p-3 rounded-xl bg-surface-50 border border-surface-200 text-xs space-y-1">
+              <div className="p-3 rounded-md bg-surface-50 border border-surface-200 text-xs space-y-1">
                 <p className="font-semibold text-surface-800">
                   Status: {fitToFly.isCleared ? 'Cleared for Air Travel' : 'Not Cleared / Re-evaluation'}
                 </p>
@@ -715,13 +715,13 @@ export default function DoctorCaseWorkspacePage({
                   <p className="text-surface-600">Signed by: {fitToFly.clearedBy}</p>
                 )}
                 {fitToFly.clearanceDate && (
-                  <p className="text-surface-600">
+                  <p className="text-surface-600 tabular-nums">
                     Cleared on: {new Date(fitToFly.clearanceDate).toLocaleDateString()}
                   </p>
                 )}
                 {fitToFly.restrictions && (
                   <p className="text-surface-700">
-                    <span className="font-semibold">Restrictions:</span> {fitToFly.restrictions}
+                    <span className="font-medium">Restrictions:</span> {fitToFly.restrictions}
                   </p>
                 )}
                 {fitToFly?.isCleared && certificateDoc?.fileUrl && (
@@ -730,7 +730,7 @@ export default function DoctorCaseWorkspacePage({
                       href={certificateDoc.fileUrl}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold text-primary-700 bg-white border border-primary-200 hover:bg-primary-50 transition-colors"
+                      className="min-h-9 inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium text-primary-700 bg-white border border-primary-200 hover:bg-primary-50 transition-colors"
                     >
                       <Download className="w-3.5 h-3.5" />
                       Download Fit-to-Fly Certificate
@@ -742,15 +742,15 @@ export default function DoctorCaseWorkspacePage({
 
             <form onSubmit={handleFitToFlySubmit} className="space-y-3 text-xs">
               <div className="space-y-1.5">
-                <span className="block font-bold text-surface-700">Clearance Decision</span>
+                <span className="block font-medium text-surface-700">Clearance decision</span>
                 <div className="grid grid-cols-2 gap-2">
                   <button
                     type="button"
                     disabled={isClosed || savingFitToFly}
                     onClick={() => setIsCleared(true)}
-                    className={`px-3 py-2 rounded-xl border text-xs font-bold transition-colors ${
+                    className={`min-h-11 px-3 py-2 rounded-md border text-xs font-medium transition-colors ${
                       isCleared
-                        ? 'bg-emerald-50 border-emerald-400 text-emerald-800'
+                        ? 'bg-success-50 border-success-300 text-success-800'
                         : 'bg-white border-surface-200 text-surface-600 hover:bg-surface-50'
                     }`}
                   >
@@ -760,9 +760,9 @@ export default function DoctorCaseWorkspacePage({
                     type="button"
                     disabled={isClosed || savingFitToFly}
                     onClick={() => setIsCleared(false)}
-                    className={`px-3 py-2 rounded-xl border text-xs font-bold transition-colors ${
+                    className={`min-h-11 px-3 py-2 rounded-md border text-xs font-medium transition-colors ${
                       !isCleared
-                        ? 'bg-amber-50 border-amber-400 text-amber-800'
+                        ? 'bg-warning-50 border-warning-300 text-warning-800'
                         : 'bg-white border-surface-200 text-surface-600 hover:bg-surface-50'
                     }`}
                   >
@@ -772,44 +772,47 @@ export default function DoctorCaseWorkspacePage({
               </div>
 
               <div className="space-y-1">
-                <label className="block font-bold text-surface-700">
-                  Clinical Travel Restrictions / Instructions
+                <label htmlFor="ftf-restrictions" className="block font-medium text-surface-700">
+                  Clinical travel restrictions / instructions
                 </label>
                 <textarea
+                  id="ftf-restrictions"
                   rows={3}
                   disabled={isClosed || savingFitToFly}
                   value={restrictions}
                   onChange={(e) => setRestrictions(e.target.value)}
                   placeholder="e.g., Wheelchair assistance at airport, DVT compression stockings, continue dual antiplatelet therapy..."
-                  className="w-full p-2.5 rounded-xl border border-surface-200 bg-white text-surface-800 focus:border-primary-600 focus:outline-none disabled:bg-surface-100"
+                  className="w-full p-2.5 rounded-md border border-surface-300 bg-white text-surface-900 focus:border-primary-600 focus:outline-none disabled:bg-surface-100"
                 />
               </div>
 
               <div className="space-y-1">
-                <label className="block font-bold text-surface-700">
-                  Re-Evaluation Date (Optional)
+                <label htmlFor="ftf-reeval-date" className="block font-medium text-surface-700">
+                  Re-evaluation date (optional)
                 </label>
                 <input
+                  id="ftf-reeval-date"
                   type="date"
                   disabled={isClosed || savingFitToFly}
                   value={reEvalDate}
                   onChange={(e) => setReEvalDate(e.target.value)}
-                  className="w-full px-3 py-2 rounded-xl border border-surface-200 bg-white text-surface-800 focus:border-primary-600 focus:outline-none disabled:bg-surface-100"
+                  className="w-full min-h-11 px-3 py-2 rounded-md border border-surface-300 bg-white text-surface-900 focus:border-primary-600 focus:outline-none disabled:bg-surface-100"
                 />
               </div>
 
               <div className="space-y-1">
-                <label className="block font-bold text-surface-700">
-                  Signed Certificate Attachment (Optional PDF/JPG/PNG)
+                <label htmlFor="ftf-cert-file" className="block font-medium text-surface-700">
+                  Signed certificate attachment (optional PDF/JPG/PNG)
                 </label>
                 <div className="flex items-center gap-2 flex-wrap">
                   <input
+                    id="ftf-cert-file"
                     ref={fitToFlyFileInputRef}
                     type="file"
                     accept=".pdf,.jpg,.jpeg,.png"
                     disabled={isClosed || savingFitToFly}
                     onChange={(e) => setFitToFlyFile(e.target.files?.[0] || null)}
-                    className="block w-full text-xs text-surface-600 file:mr-3 file:py-1.5 file:px-3 file:rounded-lg file:border file:border-surface-200 file:text-xs file:font-semibold file:bg-white file:text-surface-700 hover:file:bg-surface-100"
+                    className="block w-full text-xs text-surface-600 file:mr-3 file:py-2 file:px-3 file:rounded-md file:border file:border-surface-300 file:text-xs file:font-medium file:bg-white file:text-surface-700 hover:file:bg-surface-50"
                   />
                   {fitToFlyFile && (
                     <button
@@ -818,13 +821,13 @@ export default function DoctorCaseWorkspacePage({
                         setFitToFlyFile(null);
                         if (fitToFlyFileInputRef.current) fitToFlyFileInputRef.current.value = '';
                       }}
-                      className="inline-flex items-center gap-1 text-[11px] font-semibold text-surface-500 hover:text-rose-600"
+                      className="min-h-8 inline-flex items-center gap-1 text-xs font-medium text-surface-500 hover:text-danger-600"
                     >
                       <X className="w-3.5 h-3.5" /> Clear file
                     </button>
                   )}
                 </div>
-                <p className="text-[11px] text-surface-500 flex items-center gap-1">
+                <p className="text-xs text-surface-500 flex items-center gap-1">
                   <Upload className="w-3 h-3 shrink-0" />
                   Leave blank to auto-generate official Fit-to-Fly PDF certificate when cleared.
                 </p>
