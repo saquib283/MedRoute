@@ -54,6 +54,7 @@ import {
   PUT as updateDoctorAppointment,
 } from '@/app/api/v1/doctor/appointments/route';
 import { GET as getDoctorPatients } from '@/app/api/v1/doctor/patients/route';
+import { GET as getCasePathway } from '@/app/api/v1/cases/[id]/pathway/route';
 import { PUT as updateCaseFitToFly } from '@/app/api/v1/cases/[id]/fit-to-fly/route';
 
 const mockedPrisma = prisma as unknown as {
@@ -362,46 +363,135 @@ describe('Task 6: Pre-Travel Doctor Triage & IATA MEDIF Fit-to-Fly Safety Checkl
     expect(patJson.data.patients[0].medicalProfile.chronicConditions).toEqual([
       'Coronary Artery Disease',
     ]);
+
+    mockedPrisma.case.findUnique.mockResolvedValue({
+      id: 'case-pretravel-1',
+      patientId: 'pat-pretravel-1',
+      managerId: 'mgr-1',
+      primaryDoctorId: 'seed-doctor-001',
+      status: 'UNDER_REVIEW',
+      travelLogistics: {
+        attendants: [
+          {
+            fullName: 'Salim Al-Harthy',
+            passportNo: encryptedAttendantPassport,
+            relation: 'Brother',
+          },
+        ],
+      },
+      patient: {
+        id: 'pat-pretravel-1',
+        userId: 'pat-u-pretravel',
+        nationality: 'Oman',
+        passportNo: encrypt('P11223344'),
+        user: {
+          fullName: 'Omar Al-Harthy',
+          email: 'omar@afzalhealthcare.in',
+          phone: '+96891234567',
+        },
+        medicalProfile: null,
+      },
+      hospital: {
+        id: 'seed-hospital-001',
+        name: 'Fortis Escorts Heart Institute',
+        city: 'New Delhi',
+        address: 'Okhla Road',
+        accreditation: 'NABH, JCI',
+      },
+      primaryDoctor: {
+        id: 'seed-doctor-001',
+        userId: 'doc-u-1',
+        fullName: 'Dr. Ashok Seth',
+        qualification: 'MBBS, MD',
+        specialisation: { id: 'spec-1', name: 'Cardiology' },
+      },
+      clinicalSteps: [
+        {
+          id: 'step-mdt-1',
+          title: 'Specialist Triage & Multi-Disciplinary Case Review',
+          status: 'IN_PROGRESS',
+          requiredRole: 'DOCTOR',
+        },
+      ],
+      fitToFlyClearance: null,
+    });
+
+    const pathwayReq = new NextRequest('http://localhost/api/v1/cases/case-pretravel-1/pathway', {
+      headers: docHeaders,
+    });
+    const pathwayRes = await getCasePathway(pathwayReq, {
+      params: Promise.resolve({ id: 'case-pretravel-1' }),
+    });
+    const pathwayJson = await pathwayRes.json();
+
+    expect(pathwayRes.status).toBe(200);
+    expect(pathwayJson.data.case.id).toBe('case-pretravel-1');
+    expect(pathwayJson.data.case.patient.passportNo).toBe('*****3344');
+    expect(pathwayJson.data.case.travelLogistics.attendants[0].passportNo).toBe('****6543');
   });
 
   it('validateFitToFlySafetyChecklist blocks clearance if wound or trapped-gas check fails', () => {
-    const unsafe = validateFitToFlySafetyChecklist(true, {
+    const unsafeGas = validateFitToFlySafetyChecklist(true, {
       woundStable: true,
       noTrappedGasRisk: false,
       cardioRespiratoryStable: true,
       hemoglobinCleared: true,
       dvtProphylaxisPlan: true,
     });
-    expect(unsafe.ok).toBe(false);
+    expect(unsafeGas.ok).toBe(false);
+
+    const unsafeWound = validateFitToFlySafetyChecklist(true, {
+      woundStable: false,
+      noTrappedGasRisk: true,
+      cardioRespiratoryStable: true,
+      hemoglobinCleared: true,
+      dvtProphylaxisPlan: true,
+    });
+    expect(unsafeWound.ok).toBe(false);
   });
 
-  it('PUT /api/v1/cases/[id]/fit-to-fly rejects isCleared=true when noTrappedGasRisk=false and succeeds when all 5 IATA checks pass', async () => {
-    const unsafeReq = new NextRequest('http://localhost/api/v1/cases/case-1/fit-to-fly', {
-      method: 'PUT',
-      headers: { ...docHeaders, 'content-type': 'application/json' },
-      body: JSON.stringify({
-        isCleared: true,
-        restrictions: 'Wheelchair assistance requested',
-        ssrCode: 'WCHR',
-        requiresMedif: true,
-        flightNumber: 'EK511',
-        departureDate: '2026-12-10T10:00:00.000Z',
-        checklist: {
-          woundStable: true,
-          noTrappedGasRisk: false,
-          cardioRespiratoryStable: true,
-          hemoglobinCleared: true,
-          dvtProphylaxisPlan: true,
-        },
-      }),
-    });
+  it('PUT /api/v1/cases/[id]/fit-to-fly rejects isCleared=true when woundStable=false or noTrappedGasRisk=false, succeeds when all 5 pass, and clears empty fields to null', async () => {
+    const expectedSafetyMessage =
+      'All physiological safety criteria must be confirmed to certify Fit-to-Fly clearance';
 
-    const unsafeRes = await updateCaseFitToFly(unsafeReq, {
-      params: Promise.resolve({ id: 'case-1' }),
-    });
-    const unsafeJson = await unsafeRes.json();
-    expect(unsafeRes.status).toBe(400);
-    expect(unsafeJson.error.code).toBe('BAD_REQUEST');
+    for (const unsafeChecklist of [
+      {
+        woundStable: false,
+        noTrappedGasRisk: true,
+        cardioRespiratoryStable: true,
+        hemoglobinCleared: true,
+        dvtProphylaxisPlan: true,
+      },
+      {
+        woundStable: true,
+        noTrappedGasRisk: false,
+        cardioRespiratoryStable: true,
+        hemoglobinCleared: true,
+        dvtProphylaxisPlan: true,
+      },
+    ]) {
+      const unsafeReq = new NextRequest('http://localhost/api/v1/cases/case-1/fit-to-fly', {
+        method: 'PUT',
+        headers: { ...docHeaders, 'content-type': 'application/json' },
+        body: JSON.stringify({
+          isCleared: true,
+          restrictions: 'Wheelchair assistance requested',
+          ssrCode: 'WCHR',
+          requiresMedif: true,
+          flightNumber: 'EK511',
+          departureDate: '2026-12-10T10:00:00.000Z',
+          checklist: unsafeChecklist,
+        }),
+      });
+
+      const unsafeRes = await updateCaseFitToFly(unsafeReq, {
+        params: Promise.resolve({ id: 'case-1' }),
+      });
+      const unsafeJson = await unsafeRes.json();
+      expect(unsafeRes.status).toBe(400);
+      expect(unsafeJson.error.code).toBe('BAD_REQUEST');
+      expect(unsafeJson.error.message).toContain(expectedSafetyMessage);
+    }
 
     mockedPrisma.case.findUnique.mockResolvedValue({
       id: 'case-1',
@@ -492,5 +582,37 @@ describe('Task 6: Pre-Travel Doctor Triage & IATA MEDIF Fit-to-Fly Safety Checkl
     expect(validJson.data.caseStatus).toBe('FIT_TO_FLY_CLEARED');
     expect(validJson.data.fitToFlyClearance.ssrCode).toBe('WCHR');
     expect(validJson.data.fitToFlyClearance.requiresMedif).toBe(true);
+
+    // Verify clearing optional fields via multipart FormData persists null (not skipped)
+    const clearForm = new FormData();
+    clearForm.append('isCleared', 'false');
+    clearForm.append('ssrCode', 'NONE');
+    clearForm.append('requiresMedif', 'false');
+    clearForm.append('flightNumber', '');
+    clearForm.append('departureDate', '');
+    clearForm.append('restrictions', '');
+    clearForm.append('reEvalDate', '');
+
+    const clearReq = new NextRequest('http://localhost/api/v1/cases/case-1/fit-to-fly', {
+      method: 'PUT',
+      headers: docHeaders,
+      body: clearForm,
+    });
+
+    const clearRes = await updateCaseFitToFly(clearReq, {
+      params: Promise.resolve({ id: 'case-1' }),
+    });
+    expect(clearRes.status).toBe(200);
+    expect(mockedPrisma.fitToFlyClearance.upsert).toHaveBeenLastCalledWith(
+      expect.objectContaining({
+        update: expect.objectContaining({
+          isCleared: false,
+          restrictions: null,
+          reEvalDate: null,
+          flightNumber: null,
+          departureDate: null,
+        }),
+      })
+    );
   });
 });

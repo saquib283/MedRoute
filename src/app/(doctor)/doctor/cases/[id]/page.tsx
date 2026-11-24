@@ -281,8 +281,12 @@ export default function DoctorCaseWorkspacePage({
       );
       setSsrCode(clearance?.ssrCode || logistics?.wheelchairSsrCode || 'NONE');
       setRequiresMedif(Boolean(clearance?.requiresMedif));
-      setFlightNumber(clearance?.flightNumber || logistics?.departureFlightNo || '');
-      const rawDepDate = clearance?.departureDate || logistics?.departureAt || null;
+      setFlightNumber(
+        clearance ? clearance.flightNumber || '' : logistics?.departureFlightNo || ''
+      );
+      const rawDepDate = clearance
+        ? clearance.departureDate || null
+        : logistics?.departureAt || null;
       setDepartureDate(rawDepDate ? new Date(rawDepDate).toISOString().slice(0, 10) : '');
     },
     []
@@ -516,7 +520,9 @@ export default function DoctorCaseWorkspacePage({
           recoveryStayDays: Number(planRecoveryLos) || 0,
           estimatedCostUsd: parsedCost,
           depositRequiredUsd: parsedDeposit,
-          currency: 'USD',
+          currency: treatmentPlan?.currency ?? 'USD',
+          inclusions: treatmentPlan?.inclusions ?? [],
+          exclusions: treatmentPlan?.exclusions ?? [],
           doctorOpinionNotes: planOpinionNotes.trim() || null,
         }),
       });
@@ -591,18 +597,15 @@ export default function DoctorCaseWorkspacePage({
       formData.append('checklist', JSON.stringify(checklist));
       formData.append('ssrCode', ssrCode || 'NONE');
       formData.append('requiresMedif', requiresMedif ? 'true' : 'false');
-      if (flightNumber.trim()) {
-        formData.append('flightNumber', flightNumber.trim());
-      }
-      if (departureDate.trim()) {
-        formData.append('departureDate', new Date(`${departureDate.trim()}T00:00:00.000Z`).toISOString());
-      }
-      if (restrictions.trim()) {
-        formData.append('restrictions', restrictions.trim());
-      }
-      if (reEvalDate.trim()) {
-        formData.append('reEvalDate', reEvalDate.trim());
-      }
+      formData.append('flightNumber', flightNumber.trim());
+      formData.append(
+        'departureDate',
+        departureDate.trim()
+          ? new Date(`${departureDate.trim()}T00:00:00.000Z`).toISOString()
+          : ''
+      );
+      formData.append('restrictions', restrictions.trim());
+      formData.append('reEvalDate', reEvalDate.trim());
       if (fitToFlyFile) {
         formData.append('file', fitToFlyFile);
       }
@@ -1021,6 +1024,17 @@ export default function DoctorCaseWorkspacePage({
 
             {showPlanEditor && !isClosed && (
               <form onSubmit={handlePublishTreatmentPlan} className="space-y-3 text-xs pt-2 border-t border-surface-200">
+                {treatmentPlan?.consentAcceptedAt && (
+                  <div
+                    role="alert"
+                    className="p-3 rounded-md bg-warning-50 border border-warning-200 text-warning-900 flex items-start gap-2"
+                  >
+                    <AlertTriangle className="w-4 h-4 text-warning-600 shrink-0 mt-0.5" aria-hidden="true" />
+                    <p className="font-medium">
+                      Publishing a revised treatment plan resets the patient&apos;s confirmed consent and requires patient re-approval.
+                    </p>
+                  </div>
+                )}
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   <div className="space-y-1">
                     <label htmlFor="doc-plan-diagnosis" className="block font-medium text-surface-700">
