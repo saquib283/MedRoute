@@ -251,11 +251,18 @@ export default function CasesPipeline() {
 
                   <div className="flex justify-between items-center mt-4 pt-3 border-t border-surface-200 text-xs gap-2 flex-wrap">
                     <span className="text-surface-500 font-mono text-[11px]">Case ID: {c.id}</span>
-                    <div className="flex items-center gap-2">
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <Link
+                        href={`/manager/cases/${c.id}`}
+                        onClick={(e) => e.stopPropagation()}
+                        className="inline-flex items-center justify-center min-h-11 px-3.5 text-xs font-medium rounded-md bg-primary-600 text-white hover:bg-primary-700 border border-primary-700/20 shadow-2xs transition-colors"
+                      >
+                        Open Case Workspace
+                      </Link>
                       <Link
                         href={`/manager/cases/${c.id}/pathway`}
                         onClick={(e) => e.stopPropagation()}
-                        className="inline-flex items-center justify-center px-3 py-1.5 text-xs font-medium rounded-md bg-primary-50 text-primary-700 hover:bg-primary-100 border border-primary-200 transition-colors"
+                        className="inline-flex items-center justify-center min-h-11 px-3 text-xs font-medium rounded-md bg-primary-50 text-primary-700 hover:bg-primary-100 border border-primary-200 transition-colors"
                       >
                         Configure Pathway
                       </Link>
@@ -295,12 +302,20 @@ export default function CasesPipeline() {
                         {editingCase.patient.user.fullName}
                       </p>
                     </div>
-                    <Link
-                      href={`/manager/cases/${editingCase.id}/pathway`}
-                      className="inline-flex items-center justify-center px-3 py-1.5 text-xs font-medium rounded-md bg-primary-50 text-primary-700 hover:bg-primary-100 border border-primary-200 transition-colors shrink-0"
-                    >
-                      Configure Pathway
-                    </Link>
+                    <div className="flex items-center gap-2 shrink-0 flex-wrap">
+                      <Link
+                        href={`/manager/cases/${editingCase.id}`}
+                        className="inline-flex items-center justify-center min-h-11 px-3 text-xs font-medium rounded-md bg-primary-600 text-white hover:bg-primary-700 border border-primary-700/20 shadow-2xs transition-colors shrink-0"
+                      >
+                        Open Case Workspace
+                      </Link>
+                      <Link
+                        href={`/manager/cases/${editingCase.id}/pathway`}
+                        className="inline-flex items-center justify-center min-h-11 px-3 text-xs font-medium rounded-md bg-primary-50 text-primary-700 hover:bg-primary-100 border border-primary-200 transition-colors shrink-0"
+                      >
+                        Configure Pathway
+                      </Link>
+                    </div>
                   </div>
 
                   {/* Case Status Dropdown */}

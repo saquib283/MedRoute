@@ -214,7 +214,17 @@ export default function AdminCasesPage() {
                         </div>
                       </td>
                       <td className="px-5 py-3.5 text-right">
-                        <Button variant="ghost" size="sm" onClick={() => setSelectedCase(c)}>Manage</Button>
+                        <div className="inline-flex items-center justify-end gap-2">
+                          <Link
+                            href={`/admin/cases/${c.id}`}
+                            className="inline-flex items-center justify-center min-h-11 px-3 rounded-md bg-primary-600 hover:bg-primary-700 text-white text-xs font-medium border border-primary-700/20 shadow-2xs transition-colors whitespace-nowrap"
+                          >
+                            Open Case Workspace
+                          </Link>
+                          <Button variant="ghost" size="sm" onClick={() => setSelectedCase(c)}>
+                            Manage
+                          </Button>
+                        </div>
                       </td>
                     </tr>
                   ))
@@ -295,11 +305,17 @@ export default function AdminCasesPage() {
                 />
               </div>
 
-              {/* Clinical Pathway Navigation */}
-              <div className="pt-4 border-t border-surface-200">
+              {/* Clinical Workspace & Pathway Navigation */}
+              <div className="pt-4 border-t border-surface-200 grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                <Link
+                  href={`/admin/cases/${selectedCase.id}`}
+                  className="inline-flex items-center justify-center w-full min-h-11 px-4 text-xs font-medium rounded-md bg-primary-600 text-white hover:bg-primary-700 border border-primary-700/20 shadow-2xs transition-colors"
+                >
+                  Open Case Workspace
+                </Link>
                 <Link
                   href={`/admin/cases/${selectedCase.id}/pathway`}
-                  className="inline-flex items-center justify-center w-full px-4 py-2 text-xs font-medium rounded-md bg-primary-50 text-primary-700 hover:bg-primary-100 border border-primary-200 transition-colors"
+                  className="inline-flex items-center justify-center w-full min-h-11 px-4 text-xs font-medium rounded-md bg-primary-50 text-primary-700 hover:bg-primary-100 border border-primary-200 transition-colors"
                 >
                   Configure Clinical Pathway
                 </Link>

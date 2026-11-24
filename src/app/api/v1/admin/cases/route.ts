@@ -12,6 +12,11 @@ import { createAuditLog, AUDIT_ACTIONS } from '@/lib/api/audit-logger';
 import { CASE_STATUS_ORDER } from '@/lib/constants';
 import { createCaseForPatient } from '@/lib/services/onboarding.service';
 import { assignPatientCoordinator } from '@/lib/services/case-assignment.service';
+import {
+  formatPatientForViewer,
+  formatTravelLogisticsForViewer,
+} from '@/lib/services/phi.service';
+import { validateCaseStatusTransition } from '@/lib/validation/lifecycle-schemas';
 import { z } from 'zod';
 
 const VALID_STATUSES = CASE_STATUS_ORDER;
@@ -28,8 +33,23 @@ const updateCaseSchema = z.object({
   status: z.enum(VALID_STATUSES).optional(),
   managerId: z.string().nullable().optional(),
   notes: z.string().optional(),
+  isUrgent: z.boolean().optional(),
   escalationNote: z.string().nullable().optional(),
+  overrideReason: z.string().max(1000).nullable().optional(),
 });
+
+function maskCaseForViewer<T extends Record<string, unknown>>(c: T | null): T | null {
+  if (!c) return null;
+  return {
+    ...c,
+    ...(c.patient && typeof c.patient === 'object'
+      ? { patient: formatPatientForViewer(c.patient as Record<string, unknown>, { maskPassport: true }) }
+      : {}),
+    ...('travelLogistics' in c
+      ? { travelLogistics: formatTravelLogisticsForViewer(c.travelLogistics, { maskPassport: true }) }
+      : {}),
+  };
+}
 
 export async function GET(request: NextRequest) {
   try {
@@ -78,7 +98,8 @@ export async function GET(request: NextRequest) {
       prisma.case.count({ where }),
     ]);
 
-    return apiSuccess({ cases, pagination: { page, limit, total, totalPages: Math.ceil(total / limit) } });
+    const maskedCases = cases.map((c) => maskCaseForViewer(c as unknown as Record<string, unknown>));
+    return apiSuccess({ cases: maskedCases, pagination: { page, limit, total, totalPages: Math.ceil(total / limit) } });
   } catch (err) {
     console.error('[Admin Cases GET Error]', err);
     return apiError(ERROR_CODES.INTERNAL_ERROR, 'Failed to fetch cases', 500);
@@ -109,7 +130,11 @@ export async function POST(request: NextRequest) {
       return apiError(caseRes.code, caseRes.message, caseRes.status);
     }
 
-    return apiSuccess({ case: caseRes.case }, undefined, 201);
+    return apiSuccess(
+      { case: maskCaseForViewer(caseRes.case as unknown as Record<string, unknown>) },
+      undefined,
+      201
+    );
   } catch (err) {
     console.error('[Admin Cases POST Error]', err);
     return apiError(ERROR_CODES.INTERNAL_ERROR, 'Failed to create case', 500);
@@ -130,15 +155,77 @@ export async function PUT(request: NextRequest) {
       return apiError(ERROR_CODES.BAD_REQUEST, result.error.issues[0].message, 400);
     }
 
-    const { id, managerId, ...restUpdateData } = result.data;
+    const { id, managerId, overrideReason, ...restUpdateData } = result.data;
 
-    const existing = await prisma.case.findUnique({ where: { id } });
+    const existing = await prisma.case.findUnique({
+      where: { id },
+      include: { fitToFlyClearance: { select: { isCleared: true } } },
+    });
     if (!existing) {
       return apiError(ERROR_CODES.CASE_NOT_FOUND, 'Case not found', 404);
     }
 
-    if (existing.status === 'CLOSED' && restUpdateData.status && restUpdateData.status !== 'CLOSED') {
-      return apiError(ERROR_CODES.CASE_ALREADY_CLOSED, 'Cannot reopen a closed case', 400);
+    const normalizedEscalation =
+      restUpdateData.escalationNote !== undefined
+        ? restUpdateData.escalationNote?.trim()
+          ? restUpdateData.escalationNote.trim()
+          : null
+        : undefined;
+
+    const normalizedOverrideReason =
+      overrideReason?.trim() ||
+      (normalizedEscalation !== undefined ? normalizedEscalation : null) ||
+      null;
+
+    if (restUpdateData.status !== undefined && restUpdateData.status !== existing.status) {
+      const [verifiedPassportCount, unpaidBillCount, ftfFallback] = await Promise.all([
+        prisma.document?.count
+          ? prisma.document.count({
+              where: {
+                patientId: existing.patientId,
+                category: 'PASSPORT',
+                verificationStatus: 'VERIFIED',
+              },
+            })
+          : Promise.resolve(0),
+        prisma.medicalBill?.count
+          ? prisma.medicalBill.count({
+              where: {
+                caseId: id,
+                status: { notIn: ['PAID', 'CANCELLED'] },
+              },
+            })
+          : Promise.resolve(0),
+        existing.fitToFlyClearance === undefined && prisma.fitToFlyClearance?.findUnique
+          ? prisma.fitToFlyClearance.findUnique({
+              where: { caseId: id },
+              select: { isCleared: true },
+            })
+          : Promise.resolve(null),
+      ]);
+
+      const hasClearedFitToFly = Boolean(
+        existing.fitToFlyClearance?.isCleared === true || ftfFallback?.isCleared === true
+      );
+
+      const transitionCheck = validateCaseStatusTransition({
+        currentStatus: existing.status,
+        nextStatus: restUpdateData.status,
+        hasVerifiedPassport: verifiedPassportCount > 0,
+        hasClearedFitToFly,
+        unpaidBillCount,
+        overrideReason: normalizedOverrideReason,
+      });
+
+      if (!transitionCheck.ok) {
+        return apiError(
+          existing.status === 'CLOSED'
+            ? ERROR_CODES.CASE_ALREADY_CLOSED
+            : ERROR_CODES.INVALID_STATUS_TRANSITION,
+          transitionCheck.message,
+          400
+        );
+      }
     }
 
     if (managerId !== undefined) {
@@ -153,22 +240,17 @@ export async function PUT(request: NextRequest) {
       }
     }
 
-    const normalizedEscalation =
-      restUpdateData.escalationNote !== undefined
-        ? restUpdateData.escalationNote?.trim()
-          ? restUpdateData.escalationNote.trim()
-          : null
-        : undefined;
-
     const hasOtherUpdates =
       restUpdateData.status !== undefined ||
       restUpdateData.notes !== undefined ||
+      restUpdateData.isUrgent !== undefined ||
       normalizedEscalation !== undefined;
 
     if (hasOtherUpdates) {
       const caseUpdateData = {
         ...(restUpdateData.status !== undefined && { status: restUpdateData.status }),
         ...(restUpdateData.notes !== undefined && { notes: restUpdateData.notes }),
+        ...(restUpdateData.isUrgent !== undefined && { isUrgent: restUpdateData.isUrgent }),
         ...(normalizedEscalation !== undefined && { escalationNote: normalizedEscalation }),
       };
 
@@ -188,7 +270,10 @@ export async function PUT(request: NextRequest) {
         entityType: 'Case',
         entityId: id,
         oldValue: { status: existing.status, managerId: existing.managerId },
-        newValue: caseUpdateData,
+        newValue: {
+          ...caseUpdateData,
+          ...(overrideReason?.trim() ? { overrideReason: overrideReason.trim() } : {}),
+        },
         ipAddress: getClientIP(request),
       });
     }
@@ -201,7 +286,9 @@ export async function PUT(request: NextRequest) {
       },
     });
 
-    return apiSuccess({ case: updatedCase });
+    return apiSuccess({
+      case: maskCaseForViewer(updatedCase as unknown as Record<string, unknown>),
+    });
   } catch (err) {
     console.error('[Admin Cases PUT Error]', err);
     return apiError(ERROR_CODES.INTERNAL_ERROR, 'Failed to update case', 500);

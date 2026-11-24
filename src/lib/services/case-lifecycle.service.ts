@@ -109,6 +109,10 @@ export interface CaseLifecycleSnapshot {
   formCSlaStatus: FormCSlaStatus;
   unpaidBillCount: number;
   documents: unknown[];
+  medicalBills: unknown[];
+  hotelBookings: unknown[];
+  availableHospitals?: unknown[];
+  availableDoctors?: unknown[];
   nextActions: PatientNextActionItem[];
 }
 
@@ -195,8 +199,10 @@ async function resolveFreshClinicalSteps(
 async function fetchCaseSupportingContext(caseId: string, patientId: string): Promise<{
   documents: Array<PatientDocumentSummary & Record<string, unknown>>;
   unpaidBillCount: number;
+  medicalBills: unknown[];
+  hotelBookings: unknown[];
 }> {
-  const [documents, unpaidBillCount] = await Promise.all([
+  const [documents, unpaidBillCount, medicalBills, hotelBookings] = await Promise.all([
     prisma.document?.findMany
       ? prisma.document.findMany({
           where: { patientId },
@@ -211,6 +217,35 @@ async function fetchCaseSupportingContext(caseId: string, patientId: string): Pr
           },
         })
       : Promise.resolve(0),
+    prisma.medicalBill?.findMany
+      ? prisma.medicalBill.findMany({
+          where: { caseId },
+          include: {
+            hospital: { select: { id: true, name: true, city: true } },
+            items: true,
+          },
+          orderBy: { createdAt: 'desc' },
+        })
+      : Promise.resolve([]),
+    prisma.hotelBooking?.findMany
+      ? prisma.hotelBooking.findMany({
+          where: {
+            OR: [{ caseId }, { patientId }],
+          },
+          include: {
+            hotel: {
+              select: {
+                id: true,
+                name: true,
+                city: true,
+                distanceKm: true,
+                starRating: true,
+              },
+            },
+          },
+          orderBy: { createdAt: 'desc' },
+        })
+      : Promise.resolve([]),
   ]);
 
   return {
@@ -218,6 +253,46 @@ async function fetchCaseSupportingContext(caseId: string, patientId: string): Pr
       ? (documents as unknown as Array<PatientDocumentSummary & Record<string, unknown>>)
       : [],
     unpaidBillCount: typeof unpaidBillCount === 'number' ? unpaidBillCount : 0,
+    medicalBills: Array.isArray(medicalBills) ? medicalBills : [],
+    hotelBookings: Array.isArray(hotelBookings) ? hotelBookings : [],
+  };
+}
+
+async function fetchStaffClinicalDirectory(): Promise<{
+  availableHospitals: unknown[];
+  availableDoctors: unknown[];
+}> {
+  const [hospitals, doctors] = await Promise.all([
+    prisma.hospital?.findMany
+      ? prisma.hospital.findMany({
+          where: { isActive: true },
+          select: {
+            id: true,
+            name: true,
+            city: true,
+            accreditation: true,
+          },
+          orderBy: { name: 'asc' },
+        })
+      : Promise.resolve([]),
+    prisma.doctor?.findMany
+      ? prisma.doctor.findMany({
+          where: { isActive: true },
+          select: {
+            id: true,
+            fullName: true,
+            hospitalId: true,
+            qualification: true,
+            specialisation: { select: { id: true, name: true } },
+          },
+          orderBy: { fullName: 'asc' },
+        })
+      : Promise.resolve([]),
+  ]);
+
+  return {
+    availableHospitals: Array.isArray(hospitals) ? hospitals : [],
+    availableDoctors: Array.isArray(doctors) ? doctors : [],
   };
 }
 
@@ -235,12 +310,12 @@ async function buildLifecycleSnapshotFromCase(
     rawTravelLogistics?: TravelLogisticsPayload | null;
     postReturnFollowUps?: FollowUpMilestone[];
     passportExpiry?: Date | null;
+    availableHospitals?: unknown[];
+    availableDoctors?: unknown[];
   }
 ): Promise<CaseLifecycleSnapshot> {
-  const { documents, unpaidBillCount } = await fetchCaseSupportingContext(
-    targetCase.id,
-    targetCase.patientId
-  );
+  const { documents, unpaidBillCount, medicalBills, hotelBookings } =
+    await fetchCaseSupportingContext(targetCase.id, targetCase.patientId);
 
   const effectiveStatus = overrides?.status ?? targetCase.status;
   const effectiveHospital =
@@ -323,6 +398,14 @@ async function buildLifecycleSnapshotFromCase(
     formCSlaStatus,
     unpaidBillCount,
     documents,
+    medicalBills,
+    hotelBookings,
+    ...(overrides?.availableHospitals !== undefined
+      ? { availableHospitals: overrides.availableHospitals }
+      : {}),
+    ...(overrides?.availableDoctors !== undefined
+      ? { availableDoctors: overrides.availableDoctors }
+      : {}),
     nextActions,
   };
 }
@@ -356,7 +439,12 @@ export async function getCaseLifecycle(
   const access = await authorizeCaseClinicalAccess(caseId, actor);
   if (!access.ok) return access;
 
-  const snapshot = await buildLifecycleSnapshotFromCase(access.targetCase);
+  const staffDir =
+    actor.role === 'MANAGER' || actor.role === 'ADMIN'
+      ? await fetchStaffClinicalDirectory()
+      : undefined;
+
+  const snapshot = await buildLifecycleSnapshotFromCase(access.targetCase, staffDir);
   return { ok: true, data: snapshot };
 }
 

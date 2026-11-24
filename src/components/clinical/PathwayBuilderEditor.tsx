@@ -64,6 +64,7 @@ interface PathwayBuilderEditorProps {
   caseId: string;
   backHref: string;
   backLabel: string;
+  embedded?: boolean;
 }
 
 const CATEGORY_OPTIONS = [
@@ -112,6 +113,7 @@ export function PathwayBuilderEditor({
   caseId,
   backHref,
   backLabel,
+  embedded = false,
 }: PathwayBuilderEditorProps) {
   const [caseDetails, setCaseDetails] = useState<CaseDetails | null>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -428,43 +430,75 @@ export function PathwayBuilderEditor({
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-5 border-b border-surface-200">
-        <div>
-          <Link
-            href={backHref}
-            className="inline-flex items-center gap-1.5 text-xs font-medium text-surface-500 hover:text-surface-900 mb-2 transition-colors"
-          >
-            <ArrowLeft className="w-3.5 h-3.5" /> {backLabel}
-          </Link>
-          <h1 className="text-xl font-semibold tracking-tight text-surface-900">
-            Configurable Patient Pathway &amp; Action Builder
-          </h1>
-          <p className="text-xs sm:text-sm text-surface-500 mt-1">
-            Patient: <span className="font-medium text-surface-900">{caseDetails?.patient?.user?.fullName}</span> (
-            {caseDetails?.patient?.user?.email})
-          </p>
+      {embedded ? (
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-4 border-b border-surface-200">
+          <div>
+            <h2 className="text-sm sm:text-base font-semibold text-surface-900">
+              Clinical Pathway &amp; Milestone Orchestration
+            </h2>
+            <p className="text-xs font-normal text-surface-500 mt-0.5">
+              Apply specialty 7-stage presets or customize stage milestones and responsible clinical roles.
+            </p>
+          </div>
+          <div className="flex items-center gap-2.5 shrink-0">
+            <Button
+              onClick={() => addCustomStage()}
+              variant="secondary"
+              size="sm"
+              disabled={isClosed}
+            >
+              <Plus className="w-4 h-4" /> Add Custom Stage
+            </Button>
+            <Button
+              onClick={handleSavePathway}
+              size="sm"
+              isLoading={isSaving}
+              disabled={isSaving || isClosed}
+            >
+              {!isSaving && <Save className="w-4 h-4" />}
+              <span>{isSaving ? 'Saving Pathway...' : 'Save Patient Pathway'}</span>
+            </Button>
+          </div>
         </div>
+      ) : (
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-5 border-b border-surface-200">
+          <div>
+            <Link
+              href={backHref}
+              className="inline-flex items-center gap-1.5 text-xs font-medium text-surface-500 hover:text-surface-900 mb-2 transition-colors"
+            >
+              <ArrowLeft className="w-3.5 h-3.5" /> {backLabel}
+            </Link>
+            <h1 className="text-xl font-semibold tracking-tight text-surface-900">
+              Configurable Patient Pathway &amp; Action Builder
+            </h1>
+            <p className="text-xs sm:text-sm text-surface-500 mt-1">
+              Patient: <span className="font-medium text-surface-900">{caseDetails?.patient?.user?.fullName}</span> (
+              {caseDetails?.patient?.user?.email})
+            </p>
+          </div>
 
-        <div className="flex items-center gap-2.5 shrink-0">
-          <Button
-            onClick={() => addCustomStage()}
-            variant="secondary"
-            size="sm"
-            disabled={isClosed}
-          >
-            <Plus className="w-4 h-4" /> Add Custom Stage
-          </Button>
-          <Button
-            onClick={handleSavePathway}
-            size="sm"
-            isLoading={isSaving}
-            disabled={isSaving || isClosed}
-          >
-            {!isSaving && <Save className="w-4 h-4" />}
-            <span>{isSaving ? 'Saving Pathway...' : 'Save Patient Pathway'}</span>
-          </Button>
+          <div className="flex items-center gap-2.5 shrink-0">
+            <Button
+              onClick={() => addCustomStage()}
+              variant="secondary"
+              size="sm"
+              disabled={isClosed}
+            >
+              <Plus className="w-4 h-4" /> Add Custom Stage
+            </Button>
+            <Button
+              onClick={handleSavePathway}
+              size="sm"
+              isLoading={isSaving}
+              disabled={isSaving || isClosed}
+            >
+              {!isSaving && <Save className="w-4 h-4" />}
+              <span>{isSaving ? 'Saving Pathway...' : 'Save Patient Pathway'}</span>
+            </Button>
+          </div>
         </div>
-      </div>
+      )}
 
       {isClosed && (
         <Card className="p-4 border-amber-200 bg-amber-50 text-xs font-medium text-amber-900">

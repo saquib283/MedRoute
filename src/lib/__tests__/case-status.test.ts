@@ -2,6 +2,9 @@ const mockCaseFindMany = jest.fn();
 const mockCaseCount = jest.fn();
 const mockCaseFindUnique = jest.fn();
 const mockCaseUpdate = jest.fn();
+const mockDocumentCount = jest.fn();
+const mockMedicalBillCount = jest.fn();
+const mockFitToFlyFindUnique = jest.fn();
 const mockCreateAuditLog = jest.fn();
 const mockAssignPatientCoordinator = jest.fn();
 
@@ -13,6 +16,15 @@ jest.mock('@/lib/prisma', () => ({
       count: (...args: unknown[]) => mockCaseCount(...args),
       findUnique: (...args: unknown[]) => mockCaseFindUnique(...args),
       update: (...args: unknown[]) => mockCaseUpdate(...args),
+    },
+    document: {
+      count: (...args: unknown[]) => mockDocumentCount(...args),
+    },
+    medicalBill: {
+      count: (...args: unknown[]) => mockMedicalBillCount(...args),
+    },
+    fitToFlyClearance: {
+      findUnique: (...args: unknown[]) => mockFitToFlyFindUnique(...args),
     },
   },
 }));
@@ -29,8 +41,11 @@ jest.mock('@/lib/services/case-assignment.service', () => ({
 import { NextRequest } from 'next/server';
 import { CASE_STATUS_ORDER, CASE_STATUS_LABELS, CASE_PHASE_GROUPS, getCasePhaseIndex } from '../constants';
 import { updateCaseStatusSchema } from '../validation/schemas';
+import { computeFormCSlaStatus } from '../validation/lifecycle-schemas';
+import { encrypt } from '../auth/crypto';
 import { GET as getAdminEscalations, PUT as putAdminEscalations } from '@/app/api/v1/admin/escalations/route';
-import { PUT as putAdminCases } from '@/app/api/v1/admin/cases/route';
+import { GET as getAdminCases, PUT as putAdminCases } from '@/app/api/v1/admin/cases/route';
+import { GET as getManagerCases, PUT as putManagerCases } from '@/app/api/v1/manager/cases/route';
 
 const ALL_12 = [
   'INQUIRY_RECEIVED',
@@ -195,5 +210,247 @@ describe('Admin Escalations & Case Normalization Routes', () => {
         newValue: { escalationNote: null },
       })
     );
+  });
+});
+
+describe('Case Status Stage-Gate Guardrails, PHI Masking & Form C 24h SLA', () => {
+  const adminHeaders = {
+    'x-user-id': 'admin-1',
+    'x-user-role': 'ADMIN',
+    'x-user-email': 'admin@medroute.test',
+    'content-type': 'application/json',
+  };
+
+  const managerHeaders = {
+    'x-user-id': 'mgr-1',
+    'x-user-role': 'MANAGER',
+    'x-user-email': 'mgr@medroute.test',
+    'content-type': 'application/json',
+  };
+
+  beforeEach(() => {
+    jest.clearAllMocks();
+    mockDocumentCount.mockResolvedValue(1);
+    mockMedicalBillCount.mockResolvedValue(0);
+    mockFitToFlyFindUnique.mockResolvedValue(null);
+  });
+
+  it('computeFormCSlaStatus flags OVERDUE_STATUTORY when >24h elapsed since arrival without Form C', () => {
+    const arrival = new Date('2026-11-22T08:00:00Z').toISOString();
+    const now = new Date('2026-11-24T10:00:00Z');
+    expect(computeFormCSlaStatus(null, null, now)).toBe('NOT_ARRIVED');
+    expect(computeFormCSlaStatus(arrival, null, new Date('2026-11-22T20:00:00Z'))).toBe('DUE_WITHIN_24H');
+    expect(computeFormCSlaStatus(arrival, null, now)).toBe('OVERDUE_STATUTORY');
+    expect(computeFormCSlaStatus(arrival, '2026-11-22T18:00:00Z', now)).toBe('SUBMITTED_ON_TIME');
+    expect(computeFormCSlaStatus(arrival, '2026-11-23T12:00:00Z', now)).toBe('SUBMITTED_LATE');
+  });
+
+  it('PUT /api/v1/admin/cases rejects FIT_TO_FLY_CLEARED when fitToFlyClearance?.isCleared !== true', async () => {
+    mockCaseFindUnique.mockResolvedValueOnce({
+      id: 'case-ftf-1',
+      patientId: 'pat-1',
+      status: 'WARD_RECOVERY',
+      managerId: 'mgr-1',
+      fitToFlyClearance: { isCleared: false },
+    });
+
+    const req = new NextRequest('http://localhost/api/v1/admin/cases', {
+      method: 'PUT',
+      headers: adminHeaders,
+      body: JSON.stringify({
+        id: 'case-ftf-1',
+        status: 'FIT_TO_FLY_CLEARED',
+      }),
+    });
+
+    const res = await putAdminCases(req);
+    expect(res.status).toBe(400);
+    expect(mockCaseUpdate).not.toHaveBeenCalled();
+  });
+
+  it('PUT /api/v1/admin/cases rejects CLOSED when unpaid non-cancelled bills exist without escalationNote or overrideReason', async () => {
+    mockCaseFindUnique.mockResolvedValueOnce({
+      id: 'case-bill-1',
+      patientId: 'pat-1',
+      status: 'FIT_TO_FLY_CLEARED',
+      managerId: 'mgr-1',
+      fitToFlyClearance: { isCleared: true },
+    });
+    mockMedicalBillCount.mockResolvedValueOnce(2);
+
+    const blockedReq = new NextRequest('http://localhost/api/v1/admin/cases', {
+      method: 'PUT',
+      headers: adminHeaders,
+      body: JSON.stringify({
+        id: 'case-bill-1',
+        status: 'CLOSED',
+      }),
+    });
+
+    const blockedRes = await putAdminCases(blockedReq);
+    expect(blockedRes.status).toBe(400);
+    expect(mockCaseUpdate).not.toHaveBeenCalled();
+
+    // Allowed when explicit overrideReason / escalationNote is provided
+    mockCaseFindUnique
+      .mockResolvedValueOnce({
+        id: 'case-bill-1',
+        patientId: 'pat-1',
+        status: 'FIT_TO_FLY_CLEARED',
+        managerId: 'mgr-1',
+        fitToFlyClearance: { isCleared: true },
+      })
+      .mockResolvedValueOnce({
+        id: 'case-bill-1',
+        patientId: 'pat-1',
+        status: 'CLOSED',
+        managerId: 'mgr-1',
+        escalationNote: 'Approved financial settlement plan on file',
+      });
+    mockMedicalBillCount.mockResolvedValueOnce(2);
+    mockCaseUpdate.mockResolvedValueOnce({ id: 'case-bill-1', status: 'CLOSED' });
+
+    const overrideReq = new NextRequest('http://localhost/api/v1/admin/cases', {
+      method: 'PUT',
+      headers: adminHeaders,
+      body: JSON.stringify({
+        id: 'case-bill-1',
+        status: 'CLOSED',
+        escalationNote: 'Approved financial settlement plan on file',
+      }),
+    });
+
+    const overrideRes = await putAdminCases(overrideReq);
+    expect(overrideRes.status).toBe(200);
+    expect(mockCaseUpdate).toHaveBeenCalled();
+  });
+
+  it('PUT /api/v1/manager/cases rejects IN_TREATMENT without verified PASSPORT, FIT_TO_FLY_CLEARED without clearance, and CLOSED with unpaid bills', async () => {
+    // 1. Entering IN_TREATMENT without verified PASSPORT and no overrideReason
+    mockCaseFindUnique.mockResolvedValueOnce({
+      id: 'case-mgr-1',
+      patientId: 'pat-1',
+      status: 'PLAN_CONFIRMED',
+      managerId: 'mgr-1',
+      fitToFlyClearance: null,
+    });
+    mockDocumentCount.mockResolvedValueOnce(0);
+
+    const noPassportReq = new NextRequest('http://localhost/api/v1/manager/cases', {
+      method: 'PUT',
+      headers: managerHeaders,
+      body: JSON.stringify({
+        caseId: 'case-mgr-1',
+        status: 'IN_TREATMENT',
+      }),
+    });
+    const noPassportRes = await putManagerCases(noPassportReq);
+    expect(noPassportRes.status).toBe(400);
+    expect(mockCaseUpdate).not.toHaveBeenCalled();
+
+    // 2. Jumping to FIT_TO_FLY_CLEARED without signed Fit-to-Fly clearance
+    mockCaseFindUnique.mockResolvedValueOnce({
+      id: 'case-mgr-1',
+      patientId: 'pat-1',
+      status: 'WARD_RECOVERY',
+      managerId: 'mgr-1',
+      fitToFlyClearance: { isCleared: false },
+    });
+    const noFtfReq = new NextRequest('http://localhost/api/v1/manager/cases', {
+      method: 'PUT',
+      headers: managerHeaders,
+      body: JSON.stringify({
+        caseId: 'case-mgr-1',
+        status: 'FIT_TO_FLY_CLEARED',
+      }),
+    });
+    const noFtfRes = await putManagerCases(noFtfReq);
+    expect(noFtfRes.status).toBe(400);
+    expect(mockCaseUpdate).not.toHaveBeenCalled();
+
+    // 3. Closing with unpaid bills and no override/escalationNote
+    mockCaseFindUnique.mockResolvedValueOnce({
+      id: 'case-mgr-1',
+      patientId: 'pat-1',
+      status: 'FIT_TO_FLY_CLEARED',
+      managerId: 'mgr-1',
+      fitToFlyClearance: { isCleared: true },
+    });
+    mockMedicalBillCount.mockResolvedValueOnce(1);
+    const unpaidCloseReq = new NextRequest('http://localhost/api/v1/manager/cases', {
+      method: 'PUT',
+      headers: managerHeaders,
+      body: JSON.stringify({
+        caseId: 'case-mgr-1',
+        status: 'CLOSED',
+      }),
+    });
+    const unpaidCloseRes = await putManagerCases(unpaidCloseReq);
+    expect(unpaidCloseRes.status).toBe(400);
+    expect(mockCaseUpdate).not.toHaveBeenCalled();
+  });
+
+  it('GET /api/v1/manager/cases and GET /api/v1/admin/cases mask patient passportNo and travelLogistics attendant passports', async () => {
+    const patCipher = encrypt('P98765432');
+    const attCipher = encrypt('A11223344');
+
+    mockCaseFindMany.mockResolvedValueOnce([
+      {
+        id: 'case-phi-1',
+        patientId: 'pat-1',
+        managerId: 'mgr-1',
+        status: 'PLAN_CONFIRMED',
+        travelLogistics: {
+          attendants: [{ fullName: 'Sara Ali', passportNo: attCipher, relation: 'Sister' }],
+        },
+        patient: {
+          id: 'pat-1',
+          passportNo: patCipher,
+          user: { fullName: 'Tariq Ali', email: 'tariq@example.com', phone: '+96890001111' },
+        },
+      },
+    ]);
+
+    const mgrRes = await getManagerCases(
+      new NextRequest('http://localhost/api/v1/manager/cases', {
+        method: 'GET',
+        headers: managerHeaders,
+      })
+    );
+    expect(mgrRes.status).toBe(200);
+    const mgrJson = await mgrRes.json();
+    expect(mgrJson.cases[0].patient.passportNo).toBe('*****5432');
+    expect(mgrJson.cases[0].travelLogistics.attendants[0].passportNo).toBe('*****3344');
+
+    mockCaseFindMany.mockResolvedValueOnce([
+      {
+        id: 'case-phi-1',
+        patientId: 'pat-1',
+        managerId: 'mgr-1',
+        status: 'PLAN_CONFIRMED',
+        travelLogistics: {
+          attendants: [{ fullName: 'Sara Ali', passportNo: attCipher, relation: 'Sister' }],
+        },
+        patient: {
+          id: 'pat-1',
+          passportNo: patCipher,
+          user: { fullName: 'Tariq Ali', email: 'tariq@example.com' },
+        },
+        manager: { id: 'mgr-1', fullName: 'Coordinator 1' },
+        _count: { appointments: 1 },
+      },
+    ]);
+    mockCaseCount.mockResolvedValueOnce(1);
+
+    const adminRes = await getAdminCases(
+      new NextRequest('http://localhost/api/v1/admin/cases', {
+        method: 'GET',
+        headers: adminHeaders,
+      })
+    );
+    expect(adminRes.status).toBe(200);
+    const adminJson = await adminRes.json();
+    expect(adminJson.data.cases[0].patient.passportNo).toBe('*****5432');
+    expect(adminJson.data.cases[0].travelLogistics.attendants[0].passportNo).toBe('*****3344');
   });
 });
