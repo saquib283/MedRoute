@@ -14,9 +14,12 @@ import { Badge, CaseStatusBadge } from '@/components/ui/Badge';
 import { Select } from '@/components/ui/Select';
 import { toast } from '@/components/ui/Toast';
 import {
+  APPOINTMENT_MODES,
+  APPOINTMENT_MODE_LABELS,
   APPOINTMENT_STATUS_LABELS,
   APPOINTMENT_TYPE_LABELS,
 } from '@/lib/constants';
+import { formatConsultationScheduleDualTz } from '@/lib/validation/booking-helpers';
 import {
   Calendar,
   MapPin,
@@ -25,6 +28,8 @@ import {
   AlertTriangle,
   Save,
   X,
+  Video,
+  Languages,
 } from 'lucide-react';
 
 type FilterTab = 'upcoming' | 'past' | 'all';
@@ -33,6 +38,9 @@ interface DoctorAppointment {
   id: string;
   caseId: string;
   appointmentType: string;
+  mode?: string;
+  meetingUrl?: string | null;
+  interpreterLanguage?: string | null;
   scheduledAt: string;
   status: string;
   clinicalNotes: string | null;
@@ -218,6 +226,10 @@ export default function DoctorAppointmentsPage() {
             const targetCaseId = appt.case?.id || appt.caseId;
             const isEditingNotes = editingNotesId === appt.id;
             const isSaving = updatingId === appt.id;
+            const dualTz = formatConsultationScheduleDualTz(appt.scheduledAt);
+            const isTeleconsult = appt.mode === APPOINTMENT_MODES.TELECONSULTATION;
+            const canJoinVideo =
+              isTeleconsult && Boolean(appt.meetingUrl) && appt.status !== 'CANCELLED';
 
             return (
               <Card key={appt.id} className="p-5 space-y-4">
@@ -233,6 +245,18 @@ export default function DoctorAppointmentsPage() {
                       <Badge variant={getStatusBadgeVariant(appt.status)} dot>
                         {APPOINTMENT_STATUS_LABELS[appt.status] || appt.status}
                       </Badge>
+                      <Badge variant={isTeleconsult ? 'primary' : 'default'}>
+                        {isTeleconsult && <Video className="w-3 h-3" aria-hidden="true" />}
+                        <span>
+                          {APPOINTMENT_MODE_LABELS[appt.mode || 'IN_PERSON'] || 'In-Person Hospital Visit'}
+                        </span>
+                      </Badge>
+                      {appt.interpreterLanguage && (
+                        <Badge variant="info">
+                          <Languages className="w-3 h-3" aria-hidden="true" />
+                          <span>Interpreter: {appt.interpreterLanguage}</span>
+                        </Badge>
+                      )}
                       {appt.case?.status && <CaseStatusBadge status={appt.case.status} />}
                       {appt.case?.isUrgent && (
                         <Badge variant="danger" size="sm">
@@ -243,9 +267,14 @@ export default function DoctorAppointmentsPage() {
 
                     <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-surface-600">
                       <span className="inline-flex items-center gap-1.5 font-medium text-primary-700 tabular-nums">
-                        <Calendar className="w-3.5 h-3.5" />
-                        {APPOINTMENT_TYPE_LABELS[appt.appointmentType] || appt.appointmentType} —{' '}
-                        {new Date(appt.scheduledAt).toLocaleString()}
+                        <Calendar className="w-3.5 h-3.5" aria-hidden="true" />
+                        <span>
+                          {APPOINTMENT_TYPE_LABELS[appt.appointmentType] || appt.appointmentType} —{' '}
+                          {dualTz.istLabel}
+                        </span>
+                      </span>
+                      <span className="text-[11px] text-surface-500 tabular-nums">
+                        Local: {dualTz.localLabel}
                       </span>
                       {appt.hospital?.name && (
                         <span className="inline-flex items-center gap-1">
@@ -259,6 +288,18 @@ export default function DoctorAppointmentsPage() {
 
                   {/* Quick Actions & Status Control */}
                   <div className="flex flex-wrap items-center gap-2.5 shrink-0">
+                    {canJoinVideo && appt.meetingUrl && (
+                      <a
+                        href={appt.meetingUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="inline-flex items-center justify-center gap-1.5 min-h-11 px-3.5 rounded-md bg-primary-600 hover:bg-primary-700 text-white text-xs font-medium transition-colors"
+                      >
+                        <Video className="w-3.5 h-3.5" aria-hidden="true" />
+                        <span>Join Video Consultation</span>
+                        <ExternalLink className="w-3 h-3" aria-hidden="true" />
+                      </a>
+                    )}
                     <div className="w-44">
                       <Select
                         value={appt.status}

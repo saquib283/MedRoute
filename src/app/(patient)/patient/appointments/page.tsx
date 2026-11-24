@@ -11,10 +11,19 @@ import { Button } from '@/components/ui/Button';
 import { Badge } from '@/components/ui/Badge';
 import { Modal } from '@/components/ui/Modal';
 import { Select, SelectOption } from '@/components/ui/Select';
+import { Input } from '@/components/ui/Input';
 import { DatePicker } from '@/components/ui/DatePicker';
 import { toast } from '@/components/ui/Toast';
-import { APPOINTMENT_STATUS_LABELS, APPOINTMENT_TYPE_LABELS } from '@/lib/constants';
-import { formatDoctorDisplayName } from '@/lib/validation/booking-helpers';
+import {
+  APPOINTMENT_MODES,
+  APPOINTMENT_MODE_LABELS,
+  APPOINTMENT_STATUS_LABELS,
+  APPOINTMENT_TYPE_LABELS,
+} from '@/lib/constants';
+import {
+  formatConsultationScheduleDualTz,
+  formatDoctorDisplayName,
+} from '@/lib/validation/booking-helpers';
 import {
   Calendar,
   Building2,
@@ -26,6 +35,9 @@ import {
   AlertCircle,
   Stethoscope,
   RefreshCw,
+  Video,
+  Languages,
+  ExternalLink,
 } from 'lucide-react';
 
 interface Hospital {
@@ -44,6 +56,9 @@ interface Appointment {
   id: string;
   scheduledAt: string;
   appointmentType: string;
+  mode?: string;
+  meetingUrl?: string | null;
+  interpreterLanguage?: string | null;
   status: string;
   cancellationReason: string | null;
   hospital: {
@@ -55,6 +70,19 @@ interface Appointment {
     qualification: string | null;
   };
 }
+
+const APPOINTMENT_MODE_OPTIONS: SelectOption[] = [
+  {
+    value: APPOINTMENT_MODES.TELECONSULTATION,
+    label: APPOINTMENT_MODE_LABELS.TELECONSULTATION,
+    description: 'Remote video consultation prior to travel or after return',
+  },
+  {
+    value: APPOINTMENT_MODES.IN_PERSON,
+    label: APPOINTMENT_MODE_LABELS.IN_PERSON,
+    description: 'In-hospital consultation at partner facility in India',
+  },
+];
 
 const STATUS_FILTERS = [
   { id: 'ALL', label: 'All Sessions' },
@@ -99,6 +127,8 @@ export default function AppointmentsPage() {
   const [selectedHospital, setSelectedHospital] = useState('');
   const [selectedDoctor, setSelectedDoctor] = useState('');
   const [selectedType, setSelectedType] = useState('CONSULTATION');
+  const [selectedMode, setSelectedMode] = useState<string>(APPOINTMENT_MODES.TELECONSULTATION);
+  const [interpreterLanguage, setInterpreterLanguage] = useState('');
   const [scheduledAt, setScheduledAt] = useState('');
 
   const [cancelTarget, setCancelTarget] = useState<Appointment | null>(null);
@@ -161,6 +191,8 @@ export default function AppointmentsPage() {
           hospitalId: selectedHospital,
           doctorId: selectedDoctor,
           appointmentType: selectedType,
+          mode: selectedMode,
+          interpreterLanguage: interpreterLanguage.trim() || undefined,
           scheduledAt,
         }),
       });
@@ -175,6 +207,8 @@ export default function AppointmentsPage() {
         setSelectedHospital('');
         setSelectedDoctor('');
         setSelectedType('CONSULTATION');
+        setSelectedMode(APPOINTMENT_MODES.TELECONSULTATION);
+        setInterpreterLanguage('');
         setScheduledAt('');
         void fetchAppointments();
       } else {
@@ -433,79 +467,126 @@ export default function AppointmentsPage() {
       {/* View 1: Cards */}
       {viewMode === 'cards' && filteredAppointmentsList.length > 0 && (
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          {filteredAppointmentsList.map((app) => (
-            <Card key={app.id} hover className="p-5 flex flex-col justify-between space-y-4">
-              <div className="flex items-start justify-between gap-3">
-                <div className="flex items-center gap-3 min-w-0">
-                  <div className="w-10 h-10 rounded-md bg-surface-100 text-surface-700 border border-surface-200 flex items-center justify-center font-semibold text-xs shrink-0">
-                    Dr
+          {filteredAppointmentsList.map((app) => {
+            const dualTz = formatConsultationScheduleDualTz(app.scheduledAt);
+            const isTeleconsult = app.mode === APPOINTMENT_MODES.TELECONSULTATION;
+            const canJoinVideo =
+              isTeleconsult &&
+              Boolean(app.meetingUrl) &&
+              app.status !== 'CANCELLED' &&
+              app.status !== 'COMPLETED';
+
+            return (
+              <Card key={app.id} hover className="p-5 flex flex-col justify-between space-y-4">
+                <div className="flex items-start justify-between gap-3">
+                  <div className="flex items-center gap-3 min-w-0">
+                    <div className="w-10 h-10 rounded-md bg-surface-100 text-surface-700 border border-surface-200 flex items-center justify-center font-semibold text-xs shrink-0">
+                      Dr
+                    </div>
+                    <div className="min-w-0">
+                      <span className="text-[11px] text-surface-600 font-medium">
+                        {APPOINTMENT_TYPE_LABELS[app.appointmentType] || app.appointmentType}
+                      </span>
+                      <h2 className="text-sm sm:text-base font-semibold text-surface-900 truncate">
+                        {formatDoctorDisplayName(app.doctor.fullName)}
+                      </h2>
+                      {app.doctor.qualification && (
+                        <p className="text-xs text-surface-500 truncate">{app.doctor.qualification}</p>
+                      )}
+                    </div>
                   </div>
-                  <div className="min-w-0">
-                    <span className="text-[11px] text-surface-600 font-medium">
-                      {APPOINTMENT_TYPE_LABELS[app.appointmentType] || app.appointmentType}
+
+                  <Badge variant={getStatusBadgeVariant(app.status)} dot>
+                    {APPOINTMENT_STATUS_LABELS[app.status] || app.status}
+                  </Badge>
+                </div>
+
+                <div className="flex flex-wrap items-center gap-2">
+                  <Badge variant={isTeleconsult ? 'primary' : 'default'}>
+                    {isTeleconsult ? (
+                      <Video className="w-3 h-3" aria-hidden="true" />
+                    ) : (
+                      <Building2 className="w-3 h-3" aria-hidden="true" />
+                    )}
+                    <span>
+                      {APPOINTMENT_MODE_LABELS[app.mode || 'IN_PERSON'] || 'In-Person Hospital Visit'}
                     </span>
-                    <h2 className="text-sm sm:text-base font-semibold text-surface-900 truncate">
-                      {formatDoctorDisplayName(app.doctor.fullName)}
-                    </h2>
-                    {app.doctor.qualification && (
-                      <p className="text-xs text-surface-500 truncate">{app.doctor.qualification}</p>
+                  </Badge>
+
+                  {app.interpreterLanguage && (
+                    <Badge variant="info">
+                      <Languages className="w-3 h-3" aria-hidden="true" />
+                      <span>Interpreter: {app.interpreterLanguage}</span>
+                    </Badge>
+                  )}
+                </div>
+
+                <div className="bg-surface-50 px-3.5 py-3 rounded-md border border-surface-200 space-y-1.5 text-xs text-surface-700">
+                  <div className="flex items-center gap-2">
+                    <Building2 className="w-3.5 h-3.5 text-surface-500 shrink-0" aria-hidden="true" />
+                    <span className="font-medium text-surface-900">{app.hospital.name}</span>
+                    <span className="text-surface-500">({app.hospital.city})</span>
+                  </div>
+
+                  <div className="flex items-start gap-2 tabular-nums text-surface-700">
+                    <Clock className="w-3.5 h-3.5 text-surface-500 shrink-0 mt-0.5" aria-hidden="true" />
+                    <div className="space-y-0.5">
+                      <span className="block font-medium text-surface-900">{dualTz.istLabel}</span>
+                      <span className="block text-[11px] text-surface-500">
+                        Your time: {dualTz.localLabel}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+
+                {isTeleconsult && !app.meetingUrl && app.status !== 'CANCELLED' && (
+                  <p className="text-[11px] text-surface-500">
+                    Secure video consultation link will appear here once assigned by your care coordinator.
+                  </p>
+                )}
+
+                {app.status === 'CANCELLED' && app.cancellationReason && (
+                  <div className="p-3 bg-danger-50 border border-danger-200 rounded-md text-xs text-danger-800">
+                    <span className="font-medium">Cancellation note: </span>
+                    {app.cancellationReason}
+                  </div>
+                )}
+
+                {(canJoinVideo || (app.status !== 'CANCELLED' && app.status !== 'COMPLETED')) && (
+                  <div className="flex flex-wrap items-center justify-end gap-2 pt-1">
+                    {canJoinVideo && app.meetingUrl && (
+                      <a
+                        href={app.meetingUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="inline-flex items-center justify-center gap-1.5 min-h-11 px-3.5 rounded-md bg-primary-600 hover:bg-primary-700 text-white text-xs font-medium transition-colors"
+                      >
+                        <Video className="w-3.5 h-3.5" aria-hidden="true" />
+                        <span>Join Video Consultation</span>
+                        <ExternalLink className="w-3 h-3" aria-hidden="true" />
+                      </a>
+                    )}
+
+                    {app.status !== 'CANCELLED' && app.status !== 'COMPLETED' && (
+                      <Button
+                        type="button"
+                        variant="secondary"
+                        size="sm"
+                        className="text-danger-700 hover:bg-danger-50 border-danger-200"
+                        onClick={() => {
+                          setCancelTarget(app);
+                          setCancelReason('');
+                          setCancelError('');
+                        }}
+                      >
+                        Cancel or Reschedule
+                      </Button>
                     )}
                   </div>
-                </div>
-
-                <Badge variant={getStatusBadgeVariant(app.status)} dot>
-                  {APPOINTMENT_STATUS_LABELS[app.status] || app.status}
-                </Badge>
-              </div>
-
-              <div className="bg-surface-50 px-3.5 py-3 rounded-md border border-surface-200 space-y-1.5 text-xs text-surface-700">
-                <div className="flex items-center gap-2">
-                  <Building2 className="w-3.5 h-3.5 text-surface-500 shrink-0" aria-hidden="true" />
-                  <span className="font-medium text-surface-900">{app.hospital.name}</span>
-                  <span className="text-surface-500">({app.hospital.city})</span>
-                </div>
-
-                <div className="flex items-center gap-2 tabular-nums text-surface-600">
-                  <Clock className="w-3.5 h-3.5 text-surface-500 shrink-0" aria-hidden="true" />
-                  <span>
-                    {new Date(app.scheduledAt).toLocaleString('en-US', {
-                      weekday: 'short',
-                      month: 'short',
-                      day: 'numeric',
-                      year: 'numeric',
-                      hour: '2-digit',
-                      minute: '2-digit',
-                    })}
-                  </span>
-                </div>
-              </div>
-
-              {app.status === 'CANCELLED' && app.cancellationReason && (
-                <div className="p-3 bg-danger-50 border border-danger-200 rounded-md text-xs text-danger-800">
-                  <span className="font-medium">Cancellation note: </span>
-                  {app.cancellationReason}
-                </div>
-              )}
-
-              {app.status !== 'CANCELLED' && app.status !== 'COMPLETED' && (
-                <div className="flex justify-end pt-1">
-                  <Button
-                    type="button"
-                    variant="secondary"
-                    size="sm"
-                    className="text-danger-700 hover:bg-danger-50 border-danger-200"
-                    onClick={() => {
-                      setCancelTarget(app);
-                      setCancelReason('');
-                      setCancelError('');
-                    }}
-                  >
-                    Cancel or Reschedule
-                  </Button>
-                </div>
-              )}
-            </Card>
-          ))}
+                )}
+              </Card>
+            );
+          })}
         </div>
       )}
 
@@ -522,13 +603,13 @@ export default function AppointmentsPage() {
               <thead>
                 <tr className="bg-surface-50 border-b border-surface-200 text-[11px] font-medium uppercase tracking-wide text-surface-500">
                   <th scope="col" className="px-4 py-3">
-                    Date &amp; Time
+                    Date &amp; Time (IST / Local)
                   </th>
                   <th scope="col" className="px-4 py-3">
                     Specialist
                   </th>
                   <th scope="col" className="px-4 py-3">
-                    Hospital
+                    Mode &amp; Interpreter
                   </th>
                   <th scope="col" className="px-4 py-3">
                     Session Type
@@ -542,55 +623,84 @@ export default function AppointmentsPage() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-surface-100 text-surface-700">
-                {filteredAppointmentsList.map((app) => (
-                  <tr key={app.id} className="hover:bg-surface-50/70 transition-colors">
-                    <td className="px-4 py-3.5 whitespace-nowrap font-medium text-surface-900 tabular-nums">
-                      {new Date(app.scheduledAt).toLocaleString('en-US', {
-                        month: 'short',
-                        day: 'numeric',
-                        year: 'numeric',
-                        hour: '2-digit',
-                        minute: '2-digit',
-                      })}
-                    </td>
-                    <td className="px-4 py-3.5">
-                      <div className="font-medium text-surface-900">
-                        {formatDoctorDisplayName(app.doctor.fullName)}
-                      </div>
-                      {app.doctor.qualification && (
-                        <div className="text-[11px] text-surface-500">{app.doctor.qualification}</div>
-                      )}
-                    </td>
-                    <td className="px-4 py-3.5">
-                      {app.hospital.name} ({app.hospital.city})
-                    </td>
-                    <td className="px-4 py-3.5">
-                      {APPOINTMENT_TYPE_LABELS[app.appointmentType] || app.appointmentType}
-                    </td>
-                    <td className="px-4 py-3.5">
-                      <Badge variant={getStatusBadgeVariant(app.status)} dot>
-                        {APPOINTMENT_STATUS_LABELS[app.status] || app.status}
-                      </Badge>
-                    </td>
-                    <td className="px-4 py-3.5 text-right">
-                      {app.status !== 'CANCELLED' && app.status !== 'COMPLETED' && (
-                        <Button
-                          type="button"
-                          variant="ghost"
-                          size="sm"
-                          className="text-danger-700 hover:text-danger-800 hover:bg-danger-50"
-                          onClick={() => {
-                            setCancelTarget(app);
-                            setCancelReason('');
-                            setCancelError('');
-                          }}
-                        >
-                          Cancel
-                        </Button>
-                      )}
-                    </td>
-                  </tr>
-                ))}
+                {filteredAppointmentsList.map((app) => {
+                  const dualTz = formatConsultationScheduleDualTz(app.scheduledAt);
+                  const isTeleconsult = app.mode === APPOINTMENT_MODES.TELECONSULTATION;
+                  const canJoinVideo =
+                    isTeleconsult &&
+                    Boolean(app.meetingUrl) &&
+                    app.status !== 'CANCELLED' &&
+                    app.status !== 'COMPLETED';
+
+                  return (
+                    <tr key={app.id} className="hover:bg-surface-50/70 transition-colors">
+                      <td className="px-4 py-3.5 whitespace-nowrap tabular-nums">
+                        <div className="font-medium text-surface-900">{dualTz.istLabel}</div>
+                        <div className="text-[11px] text-surface-500">
+                          Your time: {dualTz.localLabel}
+                        </div>
+                      </td>
+                      <td className="px-4 py-3.5">
+                        <div className="font-medium text-surface-900">
+                          {formatDoctorDisplayName(app.doctor.fullName)}
+                        </div>
+                        <div className="text-[11px] text-surface-500">
+                          {app.hospital.name} ({app.hospital.city})
+                        </div>
+                      </td>
+                      <td className="px-4 py-3.5">
+                        <div className="flex flex-wrap gap-1.5">
+                          <Badge variant={isTeleconsult ? 'primary' : 'default'} size="sm">
+                            {APPOINTMENT_MODE_LABELS[app.mode || 'IN_PERSON'] || 'In-Person'}
+                          </Badge>
+                          {app.interpreterLanguage && (
+                            <Badge variant="info" size="sm">
+                              {app.interpreterLanguage}
+                            </Badge>
+                          )}
+                        </div>
+                      </td>
+                      <td className="px-4 py-3.5">
+                        {APPOINTMENT_TYPE_LABELS[app.appointmentType] || app.appointmentType}
+                      </td>
+                      <td className="px-4 py-3.5">
+                        <Badge variant={getStatusBadgeVariant(app.status)} dot>
+                          {APPOINTMENT_STATUS_LABELS[app.status] || app.status}
+                        </Badge>
+                      </td>
+                      <td className="px-4 py-3.5 text-right">
+                        <div className="inline-flex items-center justify-end gap-2">
+                          {canJoinVideo && app.meetingUrl && (
+                            <a
+                              href={app.meetingUrl}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="inline-flex items-center gap-1 min-h-11 px-3 rounded-md bg-primary-600 hover:bg-primary-700 text-white text-xs font-medium transition-colors"
+                            >
+                              <Video className="w-3.5 h-3.5" aria-hidden="true" />
+                              <span>Join Video Consultation</span>
+                            </a>
+                          )}
+                          {app.status !== 'CANCELLED' && app.status !== 'COMPLETED' && (
+                            <Button
+                              type="button"
+                              variant="ghost"
+                              size="sm"
+                              className="text-danger-700 hover:text-danger-800 hover:bg-danger-50"
+                              onClick={() => {
+                                setCancelTarget(app);
+                                setCancelReason('');
+                                setCancelError('');
+                              }}
+                            >
+                              Cancel
+                            </Button>
+                          )}
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                })}
               </tbody>
             </table>
           </div>
@@ -668,6 +778,22 @@ export default function AppointmentsPage() {
             onChange={setSelectedType}
             placeholder="Select consultation type..."
             required
+          />
+
+          <Select
+            label="Consultation Mode"
+            options={APPOINTMENT_MODE_OPTIONS}
+            value={selectedMode}
+            onChange={setSelectedMode}
+            required
+          />
+
+          <Input
+            label="Preferred Medical Interpreter Language (Optional)"
+            type="text"
+            placeholder="e.g. Arabic, French, Swahili, Russian"
+            value={interpreterLanguage}
+            onChange={(e) => setInterpreterLanguage(e.target.value)}
           />
 
           <DatePicker

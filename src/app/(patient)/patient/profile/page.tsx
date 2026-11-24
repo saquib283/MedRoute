@@ -15,6 +15,7 @@ import { toast } from '@/components/ui/Toast';
 import { Select, SelectOption } from '@/components/ui/Select';
 import { PhoneInput } from '@/components/ui/PhoneInput';
 import { DatePicker } from '@/components/ui/DatePicker';
+import { isPassportValidForMedicalVisa } from '@/lib/validation/booking-helpers';
 import {
   User,
   PhoneCall,
@@ -108,6 +109,7 @@ export default function PatientProfilePage() {
   const [phone, setPhone] = useState('');
   const [nationality, setNationality] = useState('');
   const [dob, setDob] = useState('');
+  const [passportExpiry, setPassportExpiry] = useState('');
 
   const [bloodGroup, setBloodGroup] = useState('');
   const [primaryLanguage, setPrimaryLanguage] = useState('');
@@ -149,6 +151,9 @@ export default function PatientProfilePage() {
         setPhone(pat.user.phone || '');
         setNationality(pat.nationality || '');
         setDob(pat.dob ? new Date(pat.dob).toISOString().split('T')[0] : '');
+        setPassportExpiry(
+          pat.passportExpiry ? new Date(pat.passportExpiry).toISOString().split('T')[0] : ''
+        );
 
         setBloodGroup(pat.bloodGroup || '');
         setPrimaryLanguage(pat.primaryLanguage || '');
@@ -287,6 +292,7 @@ export default function PatientProfilePage() {
         body: JSON.stringify({
           bloodGroup: bloodGroup || undefined,
           primaryLanguage: primaryLanguage.trim() || undefined,
+          passportExpiry: passportExpiry.trim() ? passportExpiry.trim() : null,
           ...(hasEmergencyContact
             ? {
                 emergencyContact: {
@@ -549,6 +555,34 @@ export default function PatientProfilePage() {
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <Input label="Nationality" type="text" value={nationality} disabled />
                 <Input label="Date of Birth" type="text" value={dob} disabled />
+              </div>
+              <div className="sm:col-span-2 pt-2 border-t border-surface-100 flex flex-col sm:flex-row sm:items-end justify-between gap-4">
+                <div className="flex-1 max-w-xs">
+                  <Input
+                    label="Passport Expiry Date"
+                    type="date"
+                    value={passportExpiry}
+                    onChange={(e) => setPassportExpiry(e.target.value)}
+                    helperText="Must be valid for at least 6 months for Indian Medical Visa sponsorship."
+                  />
+                </div>
+                <div className="pb-1">
+                  {passportExpiry ? (
+                    isPassportValidForMedicalVisa(passportExpiry) ? (
+                      <Badge variant="success" dot>
+                        6-Month Medical Visa Rule Met
+                      </Badge>
+                    ) : (
+                      <Badge variant="danger" dot>
+                        Less than 6 Months Validity
+                      </Badge>
+                    )
+                  ) : (
+                    <Badge variant="warning" dot>
+                      Passport Expiry Needed
+                    </Badge>
+                  )}
+                </div>
               </div>
             </div>
           </Card>

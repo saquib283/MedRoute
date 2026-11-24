@@ -131,7 +131,16 @@ export async function POST(request: NextRequest) {
       return apiError(ERROR_CODES.BAD_REQUEST, result.error.issues[0].message, 400);
     }
 
-    const { caseId, hospitalId, doctorId, appointmentType, scheduledAt } = result.data;
+    const {
+      caseId,
+      hospitalId,
+      doctorId,
+      appointmentType,
+      mode,
+      meetingUrl,
+      interpreterLanguage,
+      scheduledAt,
+    } = result.data;
 
     if (appointmentType === 'SURGERY') {
       return apiError(
@@ -185,6 +194,9 @@ export async function POST(request: NextRequest) {
         hospitalId,
         doctorId,
         appointmentType,
+        mode: mode ?? 'IN_PERSON',
+        meetingUrl: meetingUrl?.trim() ? meetingUrl.trim() : null,
+        interpreterLanguage: interpreterLanguage?.trim() ? interpreterLanguage.trim() : null,
         scheduledAt: scheduledDate,
         createdBy: authUser!.userId,
         status: 'SCHEDULED',

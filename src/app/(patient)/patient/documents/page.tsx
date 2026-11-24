@@ -18,6 +18,8 @@ import {
   matchesPatientDocumentCategoryFilter,
   canPatientDeleteDocument,
 } from '@/lib/validation/document-vault-helpers';
+import { VisaAndTravelConciergeCard } from '@/components/clinical/VisaAndTravelConciergeCard';
+import type { TravelLogisticsPayload } from '@/lib/validation/lifecycle-schemas';
 import {
   UploadCloud,
   FileText,
@@ -82,9 +84,14 @@ const UPLOAD_CATEGORY_OPTIONS: SelectOption[] = [
     label: 'Medical Travel Insurance Policy',
     description: 'International coverage certificate',
   },
+  {
+    value: 'FRRO_REGISTRATION',
+    label: 'FRRO / Form C Registration',
+    description: 'Bureau of Immigration arrival registration proof',
+  },
 ];
 
-const REQUIRED_TRAVEL_DOCS = [
+const PRE_TRAVEL_DOCS = [
   { key: 'PASSPORT', label: 'Passport Copy', role: 'Patient upload', uploadable: true },
   {
     key: 'VISA_INVITATION_LETTER',
@@ -107,10 +114,51 @@ const REQUIRED_TRAVEL_DOCS = [
   { key: 'VISA', label: 'Medical Visa / e-Visa', role: 'Patient upload', uploadable: true },
 ];
 
+const DISCHARGE_RETURN_DOCS = [
+  {
+    key: 'DISCHARGE_SUMMARY',
+    label: 'Hospital Discharge Summary',
+    role: 'Hospital issued',
+    uploadable: false,
+  },
+  {
+    key: 'PRESCRIPTION',
+    label: 'Discharge Prescription',
+    role: 'Patient / Hospital',
+    uploadable: true,
+  },
+  {
+    key: 'FIT_TO_FLY_CERTIFICATE',
+    label: 'Fit-to-Fly Certificate',
+    role: 'Hospital issued',
+    uploadable: false,
+  },
+  {
+    key: 'FRRO_REGISTRATION',
+    label: 'FRRO / Form C Registration',
+    role: 'Coordinator / Patient',
+    uploadable: true,
+  },
+];
+
+const DISCHARGE_PHASE_STATUSES = new Set([
+  'POST_TREATMENT',
+  'OUTPATIENT_RECUPERATION',
+  'FIT_TO_FLY_CLEARED',
+  'REMOTE_REHAB',
+  'CLOSED',
+]);
+
 export default function DocumentVaultPage() {
   const [documents, setDocuments] = useState<DocumentItem[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
+
+  const [activeCaseId, setActiveCaseId] = useState<string | null>(null);
+  const [passportExpiry, setPassportExpiry] = useState<string | null>(null);
+  const [travelLogistics, setTravelLogistics] = useState<TravelLogisticsPayload | null>(null);
+  const [checklistTab, setChecklistTab] = useState<'PRE_TRAVEL' | 'DISCHARGE_RETURN'>('PRE_TRAVEL');
+  const hasAutoSelectedTabRef = useRef(false);
 
   const [selectedCategory, setSelectedCategory] = useState('PASSPORT');
   const [fileToUpload, setFileToUpload] = useState<File | null>(null);
@@ -132,12 +180,44 @@ export default function DocumentVaultPage() {
     setIsLoading(true);
     setLoadError(null);
     try {
-      const res = await fetch('/api/v1/patient/documents');
-      const data = await res.json();
-      if (res.ok && data.success && data.data) {
+      const [docsRes, casesRes] = await Promise.all([
+        fetch('/api/v1/patient/documents'),
+        fetch('/api/v1/patient/cases'),
+      ]);
+      const data = await docsRes.json();
+      if (docsRes.ok && data.success && data.data) {
         setDocuments(data.data.documents || []);
       } else {
         setLoadError(data?.error?.message || 'Unable to load your document vault.');
+      }
+
+      if (casesRes.ok) {
+        const casesJson = await casesRes.json();
+        const casesList = Array.isArray(casesJson?.data?.cases) ? casesJson.data.cases : [];
+        const targetCase =
+          casesList.find((c: { status: string }) => c.status !== 'CLOSED') || casesList[0];
+
+        if (targetCase?.id) {
+          setActiveCaseId(targetCase.id);
+          if (!hasAutoSelectedTabRef.current) {
+            hasAutoSelectedTabRef.current = true;
+            if (DISCHARGE_PHASE_STATUSES.has(targetCase.status)) {
+              setChecklistTab('DISCHARGE_RETURN');
+            }
+          }
+
+          const lifecycleRes = await fetch(`/api/v1/cases/${targetCase.id}/lifecycle`);
+          if (lifecycleRes.ok) {
+            const lifecycleJson = await lifecycleRes.json();
+            const snapshot = lifecycleJson?.data;
+            if (snapshot) {
+              setTravelLogistics(snapshot.travelLogistics ?? null);
+              setPassportExpiry(snapshot.case?.patient?.passportExpiry ?? null);
+            }
+          } else if (targetCase.travelLogistics) {
+            setTravelLogistics(targetCase.travelLogistics);
+          }
+        }
       }
     } catch (err) {
       console.error('Failed to load documents list', err);
@@ -154,6 +234,20 @@ export default function DocumentVaultPage() {
     }, 0);
     return () => clearTimeout(timer);
   }, [fetchDocuments]);
+
+  useEffect(() => {
+    if (isLoading || typeof window === 'undefined') return;
+    if (window.location.hash === '#travel-concierge') {
+      const timer = setTimeout(() => {
+        document.getElementById('travel-concierge')?.scrollIntoView({
+          behavior: 'smooth',
+          block: 'start',
+        });
+      }, 50);
+      return () => clearTimeout(timer);
+    }
+    return undefined;
+  }, [isLoading]);
 
   const handleSelectChecklistCategory = (categoryKey: string) => {
     setSelectedCategory(categoryKey);
@@ -247,6 +341,11 @@ export default function DocumentVaultPage() {
     }
   };
 
+  const activeChecklistDocs = useMemo(
+    () => (checklistTab === 'DISCHARGE_RETURN' ? DISCHARGE_RETURN_DOCS : PRE_TRAVEL_DOCS),
+    [checklistTab]
+  );
+
   const readinessMetrics = useMemo(() => {
     const verifiedOrIssued = documents.filter(
       (d) => d.verificationStatus === 'VERIFIED' || d.verificationStatus === 'ISSUED_BY_HOSPITAL'
@@ -254,13 +353,18 @@ export default function DocumentVaultPage() {
     const uploadedCategories = new Set(verifiedOrIssued.map((d) => d.category));
 
     let count = 0;
-    REQUIRED_TRAVEL_DOCS.forEach((req) => {
+    activeChecklistDocs.forEach((req) => {
       if (uploadedCategories.has(req.key)) count++;
     });
 
-    const percent = Math.round((count / REQUIRED_TRAVEL_DOCS.length) * 100);
-    return { count, total: REQUIRED_TRAVEL_DOCS.length, percent, uploadedCategories };
-  }, [documents]);
+    const percent = Math.round((count / activeChecklistDocs.length) * 100);
+    return { count, total: activeChecklistDocs.length, percent, uploadedCategories };
+  }, [documents, activeChecklistDocs]);
+
+  const rejectedDocuments = useMemo(
+    () => documents.filter((d) => d.verificationStatus === 'REJECTED'),
+    [documents]
+  );
 
   const filteredDocuments = useMemo(() => {
     return documents.filter((doc) => {
@@ -361,19 +465,116 @@ export default function DocumentVaultPage() {
         </div>
       )}
 
-      {/* Pre-Travel Document Checklist */}
+      {/* Rejected Document Action Banner */}
+      {rejectedDocuments.length > 0 && (
+        <div
+          role="alert"
+          className="p-4 rounded-lg border border-danger-200 bg-danger-50 text-danger-900 space-y-3"
+        >
+          <div className="flex items-start gap-3">
+            <AlertCircle className="w-4 h-4 text-danger-600 shrink-0 mt-0.5" aria-hidden="true" />
+            <div>
+              <h2 className="text-sm font-semibold">
+                Action Required: Replace Rejected Document{rejectedDocuments.length > 1 ? 's' : ''}
+              </h2>
+              <p className="text-xs font-normal text-danger-800 mt-0.5">
+                Your coordinator flagged {rejectedDocuments.length}{' '}
+                {rejectedDocuments.length === 1 ? 'document' : 'documents'} for re-upload before clearance can proceed.
+              </p>
+            </div>
+          </div>
+
+          <div className="space-y-2">
+            {rejectedDocuments.map((rej) => (
+              <div
+                key={rej.id}
+                className="p-3 rounded-md bg-white border border-danger-200 flex flex-col sm:flex-row sm:items-center justify-between gap-3"
+              >
+                <div className="min-w-0">
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <span className="text-xs font-semibold text-surface-900">
+                      {DOCUMENT_CATEGORY_LABELS[rej.category] || rej.category}
+                    </span>
+                    <span className="text-xs text-surface-500 truncate">{rej.fileName}</span>
+                  </div>
+                  <p className="text-xs font-normal text-danger-800 mt-0.5">
+                    {rej.verificationNotes
+                      ? rej.verificationNotes
+                      : 'Please upload a clearer, uncropped scan for coordinator review.'}
+                  </p>
+                </div>
+
+                <Button
+                  type="button"
+                  variant="danger"
+                  size="sm"
+                  onClick={() => handleSelectChecklistCategory(rej.category)}
+                  className="self-start sm:self-auto shrink-0"
+                >
+                  Replace Document
+                </Button>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Phase-Adaptive Document Checklist */}
       <Card className="p-5 space-y-4">
-        <div className="flex items-center justify-between flex-wrap gap-2">
-          <h2 className="text-sm font-semibold text-surface-900">
-            Pre-Travel Document Checklist
-          </h2>
-          <span className="text-xs text-surface-500">
-            Required for Indian Medical Visa (M-Visa) &amp; hospital admission
-          </span>
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+          <div>
+            <h2 className="text-sm font-semibold text-surface-900">
+              {checklistTab === 'PRE_TRAVEL'
+                ? 'Pre-Travel & Medical Visa Checklist'
+                : 'Hospital Discharge & Return Travel Pack'}
+            </h2>
+            <span className="text-xs text-surface-500">
+              {checklistTab === 'PRE_TRAVEL'
+                ? 'Required for Indian Medical Visa (M-Visa) & hospital admission'
+                : 'Required for inpatient discharge, FRRO exit compliance, and return flight'}
+            </span>
+          </div>
+
+          <div
+            role="tablist"
+            aria-label="Checklist phase view"
+            className="inline-flex p-1 bg-surface-100 border border-surface-200 rounded-md self-start"
+          >
+            <button
+              type="button"
+              role="tab"
+              aria-selected={checklistTab === 'PRE_TRAVEL'}
+              onClick={() => setChecklistTab('PRE_TRAVEL')}
+              className={`min-h-11 px-3 rounded-md text-xs font-medium transition-colors ${
+                checklistTab === 'PRE_TRAVEL'
+                  ? 'bg-white text-surface-900 shadow-2xs'
+                  : 'text-surface-600 hover:text-surface-900'
+              }`}
+            >
+              Pre-Travel &amp; Visa
+            </button>
+            <button
+              type="button"
+              role="tab"
+              aria-selected={checklistTab === 'DISCHARGE_RETURN'}
+              onClick={() => setChecklistTab('DISCHARGE_RETURN')}
+              className={`min-h-11 px-3 rounded-md text-xs font-medium transition-colors ${
+                checklistTab === 'DISCHARGE_RETURN'
+                  ? 'bg-white text-surface-900 shadow-2xs'
+                  : 'text-surface-600 hover:text-surface-900'
+              }`}
+            >
+              Discharge &amp; Return Pack
+            </button>
+          </div>
         </div>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3">
-          {REQUIRED_TRAVEL_DOCS.map((doc) => {
+        <div
+          className={`grid grid-cols-1 sm:grid-cols-2 ${
+            checklistTab === 'PRE_TRAVEL' ? 'lg:grid-cols-5' : 'lg:grid-cols-4'
+          } gap-3`}
+        >
+          {activeChecklistDocs.map((doc) => {
             const isVerified = readinessMetrics.uploadedCategories.has(doc.key);
             const canQuickSelect = !isVerified && doc.uploadable;
 
@@ -432,6 +633,24 @@ export default function DocumentVaultPage() {
           })}
         </div>
       </Card>
+
+      {/* Visa, MED-X Attendant & Travel Concierge Vault */}
+      <VisaAndTravelConciergeCard
+        caseId={activeCaseId}
+        passportExpiry={passportExpiry}
+        travelLogistics={travelLogistics}
+        role="PATIENT"
+        onSaved={(snapshot) => {
+          const updatedLogistics = snapshot.travelLogistics as TravelLogisticsPayload | undefined;
+          const updatedCase = snapshot.case as { patient?: { passportExpiry?: string | null } } | undefined;
+          if (updatedLogistics !== undefined) {
+            setTravelLogistics(updatedLogistics);
+          }
+          if (updatedCase?.patient?.passportExpiry !== undefined) {
+            setPassportExpiry(updatedCase.patient.passportExpiry);
+          }
+        }}
+      />
 
       {/* Keyboard-Accessible Document Upload Card */}
       <div ref={uploadCardRef} id="document-upload-section">

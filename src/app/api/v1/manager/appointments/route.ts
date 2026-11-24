@@ -1,7 +1,30 @@
 import { NextResponse } from 'next/server';
-import { AppointmentStatus, AppointmentType } from '@prisma/client';
+import { AppointmentMode, AppointmentStatus, AppointmentType } from '@prisma/client';
 import { z } from 'zod';
 import prisma from '@/lib/prisma';
+
+const optionalMeetingUrlSchema = z
+  .union([z.string().trim().url('Invalid video meeting URL').max(500), z.literal('')])
+  .nullable()
+  .optional()
+  .transform((val) => {
+    if (val === undefined) return undefined;
+    if (val === null) return null;
+    const trimmed = val.trim();
+    return trimmed.length > 0 ? trimmed : null;
+  });
+
+const optionalInterpreterLanguageSchema = z
+  .string()
+  .max(100)
+  .nullable()
+  .optional()
+  .transform((val) => {
+    if (val === undefined) return undefined;
+    if (val === null) return null;
+    const trimmed = val.trim();
+    return trimmed.length > 0 ? trimmed : null;
+  });
 
 const createAppointmentSchema = z.object({
   caseId: z.string(),
@@ -9,6 +32,9 @@ const createAppointmentSchema = z.object({
   hospitalId: z.string(),
   doctorId: z.string(),
   appointmentType: z.nativeEnum(AppointmentType),
+  mode: z.nativeEnum(AppointmentMode).optional(),
+  meetingUrl: optionalMeetingUrlSchema,
+  interpreterLanguage: optionalInterpreterLanguageSchema,
   scheduledAt: z
     .string()
     .transform((val) => new Date(val))
@@ -18,6 +44,9 @@ const createAppointmentSchema = z.object({
 const updateAppointmentSchema = z.object({
   appointmentId: z.string(),
   status: z.nativeEnum(AppointmentStatus).optional(),
+  mode: z.nativeEnum(AppointmentMode).optional(),
+  meetingUrl: optionalMeetingUrlSchema,
+  interpreterLanguage: optionalInterpreterLanguageSchema,
   scheduledAt: z
     .string()
     .transform((val) => new Date(val))
@@ -133,7 +162,17 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Invalid parameters', details: parsed.error.issues }, { status: 400 });
     }
 
-    const { caseId, patientId, hospitalId, doctorId, appointmentType, scheduledAt } = parsed.data;
+    const {
+      caseId,
+      patientId,
+      hospitalId,
+      doctorId,
+      appointmentType,
+      mode,
+      meetingUrl,
+      interpreterLanguage,
+      scheduledAt,
+    } = parsed.data;
 
     // Verify manager controls this case
     const caseRecord = await prisma.case.findUnique({
@@ -171,6 +210,9 @@ export async function POST(request: Request) {
         hospitalId,
         doctorId,
         appointmentType,
+        mode: mode ?? AppointmentMode.IN_PERSON,
+        meetingUrl: meetingUrl ?? null,
+        interpreterLanguage: interpreterLanguage ?? null,
         scheduledAt,
         status: 'SCHEDULED',
         createdBy: userId,
@@ -203,7 +245,16 @@ export async function PUT(request: Request) {
       return NextResponse.json({ error: 'Invalid parameters', details: parsed.error.issues }, { status: 400 });
     }
 
-    const { appointmentId, status, scheduledAt, cancellationReason, clinicalNotes } = parsed.data;
+    const {
+      appointmentId,
+      status,
+      mode,
+      meetingUrl,
+      interpreterLanguage,
+      scheduledAt,
+      cancellationReason,
+      clinicalNotes,
+    } = parsed.data;
 
     // Verify appointment belongs to a case managed by this manager (ADMIN exempt)
     const appointmentRecord = await prisma.appointment.findUnique({
@@ -221,6 +272,9 @@ export async function PUT(request: Request) {
       where: { id: appointmentId },
       data: {
         ...(status !== undefined && { status }),
+        ...(mode !== undefined && { mode }),
+        ...(meetingUrl !== undefined && { meetingUrl }),
+        ...(interpreterLanguage !== undefined && { interpreterLanguage }),
         ...(scheduledAt !== undefined && { scheduledAt }),
         ...(cancellationReason !== undefined && { cancellationReason }),
         ...(clinicalNotes !== undefined && { clinicalNotes }),

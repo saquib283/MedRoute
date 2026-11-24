@@ -71,6 +71,7 @@ export async function PUT(request: NextRequest) {
     const {
       bloodGroup,
       primaryLanguage,
+      passportExpiry,
       emergencyContact,
       allergies,
       medications,
@@ -78,6 +79,15 @@ export async function PUT(request: NextRequest) {
       chronicConditions,
       specialisationsRequired,
     } = body;
+
+    let validatedPassportExpiry: Date | null | undefined = undefined;
+    if (passportExpiry !== undefined) {
+      const peParsed = patientProfileSchema.shape.passportExpiry.safeParse(passportExpiry);
+      if (!peParsed.success) {
+        return apiError(ERROR_CODES.VALIDATION_ERROR, 'Invalid passport expiry date', 400);
+      }
+      validatedPassportExpiry = peParsed.data ? new Date(peParsed.data) : null;
+    }
 
     const normalizedBloodGroup = bloodGroup === '' ? undefined : bloodGroup;
     if (normalizedBloodGroup !== undefined) {
@@ -150,6 +160,9 @@ export async function PUT(request: NextRequest) {
           bloodGroup: normalizedBloodGroup !== undefined ? normalizedBloodGroup : undefined,
           primaryLanguage:
             normalizedPrimaryLanguage !== undefined ? normalizedPrimaryLanguage : undefined,
+          ...(validatedPassportExpiry !== undefined
+            ? { passportExpiry: validatedPassportExpiry }
+            : {}),
           emergencyContact:
             validatedEmergencyContact !== undefined
               ? (validatedEmergencyContact as Prisma.InputJsonValue)
