@@ -9,6 +9,7 @@
 import React, { useState, useMemo } from 'react';
 import Link from 'next/link';
 import { CASE_STATUS_LABELS } from '@/lib/constants';
+import { resolveRoadmapStepActionState } from '@/lib/validation/lifecycle-schemas';
 import {
   Plane,
   ShieldCheck,
@@ -20,6 +21,9 @@ import {
   UploadCloud,
   Check,
   Clock,
+  ClipboardCheck,
+  HeartPulse,
+  Calendar,
 } from 'lucide-react';
 
 export interface ClinicalStepData {
@@ -50,6 +54,12 @@ interface ClinicalRoadmapTreeProps {
   steps: ClinicalStepData[];
   fitToFly?: FitToFlyData | null;
   currentStatus: string;
+  issuedDocCategories?: ReadonlySet<string> | readonly string[] | null;
+  unpaidBillCount?: number;
+  hasTreatmentPlan?: boolean;
+  treatmentPlanAccepted?: boolean;
+  hasPendingFollowUp?: boolean;
+  onOpenAction?: (action: 'TREATMENT_PLAN_MODAL' | 'FOLLOW_UP_MODAL') => void;
 }
 
 const CLINICAL_OUTCOME_LABELS: Record<string, string> = {
@@ -76,6 +86,12 @@ export function ClinicalRoadmapTree({
   steps,
   fitToFly,
   currentStatus,
+  issuedDocCategories,
+  unpaidBillCount = 0,
+  hasTreatmentPlan = false,
+  treatmentPlanAccepted = false,
+  hasPendingFollowUp = false,
+  onOpenAction,
 }: ClinicalRoadmapTreeProps) {
   const completedCount = steps.filter((s) => s.status === 'COMPLETED').length;
   const totalCount = steps.length || 1;
@@ -166,60 +182,108 @@ export function ClinicalRoadmapTree({
   };
 
   const renderActionButton = (step: ClinicalStepData) => {
-    if (!step.actionType) return null;
+    const actionState = resolveRoadmapStepActionState({
+      step,
+      issuedDocCategories,
+      unpaidBillCount,
+      hasTreatmentPlan,
+      treatmentPlanAccepted,
+      hasPendingFollowUp,
+    });
 
-    switch (step.actionType) {
-      case 'ISSUE_VIL':
-        return (
-          <Link
-            href="/patient/documents"
-            className="inline-flex items-center justify-center gap-1.5 min-h-11 px-3 bg-white hover:bg-surface-100 text-surface-800 border border-surface-300 rounded-md text-xs font-medium transition-colors shrink-0"
-          >
-            <Download className="w-3.5 h-3.5 text-primary-600" aria-hidden="true" />
-            <span>Download Visa Letter</span>
-          </Link>
-        );
-      case 'SIGN_FIT_TO_FLY':
-        return (
-          <Link
-            href="/patient/documents"
-            className="inline-flex items-center justify-center gap-1.5 min-h-11 px-3 bg-white hover:bg-surface-100 text-surface-800 border border-surface-300 rounded-md text-xs font-medium transition-colors shrink-0"
-          >
-            <ShieldCheck className="w-3.5 h-3.5 text-success-600" aria-hidden="true" />
-            <span>Fit-to-Fly Certificate</span>
-          </Link>
-        );
-      case 'ISSUE_PROFORMA':
-      case 'SETTLE_BILL':
-        return (
-          <Link
-            href="/patient/billing"
-            className="inline-flex items-center justify-center gap-1.5 min-h-11 px-3 bg-white hover:bg-surface-100 text-surface-800 border border-surface-300 rounded-md text-xs font-medium transition-colors shrink-0"
-          >
-            <CreditCard className="w-3.5 h-3.5 text-primary-600" aria-hidden="true" />
-            <span>Review Invoice</span>
-          </Link>
-        );
-      case 'UPLOAD_DOCS':
-        return (
-          <Link
-            href="/patient/documents"
-            className="inline-flex items-center justify-center gap-1.5 min-h-11 px-3 bg-primary-600 hover:bg-primary-700 text-white rounded-md text-xs font-medium transition-colors shrink-0"
-          >
-            <UploadCloud className="w-3.5 h-3.5" aria-hidden="true" />
-            <span>Upload Records</span>
-          </Link>
-        );
-      default:
-        return null;
+    if (!actionState) return null;
+
+    if (actionState.kind === 'WAITING_ON_HOSPITAL') {
+      return (
+        <span className="inline-flex items-center justify-center gap-1.5 min-h-11 px-3 bg-surface-100 text-surface-600 border border-surface-200 rounded-md text-xs font-medium shrink-0">
+          <Clock className="w-3.5 h-3.5 text-surface-500" aria-hidden="true" />
+          <span>{actionState.label}</span>
+        </span>
+      );
     }
+
+    if (actionState.kind === 'CERTIFICATE_DOWNLOAD') {
+      return (
+        <Link
+          href={actionState.href}
+          className="inline-flex items-center justify-center gap-1.5 min-h-11 px-3 bg-white hover:bg-surface-100 text-surface-800 border border-surface-300 rounded-md text-xs font-medium transition-colors shrink-0"
+        >
+          {step.actionType === 'SIGN_FIT_TO_FLY' ? (
+            <ShieldCheck className="w-3.5 h-3.5 text-success-600" aria-hidden="true" />
+          ) : (
+            <Download className="w-3.5 h-3.5 text-primary-600" aria-hidden="true" />
+          )}
+          <span>{actionState.label}</span>
+        </Link>
+      );
+    }
+
+    if (actionState.kind === 'OPEN_MODAL') {
+      const isFollowUp = actionState.modalAction === 'FOLLOW_UP_MODAL';
+      const fallbackHref = isFollowUp ? '/patient/appointments' : '/patient/billing';
+      if (onOpenAction) {
+        return (
+          <button
+            type="button"
+            onClick={() => onOpenAction(actionState.modalAction)}
+            className="inline-flex items-center justify-center gap-1.5 min-h-11 px-3 bg-primary-600 hover:bg-primary-700 text-white border border-primary-700/20 rounded-md text-xs font-medium transition-colors shrink-0"
+          >
+            {isFollowUp ? (
+              <HeartPulse className="w-3.5 h-3.5" aria-hidden="true" />
+            ) : (
+              <ClipboardCheck className="w-3.5 h-3.5" aria-hidden="true" />
+            )}
+            <span>{actionState.label}</span>
+          </button>
+        );
+      }
+      return (
+        <Link
+          href={fallbackHref}
+          className="inline-flex items-center justify-center gap-1.5 min-h-11 px-3 bg-white hover:bg-surface-100 text-surface-800 border border-surface-300 rounded-md text-xs font-medium transition-colors shrink-0"
+        >
+          <span>{actionState.label}</span>
+        </Link>
+      );
+    }
+
+    if (actionState.variant === 'primary') {
+      return (
+        <Link
+          href={actionState.href}
+          className="inline-flex items-center justify-center gap-1.5 min-h-11 px-3 bg-primary-600 hover:bg-primary-700 text-white rounded-md text-xs font-medium transition-colors shrink-0"
+        >
+          <UploadCloud className="w-3.5 h-3.5" aria-hidden="true" />
+          <span>{actionState.label}</span>
+        </Link>
+      );
+    }
+
+    return (
+      <Link
+        href={actionState.href}
+        className="inline-flex items-center justify-center gap-1.5 min-h-11 px-3 bg-white hover:bg-surface-100 text-surface-800 border border-surface-300 rounded-md text-xs font-medium transition-colors shrink-0"
+      >
+        {step.actionType === 'ARRANGE_LOGISTICS' ? (
+          <Plane className="w-3.5 h-3.5 text-primary-600" aria-hidden="true" />
+        ) : step.actionType === 'SCHEDULE_TELE_REHAB' ? (
+          <Calendar className="w-3.5 h-3.5 text-primary-600" aria-hidden="true" />
+        ) : (
+          <CreditCard className="w-3.5 h-3.5 text-primary-600" aria-hidden="true" />
+        )}
+        <span>{actionState.label}</span>
+      </Link>
+    );
   };
 
   const humanCurrentStatus =
     CASE_STATUS_LABELS[currentStatus] || currentStatus.replace(/_/g, ' ');
 
   return (
-    <section aria-labelledby="care-roadmap-heading" className="bg-white rounded-lg border border-surface-200 shadow-2xs overflow-hidden">
+    <section
+      aria-labelledby="care-roadmap-heading"
+      className="bg-white rounded-lg border border-surface-200 shadow-2xs overflow-hidden"
+    >
       {/* ─── Clean Flat Section Header ─────────────────────────────────── */}
       <div className="p-5 border-b border-surface-200 flex flex-col lg:flex-row lg:items-center justify-between gap-4">
         <div className="space-y-1">
@@ -243,7 +307,9 @@ export function ClinicalRoadmapTree({
               <strong className="font-semibold text-surface-900">{completedCount}</strong> of{' '}
               {totalCount} completed
             </span>
-            <span className="text-surface-300" aria-hidden="true">•</span>
+            <span className="text-surface-300" aria-hidden="true">
+              •
+            </span>
             <span className="font-semibold text-primary-700 tabular-nums">{progressPercent}%</span>
           </div>
 
@@ -333,7 +399,8 @@ export function ClinicalRoadmapTree({
                 </div>
               ) : (
                 <p className="text-xs text-surface-600 leading-relaxed">
-                  Your attending physician will issue your Fit-to-Fly certificate following your post-procedure evaluation.
+                  Your attending physician will issue your Fit-to-Fly certificate following your
+                  post-procedure evaluation.
                 </p>
               )}
             </div>
@@ -383,7 +450,7 @@ export function ClinicalRoadmapTree({
                         {cleanStageHeading(stageGroup.stageName)}
                       </h3>
                       {isStageActive && (
-                        <span className="bg-primary-50 text-primary-800 border border-primary-200 text-[11px] font-medium px-2 py-0.5 rounded">
+                        <span className="bg-primary-50 text-primary-800 border border-primary-200 text-[11px] font-medium px-2 py-0.5 rounded-md">
                           Current stage
                         </span>
                       )}
@@ -412,13 +479,14 @@ export function ClinicalRoadmapTree({
                     const outcomeLabel = step.decisionBranch
                       ? CLINICAL_OUTCOME_LABELS[step.decisionBranch]
                       : null;
+                    const actionButton = renderActionButton(step);
 
                     return (
                       <div key={step.id || stepIdx} className="py-3.5 first:pt-2.5 last:pb-1 space-y-2">
                         <div className="flex items-start justify-between gap-3 flex-wrap">
                           <div className="flex items-start gap-2.5 min-w-0">
                             <span
-                              className={`mt-0.5 w-5 h-5 rounded flex items-center justify-center font-medium text-[11px] tabular-nums shrink-0 ${
+                              className={`mt-0.5 w-5 h-5 rounded-md flex items-center justify-center font-medium text-[11px] tabular-nums shrink-0 ${
                                 isCompleted
                                   ? 'bg-success-50 text-success-700 border border-success-200'
                                   : isInProgress
@@ -451,13 +519,13 @@ export function ClinicalRoadmapTree({
 
                           <div className="flex items-center gap-2 flex-wrap shrink-0">
                             {outcomeLabel && (
-                              <span className="inline-flex items-center px-2 py-0.5 rounded bg-white text-surface-700 border border-surface-200 text-[11px] font-medium">
+                              <span className="inline-flex items-center px-2 py-0.5 rounded-md bg-white text-surface-700 border border-surface-200 text-[11px] font-medium">
                                 {outcomeLabel}
                               </span>
                             )}
 
                             <span
-                              className={`inline-flex items-center gap-1 text-[11px] font-medium px-2 py-0.5 rounded border ${
+                              className={`inline-flex items-center gap-1 text-[11px] font-medium px-2 py-0.5 rounded-md border ${
                                 isCompleted
                                   ? 'bg-success-50 text-success-800 border-success-200'
                                   : isInProgress
@@ -471,7 +539,7 @@ export function ClinicalRoadmapTree({
                           </div>
                         </div>
 
-                        {(step.doctorNotes || step.actionType) && (
+                        {(step.doctorNotes || actionButton) && (
                           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pl-7">
                             {step.doctorNotes ? (
                               <p className="text-xs text-surface-600 leading-relaxed">
@@ -482,7 +550,7 @@ export function ClinicalRoadmapTree({
                               <span />
                             )}
 
-                            {renderActionButton(step)}
+                            {actionButton}
                           </div>
                         )}
                       </div>

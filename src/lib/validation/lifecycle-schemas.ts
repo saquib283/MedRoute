@@ -1212,3 +1212,210 @@ export function derivePatientNextActions(
   return actions;
 }
 
+// ─── Progressive Onboarding & Roadmap UI Helpers ────────────────────
+
+export interface RegistrationStepOneInput {
+  fullName: string;
+  email: string;
+  password: string;
+  phone?: string;
+}
+
+export type RegistrationStepOneField = 'fullName' | 'email' | 'password' | 'phone';
+
+const registrationStepOneSchema = z.object({
+  fullName: z
+    .string()
+    .trim()
+    .min(2, 'Full name must be at least 2 characters')
+    .max(100, 'Full name must be at most 100 characters'),
+  email: z.string().trim().email('Enter a valid email address'),
+  password: z
+    .string()
+    .min(8, 'Password must be at least 8 characters')
+    .regex(
+      /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[!@#$%^&*])/,
+      'Password must include uppercase, lowercase, number, and special character (!@#$%^&*)'
+    ),
+  phone: z
+    .string()
+    .optional()
+    .transform((val) => {
+      const trimmed = val?.trim() ?? '';
+      return trimmed.length > 0 ? trimmed : undefined;
+    })
+    .refine((val) => !val || /^\+?[1-9]\d{7,14}$/.test(val), {
+      message: 'Enter a valid international phone number (e.g., +96891234567)',
+    }),
+});
+
+export function validateRegistrationStepOne(
+  input: RegistrationStepOneInput
+):
+  | { ok: true }
+  | {
+      ok: false;
+      fieldErrors: Partial<Record<RegistrationStepOneField, string>>;
+      message: string;
+    } {
+  const parsed = registrationStepOneSchema.safeParse(input);
+  if (parsed.success) {
+    return { ok: true };
+  }
+
+  const fieldErrors: Partial<Record<RegistrationStepOneField, string>> = {};
+  for (const issue of parsed.error.issues) {
+    const field = issue.path[0] as RegistrationStepOneField | undefined;
+    if (field && !fieldErrors[field]) {
+      fieldErrors[field] = issue.message;
+    }
+  }
+
+  return {
+    ok: false,
+    fieldErrors,
+    message: parsed.error.issues[0]?.message || 'Please complete your account details',
+  };
+}
+
+export function validatePassportSixMonthValidity(
+  passportExpiry?: string | null,
+  referenceDate: Date = new Date()
+): { ok: true } | { ok: false; message: string } {
+  const trimmed = passportExpiry?.trim();
+  if (!trimmed) {
+    return { ok: true };
+  }
+
+  const parsedMs = Date.parse(trimmed);
+  if (Number.isNaN(parsedMs)) {
+    return { ok: false, message: 'Enter a valid passport expiry date' };
+  }
+
+  const expiryDate = new Date(parsedMs);
+  const expiryUtcMs = Date.UTC(
+    expiryDate.getUTCFullYear(),
+    expiryDate.getUTCMonth(),
+    expiryDate.getUTCDate()
+  );
+
+  const minExpiryDate = new Date(
+    Date.UTC(
+      referenceDate.getUTCFullYear(),
+      referenceDate.getUTCMonth() + 6,
+      referenceDate.getUTCDate()
+    )
+  );
+
+  if (expiryUtcMs < minExpiryDate.getTime()) {
+    return {
+      ok: false,
+      message:
+        'Passport must have at least 6 months validity remaining for Indian Medical Visa (e-MED) sponsorship.',
+    };
+  }
+
+  return { ok: true };
+}
+
+export type RoadmapStepActionState =
+  | { kind: 'WAITING_ON_HOSPITAL'; label: string }
+  | { kind: 'CERTIFICATE_DOWNLOAD'; label: string; href: string }
+  | {
+      kind: 'OPEN_MODAL';
+      modalAction: 'TREATMENT_PLAN_MODAL' | 'FOLLOW_UP_MODAL';
+      label: string;
+    }
+  | { kind: 'LINK'; label: string; href: string; variant?: 'primary' | 'secondary' };
+
+const CERTIFICATE_ACTION_LABELS: Record<string, string> = {
+  ISSUE_VIL: 'Download Visa Letter',
+  SIGN_FIT_TO_FLY: 'Fit-to-Fly Certificate',
+  DISCHARGE_SUMMARY: 'Discharge Summary',
+};
+
+export function resolveRoadmapStepActionState(params: {
+  step: { actionType?: string | null; status?: string | null };
+  issuedDocCategories?: ReadonlySet<string> | readonly string[] | null;
+  unpaidBillCount?: number;
+  hasTreatmentPlan?: boolean;
+  treatmentPlanAccepted?: boolean;
+  hasPendingFollowUp?: boolean;
+}): RoadmapStepActionState | null {
+  const actionType = params.step.actionType;
+  if (!actionType) return null;
+
+  if (actionType in CERTIFICATE_ACTION_LABELS) {
+    if (canShowRoadmapCertificateDownload(params.step, params.issuedDocCategories)) {
+      return {
+        kind: 'CERTIFICATE_DOWNLOAD',
+        label: CERTIFICATE_ACTION_LABELS[actionType],
+        href: '/patient/documents',
+      };
+    }
+    return {
+      kind: 'WAITING_ON_HOSPITAL',
+      label: 'Waiting on Hospital',
+    };
+  }
+
+  switch (actionType) {
+    case 'ISSUE_PROFORMA':
+      if ((params.unpaidBillCount ?? 0) > 0) {
+        return {
+          kind: 'LINK',
+          label: 'Review Invoice',
+          href: '/patient/billing',
+        };
+      }
+      if (params.hasTreatmentPlan) {
+        return {
+          kind: 'OPEN_MODAL',
+          modalAction: 'TREATMENT_PLAN_MODAL',
+          label: params.treatmentPlanAccepted
+            ? 'View Treatment Plan'
+            : 'Review Treatment Plan',
+        };
+      }
+      return {
+        kind: 'LINK',
+        label: 'Review Invoice',
+        href: '/patient/billing',
+      };
+    case 'SETTLE_BILL':
+      return {
+        kind: 'LINK',
+        label: 'Review Invoice',
+        href: '/patient/billing',
+      };
+    case 'ARRANGE_LOGISTICS':
+      return {
+        kind: 'LINK',
+        label: 'Travel & Attendants',
+        href: '/patient/documents#travel-concierge',
+      };
+    case 'SCHEDULE_TELE_REHAB':
+      if (params.hasPendingFollowUp) {
+        return {
+          kind: 'OPEN_MODAL',
+          modalAction: 'FOLLOW_UP_MODAL',
+          label: 'Recovery Check-In',
+        };
+      }
+      return {
+        kind: 'LINK',
+        label: 'View Appointments',
+        href: '/patient/appointments',
+      };
+    case 'UPLOAD_DOCS':
+      return {
+        kind: 'LINK',
+        label: 'Upload Records',
+        href: '/patient/documents',
+        variant: 'primary',
+      };
+    default:
+      return null;
+  }
+}
+
