@@ -12,6 +12,7 @@ import { FOLLOW_UP_MILESTONE_LABELS } from '@/lib/constants';
 import { formatDoctorDisplayName } from '@/lib/validation/booking-helpers';
 import {
   formatPatientForViewer,
+  formatTravelLogisticsForViewer,
   maskPassportNumber,
 } from '@/lib/services/phi.service';
 import {
@@ -75,6 +76,7 @@ export {
   validateFitToFlySafetyChecklist,
   canShowRoadmapCertificateDownload,
   derivePatientNextActions,
+  formatTravelLogisticsForViewer,
   type MedicalAttendantRecord,
   type TreatmentPlanPayload,
   type TravelLogisticsPayload,
@@ -149,28 +151,6 @@ function parseStoredFollowUps(raw: unknown): FollowUpMilestone[] {
   );
 }
 
-export function formatTravelLogisticsForViewer(
-  raw: unknown,
-  options: { maskPassport?: boolean } = { maskPassport: true }
-): TravelLogisticsPayload | null {
-  const parsed = parseStoredTravelLogistics(raw);
-  if (!parsed) return null;
-
-  const mask = options.maskPassport ?? true;
-  if (!Array.isArray(parsed.attendants)) {
-    return { ...parsed };
-  }
-
-  return {
-    ...parsed,
-    attendants: parsed.attendants.map((att) => ({
-      fullName: att.fullName,
-      passportNo: mask ? maskPassportNumber(att.passportNo) : att.passportNo,
-      relation: att.relation,
-    })),
-  };
-}
-
 function buildDefaultFollowUpMilestones(anchorDate: Date = new Date()): FollowUpMilestone[] {
   const dayMs = 24 * 60 * 60 * 1000;
   return [
@@ -190,6 +170,26 @@ function buildDefaultFollowUpMilestones(anchorDate: Date = new Date()): FollowUp
       status: 'PENDING',
     },
   ];
+}
+
+async function resolveFreshClinicalSteps(
+  caseId: string,
+  fallbackSteps: unknown[]
+): Promise<unknown[]> {
+  if (prisma.clinicalStep?.findMany) {
+    const queried = await prisma.clinicalStep.findMany({
+      where: { caseId },
+      orderBy: [
+        { stageOrder: 'asc' },
+        { stepOrder: 'asc' },
+        { createdAt: 'asc' },
+      ],
+    });
+    if (Array.isArray(queried)) {
+      return queried;
+    }
+  }
+  return fallbackSteps;
 }
 
 async function fetchCaseSupportingContext(caseId: string, patientId: string): Promise<{
@@ -230,6 +230,7 @@ async function buildLifecycleSnapshotFromCase(
     notes?: string | null;
     hospital?: unknown | null;
     primaryDoctor?: unknown | null;
+    clinicalSteps?: unknown[];
     treatmentPlan?: TreatmentPlanPayload | null;
     rawTravelLogistics?: TravelLogisticsPayload | null;
     postReturnFollowUps?: FollowUpMilestone[];
@@ -248,6 +249,10 @@ async function buildLifecycleSnapshotFromCase(
     overrides?.primaryDoctor !== undefined
       ? overrides.primaryDoctor
       : (targetCase.primaryDoctor ?? null);
+  const effectiveClinicalSteps =
+    overrides?.clinicalSteps !== undefined
+      ? overrides.clinicalSteps
+      : targetCase.clinicalSteps;
   const effectiveTreatmentPlan =
     overrides?.treatmentPlan !== undefined
       ? overrides.treatmentPlan
@@ -302,6 +307,7 @@ async function buildLifecycleSnapshotFromCase(
     patient: formattedPatient,
     hospital: effectiveHospital,
     primaryDoctor: effectivePrimaryDoctor,
+    clinicalSteps: effectiveClinicalSteps,
     treatmentPlan: effectiveTreatmentPlan,
     travelLogistics: viewerTravelLogistics,
     postReturnFollowUps: effectiveFollowUps,
@@ -462,30 +468,34 @@ export async function assignCaseClinicalTeam(params: {
     },
   });
 
+  let fallbackSteps: unknown[] = access.targetCase.clinicalSteps;
+
   if (
     parsed.data.specialtyId &&
-    access.targetCase.clinicalSteps.every((s) => s.status !== 'COMPLETED') &&
-    prisma.clinicalStep?.deleteMany &&
-    prisma.clinicalStep?.createMany
+    access.targetCase.clinicalSteps.every((s) => s.status !== 'COMPLETED')
   ) {
     const presetSteps = buildStandardMvtPathwaySteps(parsed.data.specialtyId);
-    await prisma.clinicalStep.deleteMany({ where: { caseId: params.caseId } });
-    await prisma.clinicalStep.createMany({
-      data: presetSteps.map((step) => ({
-        caseId: params.caseId,
-        stageName: step.stageName,
-        stageOrder: step.stageOrder,
-        stepOrder: step.stepOrder,
-        title: step.title,
-        category: step.category,
-        status: step.status,
-        decisionBranch: step.decisionBranch ?? null,
-        doctorNotes: step.doctorNotes ?? null,
-        actionType: step.actionType ?? null,
-        requiredRole: step.requiredRole ?? null,
-        actionUrl: step.actionUrl ?? null,
-      })),
+    const stepRows = presetSteps.map((step) => ({
+      caseId: params.caseId,
+      stageName: step.stageName,
+      stageOrder: step.stageOrder,
+      stepOrder: step.stepOrder,
+      title: step.title,
+      category: step.category,
+      status: step.status,
+      decisionBranch: step.decisionBranch ?? null,
+      doctorNotes: step.doctorNotes ?? null,
+      actionType: step.actionType ?? null,
+      requiredRole: step.requiredRole ?? null,
+      actionUrl: step.actionUrl ?? null,
+    }));
+
+    await prisma.$transaction(async (tx) => {
+      await tx.clinicalStep.deleteMany({ where: { caseId: params.caseId } });
+      await tx.clinicalStep.createMany({ data: stepRows });
     });
+
+    fallbackSteps = stepRows;
   } else if (prisma.clinicalStep?.updateMany) {
     await prisma.clinicalStep.updateMany({
       where: {
@@ -495,7 +505,18 @@ export async function assignCaseClinicalTeam(params: {
       },
       data: { status: 'IN_PROGRESS' },
     });
+
+    fallbackSteps = access.targetCase.clinicalSteps.map((step) =>
+      step.actionType === 'VOTE_MDT' && step.status === 'PENDING'
+        ? { ...step, status: 'IN_PROGRESS' }
+        : step
+    );
   }
+
+  const freshClinicalSteps = await resolveFreshClinicalSteps(
+    params.caseId,
+    fallbackSteps
+  );
 
   await createAuditLog({
     actorId: params.actor.userId,
@@ -550,6 +571,7 @@ export async function assignCaseClinicalTeam(params: {
     hospitalId: hospital.id,
     primaryDoctorId: doctor.id,
     notes: updatedNotes,
+    clinicalSteps: freshClinicalSteps,
     hospital: {
       id: hospital.id,
       name: hospital.name,
@@ -608,7 +630,8 @@ export async function publishCaseTreatmentPlan(params: {
     };
   }
 
-  const nowIso = new Date().toISOString();
+  const now = new Date();
+  const nowIso = now.toISOString();
   const treatmentPlan: TreatmentPlanPayload = {
     diagnosis: parsed.data.diagnosis,
     procedureName: parsed.data.procedureName,
@@ -627,8 +650,11 @@ export async function publishCaseTreatmentPlan(params: {
     consentAcceptedBy: null,
   };
 
+  // Publishing or revising a treatment plan resets consentAcceptedAt to null,
+  // so a previously PLAN_CONFIRMED pre-arrival case reverts to UNDER_REVIEW until re-accepted.
   const nextStatus: CaseStatus =
-    access.targetCase.status === 'INQUIRY_RECEIVED'
+    access.targetCase.status === 'INQUIRY_RECEIVED' ||
+    access.targetCase.status === 'PLAN_CONFIRMED'
       ? 'UNDER_REVIEW'
       : access.targetCase.status;
 
@@ -640,8 +666,12 @@ export async function publishCaseTreatmentPlan(params: {
     },
   });
 
+  const completeMdt = Boolean(
+    params.actor.role === 'DOCTOR' || parsed.data.doctorOpinionNotes
+  );
+
   if (prisma.clinicalStep?.updateMany) {
-    if (params.actor.role === 'DOCTOR' || parsed.data.doctorOpinionNotes) {
+    if (completeMdt) {
       await prisma.clinicalStep.updateMany({
         where: {
           caseId: params.caseId,
@@ -650,7 +680,7 @@ export async function publishCaseTreatmentPlan(params: {
         },
         data: {
           status: 'COMPLETED',
-          completedAt: new Date(),
+          completedAt: now,
           ...(parsed.data.doctorOpinionNotes
             ? { doctorNotes: parsed.data.doctorOpinionNotes }
             : {}),
@@ -662,22 +692,52 @@ export async function publishCaseTreatmentPlan(params: {
       where: {
         caseId: params.caseId,
         actionType: 'ISSUE_PROFORMA',
-        status: { not: 'COMPLETED' },
       },
       data: {
         status: 'ACTION_REQUIRED',
+        completedAt: null,
       },
     });
   }
+
+  const fallbackSteps = access.targetCase.clinicalSteps.map((step) => {
+    if (completeMdt && step.actionType === 'VOTE_MDT' && step.status !== 'COMPLETED') {
+      return {
+        ...step,
+        status: 'COMPLETED',
+        completedAt: now,
+        ...(parsed.data.doctorOpinionNotes
+          ? { doctorNotes: parsed.data.doctorOpinionNotes }
+          : {}),
+      };
+    }
+    if (step.actionType === 'ISSUE_PROFORMA') {
+      return {
+        ...step,
+        status: 'ACTION_REQUIRED',
+        completedAt: null,
+      };
+    }
+    return step;
+  });
+
+  const freshClinicalSteps = await resolveFreshClinicalSteps(
+    params.caseId,
+    fallbackSteps
+  );
 
   await createAuditLog({
     actorId: params.actor.userId,
     action: AUDIT_ACTIONS.UPDATE,
     entityType: 'Case',
     entityId: params.caseId,
-    oldValue: access.targetCase.treatmentPlan,
+    oldValue: {
+      status: access.targetCase.status,
+      treatmentPlan: access.targetCase.treatmentPlan,
+    },
     newValue: {
       lifecycleAction: 'PUBLISH_TREATMENT_PLAN',
+      status: nextStatus,
       diagnosis: treatmentPlan.diagnosis,
       procedureName: treatmentPlan.procedureName,
       estimatedCostUsd: treatmentPlan.estimatedCostUsd,
@@ -700,6 +760,7 @@ export async function publishCaseTreatmentPlan(params: {
 
   const snapshot = await buildLifecycleSnapshotFromCase(access.targetCase, {
     status: nextStatus,
+    clinicalSteps: freshClinicalSteps,
     treatmentPlan,
   });
 
@@ -755,7 +816,8 @@ export async function acceptCaseTreatmentPlan(params: {
     };
   }
 
-  const consentAcceptedAt = new Date().toISOString();
+  const now = new Date();
+  const consentAcceptedAt = now.toISOString();
   const updatedPlan: TreatmentPlanPayload = {
     ...existingPlan,
     consentAcceptedAt,
@@ -788,7 +850,7 @@ export async function acceptCaseTreatmentPlan(params: {
       },
       data: {
         status: 'COMPLETED',
-        completedAt: new Date(),
+        completedAt: now,
       },
     });
     await prisma.clinicalStep.updateMany({
@@ -802,6 +864,21 @@ export async function acceptCaseTreatmentPlan(params: {
       },
     });
   }
+
+  const fallbackSteps = access.targetCase.clinicalSteps.map((step) => {
+    if (step.actionType === 'ISSUE_PROFORMA' && step.status !== 'COMPLETED') {
+      return { ...step, status: 'COMPLETED', completedAt: now };
+    }
+    if (step.actionType === 'ISSUE_VIL' && step.status === 'PENDING') {
+      return { ...step, status: 'IN_PROGRESS' };
+    }
+    return step;
+  });
+
+  const freshClinicalSteps = await resolveFreshClinicalSteps(
+    params.caseId,
+    fallbackSteps
+  );
 
   await createAuditLog({
     actorId: params.actor.userId,
@@ -852,6 +929,7 @@ export async function acceptCaseTreatmentPlan(params: {
 
   const snapshot = await buildLifecycleSnapshotFromCase(access.targetCase, {
     status: nextStatus,
+    clinicalSteps: freshClinicalSteps,
     treatmentPlan: updatedPlan,
   });
 
@@ -911,7 +989,18 @@ export async function updateCaseTravelLogistics(params: {
       const rawPassport = incoming.passportNo.trim();
 
       let storedPassport: string;
-      if (isEncryptedCiphertext(rawPassport)) {
+      if (rawPassport.includes(':') || isEncryptedCiphertext(rawPassport)) {
+        const belongsToCurrentCase =
+          isEncryptedCiphertext(rawPassport) &&
+          existingAttendants.some((ex) => ex.passportNo === rawPassport);
+        if (!belongsToCurrentCase) {
+          return {
+            ok: false,
+            code: ERROR_CODES.BAD_REQUEST,
+            message: 'Invalid attendant passport number',
+            status: 400,
+          };
+        }
         storedPassport = rawPassport;
       } else if (isMaskedPassportValue(rawPassport)) {
         const matchedExisting =
@@ -961,6 +1050,7 @@ export async function updateCaseTravelLogistics(params: {
   }
 
   const isStaff = params.actor.role === 'MANAGER' || params.actor.role === 'ADMIN';
+  const now = new Date();
 
   const mergedLogistics: TravelLogisticsPayload = {
     ...existingLogistics,
@@ -1003,7 +1093,7 @@ export async function updateCaseTravelLogistics(params: {
     ...(parsed.data.visaExpiryDate !== undefined
       ? { visaExpiryDate: parsed.data.visaExpiryDate }
       : {}),
-    updatedAt: new Date().toISOString(),
+    updatedAt: now.toISOString(),
   };
 
   await prisma.case.update({
@@ -1023,7 +1113,7 @@ export async function updateCaseTravelLogistics(params: {
         },
         data: {
           status: 'COMPLETED',
-          completedAt: new Date(),
+          completedAt: now,
         },
       });
     } else if (mergedLogistics.arrivalFlightNo && mergedLogistics.arrivalAt) {
@@ -1039,6 +1129,26 @@ export async function updateCaseTravelLogistics(params: {
       });
     }
   }
+
+  const fallbackSteps = access.targetCase.clinicalSteps.map((step) => {
+    if (step.actionType !== 'ARRANGE_LOGISTICS') return step;
+    if (mergedLogistics.pickupConfirmed === true && step.status !== 'COMPLETED') {
+      return { ...step, status: 'COMPLETED', completedAt: now };
+    }
+    if (
+      mergedLogistics.arrivalFlightNo &&
+      mergedLogistics.arrivalAt &&
+      step.status === 'PENDING'
+    ) {
+      return { ...step, status: 'IN_PROGRESS' };
+    }
+    return step;
+  });
+
+  const freshClinicalSteps = await resolveFreshClinicalSteps(
+    params.caseId,
+    fallbackSteps
+  );
 
   await createAuditLog({
     actorId: params.actor.userId,
@@ -1081,6 +1191,7 @@ export async function updateCaseTravelLogistics(params: {
   }
 
   const snapshot = await buildLifecycleSnapshotFromCase(access.targetCase, {
+    clinicalSteps: freshClinicalSteps,
     rawTravelLogistics: mergedLogistics,
     ...(updatedPassportExpiry !== undefined ? { passportExpiry: updatedPassportExpiry } : {}),
   });
@@ -1127,10 +1238,11 @@ export async function recordCaseFormC(params: {
     };
   }
 
+  const now = new Date();
   const existingLogistics = parseStoredTravelLogistics(access.targetCase.travelLogistics) ?? {};
   const submittedIso = parsed.data.formCSubmittedAt
     ? new Date(parsed.data.formCSubmittedAt).toISOString()
-    : new Date().toISOString();
+    : now.toISOString();
 
   const mergedLogistics: TravelLogisticsPayload = {
     ...existingLogistics,
@@ -1141,7 +1253,7 @@ export async function recordCaseFormC(params: {
     ...(parsed.data.visaExpiryDate !== undefined
       ? { visaExpiryDate: parsed.data.visaExpiryDate }
       : {}),
-    updatedAt: new Date().toISOString(),
+    updatedAt: now.toISOString(),
   };
 
   await prisma.case.update({
@@ -1160,10 +1272,21 @@ export async function recordCaseFormC(params: {
       },
       data: {
         status: 'COMPLETED',
-        completedAt: new Date(),
+        completedAt: now,
       },
     });
   }
+
+  const fallbackSteps = access.targetCase.clinicalSteps.map((step) =>
+    step.actionType === 'RECORD_FORM_C' && step.status !== 'COMPLETED'
+      ? { ...step, status: 'COMPLETED', completedAt: now }
+      : step
+  );
+
+  const freshClinicalSteps = await resolveFreshClinicalSteps(
+    params.caseId,
+    fallbackSteps
+  );
 
   const formCSlaStatus = computeFormCSlaStatus(
     mergedLogistics.arrivalAt ?? null,
@@ -1202,6 +1325,7 @@ export async function recordCaseFormC(params: {
   }
 
   const snapshot = await buildLifecycleSnapshotFromCase(access.targetCase, {
+    clinicalSteps: freshClinicalSteps,
     rawTravelLogistics: mergedLogistics,
   });
 
@@ -1275,7 +1399,8 @@ export async function submitCaseFollowUpCheckIn(params: {
   const milestones: FollowUpMilestone[] =
     existingList.length > 0 ? [...existingList] : buildDefaultFollowUpMilestones();
 
-  const nowIso = new Date().toISOString();
+  const now = new Date();
+  const nowIso = now.toISOString();
   const targetIdx = milestones.findIndex((m) => m.milestone === parsed.data.milestone);
   const previousEntry: FollowUpMilestone =
     targetIdx >= 0
@@ -1326,9 +1451,10 @@ export async function submitCaseFollowUpCheckIn(params: {
     },
   });
 
+  const allReviewed =
+    milestones.length >= 3 && milestones.every((m) => m.status === 'REVIEWED');
+
   if (prisma.clinicalStep?.updateMany) {
-    const allReviewed =
-      milestones.length >= 3 && milestones.every((m) => m.status === 'REVIEWED');
     await prisma.clinicalStep.updateMany({
       where: {
         caseId: params.caseId,
@@ -1337,10 +1463,25 @@ export async function submitCaseFollowUpCheckIn(params: {
       },
       data: {
         status: allReviewed ? 'COMPLETED' : 'IN_PROGRESS',
-        ...(allReviewed ? { completedAt: new Date() } : {}),
+        ...(allReviewed ? { completedAt: now } : {}),
       },
     });
   }
+
+  const fallbackSteps = access.targetCase.clinicalSteps.map((step) =>
+    step.actionType === 'SCHEDULE_TELE_REHAB' && step.status !== 'COMPLETED'
+      ? {
+          ...step,
+          status: allReviewed ? 'COMPLETED' : 'IN_PROGRESS',
+          ...(allReviewed ? { completedAt: now } : {}),
+        }
+      : step
+  );
+
+  const freshClinicalSteps = await resolveFreshClinicalSteps(
+    params.caseId,
+    fallbackSteps
+  );
 
   await createAuditLog({
     actorId: params.actor.userId,
@@ -1401,6 +1542,7 @@ export async function submitCaseFollowUpCheckIn(params: {
 
   const snapshot = await buildLifecycleSnapshotFromCase(access.targetCase, {
     status: nextStatus,
+    clinicalSteps: freshClinicalSteps,
     postReturnFollowUps: milestones,
   });
 

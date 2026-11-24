@@ -25,6 +25,7 @@ jest.mock('@/lib/prisma', () => ({
 }));
 
 import prisma from '@/lib/prisma';
+import { encrypt } from '@/lib/auth/crypto';
 import {
   authorizeCaseClinicalAccess,
   getCasePathwayForViewer,
@@ -139,9 +140,26 @@ describe('Task 2: Clinical Pathway Service & Multi-Role Authorization', () => {
       expect(missingRes.code).toBe('CASE_NOT_FOUND');
     }
 
-    mockedPrisma.case.findUnique.mockResolvedValueOnce(baseCase);
+    mockedPrisma.case.findUnique.mockResolvedValueOnce({
+      ...baseCase,
+      travelLogistics: {
+        attendants: [
+          {
+            fullName: 'Ahmed Al-Hassan',
+            passportNo: encrypt('U99887766'),
+            relation: 'Husband',
+          },
+        ],
+      },
+    });
     const okRes = await getCasePathwayForViewer('case-1', { userId: 'mgr-1', role: 'MANAGER' });
     expect(okRes.ok).toBe(true);
+    if (okRes.ok) {
+      const returnedCase = okRes.data.case as {
+        travelLogistics?: { attendants?: Array<{ passportNo: string }> };
+      };
+      expect(returnedCase.travelLogistics?.attendants?.[0].passportNo).toBe('*****7766');
+    }
   });
 
   it('persists actionType, requiredRole, and actionUrl in replaceCasePathway and blocks CLOSED cases', async () => {

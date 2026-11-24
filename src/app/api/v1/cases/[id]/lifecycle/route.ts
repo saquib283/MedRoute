@@ -72,3 +72,4 @@ export async function PUT(
     return apiError(ERROR_CODES.INTERNAL_ERROR, 'Failed to update case lifecycle', 500);
   }
 }
+

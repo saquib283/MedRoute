@@ -8,6 +8,7 @@ import prisma from '@/lib/prisma';
 import { requireAuth } from '@/lib/api/auth-helper';
 import { apiSuccess, apiError } from '@/lib/api/response';
 import { ERROR_CODES } from '@/lib/api/errors';
+import { formatTravelLogisticsForViewer } from '@/lib/services/phi.service';
 
 export async function GET(request: NextRequest) {
   try {
@@ -70,7 +71,18 @@ export async function GET(request: NextRequest) {
       orderBy: { createdAt: 'desc' },
     });
 
-    return apiSuccess({ cases });
+    const formattedCases = cases.map((c) => ({
+      ...c,
+      ...(c.travelLogistics !== undefined
+        ? {
+            travelLogistics: formatTravelLogisticsForViewer(c.travelLogistics, {
+              maskPassport: true,
+            }),
+          }
+        : {}),
+    }));
+
+    return apiSuccess({ cases: formattedCases });
   } catch (err) {
     console.error('[Patient Cases GET Error]', err);
     return apiError(ERROR_CODES.INTERNAL_ERROR, 'Failed to fetch patient cases', 500);

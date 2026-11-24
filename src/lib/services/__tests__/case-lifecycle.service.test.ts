@@ -6,9 +6,11 @@ jest.mock('@/lib/prisma', () => ({
   default: {
     case: {
       findUnique: jest.fn(),
+      findMany: jest.fn(),
       update: jest.fn(),
     },
     patient: {
+      findFirst: jest.fn(),
       update: jest.fn(),
     },
     hospital: {
@@ -27,6 +29,7 @@ jest.mock('@/lib/prisma', () => ({
       count: jest.fn(),
     },
     clinicalStep: {
+      findMany: jest.fn(),
       deleteMany: jest.fn(),
       createMany: jest.fn(),
       updateMany: jest.fn(),
@@ -67,6 +70,7 @@ import {
   GET as getLifecycleRoute,
   PUT as putLifecycleRoute,
 } from '@/app/api/v1/cases/[id]/lifecycle/route';
+import { GET as getPatientCasesRoute } from '@/app/api/v1/patient/cases/route';
 
 describe('Case Lifecycle Engine & Stage Guardrails', () => {
   test('buildStandardMvtPathwaySteps seeds 7 sequential stages with Stage 1 Step 1 IN_PROGRESS and remaining PENDING', () => {
@@ -286,6 +290,7 @@ describe('Case Lifecycle Engine & Stage Guardrails', () => {
       clinicalStep: Record<string, jest.Mock>;
       notification: Record<string, jest.Mock>;
       auditLog: Record<string, jest.Mock>;
+      $transaction: jest.Mock;
     };
 
     const baseCaseRecord = {
@@ -326,6 +331,9 @@ describe('Case Lifecycle Engine & Stage Guardrails', () => {
       mockedPrisma.clinicalStep.updateMany.mockResolvedValue({ count: 1 });
       mockedPrisma.notification.createMany.mockResolvedValue({ count: 1 });
       mockedPrisma.auditLog.create.mockResolvedValue({ id: 'audit-1' });
+      mockedPrisma.$transaction.mockImplementation(
+        async (fn: (tx: typeof mockedPrisma) => unknown) => fn(mockedPrisma)
+      );
     });
 
     test('updateCaseTravelLogistics encrypts MED-X attendant passports at rest, preserves existing ciphertext on masked re-submit, enforces max 2 attendants, and normalizes date strings', async () => {
@@ -701,6 +709,236 @@ describe('Case Lifecycle Engine & Stage Guardrails', () => {
       });
       expect(wrongPatLifecycle.ok).toBe(false);
       if (!wrongPatLifecycle.ok) expect(wrongPatLifecycle.status).toBe(403);
+    });
+
+    test('rejects attacker-supplied foreign ciphertext in updateCaseTravelLogistics and masks travelLogistics in GET /api/v1/patient/cases', async () => {
+      const existingAttendantCipher = encrypt('U99887766');
+      const foreignCipher = encrypt('SECRET_OTHER_PATIENT_0001');
+
+      mockedPrisma.case.findUnique.mockResolvedValue({
+        ...baseCaseRecord,
+        travelLogistics: {
+          attendants: [
+            {
+              fullName: 'Ahmed Al-Hassan',
+              passportNo: existingAttendantCipher,
+              relation: 'Husband',
+            },
+          ],
+        },
+      });
+
+      const oracleAttempt = await updateCaseTravelLogistics({
+        caseId: 'case-101',
+        payload: {
+          action: 'UPDATE_TRAVEL_LOGISTICS',
+          attendants: [
+            {
+              fullName: 'Attacker Probe',
+              passportNo: foreignCipher,
+              relation: 'Brother',
+            },
+          ],
+        },
+        actor: { userId: 'pat-u-101', role: 'PATIENT' },
+      });
+
+      expect(oracleAttempt.ok).toBe(false);
+      if (!oracleAttempt.ok) {
+        expect(oracleAttempt.status).toBe(400);
+        expect(oracleAttempt.message).toBe('Invalid attendant passport number');
+      }
+      expect(mockedPrisma.case.update).not.toHaveBeenCalled();
+
+      // GET /api/v1/patient/cases masks travelLogistics.attendants[].passportNo
+      mockedPrisma.patient.findFirst.mockResolvedValueOnce({
+        id: 'pat-101',
+        userId: 'pat-u-101',
+      });
+      mockedPrisma.case.findMany.mockResolvedValueOnce([
+        {
+          ...baseCaseRecord,
+          travelLogistics: {
+            attendants: [
+              {
+                fullName: 'Ahmed Al-Hassan',
+                passportNo: existingAttendantCipher,
+                relation: 'Husband',
+              },
+            ],
+          },
+        },
+      ]);
+
+      const patCasesReq = new NextRequest('http://localhost/api/v1/patient/cases', {
+        method: 'GET',
+        headers: {
+          'x-user-id': 'pat-u-101',
+          'x-user-email': 'ranya@example.com',
+          'x-user-role': 'PATIENT',
+        },
+      });
+      const patCasesRes = await getPatientCasesRoute(patCasesReq);
+      expect(patCasesRes.status).toBe(200);
+      const patCasesJson = await patCasesRes.json();
+      expect(patCasesJson.data.cases[0].travelLogistics.attendants[0].passportNo).toBe(
+        '*****7766'
+      );
+      expect(patCasesJson.data.cases[0].travelLogistics.attendants[0].passportNo).not.toBe(
+        existingAttendantCipher
+      );
+    });
+
+    test('wraps specialty pathway replacement in $transaction, returns fresh clinicalSteps after mutations, and reverts PLAN_CONFIRMED to UNDER_REVIEW on treatment plan re-publish', async () => {
+      // 1. assignCaseClinicalTeam with specialtyId runs inside $transaction and returns fresh clinicalSteps
+      mockedPrisma.case.findUnique.mockResolvedValueOnce({
+        ...baseCaseRecord,
+        clinicalSteps: [
+          {
+            id: 'old-step-1',
+            caseId: 'case-101',
+            stageName: 'Stage 1',
+            stageOrder: 1,
+            stepOrder: 1,
+            title: 'Old Intake Step',
+            category: 'PRE_OP',
+            status: 'IN_PROGRESS',
+            actionType: 'UPLOAD_DOCS',
+          },
+        ],
+      });
+      mockedPrisma.hospital.findUnique.mockResolvedValueOnce({
+        id: 'hosp-1',
+        name: 'Fortis Escorts Heart Institute',
+        city: 'New Delhi',
+        address: 'Okhla Road',
+        accreditation: 'NABH, JCI',
+        isActive: true,
+      });
+      mockedPrisma.doctor.findUnique.mockResolvedValueOnce({
+        id: 'doc-1',
+        userId: 'doc-u-1',
+        hospitalId: 'hosp-1',
+        fullName: 'Ashok Seth',
+        qualification: 'MD, DM',
+        isActive: true,
+        specialisation: { id: 'spec-1', name: 'Cardiology' },
+      });
+      mockedPrisma.case.update.mockResolvedValueOnce({
+        ...baseCaseRecord,
+        hospitalId: 'hosp-1',
+        primaryDoctorId: 'doc-1',
+        status: 'UNDER_REVIEW',
+      });
+
+      const assignSpecialtyRes = await assignCaseClinicalTeam({
+        caseId: 'case-101',
+        payload: {
+          action: 'ASSIGN_CLINICAL_TEAM',
+          hospitalId: 'hosp-1',
+          primaryDoctorId: 'doc-1',
+          specialtyId: 'CARDIOLOGY',
+        },
+        actor: { userId: 'mgr-1', role: 'MANAGER' },
+      });
+
+      expect(assignSpecialtyRes.ok).toBe(true);
+      expect(mockedPrisma.$transaction).toHaveBeenCalledTimes(1);
+      if (assignSpecialtyRes.ok) {
+        const returnedSteps = (
+          assignSpecialtyRes.data.case as {
+            clinicalSteps: Array<{ title: string; actionType?: string; status: string }>;
+          }
+        ).clinicalSteps;
+        expect(returnedSteps.length).toBeGreaterThanOrEqual(10);
+        expect(returnedSteps[0].title).not.toBe('Old Intake Step');
+      }
+
+      // 2. Re-publishing treatment plan on a PLAN_CONFIRMED case reverts status to UNDER_REVIEW, resets consentAcceptedAt, and returns updated clinicalSteps
+      mockedPrisma.case.findUnique.mockResolvedValueOnce({
+        ...baseCaseRecord,
+        hospitalId: 'hosp-1',
+        primaryDoctorId: 'doc-1',
+        status: 'PLAN_CONFIRMED',
+        treatmentPlan: {
+          diagnosis: 'Initial CAD',
+          procedureName: 'Single Stent PCI',
+          hospitalLosDays: 2,
+          recoveryStayDays: 4,
+          estimatedCostUsd: 4200,
+          currency: 'USD',
+          publishedAt: '2026-11-20T00:00:00.000Z',
+          consentAcceptedAt: '2026-11-21T00:00:00.000Z',
+          consentAcceptedBy: 'pat-u-101',
+        },
+        clinicalSteps: [
+          {
+            id: 'step-mdt',
+            caseId: 'case-101',
+            stageName: 'Stage 1',
+            stageOrder: 1,
+            stepOrder: 2,
+            title: 'MDT Review',
+            category: 'PRE_OP',
+            status: 'PENDING',
+            actionType: 'VOTE_MDT',
+          },
+          {
+            id: 'step-proforma',
+            caseId: 'case-101',
+            stageName: 'Stage 2',
+            stageOrder: 2,
+            stepOrder: 1,
+            title: 'Issue Proforma',
+            category: 'PRE_OP',
+            status: 'COMPLETED',
+            actionType: 'ISSUE_PROFORMA',
+          },
+        ],
+      });
+      mockedPrisma.doctor.findUnique.mockResolvedValueOnce({
+        id: 'doc-1',
+        userId: 'doc-u-1',
+        fullName: 'Ashok Seth',
+        isActive: true,
+      });
+      mockedPrisma.case.update.mockImplementationOnce(
+        async ({ data }: { data: Record<string, unknown> }) => ({
+          ...baseCaseRecord,
+          ...data,
+        })
+      );
+
+      const republishRes = await publishCaseTreatmentPlan({
+        caseId: 'case-101',
+        payload: {
+          action: 'PUBLISH_TREATMENT_PLAN',
+          diagnosis: 'Revised Multi-Vessel CAD',
+          procedureName: 'Two-Vessel DES PCI',
+          hospitalLosDays: 3,
+          recoveryStayDays: 5,
+          estimatedCostUsd: 5900,
+          currency: 'USD',
+          doctorOpinionNotes: 'Updated post-angiogram review requires second stent.',
+        },
+        actor: { userId: 'doc-u-1', role: 'DOCTOR' },
+      });
+
+      expect(republishRes.ok).toBe(true);
+      if (republishRes.ok) {
+        const returnedCase = republishRes.data.case as {
+          status: string;
+          clinicalSteps: Array<{ actionType?: string; status: string }>;
+        };
+        expect(returnedCase.status).toBe('UNDER_REVIEW');
+        expect(republishRes.data.treatmentPlan?.consentAcceptedAt).toBeNull();
+        expect(
+          returnedCase.clinicalSteps.find((s) => s.actionType === 'VOTE_MDT')?.status
+        ).toBe('COMPLETED');
+        expect(
+          returnedCase.clinicalSteps.find((s) => s.actionType === 'ISSUE_PROFORMA')?.status
+        ).toBe('ACTION_REQUIRED');
+      }
     });
   });
 });

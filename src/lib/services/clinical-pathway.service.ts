@@ -10,7 +10,10 @@ import prisma from '@/lib/prisma';
 import { ERROR_CODES } from '@/lib/api/errors';
 import { AUDIT_ACTIONS, createAuditLog } from '@/lib/api/audit-logger';
 import { CASE_STATUS_ORDER } from '@/lib/constants';
-import { formatPatientForViewer } from '@/lib/services/phi.service';
+import {
+  formatPatientForViewer,
+  formatTravelLogisticsForViewer,
+} from '@/lib/services/phi.service';
 import {
   CLEAN_PRESET_TEMPLATES,
   type PathwayPresetTemplate,
@@ -282,6 +285,14 @@ export async function getCasePathwayForViewer(
   const formattedCase = {
     ...auth.targetCase,
     patient: formatPatientForViewer(auth.targetCase.patient, { maskPassport: true }),
+    ...(auth.targetCase.travelLogistics !== undefined
+      ? {
+          travelLogistics: formatTravelLogisticsForViewer(
+            auth.targetCase.travelLogistics,
+            { maskPassport: true }
+          ),
+        }
+      : {}),
   };
 
   return { ok: true, data: { case: formattedCase } };
@@ -391,6 +402,14 @@ export async function replaceCasePathway(
         patient: updatedCase.patient
           ? formatPatientForViewer(updatedCase.patient, { maskPassport: true })
           : updatedCase.patient,
+        ...(updatedCase.travelLogistics !== undefined
+          ? {
+              travelLogistics: formatTravelLogisticsForViewer(
+                updatedCase.travelLogistics,
+                { maskPassport: true }
+              ),
+            }
+          : {}),
       }
     : null;
 

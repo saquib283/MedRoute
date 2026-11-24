@@ -5,6 +5,7 @@
 
 import { decrypt, DecryptionTamperError } from '@/lib/auth/crypto';
 import { decryptMedicalProfile } from '@/lib/api/phi-encryption';
+import type { TravelLogisticsPayload } from '@/lib/validation/lifecycle-schemas';
 
 /**
  * Safely decrypt an encrypted string field, returning '[DECRYPTION_ERROR]' on GCM tamper failure.
@@ -51,4 +52,31 @@ export function formatPatientForViewer<T extends Record<string, unknown>>(
     );
   }
   return result as T;
+}
+
+/**
+ * Format Case.travelLogistics for JSON API responses by masking all MED-X attendant passport numbers.
+ */
+export function formatTravelLogisticsForViewer(
+  raw: unknown,
+  options: { maskPassport?: boolean } = { maskPassport: true }
+): TravelLogisticsPayload | null {
+  if (!raw || typeof raw !== 'object' || Array.isArray(raw)) {
+    return null;
+  }
+
+  const parsed = raw as TravelLogisticsPayload;
+  const mask = options.maskPassport ?? true;
+  if (!Array.isArray(parsed.attendants)) {
+    return { ...parsed };
+  }
+
+  return {
+    ...parsed,
+    attendants: parsed.attendants.map((att) => ({
+      fullName: att.fullName,
+      passportNo: mask ? maskPassportNumber(att.passportNo) : safeDecryptString(att.passportNo),
+      relation: att.relation,
+    })),
+  };
 }
