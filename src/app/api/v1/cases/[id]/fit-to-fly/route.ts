@@ -91,6 +91,7 @@ export async function PUT(
       const rawMedif = formData.get('requiresMedif');
       if (rawMedif === 'true') requiresMedif = true;
       else if (rawMedif === 'false') requiresMedif = false;
+      else if (typeof rawMedif === 'string' && rawMedif.trim() !== '') requiresMedif = rawMedif;
 
       const rawFlight = formData.get('flightNumber');
       flightNumber = typeof rawFlight === 'string' ? rawFlight : undefined;

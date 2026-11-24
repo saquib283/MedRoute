@@ -494,10 +494,22 @@ async function main() {
       doctorNotes: 'Patient ambulatory, on dual antiplatelet therapy (DAPT). Surgical entry site clean.',
     },
     {
+      stageName: 'Stage 6: ICU / CCU Telemetry & Ward Recovery',
+      stageOrder: 6,
+      stepOrder: 3,
+      title: 'Clinical Discharge Summary & Medication Plan',
+      category: 'DISCHARGE',
+      status: 'COMPLETED',
+      actionType: 'DISCHARGE_SUMMARY',
+      requiredRole: 'DOCTOR',
+      doctorNotes: 'Official hospital discharge summary issued with DAPT medication & radial access care instructions.',
+      completedAt: new Date(Date.now() - 12 * 3600000),
+    },
+    {
       stageName: 'Stage 7: Fit-to-Fly Certification, Discharge & Tele-Rehab',
       stageOrder: 7,
       stepOrder: 1,
-      title: 'Hospital Discharge Summary & Final Bill Settlement',
+      title: 'Hospital Final Bill Settlement',
       category: 'DISCHARGE',
       status: 'PENDING',
       actionType: 'SETTLE_BILL',
@@ -808,8 +820,8 @@ async function main() {
     });
   }
 
-  console.log(`  ✓ Sample clinical case with 9 workflow steps & Fit-to-Fly clearance created`);
-  console.log(`  ✓ 4 official verification documents & VIL certificates issued`);
+  console.log(`  ✓ Sample clinical case with ${clinicalStepsData.length} workflow steps & Fit-to-Fly clearance created`);
+  console.log(`  ✓ ${sampleDocs.length} official verification documents & VIL certificates issued`);
   console.log(`  ✓ Sample medical bill ($4,850 USD) with 5 itemized line-item breakdowns created\n`);
 
   // ─── 8. Accommodations & Hotels ──────────────────────────────────

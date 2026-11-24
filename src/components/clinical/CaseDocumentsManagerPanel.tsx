@@ -360,7 +360,7 @@ export function CaseDocumentsManagerPanel({
                       ].join('\n')
                     )
                   }
-                  className="text-xs font-medium text-primary-700 hover:text-primary-800 underline"
+                  className="inline-flex items-center min-h-11 px-2 text-xs font-medium text-primary-700 hover:text-primary-800 underline"
                 >
                   Insert structured discharge template
                 </button>

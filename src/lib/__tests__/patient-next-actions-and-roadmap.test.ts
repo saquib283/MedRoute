@@ -223,6 +223,17 @@ describe('Patient Roadmap Certificate & Next-Action Gating', () => {
 
     expect(
       resolveRoadmapStepActionState({
+        step: { actionType: 'ISSUE_PROFORMA', status: 'PENDING' },
+        hasTreatmentPlan: false,
+        unpaidBillCount: 0,
+      })
+    ).toEqual({
+      kind: 'WAITING_ON_HOSPITAL',
+      label: 'Waiting on Hospital',
+    });
+
+    expect(
+      resolveRoadmapStepActionState({
         step: { actionType: 'ISSUE_PROFORMA', status: 'ACTION_REQUIRED' },
         hasTreatmentPlan: true,
         treatmentPlanAccepted: false,

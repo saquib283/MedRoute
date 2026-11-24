@@ -259,7 +259,7 @@ export interface PathwayPresetTemplate {
   steps: PresetStageStep[];
 }
 
-const STANDARD_MVT_STEPS: PresetStageStep[] = [
+export const STANDARD_MVT_STEPS: PresetStageStep[] = [
   {
     stageName: 'Stage 1: Digital Intake & Clinical Triage',
     stageOrder: 1,
@@ -364,7 +364,17 @@ const STANDARD_MVT_STEPS: PresetStageStep[] = [
     stageName: 'Stage 6: Inpatient Recovery, Discharge Summary & Billing',
     stageOrder: 6,
     stepOrder: 2,
-    title: 'Official Hospital Discharge Summary & Final Bill Settlement',
+    title: 'Clinical Discharge Summary & Medication Plan',
+    category: 'DISCHARGE',
+    status: 'PENDING',
+    actionType: 'DISCHARGE_SUMMARY',
+    requiredRole: 'DOCTOR',
+  },
+  {
+    stageName: 'Stage 6: Inpatient Recovery, Discharge Summary & Billing',
+    stageOrder: 6,
+    stepOrder: 3,
+    title: 'Final Hospital Bill Settlement & Clearance',
     category: 'DISCHARGE',
     status: 'PENDING',
     actionType: 'SETTLE_BILL',
@@ -499,6 +509,16 @@ export const CLEAN_PRESET_TEMPLATES: PathwayPresetTemplate[] = [
         status: 'PENDING',
       },
       {
+        stageName: 'Stage 6: ICU / CCU Telemetry & Ward Recovery',
+        stageOrder: 6,
+        stepOrder: 3,
+        title: 'Clinical Discharge Summary & Medication Plan',
+        category: 'DISCHARGE',
+        status: 'PENDING',
+        actionType: 'DISCHARGE_SUMMARY',
+        requiredRole: 'DOCTOR',
+      },
+      {
         stageName: 'Stage 7: Fit-to-Fly Certification, Discharge & Tele-Rehab',
         stageOrder: 7,
         stepOrder: 1,
@@ -512,7 +532,7 @@ export const CLEAN_PRESET_TEMPLATES: PathwayPresetTemplate[] = [
         stageName: 'Stage 7: Fit-to-Fly Certification, Discharge & Tele-Rehab',
         stageOrder: 7,
         stepOrder: 2,
-        title: 'Hospital Discharge Summary & Final Bill Settlement',
+        title: 'Hospital Final Bill Settlement',
         category: 'DISCHARGE',
         status: 'PENDING',
         actionType: 'SETTLE_BILL',
@@ -619,7 +639,17 @@ export const CLEAN_PRESET_TEMPLATES: PathwayPresetTemplate[] = [
         stageName: 'Stage 6: Chemotherapy / Ward Stabilization & Discharge',
         stageOrder: 6,
         stepOrder: 2,
-        title: 'Oncology Discharge Summary & Final Bill Settlement',
+        title: 'Clinical Discharge Summary & Medication Plan',
+        category: 'DISCHARGE',
+        status: 'PENDING',
+        actionType: 'DISCHARGE_SUMMARY',
+        requiredRole: 'DOCTOR',
+      },
+      {
+        stageName: 'Stage 6: Chemotherapy / Ward Stabilization & Discharge',
+        stageOrder: 6,
+        stepOrder: 3,
+        title: 'Oncology Final Bill Settlement',
         category: 'DISCHARGE',
         status: 'PENDING',
         actionType: 'SETTLE_BILL',
@@ -736,7 +766,17 @@ export const CLEAN_PRESET_TEMPLATES: PathwayPresetTemplate[] = [
         stageName: 'Stage 6: Ward Physiotherapy & Gait Rehabilitation',
         stageOrder: 6,
         stepOrder: 2,
-        title: 'Discharge Summary & Final Hospital Settlement',
+        title: 'Clinical Discharge Summary & Medication Plan',
+        category: 'DISCHARGE',
+        status: 'PENDING',
+        actionType: 'DISCHARGE_SUMMARY',
+        requiredRole: 'DOCTOR',
+      },
+      {
+        stageName: 'Stage 6: Ward Physiotherapy & Gait Rehabilitation',
+        stageOrder: 6,
+        stepOrder: 3,
+        title: 'Final Hospital Bill Settlement',
         category: 'DISCHARGE',
         status: 'PENDING',
         actionType: 'SETTLE_BILL',
@@ -1375,6 +1415,12 @@ export function resolveRoadmapStepActionState(params: {
           label: params.treatmentPlanAccepted
             ? 'View Treatment Plan'
             : 'Review Treatment Plan',
+        };
+      }
+      if (params.step.status !== 'COMPLETED') {
+        return {
+          kind: 'WAITING_ON_HOSPITAL',
+          label: 'Waiting on Hospital',
         };
       }
       return {

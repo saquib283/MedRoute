@@ -65,7 +65,7 @@ const CATEGORY_STEP_ACTION_MAP: Partial<Record<IssuableCategory, string[]>> = {
   VISA_INVITATION_LETTER: ['ISSUE_VIL'],
   PROFORMA_INVOICE: ['ISSUE_PROFORMA'],
   FIT_TO_FLY_CERTIFICATE: ['SIGN_FIT_TO_FLY'],
-  DISCHARGE_SUMMARY: ['DISCHARGE_SUMMARY', 'OPERATIVE_SUMMARY'],
+  DISCHARGE_SUMMARY: ['DISCHARGE_SUMMARY'],
 };
 
 const verifyDocumentSchema = z.object({
@@ -1060,26 +1060,41 @@ export async function upsertCaseFitToFly(
       },
     });
 
+    const caseUpdateData: Prisma.CaseUpdateInput = {};
     if (access.targetCase.status !== 'REMOTE_REHAB') {
-      const updatedCase = await prisma.case.update({
-        where: { id: params.caseId },
-        data: { status: 'FIT_TO_FLY_CLEARED' },
-      });
-      caseStatus = updatedCase?.status || 'FIT_TO_FLY_CLEARED';
+      caseUpdateData.status = 'FIT_TO_FLY_CLEARED';
     }
 
     const existingFollowUps = Array.isArray(access.targetCase.postReturnFollowUps)
       ? access.targetCase.postReturnFollowUps
       : [];
     if (existingFollowUps.length === 0) {
-      const milestoneAnchor = parsedDepartureDate ?? clearanceDate ?? new Date();
+      const storedLogistics =
+        access.targetCase.travelLogistics && typeof access.targetCase.travelLogistics === 'object'
+          ? (access.targetCase.travelLogistics as unknown as TravelLogisticsPayload)
+          : null;
+      let storedDepartureDate: Date | null = null;
+      if (storedLogistics?.departureAt) {
+        const parsedStored = new Date(storedLogistics.departureAt);
+        if (!Number.isNaN(parsedStored.getTime())) {
+          storedDepartureDate = parsedStored;
+        }
+      }
+      const milestoneAnchor =
+        parsedDepartureDate ?? storedDepartureDate ?? clearanceDate ?? new Date();
       const seededMilestones = buildInitialFollowUpMilestones(milestoneAnchor);
-      await prisma.case.update({
+      caseUpdateData.postReturnFollowUps =
+        seededMilestones as unknown as Prisma.InputJsonValue;
+    }
+
+    if (Object.keys(caseUpdateData).length > 0) {
+      const updatedCase = await prisma.case.update({
         where: { id: params.caseId },
-        data: {
-          postReturnFollowUps: seededMilestones as unknown as Prisma.InputJsonValue,
-        },
+        data: caseUpdateData,
       });
+      if (caseUpdateData.status) {
+        caseStatus = updatedCase?.status || 'FIT_TO_FLY_CLEARED';
+      }
     }
   } else {
     await prisma.clinicalStep.updateMany({

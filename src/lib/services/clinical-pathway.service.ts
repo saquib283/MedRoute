@@ -16,6 +16,7 @@ import {
 } from '@/lib/services/phi.service';
 import {
   CLEAN_PRESET_TEMPLATES,
+  validateCaseStatusTransition,
   type PathwayPresetTemplate,
   type PresetStageStep,
 } from '@/lib/validation/lifecycle-schemas';
@@ -92,6 +93,7 @@ const clinicalStepInputSchema = z.object({
 const replacePathwaySchema = z.object({
   steps: z.array(clinicalStepInputSchema).min(1, 'At least one clinical pathway step is required'),
   caseStatus: z.enum(CASE_STATUS_ORDER).optional(),
+  overrideReason: optionalNullableString,
 });
 
 const updateStepSchema = z
@@ -164,6 +166,7 @@ export interface ReplacePathwayParams {
   caseId: string;
   steps: unknown;
   caseStatus?: unknown;
+  overrideReason?: unknown;
   actor: { userId: string; role: string; ipAddress?: string };
 }
 
@@ -317,7 +320,12 @@ export async function replaceCasePathway(
   const auth = await authorizeCaseClinicalAccess(params.caseId, params.actor);
   if (!auth.ok) return auth;
 
-  if (auth.targetCase.status === 'CLOSED') {
+  const isAttemptingStatusChange =
+    typeof params.caseStatus === 'string' &&
+    params.caseStatus.trim() !== '' &&
+    params.caseStatus !== auth.targetCase.status;
+
+  if (auth.targetCase.status === 'CLOSED' && !isAttemptingStatusChange) {
     return {
       ok: false,
       code: ERROR_CODES.CASE_ALREADY_CLOSED,
@@ -329,6 +337,7 @@ export async function replaceCasePathway(
   const parsed = replacePathwaySchema.safeParse({
     steps: params.steps,
     caseStatus: params.caseStatus === '' ? undefined : params.caseStatus,
+    overrideReason: params.overrideReason,
   });
   if (!parsed.success) {
     return {
@@ -339,7 +348,70 @@ export async function replaceCasePathway(
     };
   }
 
-  const { steps: validatedSteps, caseStatus: validatedCaseStatus } = parsed.data;
+  const {
+    steps: validatedSteps,
+    caseStatus: validatedCaseStatus,
+    overrideReason: validatedOverrideReason,
+  } = parsed.data;
+
+  if (validatedCaseStatus && validatedCaseStatus !== auth.targetCase.status) {
+    if (auth.targetCase.status === 'CLOSED' && params.actor.role !== 'ADMIN') {
+      return {
+        ok: false,
+        code: ERROR_CODES.BAD_REQUEST,
+        message: 'Cannot reopen a closed case',
+        status: 400,
+      };
+    }
+
+    const [verifiedPassportCount, unpaidBillCount, ftfFallback] = await Promise.all([
+      prisma.document?.count
+        ? prisma.document.count({
+            where: {
+              patientId: auth.targetCase.patientId,
+              category: 'PASSPORT',
+              verificationStatus: 'VERIFIED',
+            },
+          })
+        : Promise.resolve(0),
+      prisma.medicalBill?.count
+        ? prisma.medicalBill.count({
+            where: {
+              caseId: params.caseId,
+              status: { notIn: ['PAID', 'CANCELLED'] },
+            },
+          })
+        : Promise.resolve(0),
+      auth.targetCase.fitToFlyClearance === undefined && prisma.fitToFlyClearance?.findUnique
+        ? prisma.fitToFlyClearance.findUnique({
+            where: { caseId: params.caseId },
+            select: { isCleared: true },
+          })
+        : Promise.resolve(null),
+    ]);
+
+    const hasClearedFitToFly = Boolean(
+      auth.targetCase.fitToFlyClearance?.isCleared === true || ftfFallback?.isCleared === true
+    );
+
+    const guard = validateCaseStatusTransition({
+      currentStatus: auth.targetCase.status,
+      nextStatus: validatedCaseStatus,
+      hasVerifiedPassport: verifiedPassportCount > 0,
+      hasClearedFitToFly,
+      unpaidBillCount,
+      overrideReason: validatedOverrideReason ?? null,
+    });
+
+    if (!guard.ok) {
+      return {
+        ok: false,
+        code: ERROR_CODES.BAD_REQUEST,
+        message: guard.message,
+        status: 400,
+      };
+    }
+  }
 
   await prisma.$transaction(async (tx) => {
     await tx.clinicalStep.deleteMany({

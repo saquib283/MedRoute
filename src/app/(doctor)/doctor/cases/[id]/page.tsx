@@ -1371,7 +1371,7 @@ export default function DoctorCaseWorkspacePage({
                   {IATA_CHECKLIST_ITEMS.map((item) => (
                     <label
                       key={item.key}
-                      className="flex items-start gap-2.5 py-1 cursor-pointer text-surface-700"
+                      className="flex items-start gap-2.5 min-h-11 py-2 cursor-pointer text-surface-700"
                     >
                       <input
                         type="checkbox"
@@ -1390,7 +1390,7 @@ export default function DoctorCaseWorkspacePage({
                   ))}
                 </div>
                 {isCleared && !validateFitToFlySafetyChecklist(true, checklist).ok && (
-                  <p className="text-warning-800 bg-warning-50 border border-warning-200 rounded p-2 font-medium">
+                  <p className="text-warning-800 bg-warning-50 border border-warning-200 rounded-md p-2 font-medium">
                     Confirm all 5 physiological criteria above before certifying Fit-to-Fly clearance.
                   </p>
                 )}

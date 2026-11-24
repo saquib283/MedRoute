@@ -258,9 +258,17 @@ export default function ManagerBillingPage() {
       setHospitals(rawHospitals);
 
       if (opts.length > 0) {
-        setSelectedCaseId((prev) =>
-          opts.some((o) => o.caseId === prev) ? prev : opts[0].caseId
-        );
+        const requestedCaseId =
+          typeof window !== 'undefined'
+            ? new URLSearchParams(window.location.search).get('caseId')
+            : null;
+        setSelectedCaseId((prev) => {
+          if (prev && opts.some((o) => o.caseId === prev)) return prev;
+          if (requestedCaseId && opts.some((o) => o.caseId === requestedCaseId)) {
+            return requestedCaseId;
+          }
+          return opts[0].caseId;
+        });
       }
     } catch (err) {
       console.error('Failed to load billing workspace', err);

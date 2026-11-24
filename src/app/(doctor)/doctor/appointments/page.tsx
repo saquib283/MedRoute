@@ -232,7 +232,10 @@ export default function DoctorAppointmentsPage() {
             const dualTz = formatConsultationScheduleDualTz(appt.scheduledAt);
             const isTeleconsult = appt.mode === APPOINTMENT_MODES.TELECONSULTATION;
             const canJoinVideo =
-              isTeleconsult && isSafeHttpUrl(appt.meetingUrl) && appt.status !== 'CANCELLED';
+              isTeleconsult &&
+              isSafeHttpUrl(appt.meetingUrl) &&
+              appt.status !== 'CANCELLED' &&
+              appt.status !== 'COMPLETED';
 
             return (
               <Card key={appt.id} className="p-5 space-y-4">

@@ -363,9 +363,17 @@ describe('Task 3: Clinical Certificate PDF Generator, Document Verification & Fi
         update: expect.objectContaining({ clearedBy: 'Dr. Ashok Seth', isCleared: true }),
       })
     );
+    expect(mockedPrisma.case.update).toHaveBeenCalledTimes(1);
     expect(mockedPrisma.case.update).toHaveBeenCalledWith({
       where: { id: 'case-1' },
-      data: { status: 'FIT_TO_FLY_CLEARED' },
+      data: expect.objectContaining({
+        status: 'FIT_TO_FLY_CLEARED',
+        postReturnFollowUps: expect.arrayContaining([
+          expect.objectContaining({ milestone: 'DAY_7', status: 'PENDING' }),
+          expect.objectContaining({ milestone: 'DAY_30', status: 'PENDING' }),
+          expect.objectContaining({ milestone: 'DAY_90', status: 'PENDING' }),
+        ]),
+      }),
     });
     expect(mockedPrisma.auditLog.create).toHaveBeenCalledWith(
       expect.objectContaining({
@@ -689,6 +697,7 @@ describe('Task 3: Clinical Certificate PDF Generator, Document Verification & Fi
       expect.objectContaining({
         where: expect.objectContaining({
           caseId: 'case-1',
+          actionType: 'DISCHARGE_SUMMARY',
         }),
       })
     );

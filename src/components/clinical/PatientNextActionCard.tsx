@@ -48,6 +48,7 @@ export interface PatientNextActionCardProps {
   hospitalName?: string | null;
   doctorName?: string | null;
   externalModal?: 'TREATMENT_PLAN_MODAL' | 'FOLLOW_UP_MODAL' | null;
+  className?: string;
   onExternalModalClose?: () => void;
   onUpdated?: (snapshot: Record<string, unknown>) => void;
 }
@@ -112,6 +113,7 @@ export function PatientNextActionCard({
   hospitalName,
   doctorName,
   externalModal = null,
+  className = 'lg:col-span-2',
   onExternalModalClose,
   onUpdated,
 }: PatientNextActionCardProps) {
@@ -183,6 +185,9 @@ export function PatientNextActionCard({
     setInternalModal(null);
     setConsentError('');
     setFollowUpError('');
+    setConsentChecked(false);
+    setConsentNotes('');
+    setSelectedMilestone(null);
     onExternalModalClose?.();
   };
 
@@ -282,7 +287,7 @@ export function PatientNextActionCard({
   const hasCriticalAction = topActions.some((a) => a.priority === 'CRITICAL');
 
   return (
-    <div id="treatment-plan" className="lg:col-span-2">
+    <div id="treatment-plan" className={className}>
       <Card className="p-5 space-y-4 h-full">
         <div className="border-b border-surface-100 pb-3 flex items-center justify-between gap-3 flex-wrap">
           <div>
@@ -545,7 +550,7 @@ export function PatientNextActionCard({
                     role="alert"
                     className="p-3 rounded-md bg-danger-50 border border-danger-200 text-danger-800 text-xs flex items-start gap-2"
                   >
-                    <AlertCircle className="w-4 h-4 text-danger-600 shrink-0 mt-0.5" />
+                    <AlertCircle className="w-4 h-4 text-danger-600 shrink-0 mt-0.5" aria-hidden="true" />
                     <span>{consentError}</span>
                   </div>
                 )}
@@ -632,7 +637,7 @@ export function PatientNextActionCard({
               role="alert"
               className="p-3 rounded-md bg-danger-50 border border-danger-200 text-danger-800 text-xs flex items-start gap-2"
             >
-              <AlertCircle className="w-4 h-4 text-danger-600 shrink-0 mt-0.5" />
+              <AlertCircle className="w-4 h-4 text-danger-600 shrink-0 mt-0.5" aria-hidden="true" />
               <span>{followUpError}</span>
             </div>
           )}

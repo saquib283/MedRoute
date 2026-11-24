@@ -385,7 +385,13 @@ export default function AppointmentsManager() {
             Schedule, confirm, complete, reschedule, or cancel patient hospital consultations, assessments, and surgeries.
           </p>
         </div>
-        <Button size="sm" onClick={() => setIsBookModalOpen(true)}>
+        <Button
+          size="sm"
+          onClick={() => {
+            setFormError('');
+            setIsBookModalOpen(true);
+          }}
+        >
           Book Appointment
         </Button>
       </div>
@@ -520,7 +526,8 @@ export default function AppointmentsManager() {
                           {isTeleconsult &&
                             isSafeHttpUrl(appt.meetingUrl) &&
                             appt.meetingUrl &&
-                            appt.status !== 'CANCELLED' && (
+                            appt.status !== 'CANCELLED' &&
+                            appt.status !== 'COMPLETED' && (
                               <a
                                 href={appt.meetingUrl}
                                 target="_blank"
@@ -589,7 +596,10 @@ export default function AppointmentsManager() {
               <h2 className="font-semibold text-surface-900 text-base">Schedule Clinic Appointment</h2>
               <button
                 type="button"
-                onClick={() => setIsBookModalOpen(false)}
+                onClick={() => {
+                  setFormError('');
+                  setIsBookModalOpen(false);
+                }}
                 className="text-surface-500 hover:text-surface-800 font-medium text-xs"
               >
                 Cancel
@@ -712,7 +722,10 @@ export default function AppointmentsManager() {
                   variant="secondary"
                   size="sm"
                   type="button"
-                  onClick={() => setIsBookModalOpen(false)}
+                  onClick={() => {
+                    setFormError('');
+                    setIsBookModalOpen(false);
+                  }}
                 >
                   Cancel
                 </Button>
@@ -804,7 +817,10 @@ export default function AppointmentsManager() {
                   variant="secondary"
                   size="sm"
                   type="button"
-                  onClick={() => setReschedulingAppt(null)}
+                  onClick={() => {
+                    setFormError('');
+                    setReschedulingAppt(null);
+                  }}
                 >
                   Cancel
                 </Button>

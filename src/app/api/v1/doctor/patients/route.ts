@@ -77,6 +77,7 @@ export async function GET(request: NextRequest) {
         return {
           ...formatted,
           cases: formatted.cases.map((c) =>
+            // Defensive guard if travelLogistics is ever added to cases.select
             'travelLogistics' in c && c.travelLogistics !== undefined
               ? {
                   ...c,

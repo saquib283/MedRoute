@@ -58,6 +58,7 @@ export async function POST(
       caseId,
       steps: body.steps,
       caseStatus: body.caseStatus,
+      overrideReason: body.overrideReason,
       actor: {
         userId: authUser.userId,
         role: authUser.role,

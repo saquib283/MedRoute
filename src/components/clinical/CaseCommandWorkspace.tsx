@@ -76,6 +76,8 @@ type WorkspaceTabKey =
   | 'pathway_stay'
   | 'discharge_followup';
 
+type FormHydrationScope = 'ALL' | 'TRIAGE' | 'PLAN' | 'FORMC' | 'NONE';
+
 interface HospitalDirectoryItem {
   id: string;
   name: string;
@@ -302,65 +304,93 @@ export function CaseCommandWorkspace({
   const [formCVisaExpiryInput, setFormCVisaExpiryInput] = useState('');
   const [isRecordingFormC, setIsRecordingFormC] = useState(false);
 
-  const hydrateFormsFromSnapshot = useCallback((data: LifecycleSnapshotData) => {
-    const c = data.case;
-    setSelectedHospitalId(c.hospitalId || '');
-    setSelectedDoctorId(c.primaryDoctorId || '');
-    setTargetStatus(c.status || 'INQUIRY_RECEIVED');
-    setIsUrgent(Boolean(c.isUrgent));
-    setCaseNotes(c.notes || '');
-    setEscalationNote(c.escalationNote || '');
-    setOverrideReason('');
+  const hydrateFormsFromSnapshot = useCallback(
+    (data: LifecycleSnapshotData, scope: FormHydrationScope = 'ALL') => {
+      if (scope === 'NONE') return;
 
-    const plan = data.treatmentPlan;
-    setDiagnosis(plan?.diagnosis || '');
-    setProcedureName(plan?.procedureName || '');
-    setPlanSpecialty(plan?.specialty || '');
-    setHospitalLosDays(String(plan?.hospitalLosDays ?? 3));
-    setRecoveryStayDays(String(plan?.recoveryStayDays ?? 5));
-    setEstimatedCostUsd(
-      plan?.estimatedCostUsd !== undefined && plan?.estimatedCostUsd !== null
-        ? String(plan.estimatedCostUsd)
-        : ''
-    );
-    setDepositRequiredUsd(
-      plan?.depositRequiredUsd !== undefined && plan?.depositRequiredUsd !== null
-        ? String(plan.depositRequiredUsd)
-        : ''
-    );
-    setInclusionsText(Array.isArray(plan?.inclusions) ? plan.inclusions.join('\n') : '');
-    setExclusionsText(Array.isArray(plan?.exclusions) ? plan.exclusions.join('\n') : '');
-    setDoctorOpinionNotes(plan?.doctorOpinionNotes || '');
+      if (scope === 'ALL' || scope === 'TRIAGE') {
+        const c = data.case;
+        setSelectedHospitalId(c.hospitalId || '');
+        setSelectedDoctorId(c.primaryDoctorId || '');
+        setTargetStatus(c.status || 'INQUIRY_RECEIVED');
+        setIsUrgent(Boolean(c.isUrgent));
+        setCaseNotes(c.notes || '');
+        setEscalationNote(c.escalationNote || '');
+        setOverrideReason('');
+      }
 
-    const logistics = data.travelLogistics;
-    setFormCSubmittedAtInput(toDateTimeLocalValue(logistics?.formCSubmittedAt));
-    setFrroNumberInput(logistics?.frroNumber || '');
-    setFormCVisaExpiryInput(toDateInputValue(logistics?.visaExpiryDate));
-  }, []);
+      if (scope === 'ALL' || scope === 'PLAN') {
+        const plan = data.treatmentPlan;
+        setDiagnosis(plan?.diagnosis || '');
+        setProcedureName(plan?.procedureName || '');
+        setPlanSpecialty(plan?.specialty || '');
+        setHospitalLosDays(String(plan?.hospitalLosDays ?? 3));
+        setRecoveryStayDays(String(plan?.recoveryStayDays ?? 5));
+        setEstimatedCostUsd(
+          plan?.estimatedCostUsd !== undefined && plan?.estimatedCostUsd !== null
+            ? String(plan.estimatedCostUsd)
+            : ''
+        );
+        setDepositRequiredUsd(
+          plan?.depositRequiredUsd !== undefined && plan?.depositRequiredUsd !== null
+            ? String(plan.depositRequiredUsd)
+            : ''
+        );
+        setInclusionsText(Array.isArray(plan?.inclusions) ? plan.inclusions.join('\n') : '');
+        setExclusionsText(Array.isArray(plan?.exclusions) ? plan.exclusions.join('\n') : '');
+        setDoctorOpinionNotes(plan?.doctorOpinionNotes || '');
+      }
+
+      if (scope === 'ALL' || scope === 'FORMC') {
+        const logistics = data.travelLogistics;
+        setFormCSubmittedAtInput(toDateTimeLocalValue(logistics?.formCSubmittedAt));
+        setFrroNumberInput(logistics?.frroNumber || '');
+        setFormCVisaExpiryInput(toDateInputValue(logistics?.visaExpiryDate));
+      }
+    },
+    []
+  );
 
   const fetchLifecycle = useCallback(
-    async (isCancelled?: () => boolean) => {
+    async (options?: {
+      silent?: boolean;
+      hydrateScope?: FormHydrationScope;
+      isCancelled?: () => boolean;
+    }) => {
+      const silent = Boolean(options?.silent);
+      const hydrateScope = options?.hydrateScope ?? 'ALL';
+      const isCancelled = options?.isCancelled;
       try {
-        setLoadError(null);
+        if (!silent) {
+          setLoadError(null);
+        }
         const res = await fetch(`/api/v1/cases/${caseId}/lifecycle`);
         const json = await res.json();
         if (isCancelled?.()) return;
 
         if (!res.ok || !json.success || !json.data) {
           const msg = json.error?.message || 'Unable to load case workspace.';
-          setLoadError(msg);
+          if (silent) {
+            toast.error(msg, 'Refresh Failed');
+          } else {
+            setLoadError(msg);
+          }
           return;
         }
 
         const data = json.data as LifecycleSnapshotData;
         setSnapshot(data);
-        hydrateFormsFromSnapshot(data);
+        hydrateFormsFromSnapshot(data, hydrateScope);
       } catch (err) {
         if (isCancelled?.()) return;
         console.error('Failed to load case lifecycle:', err);
-        setLoadError('Network error loading case workspace.');
+        if (silent) {
+          toast.apiError(err, 'Unable to refresh case workspace.', 'Refresh Failed');
+        } else {
+          setLoadError('Network error loading case workspace.');
+        }
       } finally {
-        if (!isCancelled?.()) {
+        if (!silent && !isCancelled?.()) {
           setIsLoading(false);
         }
       }
@@ -371,7 +401,7 @@ export function CaseCommandWorkspace({
   useEffect(() => {
     let cancelled = false;
     const timer = setTimeout(() => {
-      void fetchLifecycle(() => cancelled);
+      void fetchLifecycle({ hydrateScope: 'ALL', isCancelled: () => cancelled });
     }, 0);
     return () => {
       cancelled = true;
@@ -425,6 +455,12 @@ export function CaseCommandWorkspace({
 
   const liveTransitionGuard = useMemo(() => {
     if (!currentCaseStatus) return { ok: true as const };
+    if (currentCaseStatus === 'CLOSED' && role === 'MANAGER' && targetStatus !== 'CLOSED') {
+      return {
+        ok: false as const,
+        message: 'Closed cases are locked and can only be reopened by a Super Admin.',
+      };
+    }
     return validateCaseStatusTransition({
       currentStatus: currentCaseStatus,
       nextStatus: targetStatus,
@@ -435,6 +471,7 @@ export function CaseCommandWorkspace({
     });
   }, [
     currentCaseStatus,
+    role,
     targetStatus,
     hasVerifiedPassport,
     hasClearedFitToFly,
@@ -501,7 +538,7 @@ export function CaseCommandWorkspace({
       toast.success('Partner hospital and attending specialist assigned to case.', 'Team Assigned');
       setAssignmentNotes('');
       setSelectedSpecialtyId('');
-      await fetchLifecycle();
+      await fetchLifecycle({ silent: true, hydrateScope: 'TRIAGE' });
     } catch (err) {
       toast.apiError(err, 'Network error assigning clinical team.', 'Connection Error');
     } finally {
@@ -561,7 +598,7 @@ export function CaseCommandWorkspace({
         'Case Updated'
       );
       setOverrideReason('');
-      await fetchLifecycle();
+      await fetchLifecycle({ silent: true, hydrateScope: 'TRIAGE' });
     } catch (err) {
       toast.apiError(err, 'Network error updating case status.', 'Connection Error');
     } finally {
@@ -627,7 +664,7 @@ export function CaseCommandWorkspace({
         'Structured treatment plan & cost estimate published to patient portal.',
         'Treatment Plan Published'
       );
-      await fetchLifecycle();
+      await fetchLifecycle({ silent: true, hydrateScope: 'PLAN' });
     } catch (err) {
       toast.apiError(err, 'Network error publishing treatment plan.', 'Connection Error');
     } finally {
@@ -658,7 +695,7 @@ export function CaseCommandWorkspace({
       }
 
       toast.success('Statutory FRRO Form C filing recorded on case timeline.', 'Form C Recorded');
-      await fetchLifecycle();
+      await fetchLifecycle({ silent: true, hydrateScope: 'FORMC' });
     } catch (err) {
       toast.apiError(err, 'Network error recording Form C filing.', 'Connection Error');
     } finally {
@@ -986,6 +1023,12 @@ export function CaseCommandWorkspace({
                 required
                 value={targetStatus}
                 onChange={setTargetStatus}
+                disabled={isClosed && role === 'MANAGER'}
+                helperText={
+                  isClosed && role === 'MANAGER'
+                    ? 'Closed cases are locked and can only be reopened by a Super Admin.'
+                    : undefined
+                }
                 options={CASE_STATUS_ORDER.map((s) => ({
                   value: s,
                   label: CASE_STATUS_LABELS[s] || s,
@@ -1051,14 +1094,16 @@ export function CaseCommandWorkspace({
                 />
               </div>
 
-              <Input
-                label="Administrative Override Reason (Optional)"
-                type="text"
-                value={overrideReason}
-                onChange={(e) => setOverrideReason(e.target.value)}
-                placeholder="Required only when overriding passport or billing closure gates"
-                helperText="Logged immutably in the HIPAA audit trail if used."
-              />
+              {!(isClosed && role === 'MANAGER') && (
+                <Input
+                  label="Administrative Override Reason (Optional)"
+                  type="text"
+                  value={overrideReason}
+                  onChange={(e) => setOverrideReason(e.target.value)}
+                  placeholder="Required only when overriding passport or billing closure gates"
+                  helperText="Logged immutably in the HIPAA audit trail if used."
+                />
+              )}
 
               <div className="pt-2 border-t border-surface-100 flex justify-end">
                 <Button
@@ -1408,14 +1453,14 @@ export function CaseCommandWorkspace({
             passportExpiry={c.patient.passportExpiry}
             travelLogistics={snapshot.travelLogistics}
             role="STAFF"
-            onSaved={() => void fetchLifecycle()}
+            onSaved={() => void fetchLifecycle({ silent: true, hydrateScope: 'NONE' })}
           />
 
           {/* Case Documents Verification & VIL / FRRO Certificate Issuance */}
           <CaseDocumentsManagerPanel
             caseId={caseId}
             canVerify
-            onDocumentIssued={() => void fetchLifecycle()}
+            onDocumentIssued={() => void fetchLifecycle({ silent: true, hydrateScope: 'NONE' })}
           />
         </div>
       )}
