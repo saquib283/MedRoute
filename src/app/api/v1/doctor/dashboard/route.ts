@@ -8,6 +8,10 @@ import prisma from '@/lib/prisma';
 import { requireAuth } from '@/lib/api/auth-helper';
 import { apiSuccess, apiError } from '@/lib/api/response';
 import { ERROR_CODES } from '@/lib/api/errors';
+import {
+  formatPatientForViewer,
+  formatTravelLogisticsForViewer,
+} from '@/lib/services/phi.service';
 
 export async function GET(request: NextRequest) {
   try {
@@ -88,43 +92,49 @@ export async function GET(request: NextRequest) {
       },
     });
 
-    // 5. Active clinical cases linked to this doctor's non-cancelled appointments
-    const distinctCaseAppointments = await prisma.appointment.findMany({
+    // 5. Active clinical cases assigned via Case.primaryDoctorId or non-cancelled appointments
+    const rawPendingClinicalCases = await prisma.case.findMany({
       where: {
-        doctorId: doctorProfile.id,
-        status: { not: 'CANCELLED' },
+        status: { not: 'CLOSED' },
+        OR: [
+          { primaryDoctorId: doctorProfile.id },
+          {
+            appointments: {
+              some: {
+                doctorId: doctorProfile.id,
+                status: { not: 'CANCELLED' },
+              },
+            },
+          },
+        ],
       },
-      select: { caseId: true },
-      distinct: ['caseId'],
+      include: {
+        patient: {
+          select: {
+            nationality: true,
+            user: { select: { fullName: true } },
+          },
+        },
+        clinicalSteps: {
+          where: { status: { not: 'COMPLETED' } },
+          orderBy: [{ stageOrder: 'asc' }, { stepOrder: 'asc' }],
+        },
+        fitToFlyClearance: true,
+      },
+      orderBy: [{ isUrgent: 'desc' }, { lastUpdatedAt: 'desc' }],
     });
 
-    const caseIds = Array.from(
-      new Set(distinctCaseAppointments.map((a) => a.caseId).filter(Boolean))
-    );
-
-    const pendingClinicalCases =
-      caseIds.length > 0
-        ? await prisma.case.findMany({
-            where: {
-              id: { in: caseIds },
-              status: { not: 'CLOSED' },
-            },
-            include: {
-              patient: {
-                select: {
-                  nationality: true,
-                  user: { select: { fullName: true } },
-                },
-              },
-              clinicalSteps: {
-                where: { status: { not: 'COMPLETED' } },
-                orderBy: [{ stageOrder: 'asc' }, { stepOrder: 'asc' }],
-              },
-              fitToFlyClearance: true,
-            },
-            orderBy: [{ isUrgent: 'desc' }, { lastUpdatedAt: 'desc' }],
-          })
-        : [];
+    const pendingClinicalCases = rawPendingClinicalCases.map((c) => ({
+      ...c,
+      ...('travelLogistics' in c && c.travelLogistics !== undefined
+        ? {
+            travelLogistics: formatTravelLogisticsForViewer(c.travelLogistics, {
+              maskPassport: true,
+            }),
+          }
+        : {}),
+      patient: formatPatientForViewer(c.patient, { maskPassport: true }),
+    }));
 
     return apiSuccess({
       doctorProfile,

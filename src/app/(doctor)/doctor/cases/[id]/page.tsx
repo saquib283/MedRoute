@@ -16,6 +16,19 @@ import { Badge, CaseStatusBadge, UrgencyBadge } from '@/components/ui/Badge';
 import { toast } from '@/components/ui/Toast';
 import { CaseDocumentsManagerPanel } from '@/components/clinical/CaseDocumentsManagerPanel';
 import {
+  FOLLOW_UP_MILESTONES,
+  FOLLOW_UP_MILESTONE_LABELS,
+  SSR_ASSISTANCE_CODES,
+  SSR_ASSISTANCE_LABELS,
+} from '@/lib/constants';
+import {
+  validateFitToFlySafetyChecklist,
+  type FitToFlyChecklistPayload,
+  type FollowUpMilestone,
+  type TravelLogisticsPayload,
+  type TreatmentPlanPayload,
+} from '@/lib/validation/lifecycle-schemas';
+import {
   ArrowLeft,
   AlertTriangle,
   Pill,
@@ -29,6 +42,10 @@ import {
   Lock,
   Layers,
   X,
+  ClipboardList,
+  Calendar,
+  ChevronDown,
+  ChevronUp,
 } from 'lucide-react';
 
 interface ClinicalStepItem {
@@ -53,7 +70,48 @@ interface FitToFlyClearanceItem {
   clearanceDate: string | null;
   restrictions: string | null;
   reEvalDate: string | null;
+  checklist?: FitToFlyChecklistPayload | null;
+  ssrCode?: string | null;
+  requiresMedif?: boolean;
+  flightNumber?: string | null;
+  departureDate?: string | null;
 }
+
+const DEFAULT_IATA_CHECKLIST: FitToFlyChecklistPayload = {
+  woundStable: false,
+  noTrappedGasRisk: false,
+  cardioRespiratoryStable: false,
+  hemoglobinCleared: false,
+  dvtProphylaxisPlan: false,
+};
+
+const IATA_CHECKLIST_ITEMS: Array<{
+  key: keyof FitToFlyChecklistPayload;
+  label: string;
+}> = [
+  { key: 'woundStable', label: 'Wound stable & free of active drainage' },
+  {
+    key: 'noTrappedGasRisk',
+    label: 'No trapped gas expansion risk at 8,000 ft cabin pressure',
+  },
+  {
+    key: 'cardioRespiratoryStable',
+    label: 'Cardiorespiratory & hemodynamic stability',
+  },
+  {
+    key: 'hemoglobinCleared',
+    label: 'Hemoglobin >= 8.5 g/dL & oxygenation adequate',
+  },
+  {
+    key: 'dvtProphylaxisPlan',
+    label: 'DVT thromboembolism prophylaxis prescribed',
+  },
+];
+
+const SSR_CODE_OPTIONS = SSR_ASSISTANCE_CODES.map((code) => ({
+  value: code,
+  label: SSR_ASSISTANCE_LABELS[code] || code,
+}));
 
 interface CertificateDocItem {
   id: string;
@@ -114,6 +172,8 @@ const DECISION_BRANCH_OPTIONS = [
 ];
 
 const DOCTOR_ISSUE_CATEGORIES = [
+  { value: 'FIT_TO_FLY_CERTIFICATE', label: 'Fit-to-Fly Certificate' },
+  { value: 'DISCHARGE_SUMMARY', label: 'Hospital Discharge Summary' },
   { value: 'MEDICAL_OPINION', label: 'Hospital Medical Opinion' },
   { value: 'PRESCRIPTION', label: 'Doctor Prescription' },
   { value: 'MEDICAL_REPORT', label: 'Medical Diagnostic Report' },
@@ -149,6 +209,9 @@ export default function DoctorCaseWorkspacePage({
   const [caseData, setCaseData] = useState<CaseDetail | null>(null);
   const [fitToFly, setFitToFly] = useState<FitToFlyClearanceItem | null>(null);
   const [certificateDoc, setCertificateDoc] = useState<CertificateDocItem | null>(null);
+  const [treatmentPlan, setTreatmentPlan] = useState<TreatmentPlanPayload | null>(null);
+  const [travelLogistics, setTravelLogistics] = useState<TravelLogisticsPayload | null>(null);
+  const [followUps, setFollowUps] = useState<FollowUpMilestone[]>([]);
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
 
@@ -156,10 +219,31 @@ export default function DoctorCaseWorkspacePage({
   const [stepDrafts, setStepDrafts] = useState<Record<string, StepDraft>>({});
   const [savingStepId, setSavingStepId] = useState<string | null>(null);
 
+  // Pre-Travel Treatment Plan & Opinion state
+  const [showPlanEditor, setShowPlanEditor] = useState(false);
+  const [planDiagnosis, setPlanDiagnosis] = useState('');
+  const [planProcedure, setPlanProcedure] = useState('');
+  const [planSpecialty, setPlanSpecialty] = useState('');
+  const [planHospitalLos, setPlanHospitalLos] = useState('3');
+  const [planRecoveryLos, setPlanRecoveryLos] = useState('7');
+  const [planEstimatedCost, setPlanEstimatedCost] = useState('');
+  const [planDepositCost, setPlanDepositCost] = useState('');
+  const [planOpinionNotes, setPlanOpinionNotes] = useState('');
+  const [savingPlan, setSavingPlan] = useState(false);
+
+  // Post-return follow-up feedback drafts keyed by milestone
+  const [followUpDrafts, setFollowUpDrafts] = useState<Record<string, string>>({});
+  const [savingFollowUpMilestone, setSavingFollowUpMilestone] = useState<string | null>(null);
+
   // Fit-to-Fly form state
   const [isCleared, setIsCleared] = useState(true);
   const [restrictions, setRestrictions] = useState('');
   const [reEvalDate, setReEvalDate] = useState('');
+  const [checklist, setChecklist] = useState<FitToFlyChecklistPayload>(DEFAULT_IATA_CHECKLIST);
+  const [ssrCode, setSsrCode] = useState('NONE');
+  const [requiresMedif, setRequiresMedif] = useState(false);
+  const [flightNumber, setFlightNumber] = useState('');
+  const [departureDate, setDepartureDate] = useState('');
   const [fitToFlyFile, setFitToFlyFile] = useState<File | null>(null);
   const [savingFitToFly, setSavingFitToFly] = useState(false);
   const fitToFlyFileInputRef = useRef<HTMLInputElement>(null);
@@ -176,14 +260,70 @@ export default function DoctorCaseWorkspacePage({
     setStepDrafts(nextDrafts);
   }, []);
 
-  const syncFitToFlyForm = useCallback((clearance: FitToFlyClearanceItem | null) => {
-    setFitToFly(clearance);
-    setIsCleared(clearance ? clearance.isCleared : true);
-    setRestrictions(clearance?.restrictions || '');
-    setReEvalDate(
-      clearance?.reEvalDate ? new Date(clearance.reEvalDate).toISOString().slice(0, 10) : ''
-    );
-  }, []);
+  const syncFitToFlyForm = useCallback(
+    (clearance: FitToFlyClearanceItem | null, logistics?: TravelLogisticsPayload | null) => {
+      setFitToFly(clearance);
+      setIsCleared(clearance ? clearance.isCleared : true);
+      setRestrictions(clearance?.restrictions || '');
+      setReEvalDate(
+        clearance?.reEvalDate ? new Date(clearance.reEvalDate).toISOString().slice(0, 10) : ''
+      );
+      setChecklist(
+        clearance?.checklist && typeof clearance.checklist === 'object'
+          ? {
+              woundStable: Boolean(clearance.checklist.woundStable),
+              noTrappedGasRisk: Boolean(clearance.checklist.noTrappedGasRisk),
+              cardioRespiratoryStable: Boolean(clearance.checklist.cardioRespiratoryStable),
+              hemoglobinCleared: Boolean(clearance.checklist.hemoglobinCleared),
+              dvtProphylaxisPlan: Boolean(clearance.checklist.dvtProphylaxisPlan),
+            }
+          : DEFAULT_IATA_CHECKLIST
+      );
+      setSsrCode(clearance?.ssrCode || logistics?.wheelchairSsrCode || 'NONE');
+      setRequiresMedif(Boolean(clearance?.requiresMedif));
+      setFlightNumber(clearance?.flightNumber || logistics?.departureFlightNo || '');
+      const rawDepDate = clearance?.departureDate || logistics?.departureAt || null;
+      setDepartureDate(rawDepDate ? new Date(rawDepDate).toISOString().slice(0, 10) : '');
+    },
+    []
+  );
+
+  const syncLifecycleState = useCallback(
+    (
+      plan: TreatmentPlanPayload | null,
+      milestones: FollowUpMilestone[],
+      caseStatus: string
+    ) => {
+      setTreatmentPlan(plan);
+      setPlanDiagnosis(plan?.diagnosis || '');
+      setPlanProcedure(plan?.procedureName || '');
+      setPlanSpecialty(plan?.specialty || '');
+      setPlanHospitalLos(String(plan?.hospitalLosDays ?? 3));
+      setPlanRecoveryLos(String(plan?.recoveryStayDays ?? 7));
+      setPlanEstimatedCost(
+        plan?.estimatedCostUsd !== undefined && plan?.estimatedCostUsd !== null
+          ? String(plan.estimatedCostUsd)
+          : ''
+      );
+      setPlanDepositCost(
+        plan?.depositRequiredUsd !== undefined && plan?.depositRequiredUsd !== null
+          ? String(plan.depositRequiredUsd)
+          : ''
+      );
+      setPlanOpinionNotes(plan?.doctorOpinionNotes || '');
+      if (!plan?.publishedAt && (caseStatus === 'INQUIRY_RECEIVED' || caseStatus === 'UNDER_REVIEW')) {
+        setShowPlanEditor(true);
+      }
+
+      setFollowUps(milestones);
+      const nextFollowUpDrafts: Record<string, string> = {};
+      for (const m of milestones) {
+        nextFollowUpDrafts[m.milestone] = m.doctorFeedback || '';
+      }
+      setFollowUpDrafts(nextFollowUpDrafts);
+    },
+    []
+  );
 
   const loadCaseWorkspace = useCallback(
     async (opts?: { silent?: boolean; isCancelled?: () => boolean }) => {
@@ -194,13 +334,15 @@ export default function DoctorCaseWorkspacePage({
           setLoadError(null);
           setLoading(true);
         }
-        const [pathwayRes, ftfRes] = await Promise.all([
+        const [pathwayRes, ftfRes, lifecycleRes] = await Promise.all([
           fetch(`/api/v1/cases/${caseId}/pathway`),
           fetch(`/api/v1/cases/${caseId}/fit-to-fly`),
+          fetch(`/api/v1/cases/${caseId}/lifecycle`),
         ]);
 
         const pathwayJson = await pathwayRes.json();
         const ftfJson = await ftfRes.json();
+        const lifecycleJson = await lifecycleRes.json().catch(() => null);
 
         if (isCancelled?.()) return;
 
@@ -218,11 +360,30 @@ export default function DoctorCaseWorkspacePage({
         setCaseData(loadedCase);
         syncStepDrafts(loadedCase.clinicalSteps || []);
 
+        const loadedLogistics: TravelLogisticsPayload | null =
+          lifecycleRes.ok && lifecycleJson?.success
+            ? (lifecycleJson.data?.travelLogistics ?? null)
+            : null;
+        setTravelLogistics(loadedLogistics);
+
+        if (lifecycleRes.ok && lifecycleJson?.success) {
+          syncLifecycleState(
+            lifecycleJson.data?.treatmentPlan ?? null,
+            Array.isArray(lifecycleJson.data?.postReturnFollowUps)
+              ? lifecycleJson.data.postReturnFollowUps
+              : [],
+            loadedCase.status
+          );
+        }
+
         if (ftfRes.ok && ftfJson.success) {
-          syncFitToFlyForm(ftfJson.data?.fitToFlyClearance ?? loadedCase.fitToFlyClearance ?? null);
+          syncFitToFlyForm(
+            ftfJson.data?.fitToFlyClearance ?? loadedCase.fitToFlyClearance ?? null,
+            loadedLogistics
+          );
           setCertificateDoc(ftfJson.data?.certificateDocument ?? null);
         } else {
-          syncFitToFlyForm(loadedCase.fitToFlyClearance ?? null);
+          syncFitToFlyForm(loadedCase.fitToFlyClearance ?? null, loadedLogistics);
         }
       } catch (err) {
         console.error('Failed to load doctor case workspace:', err);
@@ -239,7 +400,7 @@ export default function DoctorCaseWorkspacePage({
         }
       }
     },
-    [caseId, syncFitToFlyForm, syncStepDrafts]
+    [caseId, syncFitToFlyForm, syncLifecycleState, syncStepDrafts]
   );
 
   useEffect(() => {
@@ -324,12 +485,118 @@ export default function DoctorCaseWorkspacePage({
     }
   };
 
+  const handlePublishTreatmentPlan = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!planDiagnosis.trim() || !planProcedure.trim()) {
+      toast.error('Diagnosis and proposed procedure are required.', 'Validation Error');
+      return;
+    }
+    const parsedCost = Number(planEstimatedCost);
+    if (!Number.isFinite(parsedCost) || parsedCost < 0) {
+      toast.error('Enter a valid all-in cost estimate in USD.', 'Validation Error');
+      return;
+    }
+    const parsedDeposit = planDepositCost.trim() ? Number(planDepositCost) : null;
+    if (parsedDeposit !== null && (!Number.isFinite(parsedDeposit) || parsedDeposit < 0)) {
+      toast.error('Enter a valid deposit amount in USD.', 'Validation Error');
+      return;
+    }
+
+    setSavingPlan(true);
+    try {
+      const res = await fetch(`/api/v1/cases/${caseId}/lifecycle`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          action: 'PUBLISH_TREATMENT_PLAN',
+          diagnosis: planDiagnosis.trim(),
+          procedureName: planProcedure.trim(),
+          specialty: planSpecialty.trim() || null,
+          hospitalLosDays: Number(planHospitalLos) || 0,
+          recoveryStayDays: Number(planRecoveryLos) || 0,
+          estimatedCostUsd: parsedCost,
+          depositRequiredUsd: parsedDeposit,
+          currency: 'USD',
+          doctorOpinionNotes: planOpinionNotes.trim() || null,
+        }),
+      });
+      const json = await res.json();
+      if (!res.ok || !json.success) {
+        toast.apiError(json, 'Failed to publish treatment plan');
+        return;
+      }
+
+      toast.success(
+        'Clinical opinion and treatment plan published for patient review.',
+        'Treatment Plan Published'
+      );
+      setShowPlanEditor(false);
+      await loadCaseWorkspace({ silent: true });
+    } catch (err) {
+      toast.apiError(err, 'Network error publishing treatment plan');
+    } finally {
+      setSavingPlan(false);
+    }
+  };
+
+  const handleSaveFollowUpFeedback = async (milestone: FollowUpMilestone['milestone']) => {
+    const feedback = (followUpDrafts[milestone] || '').trim();
+    if (!feedback) {
+      toast.error('Please enter clinical guidance before submitting review.', 'Feedback Required');
+      return;
+    }
+
+    setSavingFollowUpMilestone(milestone);
+    try {
+      const res = await fetch(`/api/v1/cases/${caseId}/lifecycle`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          action: 'SUBMIT_FOLLOW_UP',
+          milestone,
+          doctorFeedback: feedback,
+        }),
+      });
+      const json = await res.json();
+      if (!res.ok || !json.success) {
+        toast.apiError(json, 'Failed to save follow-up review');
+        return;
+      }
+
+      toast.success(
+        `${FOLLOW_UP_MILESTONE_LABELS[milestone] || milestone} review saved.`,
+        'Follow-Up Reviewed'
+      );
+      await loadCaseWorkspace({ silent: true });
+    } catch (err) {
+      toast.apiError(err, 'Network error saving follow-up review');
+    } finally {
+      setSavingFollowUpMilestone(null);
+    }
+  };
+
   const handleFitToFlySubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+
+    const safetyCheck = validateFitToFlySafetyChecklist(isCleared, checklist);
+    if (!safetyCheck.ok) {
+      toast.error(safetyCheck.message, 'IATA Safety Checklist Required');
+      return;
+    }
+
     setSavingFitToFly(true);
     try {
       const formData = new FormData();
       formData.append('isCleared', isCleared ? 'true' : 'false');
+      formData.append('checklist', JSON.stringify(checklist));
+      formData.append('ssrCode', ssrCode || 'NONE');
+      formData.append('requiresMedif', requiresMedif ? 'true' : 'false');
+      if (flightNumber.trim()) {
+        formData.append('flightNumber', flightNumber.trim());
+      }
+      if (departureDate.trim()) {
+        formData.append('departureDate', new Date(`${departureDate.trim()}T00:00:00.000Z`).toISOString());
+      }
       if (restrictions.trim()) {
         formData.append('restrictions', restrictions.trim());
       }
@@ -350,7 +617,7 @@ export default function DoctorCaseWorkspacePage({
         return;
       }
 
-      syncFitToFlyForm(json.data?.fitToFlyClearance ?? null);
+      syncFitToFlyForm(json.data?.fitToFlyClearance ?? null, travelLogistics);
       setCertificateDoc(json.data?.certificateDocument ?? null);
       setFitToFlyFile(null);
       if (fitToFlyFileInputRef.current) {
@@ -679,6 +946,308 @@ export default function DoctorCaseWorkspacePage({
               </div>
             )}
           </Card>
+
+          {/* Pre-Travel Medical Opinion & Structured Treatment Plan */}
+          <Card className="p-5 space-y-4">
+            <div className="flex flex-wrap items-start justify-between gap-3 pb-3 border-b border-surface-200">
+              <div>
+                <h2 className="text-base font-semibold text-surface-900 flex items-center gap-2">
+                  <ClipboardList className="w-4 h-4 text-primary-600" />
+                  Pre-travel treatment plan &amp; clinical opinion
+                </h2>
+                <p className="text-xs text-surface-500 mt-0.5">
+                  Publish proposed diagnosis, surgical plan, length of stay, and clinical opinion for patient consent.
+                </p>
+              </div>
+              <div className="flex items-center gap-2">
+                {treatmentPlan?.consentAcceptedAt ? (
+                  <Badge variant="success" size="sm">
+                    Patient Consent Confirmed
+                  </Badge>
+                ) : treatmentPlan?.publishedAt ? (
+                  <Badge variant="info" size="sm">
+                    Awaiting Patient Consent
+                  </Badge>
+                ) : (
+                  <Badge variant="warning" size="sm">
+                    Pending Clinical Opinion
+                  </Badge>
+                )}
+                {!isClosed && (
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant="secondary"
+                    onClick={() => setShowPlanEditor((prev) => !prev)}
+                  >
+                    <span>{showPlanEditor ? 'Hide Form' : treatmentPlan?.publishedAt ? 'Revise Plan' : 'Draft Plan'}</span>
+                    {showPlanEditor ? (
+                      <ChevronUp className="w-3.5 h-3.5" />
+                    ) : (
+                      <ChevronDown className="w-3.5 h-3.5" />
+                    )}
+                  </Button>
+                )}
+              </div>
+            </div>
+
+            {treatmentPlan?.procedureName && (
+              <div className="p-4 rounded-lg bg-surface-50 border border-surface-200 space-y-2 text-xs">
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                  <div>
+                    <span className="text-surface-500 block">Diagnosis</span>
+                    <span className="font-semibold text-surface-900">{treatmentPlan.diagnosis}</span>
+                  </div>
+                  <div>
+                    <span className="text-surface-500 block">Proposed Procedure</span>
+                    <span className="font-semibold text-surface-900">{treatmentPlan.procedureName}</span>
+                  </div>
+                  <div className="tabular-nums">
+                    <span className="text-surface-500 block">Stay &amp; All-In Estimate</span>
+                    <span className="font-semibold text-surface-900">
+                      {treatmentPlan.hospitalLosDays}d inpatient + {treatmentPlan.recoveryStayDays}d recovery •{' '}
+                      {treatmentPlan.currency || 'USD'} {Number(treatmentPlan.estimatedCostUsd || 0).toLocaleString()}
+                    </span>
+                  </div>
+                </div>
+                {treatmentPlan.doctorOpinionNotes && (
+                  <p className="text-surface-700 pt-2 border-t border-surface-200">
+                    <span className="font-medium text-surface-900">Specialist Opinion:</span>{' '}
+                    {treatmentPlan.doctorOpinionNotes}
+                  </p>
+                )}
+              </div>
+            )}
+
+            {showPlanEditor && !isClosed && (
+              <form onSubmit={handlePublishTreatmentPlan} className="space-y-3 text-xs pt-2 border-t border-surface-200">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div className="space-y-1">
+                    <label htmlFor="doc-plan-diagnosis" className="block font-medium text-surface-700">
+                      Primary clinical diagnosis
+                    </label>
+                    <input
+                      id="doc-plan-diagnosis"
+                      type="text"
+                      required
+                      value={planDiagnosis}
+                      onChange={(e) => setPlanDiagnosis(e.target.value)}
+                      placeholder="e.g., Double-vessel coronary artery disease"
+                      className="w-full min-h-11 px-3 py-2 rounded-md border border-surface-300 bg-white text-surface-900 focus:border-primary-600 focus:outline-none"
+                    />
+                  </div>
+                  <div className="space-y-1">
+                    <label htmlFor="doc-plan-procedure" className="block font-medium text-surface-700">
+                      Proposed procedure
+                    </label>
+                    <input
+                      id="doc-plan-procedure"
+                      type="text"
+                      required
+                      value={planProcedure}
+                      onChange={(e) => setPlanProcedure(e.target.value)}
+                      placeholder="e.g., Percutaneous Coronary Intervention (PCI)"
+                      className="w-full min-h-11 px-3 py-2 rounded-md border border-surface-300 bg-white text-surface-900 focus:border-primary-600 focus:outline-none"
+                    />
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                  <div className="space-y-1">
+                    <label htmlFor="doc-plan-hlos" className="block font-medium text-surface-700">
+                      Hospital LOS (days)
+                    </label>
+                    <input
+                      id="doc-plan-hlos"
+                      type="number"
+                      min={0}
+                      max={365}
+                      value={planHospitalLos}
+                      onChange={(e) => setPlanHospitalLos(e.target.value)}
+                      className="w-full min-h-11 px-3 py-2 rounded-md border border-surface-300 bg-white text-surface-900 tabular-nums focus:border-primary-600 focus:outline-none"
+                    />
+                  </div>
+                  <div className="space-y-1">
+                    <label htmlFor="doc-plan-rlos" className="block font-medium text-surface-700">
+                      Recovery stay (days)
+                    </label>
+                    <input
+                      id="doc-plan-rlos"
+                      type="number"
+                      min={0}
+                      max={365}
+                      value={planRecoveryLos}
+                      onChange={(e) => setPlanRecoveryLos(e.target.value)}
+                      className="w-full min-h-11 px-3 py-2 rounded-md border border-surface-300 bg-white text-surface-900 tabular-nums focus:border-primary-600 focus:outline-none"
+                    />
+                  </div>
+                  <div className="space-y-1">
+                    <label htmlFor="doc-plan-cost" className="block font-medium text-surface-700">
+                      Est. all-in cost (USD)
+                    </label>
+                    <input
+                      id="doc-plan-cost"
+                      type="number"
+                      min={0}
+                      step="0.01"
+                      required
+                      value={planEstimatedCost}
+                      onChange={(e) => setPlanEstimatedCost(e.target.value)}
+                      placeholder="4850"
+                      className="w-full min-h-11 px-3 py-2 rounded-md border border-surface-300 bg-white text-surface-900 tabular-nums focus:border-primary-600 focus:outline-none"
+                    />
+                  </div>
+                  <div className="space-y-1">
+                    <label htmlFor="doc-plan-deposit" className="block font-medium text-surface-700">
+                      Deposit req. (USD)
+                    </label>
+                    <input
+                      id="doc-plan-deposit"
+                      type="number"
+                      min={0}
+                      step="0.01"
+                      value={planDepositCost}
+                      onChange={(e) => setPlanDepositCost(e.target.value)}
+                      placeholder="2000"
+                      className="w-full min-h-11 px-3 py-2 rounded-md border border-surface-300 bg-white text-surface-900 tabular-nums focus:border-primary-600 focus:outline-none"
+                    />
+                  </div>
+                </div>
+
+                <div className="space-y-1">
+                  <label htmlFor="doc-plan-opinion" className="block font-medium text-surface-700">
+                    Specialist clinical opinion &amp; pre-travel notes
+                  </label>
+                  <textarea
+                    id="doc-plan-opinion"
+                    rows={3}
+                    value={planOpinionNotes}
+                    onChange={(e) => setPlanOpinionNotes(e.target.value)}
+                    placeholder="Summarize angiography/imaging interpretation, surgical candidacy, and pre-travel medication instructions..."
+                    className="w-full p-2.5 rounded-md border border-surface-300 bg-white text-surface-900 focus:border-primary-600 focus:outline-none"
+                  />
+                </div>
+
+                <div className="flex justify-end">
+                  <Button type="submit" size="sm" isLoading={savingPlan}>
+                    <Save className="w-3.5 h-3.5" />
+                    Publish Treatment Plan
+                  </Button>
+                </div>
+              </form>
+            )}
+          </Card>
+
+          {/* Post-Return Remote Follow-Up Reviews (Day-7 / Day-30 / Day-90) */}
+          <Card className="p-5 space-y-4">
+            <div className="flex flex-wrap items-start justify-between gap-2 pb-3 border-b border-surface-200">
+              <div>
+                <h2 className="text-base font-semibold text-surface-900 flex items-center gap-2">
+                  <Calendar className="w-4 h-4 text-primary-600" />
+                  Post-return remote follow-ups (Day-7 / Day-30 / Day-90)
+                </h2>
+                <p className="text-xs text-surface-500 mt-0.5">
+                  Review patient-submitted pain scores, wound status, and record specialist guidance.
+                </p>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              {(followUps.length > 0
+                ? followUps
+                : FOLLOW_UP_MILESTONES.map(
+                    (milestone): FollowUpMilestone => ({
+                      milestone,
+                      dueAt: '',
+                      status: 'PENDING',
+                    })
+                  )
+              ).map((item) => {
+                const label = FOLLOW_UP_MILESTONE_LABELS[item.milestone] || item.milestone;
+                const isSavingThis = savingFollowUpMilestone === item.milestone;
+                return (
+                  <div
+                    key={item.milestone}
+                    className="p-3.5 rounded-lg border border-surface-200 bg-surface-50/50 space-y-2.5 text-xs flex flex-col justify-between"
+                  >
+                    <div className="space-y-2">
+                      <div className="flex items-start justify-between gap-2">
+                        <div>
+                          <p className="font-semibold text-surface-900">{label}</p>
+                          <p className="text-surface-500 tabular-nums mt-0.5">
+                            Due: {item.dueAt ? new Date(item.dueAt).toLocaleDateString() : 'Upon Fit-to-Fly'}
+                          </p>
+                        </div>
+                        <Badge
+                          variant={
+                            item.status === 'REVIEWED'
+                              ? 'success'
+                              : item.status === 'SUBMITTED'
+                              ? 'info'
+                              : 'default'
+                          }
+                          size="sm"
+                        >
+                          {item.status}
+                        </Badge>
+                      </div>
+
+                      {item.painScore !== undefined && (
+                        <p className="text-surface-700 tabular-nums">
+                          <span className="font-medium text-surface-900">Pain:</span> {item.painScore}/10
+                          {item.woundStatus ? ` • Wound: ${item.woundStatus}` : ''}
+                        </p>
+                      )}
+
+                      {item.patientNotes && (
+                        <div className="p-2 rounded-md bg-white border border-surface-200 text-surface-700">
+                          <span className="font-medium text-surface-900 block mb-0.5">
+                            Patient Report
+                          </span>
+                          {item.patientNotes}
+                        </div>
+                      )}
+                    </div>
+
+                    {!isClosed && (
+                      <div className="space-y-2 pt-2 border-t border-surface-200">
+                        <label
+                          htmlFor={`followup-feedback-${item.milestone}`}
+                          className="block font-medium text-surface-700"
+                        >
+                          Specialist feedback
+                        </label>
+                        <textarea
+                          id={`followup-feedback-${item.milestone}`}
+                          rows={2}
+                          value={followUpDrafts[item.milestone] || ''}
+                          onChange={(e) =>
+                            setFollowUpDrafts((prev) => ({
+                              ...prev,
+                              [item.milestone]: e.target.value,
+                            }))
+                          }
+                          placeholder="Record tele-rehab guidance or medication taper..."
+                          className="w-full p-2 rounded-md border border-surface-300 bg-white text-xs text-surface-900 focus:border-primary-600 focus:outline-none"
+                        />
+                        <Button
+                          type="button"
+                          size="sm"
+                          fullWidth
+                          variant="secondary"
+                          isLoading={isSavingThis}
+                          onClick={() => void handleSaveFollowUpFeedback(item.milestone)}
+                        >
+                          <Save className="w-3.5 h-3.5" />
+                          Save Review
+                        </Button>
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          </Card>
         </div>
 
         {/* Right Column: Fit-to-Fly Clearance & Case Documents */}
@@ -689,10 +1258,10 @@ export default function DoctorCaseWorkspacePage({
               <div>
                 <h2 className="text-base font-semibold text-surface-900 flex items-center gap-2">
                   <Plane className="w-4 h-4 text-primary-600" />
-                  Fit-to-Fly clearance
+                  Fit-to-Fly &amp; IATA MEDIF clearance
                 </h2>
                 <p className="text-xs text-surface-500 mt-0.5">
-                  Certify medical fitness for international air travel
+                  Verify 5-point IATA physiological safety criteria and airline SSR assistance
                 </p>
               </div>
               {fitToFly?.isCleared ? (
@@ -707,7 +1276,7 @@ export default function DoctorCaseWorkspacePage({
             </div>
 
             {fitToFly && (
-              <div className="p-3 rounded-md bg-surface-50 border border-surface-200 text-xs space-y-1">
+              <div className="p-3 rounded-md bg-surface-50 border border-surface-200 text-xs space-y-1.5">
                 <p className="font-semibold text-surface-800">
                   Status: {fitToFly.isCleared ? 'Cleared for Air Travel' : 'Not Cleared / Re-evaluation'}
                 </p>
@@ -717,6 +1286,14 @@ export default function DoctorCaseWorkspacePage({
                 {fitToFly.clearanceDate && (
                   <p className="text-surface-600 tabular-nums">
                     Cleared on: {new Date(fitToFly.clearanceDate).toLocaleDateString()}
+                  </p>
+                )}
+                {(fitToFly.ssrCode || fitToFly.requiresMedif || fitToFly.flightNumber) && (
+                  <p className="text-surface-700 tabular-nums">
+                    SSR: <span className="font-medium">{fitToFly.ssrCode || 'NONE'}</span>
+                    {' • '}
+                    MEDIF: <span className="font-medium">{fitToFly.requiresMedif ? 'Required' : 'Not Required'}</span>
+                    {fitToFly.flightNumber ? ` • Flight: ${fitToFly.flightNumber}` : ''}
                   </p>
                 )}
                 {fitToFly.restrictions && (
@@ -730,7 +1307,7 @@ export default function DoctorCaseWorkspacePage({
                       href={certificateDoc.fileUrl}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="min-h-9 inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium text-primary-700 bg-white border border-primary-200 hover:bg-primary-50 transition-colors"
+                      className="min-h-11 inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium text-primary-700 bg-white border border-primary-200 hover:bg-primary-50 transition-colors"
                     >
                       <Download className="w-3.5 h-3.5" />
                       Download Fit-to-Fly Certificate
@@ -768,6 +1345,91 @@ export default function DoctorCaseWorkspacePage({
                   >
                     Hold / Re-evaluate
                   </button>
+                </div>
+              </div>
+
+              {/* 5-Point IATA Physiological Flight-Safety Checklist */}
+              <div className="p-3 rounded-md bg-surface-50 border border-surface-200 space-y-2">
+                <p className="font-semibold text-surface-800">
+                  5-point IATA physiological flight-safety checklist
+                </p>
+                <div className="space-y-1.5">
+                  {IATA_CHECKLIST_ITEMS.map((item) => (
+                    <label
+                      key={item.key}
+                      className="flex items-start gap-2.5 py-1 cursor-pointer text-surface-700"
+                    >
+                      <input
+                        type="checkbox"
+                        disabled={isClosed || savingFitToFly}
+                        checked={checklist[item.key]}
+                        onChange={(e) =>
+                          setChecklist((prev) => ({
+                            ...prev,
+                            [item.key]: e.target.checked,
+                          }))
+                        }
+                        className="mt-0.5 h-4 w-4 rounded border-surface-300 text-primary-600 focus:ring-primary-600 shrink-0"
+                      />
+                      <span>{item.label}</span>
+                    </label>
+                  ))}
+                </div>
+                {isCleared && !validateFitToFlySafetyChecklist(true, checklist).ok && (
+                  <p className="text-warning-800 bg-warning-50 border border-warning-200 rounded p-2 font-medium">
+                    Confirm all 5 physiological criteria above before certifying Fit-to-Fly clearance.
+                  </p>
+                )}
+              </div>
+
+              <Select
+                label="Airline SSR assistance code"
+                value={ssrCode}
+                onChange={setSsrCode}
+                options={SSR_CODE_OPTIONS}
+                disabled={isClosed || savingFitToFly}
+              />
+
+              <label className="flex items-center gap-2.5 min-h-11 px-3 py-2 rounded-md border border-surface-200 bg-surface-50 cursor-pointer">
+                <input
+                  type="checkbox"
+                  disabled={isClosed || savingFitToFly}
+                  checked={requiresMedif}
+                  onChange={(e) => setRequiresMedif(e.target.checked)}
+                  className="h-4 w-4 rounded border-surface-300 text-primary-600 focus:ring-primary-600 shrink-0"
+                />
+                <span className="font-medium text-surface-800">
+                  IATA MEDIF Required — 48–72h airline desk clearance
+                </span>
+              </label>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div className="space-y-1">
+                  <label htmlFor="ftf-flight-no" className="block font-medium text-surface-700">
+                    Return flight number
+                  </label>
+                  <input
+                    id="ftf-flight-no"
+                    type="text"
+                    disabled={isClosed || savingFitToFly}
+                    value={flightNumber}
+                    onChange={(e) => setFlightNumber(e.target.value)}
+                    placeholder="e.g., EK511"
+                    className="w-full min-h-11 px-3 py-2 rounded-md border border-surface-300 bg-white text-surface-900 focus:border-primary-600 focus:outline-none disabled:bg-surface-100"
+                  />
+                </div>
+                <div className="space-y-1">
+                  <label htmlFor="ftf-departure-date" className="block font-medium text-surface-700">
+                    Departure date
+                  </label>
+                  <input
+                    id="ftf-departure-date"
+                    type="date"
+                    disabled={isClosed || savingFitToFly}
+                    value={departureDate}
+                    onChange={(e) => setDepartureDate(e.target.value)}
+                    className="w-full min-h-11 px-3 py-2 rounded-md border border-surface-300 bg-white text-surface-900 tabular-nums focus:border-primary-600 focus:outline-none disabled:bg-surface-100"
+                  />
                 </div>
               </div>
 

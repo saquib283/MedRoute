@@ -17,6 +17,18 @@ jest.mock('@/lib/prisma', () => ({
     },
     case: {
       findMany: jest.fn(),
+      findUnique: jest.fn(),
+      update: jest.fn(),
+    },
+    document: {
+      create: jest.fn(),
+      update: jest.fn(),
+    },
+    clinicalStep: {
+      updateMany: jest.fn(),
+    },
+    fitToFlyClearance: {
+      upsert: jest.fn(),
     },
     auditLog: {
       create: jest.fn(),
@@ -24,19 +36,34 @@ jest.mock('@/lib/prisma', () => ({
   },
 }));
 
+jest.mock('@/lib/services/document-storage.service', () => ({
+  saveGeneratedBuffer: jest.fn().mockResolvedValue({
+    storageKey: 'cert_test_ftf.pdf',
+    fileSize: 1024,
+  }),
+  saveValidatedUpload: jest.fn(),
+  removeStoredFile: jest.fn(),
+}));
+
 import prisma from '@/lib/prisma';
+import { encrypt } from '@/lib/auth/crypto';
+import { validateFitToFlySafetyChecklist } from '@/lib/validation/lifecycle-schemas';
 import { GET as getDoctorDashboard } from '@/app/api/v1/doctor/dashboard/route';
 import {
   GET as getDoctorAppointments,
   PUT as updateDoctorAppointment,
 } from '@/app/api/v1/doctor/appointments/route';
 import { GET as getDoctorPatients } from '@/app/api/v1/doctor/patients/route';
+import { PUT as updateCaseFitToFly } from '@/app/api/v1/cases/[id]/fit-to-fly/route';
 
 const mockedPrisma = prisma as unknown as {
   doctor: Record<string, jest.Mock>;
   appointment: Record<string, jest.Mock>;
   patient: Record<string, jest.Mock>;
   case: Record<string, jest.Mock>;
+  document: Record<string, jest.Mock>;
+  clinicalStep: Record<string, jest.Mock>;
+  fitToFlyClearance: Record<string, jest.Mock>;
   auditLog: Record<string, jest.Mock>;
 };
 
@@ -65,19 +92,17 @@ describe('Task 5: Doctor Portal API Enhancements', () => {
       .mockResolvedValueOnce(2)
       .mockResolvedValueOnce(1)
       .mockResolvedValueOnce(1);
-    mockedPrisma.appointment.findMany
-      .mockResolvedValueOnce([
-        {
-          id: 'appt-1',
-          caseId: 'case-1',
-          appointmentType: 'PRE_OP_ASSESSMENT',
-          scheduledAt: new Date('2026-11-24T10:00:00.000Z'),
-          status: 'CONFIRMED',
-          patient: { user: { fullName: 'Tariq Al-Said' }, nationality: 'Oman' },
-          case: { id: 'case-1', status: 'WARD_RECOVERY', isUrgent: true },
-        },
-      ])
-      .mockResolvedValueOnce([{ caseId: 'case-1' }]);
+    mockedPrisma.appointment.findMany.mockResolvedValueOnce([
+      {
+        id: 'appt-1',
+        caseId: 'case-1',
+        appointmentType: 'PRE_OP_ASSESSMENT',
+        scheduledAt: new Date('2026-11-24T10:00:00.000Z'),
+        status: 'CONFIRMED',
+        patient: { user: { fullName: 'Tariq Al-Said' }, nationality: 'Oman' },
+        case: { id: 'case-1', status: 'WARD_RECOVERY', isUrgent: true },
+      },
+    ]);
     mockedPrisma.case.findMany.mockResolvedValue([
       {
         id: 'case-1',
@@ -224,5 +249,248 @@ describe('Task 5: Doctor Portal API Enhancements', () => {
         }),
       })
     );
+  });
+});
+
+describe('Task 6: Pre-Travel Doctor Triage & IATA MEDIF Fit-to-Fly Safety Checklist', () => {
+  beforeEach(() => {
+    jest.clearAllMocks();
+    mockedPrisma.doctor.findUnique.mockResolvedValue({
+      id: 'seed-doctor-001',
+      userId: 'doc-u-1',
+      fullName: 'Dr. Ashok Seth',
+      qualification: 'MBBS, MD, DM (Cardiology)',
+      isActive: true,
+      hospital: { name: 'Fortis Escorts Heart Institute', city: 'New Delhi' },
+      specialisation: { name: 'Cardiology' },
+    });
+  });
+
+  it('includes UNDER_REVIEW pre-travel cases & patients assigned via primaryDoctorId even with zero Appointment rows, and masks travelLogistics/passports', async () => {
+    mockedPrisma.appointment.count
+      .mockResolvedValueOnce(0)
+      .mockResolvedValueOnce(0)
+      .mockResolvedValueOnce(0);
+    mockedPrisma.appointment.findMany.mockResolvedValue([]);
+
+    const encryptedAttendantPassport = encrypt('M9876543');
+    mockedPrisma.case.findMany.mockResolvedValue([
+      {
+        id: 'case-pretravel-1',
+        status: 'UNDER_REVIEW',
+        isUrgent: false,
+        primaryDoctorId: 'seed-doctor-001',
+        travelLogistics: {
+          attendants: [
+            {
+              fullName: 'Salim Al-Harthy',
+              passportNo: encryptedAttendantPassport,
+              relation: 'Brother',
+            },
+          ],
+        },
+        patient: {
+          nationality: 'Oman',
+          passportNo: encrypt('P11223344'),
+          user: { fullName: 'Omar Al-Harthy' },
+        },
+        clinicalSteps: [
+          {
+            id: 'step-mdt-1',
+            title: 'Specialist Triage & Multi-Disciplinary Case Review',
+            status: 'IN_PROGRESS',
+            requiredRole: 'DOCTOR',
+          },
+        ],
+        fitToFlyClearance: null,
+      },
+    ]);
+
+    const dashReq = new NextRequest('http://localhost/api/v1/doctor/dashboard', {
+      headers: docHeaders,
+    });
+    const dashRes = await getDoctorDashboard(dashReq);
+    const dashJson = await dashRes.json();
+
+    expect(dashRes.status).toBe(200);
+    expect(dashJson.data.metrics.activeCases).toBe(1);
+    expect(dashJson.data.pendingClinicalCases).toHaveLength(1);
+    expect(dashJson.data.pendingClinicalCases[0].id).toBe('case-pretravel-1');
+    expect(dashJson.data.pendingClinicalCases[0].status).toBe('UNDER_REVIEW');
+    expect(
+      dashJson.data.pendingClinicalCases[0].travelLogistics.attendants[0].passportNo
+    ).toBe('****6543');
+    expect(dashJson.data.pendingClinicalCases[0].patient.passportNo).toBe('*****3344');
+
+    mockedPrisma.patient.findMany.mockResolvedValue([
+      {
+        id: 'pat-pretravel-1',
+        nationality: 'Oman',
+        passportNo: encrypt('P11223344'),
+        user: {
+          fullName: 'Omar Al-Harthy',
+          email: 'omar@afzalhealthcare.in',
+          phone: '+96891234567',
+        },
+        medicalProfile: {
+          allergies: '[]',
+          medications: '[]',
+          surgeries: '[]',
+          chronicConditions: '["Coronary Artery Disease"]',
+        },
+        cases: [
+          {
+            id: 'case-pretravel-1',
+            status: 'UNDER_REVIEW',
+            isUrgent: false,
+            fitToFlyClearance: null,
+          },
+        ],
+      },
+    ]);
+
+    const patReq = new NextRequest('http://localhost/api/v1/doctor/patients', {
+      headers: docHeaders,
+    });
+    const patRes = await getDoctorPatients(patReq);
+    const patJson = await patRes.json();
+
+    expect(patRes.status).toBe(200);
+    expect(patJson.data.patients).toHaveLength(1);
+    expect(patJson.data.patients[0].id).toBe('pat-pretravel-1');
+    expect(patJson.data.patients[0].passportNo).toBe('*****3344');
+    expect(patJson.data.patients[0].medicalProfile.chronicConditions).toEqual([
+      'Coronary Artery Disease',
+    ]);
+  });
+
+  it('validateFitToFlySafetyChecklist blocks clearance if wound or trapped-gas check fails', () => {
+    const unsafe = validateFitToFlySafetyChecklist(true, {
+      woundStable: true,
+      noTrappedGasRisk: false,
+      cardioRespiratoryStable: true,
+      hemoglobinCleared: true,
+      dvtProphylaxisPlan: true,
+    });
+    expect(unsafe.ok).toBe(false);
+  });
+
+  it('PUT /api/v1/cases/[id]/fit-to-fly rejects isCleared=true when noTrappedGasRisk=false and succeeds when all 5 IATA checks pass', async () => {
+    const unsafeReq = new NextRequest('http://localhost/api/v1/cases/case-1/fit-to-fly', {
+      method: 'PUT',
+      headers: { ...docHeaders, 'content-type': 'application/json' },
+      body: JSON.stringify({
+        isCleared: true,
+        restrictions: 'Wheelchair assistance requested',
+        ssrCode: 'WCHR',
+        requiresMedif: true,
+        flightNumber: 'EK511',
+        departureDate: '2026-12-10T10:00:00.000Z',
+        checklist: {
+          woundStable: true,
+          noTrappedGasRisk: false,
+          cardioRespiratoryStable: true,
+          hemoglobinCleared: true,
+          dvtProphylaxisPlan: true,
+        },
+      }),
+    });
+
+    const unsafeRes = await updateCaseFitToFly(unsafeReq, {
+      params: Promise.resolve({ id: 'case-1' }),
+    });
+    const unsafeJson = await unsafeRes.json();
+    expect(unsafeRes.status).toBe(400);
+    expect(unsafeJson.error.code).toBe('BAD_REQUEST');
+
+    mockedPrisma.case.findUnique.mockResolvedValue({
+      id: 'case-1',
+      patientId: 'pat-1',
+      managerId: 'mgr-1',
+      primaryDoctorId: 'seed-doctor-001',
+      status: 'OUTPATIENT_RECUPERATION',
+      postReturnFollowUps: [],
+      patient: {
+        id: 'pat-1',
+        userId: 'pat-u-1',
+        nationality: 'UAE',
+        passportNo: encrypt('A12345678'),
+        passportExpiry: new Date('2028-01-01T00:00:00.000Z'),
+        user: { fullName: 'Ranya Al-Hassan', email: 'patient@afzalhealthcare.in', phone: '+971501234567' },
+        medicalProfile: null,
+      },
+      hospital: {
+        id: 'seed-hospital-001',
+        name: 'Fortis Escorts Heart Institute',
+        city: 'New Delhi',
+        address: 'Okhla Road',
+        accreditation: 'NABH, JCI',
+      },
+      primaryDoctor: {
+        id: 'seed-doctor-001',
+        userId: 'doc-u-1',
+        fullName: 'Dr. Ashok Seth',
+        qualification: 'MBBS, MD',
+        specialisation: { id: 'spec-1', name: 'Cardiology' },
+      },
+      clinicalSteps: [],
+      fitToFlyClearance: null,
+    });
+    mockedPrisma.document.create.mockResolvedValue({ id: 'doc-ftf-1' });
+    mockedPrisma.document.update.mockResolvedValue({
+      id: 'doc-ftf-1',
+      fileName: 'fit_to_fly_certificate_case-1.pdf',
+      fileUrl: '/api/v1/documents/doc-ftf-1/download',
+    });
+    mockedPrisma.clinicalStep.updateMany.mockResolvedValue({ count: 1 });
+    mockedPrisma.fitToFlyClearance.upsert.mockResolvedValue({
+      id: 'ftf-1',
+      caseId: 'case-1',
+      isCleared: true,
+      clearedBy: 'Dr. Ashok Seth',
+      ssrCode: 'WCHR',
+      requiresMedif: true,
+      flightNumber: 'EK511',
+      checklist: {
+        woundStable: true,
+        noTrappedGasRisk: true,
+        cardioRespiratoryStable: true,
+        hemoglobinCleared: true,
+        dvtProphylaxisPlan: true,
+      },
+    });
+    mockedPrisma.case.update.mockResolvedValue({
+      id: 'case-1',
+      status: 'FIT_TO_FLY_CLEARED',
+    });
+
+    const validReq = new NextRequest('http://localhost/api/v1/cases/case-1/fit-to-fly', {
+      method: 'PUT',
+      headers: { ...docHeaders, 'content-type': 'application/json' },
+      body: JSON.stringify({
+        isCleared: true,
+        restrictions: 'Wheelchair assistance requested',
+        ssrCode: 'WCHR',
+        requiresMedif: true,
+        flightNumber: 'EK511',
+        departureDate: '2026-12-10T10:00:00.000Z',
+        checklist: {
+          woundStable: true,
+          noTrappedGasRisk: true,
+          cardioRespiratoryStable: true,
+          hemoglobinCleared: true,
+          dvtProphylaxisPlan: true,
+        },
+      }),
+    });
+
+    const validRes = await updateCaseFitToFly(validReq, {
+      params: Promise.resolve({ id: 'case-1' }),
+    });
+    const validJson = await validRes.json();
+    expect(validRes.status).toBe(200);
+    expect(validJson.data.caseStatus).toBe('FIT_TO_FLY_CLEARED');
+    expect(validJson.data.fitToFlyClearance.ssrCode).toBe('WCHR');
+    expect(validJson.data.fitToFlyClearance.requiresMedif).toBe(true);
   });
 });

@@ -11,6 +11,7 @@ import bcrypt from 'bcryptjs';
 import { encrypt } from '../src/lib/auth/crypto';
 import { encryptMedicalProfile } from '../src/lib/api/phi-encryption';
 import { DEFAULT_SYSTEM_SETTINGS } from '../src/lib/services/system-settings.service';
+import { buildStandardMvtPathwaySteps } from '../src/lib/validation/lifecycle-schemas';
 
 const prisma = new PrismaClient();
 
@@ -116,15 +117,19 @@ async function main() {
 
   // Create patient profile (encrypt ePHI fields)
   const encryptedPassportNo = encrypt('A12345678');
+  const patientPassportExpiry = new Date('2028-06-15T00:00:00.000Z');
   const patient = await prisma.patient.upsert({
     where: { userId: patientUser.id },
     update: {
       passportNo: encryptedPassportNo,
+      passportExpiry: patientPassportExpiry,
+      assignedManagerId: manager.id,
     },
     create: {
       userId: patientUser.id,
       nationality: 'UAE',
       passportNo: encryptedPassportNo,
+      passportExpiry: patientPassportExpiry,
       dob: new Date('1984-03-15'),
       bloodGroup: 'O+',
       medicalCondition: 'Cardiac evaluation required — suspected coronary artery disease',
@@ -267,18 +272,111 @@ async function main() {
 
   // ─── 5. Sample Case & Clinical Workflow Steps ─────────────────────
   console.log('Creating sample clinical case & treatment steps...');
+  const dayMs = 86400000;
+  const inboundArrivalAt = new Date(Date.now() - 6 * dayMs);
+  const outboundDepartureAt = new Date(Date.now() + 4 * dayMs);
+  const formCSubmittedAt = new Date(inboundArrivalAt.getTime() + 6 * 3600000);
+
+  const ranyaTreatmentPlan = {
+    diagnosis: 'Symptomatic double-vessel coronary artery disease (LAD proximal stenosis)',
+    procedureName: 'Percutaneous Coronary Intervention (PCI) with 2 Drug-Eluting Stents',
+    specialty: 'Cardiology',
+    hospitalLosDays: 3,
+    recoveryStayDays: 7,
+    estimatedCostUsd: 4850,
+    depositRequiredUsd: 2000,
+    currency: 'USD',
+    inclusions: [
+      'Cardiac catheterization suite & 2 drug-eluting stents',
+      '24-hour CCU telemetry + 2 days private ward room',
+      'Pre-anesthesia workup, medications during admission & airport pickup',
+    ],
+    exclusions: [
+      'International return airfare & companion hotel meals',
+      'Extended ICU stay beyond 48 hours if clinically required',
+    ],
+    doctorOpinionNotes:
+      'Coronary angiogram confirms 85% proximal LAD lesion suitable for elective PCI. Continue Aspirin 81mg daily.',
+    publishedAt: new Date(Date.now() - 12 * dayMs).toISOString(),
+    publishedBy: doctorUser.id,
+    consentAcceptedAt: new Date(Date.now() - 11 * dayMs).toISOString(),
+    consentAcceptedBy: patientUser.id,
+  };
+
+  const ranyaTravelLogistics = {
+    attendants: [
+      {
+        fullName: 'Ahmed Al-Hassan',
+        passportNo: encrypt('M99887766'),
+        relation: 'Husband',
+      },
+    ],
+    arrivalAirline: 'Emirates',
+    arrivalFlightNo: 'EK512',
+    arrivalAt: inboundArrivalAt.toISOString(),
+    arrivalAirport: 'Indira Gandhi International Airport (DEL)',
+    airportPickupRequired: true,
+    pickupConfirmed: true,
+    pickupDriverNotes:
+      'Hospital cardiac concierge vehicle + Arabic interpreter assigned at Terminal 3 Gate 4.',
+    wheelchairSsrCode: 'WCHR',
+    dietaryPreferences: 'Halal Low-Sodium',
+    departureAirline: 'Emirates',
+    departureFlightNo: 'EK511',
+    departureAt: outboundDepartureAt.toISOString(),
+    visaNumber: 'IND-MED-2026-44190',
+    visaExpiryDate: new Date(Date.now() + 170 * dayMs).toISOString(),
+    formCSubmittedAt: formCSubmittedAt.toISOString(),
+    frroNumber: 'FRRO-DEL-2026-8812',
+    updatedAt: new Date().toISOString(),
+  };
+
+  const ranyaFollowUps = [
+    {
+      milestone: 'DAY_7',
+      dueAt: new Date(outboundDepartureAt.getTime() + 7 * dayMs).toISOString(),
+      status: 'SUBMITTED',
+      painScore: 2,
+      woundStatus: 'Radial access site clean & dry, no hematoma',
+      patientNotes:
+        'Walking 15 minutes twice daily without angina or dyspnea. Taking DAPT medications as prescribed.',
+      updatedAt: new Date().toISOString(),
+    },
+    {
+      milestone: 'DAY_30',
+      dueAt: new Date(outboundDepartureAt.getTime() + 30 * dayMs).toISOString(),
+      status: 'PENDING',
+    },
+    {
+      milestone: 'DAY_90',
+      dueAt: new Date(outboundDepartureAt.getTime() + 90 * dayMs).toISOString(),
+      status: 'PENDING',
+    },
+  ];
+
   const sampleCase = await prisma.case.upsert({
     where: { id: 'seed-case-001' },
     update: {
+      hospitalId: hospital1.id,
+      primaryDoctorId: 'seed-doctor-001',
+      managerId: manager.id,
       status: 'WARD_RECOVERY',
+      treatmentPlan: ranyaTreatmentPlan as unknown as Prisma.InputJsonValue,
+      travelLogistics: ranyaTravelLogistics as unknown as Prisma.InputJsonValue,
+      postReturnFollowUps: ranyaFollowUps as unknown as Prisma.InputJsonValue,
     },
     create: {
       id: 'seed-case-001',
       patientId: patient.id,
       managerId: manager.id,
+      hospitalId: hospital1.id,
+      primaryDoctorId: 'seed-doctor-001',
       status: 'WARD_RECOVERY',
       notes: 'Patient undergoing post-operative cardiac catheterization recovery and monitoring.',
       isUrgent: false,
+      treatmentPlan: ranyaTreatmentPlan as unknown as Prisma.InputJsonValue,
+      travelLogistics: ranyaTravelLogistics as unknown as Prisma.InputJsonValue,
+      postReturnFollowUps: ranyaFollowUps as unknown as Prisma.InputJsonValue,
     },
   });
 
@@ -286,45 +384,109 @@ async function main() {
 
   const clinicalStepsData = [
     {
-      title: 'Inquiry & Initial Medical File Review',
+      stageName: 'Stage 1: Pre-Travel Triage & Medical Clearance',
+      stageOrder: 1,
+      stepOrder: 1,
+      title: 'Inquiry & Initial Medical DICOM Review',
       category: 'PRE_OP',
       status: 'COMPLETED',
+      actionType: 'UPLOAD_DOCS',
+      requiredRole: 'PATIENT',
       doctorNotes: 'Coronary angiography scans and cardiac panel received. Referred to Senior Cardiologist.',
-      completedAt: new Date(Date.now() - 14 * 86400000),
+      completedAt: new Date(Date.now() - 14 * dayMs),
     },
     {
+      stageName: 'Stage 1: Pre-Travel Triage & Medical Clearance',
+      stageOrder: 1,
+      stepOrder: 2,
       title: 'Multi-Disciplinary Team (MDT) Board Clearance',
       category: 'PRE_OP',
       status: 'COMPLETED',
+      actionType: 'VOTE_MDT',
+      requiredRole: 'DOCTOR',
       decisionBranch: 'APPROVED_FOR_SURGERY',
       doctorNotes: 'MDT Board approves elective Percutaneous Coronary Intervention (PCI) with drug-eluting stent.',
-      completedAt: new Date(Date.now() - 10 * 86400000),
+      completedAt: new Date(Date.now() - 10 * dayMs),
     },
     {
-      title: 'Pre-Anesthesia Clearance (PAC) & Cardiac Assessment',
+      stageName: 'Stage 2: MDT Board & Pro-Forma Invoice',
+      stageOrder: 2,
+      stepOrder: 1,
+      title: 'Pro-Forma Treatment Cost Estimate Generation',
       category: 'PRE_OP',
       status: 'COMPLETED',
-      decisionBranch: 'FIT_FOR_ANESTHESIA',
-      doctorNotes: 'ASA Class II. HbA1c 6.8%. Cleared for cardiac catheterization lab under local & MAC anesthesia.',
-      completedAt: new Date(Date.now() - 5 * 86400000),
+      actionType: 'ISSUE_PROFORMA',
+      requiredRole: 'MANAGER',
+      doctorNotes: 'All-in quote ($4,850 USD) published and consented by patient prior to travel.',
+      completedAt: new Date(Date.now() - 10 * dayMs),
     },
     {
+      stageName: 'Stage 3: Visa Invitation (VIL), FRRO & Travel',
+      stageOrder: 3,
+      stepOrder: 1,
+      title: 'Official Hospital Visa Invitation Letter (VIL) Issuance',
+      category: 'PRE_OP',
+      status: 'COMPLETED',
+      actionType: 'ISSUE_VIL',
+      requiredRole: 'MANAGER',
+      doctorNotes: 'VIL issued for patient and MED-X husband companion.',
+      completedAt: new Date(Date.now() - 8 * dayMs),
+    },
+    {
+      stageName: 'Stage 3: Visa Invitation (VIL), FRRO & Travel',
+      stageOrder: 3,
+      stepOrder: 2,
+      title: 'Flight Itinerary & Airport Transfer Confirmation',
+      category: 'PRE_OP',
+      status: 'COMPLETED',
+      actionType: 'ARRANGE_LOGISTICS',
+      requiredRole: 'MANAGER',
+      doctorNotes: 'Emirates EK512 pickup & WCHR assistance confirmed.',
+      completedAt: new Date(Date.now() - 6 * dayMs),
+    },
+    {
+      stageName: 'Stage 4: Hospital Admission & Pre-Anesthesia (PAC)',
+      stageOrder: 4,
+      stepOrder: 1,
+      title: 'Pre-Anesthesia Evaluation (PAC) & Cardiac Assessment',
+      category: 'PRE_OP',
+      status: 'COMPLETED',
+      actionType: 'SIGN_PAC',
+      requiredRole: 'DOCTOR',
+      decisionBranch: 'FIT_FOR_ANESTHESIA',
+      doctorNotes: 'ASA Class II. HbA1c 6.8%. Cleared for cardiac catheterization lab under local & MAC anesthesia.',
+      completedAt: new Date(Date.now() - 5 * dayMs),
+    },
+    {
+      stageName: 'Stage 5: Active Procedural / Surgical Intervention',
+      stageOrder: 5,
+      stepOrder: 1,
       title: 'Cardiac Catheterization & Stent Placement Procedure',
       category: 'TREATMENT',
       status: 'COMPLETED',
+      actionType: 'OPERATIVE_SUMMARY',
+      requiredRole: 'DOCTOR',
       decisionBranch: 'UNCOMPLICATED_PROCEDURE',
       doctorNotes: 'Successful placement of 2 drug-eluting stents in LAD artery. Zero intra-op complications.',
-      completedAt: new Date(Date.now() - 2 * 86400000),
+      completedAt: new Date(Date.now() - 2 * dayMs),
     },
     {
+      stageName: 'Stage 6: ICU / CCU Telemetry & Ward Recovery',
+      stageOrder: 6,
+      stepOrder: 1,
       title: 'Post-Op Coronary Care Unit (CCU) Monitoring',
       category: 'POST_OP',
       status: 'COMPLETED',
+      actionType: 'HEMODYNAMICS_CLEARANCE',
+      requiredRole: 'DOCTOR',
       decisionBranch: 'STABLE_STEARN_HEMODYNAMICS',
       doctorNotes: 'Transferred to CCU for 24h continuous telemetry. Vital signs stable, troponin levels trending down.',
-      completedAt: new Date(Date.now() - 1 * 86400000),
+      completedAt: new Date(Date.now() - 1 * dayMs),
     },
     {
+      stageName: 'Stage 6: ICU / CCU Telemetry & Ward Recovery',
+      stageOrder: 6,
+      stepOrder: 2,
       title: 'In-Patient Ward Recovery & Mobilization Protocol',
       category: 'POST_OP',
       status: 'IN_PROGRESS',
@@ -332,23 +494,39 @@ async function main() {
       doctorNotes: 'Patient ambulatory, on dual antiplatelet therapy (DAPT). Surgical entry site clean.',
     },
     {
-      title: 'Criteria-Based Hospital Discharge & Epicrisis',
+      stageName: 'Stage 7: Fit-to-Fly Certification, Discharge & Tele-Rehab',
+      stageOrder: 7,
+      stepOrder: 1,
+      title: 'Hospital Discharge Summary & Final Bill Settlement',
       category: 'DISCHARGE',
       status: 'PENDING',
-      doctorNotes: 'Scheduled for Day 5 post-procedure upon repeat blood panel.',
+      actionType: 'SETTLE_BILL',
+      requiredRole: 'MANAGER',
+      doctorNotes: 'Discharge summary issued; awaiting final balance settlement prior to departure.',
     },
     {
-      title: 'Outpatient Follow-Up & Fit-to-Fly Evaluation',
+      stageName: 'Stage 7: Fit-to-Fly Certification, Discharge & Tele-Rehab',
+      stageOrder: 7,
+      stepOrder: 2,
+      title: 'Fit-to-Fly Medical Travel Clearance Certificate',
       category: 'DISCHARGE',
-      status: 'PENDING',
-      decisionBranch: 'FIT_TO_FLY_PENDING',
-      doctorNotes: 'Cardiology outpatient visit scheduled for suture/sheath site review and flight clearance.',
+      status: 'COMPLETED',
+      actionType: 'SIGN_FIT_TO_FLY',
+      requiredRole: 'DOCTOR',
+      decisionBranch: 'FIT_TO_FLY_GRANTED',
+      doctorNotes: '5-point IATA physiological safety checklist verified; WCHR assistance prescribed.',
+      completedAt: new Date(),
     },
     {
-      title: 'Remote Tele-Rehabilitation & Telehealth Tracking',
+      stageName: 'Stage 7: Fit-to-Fly Certification, Discharge & Tele-Rehab',
+      stageOrder: 7,
+      stepOrder: 3,
+      title: 'Day-7, Day-30 & Day-90 Post-Return Tele-Rehab Follow-Up',
       category: 'REHAB',
-      status: 'PENDING',
-      doctorNotes: 'Scheduled virtual follow-ups at 2 weeks, 1 month, and 3 months post-discharge.',
+      status: 'IN_PROGRESS',
+      actionType: 'SCHEDULE_TELE_REHAB',
+      requiredRole: 'DOCTOR',
+      doctorNotes: 'Day-7 recovery check-in submitted by patient; awaiting specialist review.',
     },
   ];
 
@@ -356,9 +534,14 @@ async function main() {
     await prisma.clinicalStep.create({
       data: {
         caseId: sampleCase.id,
+        stageName: step.stageName,
+        stageOrder: step.stageOrder,
+        stepOrder: step.stepOrder,
         title: step.title,
         category: step.category,
         status: step.status,
+        actionType: step.actionType || null,
+        requiredRole: step.requiredRole || null,
         decisionBranch: step.decisionBranch || null,
         doctorNotes: step.doctorNotes,
         completedAt: step.completedAt || null,
@@ -366,15 +549,91 @@ async function main() {
     });
   }
 
+  const ftfChecklist = {
+    woundStable: true,
+    noTrappedGasRisk: true,
+    cardioRespiratoryStable: true,
+    hemoglobinCleared: true,
+    dvtProphylaxisPlan: true,
+  };
+
   await prisma.fitToFlyClearance.upsert({
     where: { caseId: sampleCase.id },
-    update: {},
+    update: {
+      isCleared: true,
+      clearedBy: 'Dr. Ashok Seth (MBBS, MD Cardiology)',
+      clearanceDate: new Date(),
+      restrictions:
+        'Patient cleared for commercial flights. WCHR wheelchair assistance at airport; wear compression stockings and keep emergency nitroglycerin in carry-on bag.',
+      checklist: ftfChecklist as unknown as Prisma.InputJsonValue,
+      ssrCode: 'WCHR',
+      requiresMedif: false,
+      flightNumber: 'EK511',
+      departureDate: outboundDepartureAt,
+    },
     create: {
       caseId: sampleCase.id,
       isCleared: true,
       clearedBy: 'Dr. Ashok Seth (MBBS, MD Cardiology)',
-      clearanceDate: new Date(Date.now() + 3 * 86400000),
-      restrictions: 'Patient cleared for commercial flights. Must maintain hydrated state, wear compression stockings, and keep emergency nitroglycerin in carry-on bag.',
+      clearanceDate: new Date(),
+      restrictions:
+        'Patient cleared for commercial flights. WCHR wheelchair assistance at airport; wear compression stockings and keep emergency nitroglycerin in carry-on bag.',
+      checklist: ftfChecklist as unknown as Prisma.InputJsonValue,
+      ssrCode: 'WCHR',
+      requiresMedif: false,
+      flightNumber: 'EK511',
+      departureDate: outboundDepartureAt,
+    },
+  });
+
+  // Seed TELECONSULTATION appointments with meeting URLs for Ranya
+  await prisma.appointment.upsert({
+    where: { id: 'seed-appt-001' },
+    update: {
+      mode: 'TELECONSULTATION',
+      meetingUrl: 'https://meet.afzalhealthcare.in/consult-cardiology-ranya',
+      interpreterLanguage: 'Arabic',
+    },
+    create: {
+      id: 'seed-appt-001',
+      caseId: sampleCase.id,
+      patientId: patient.id,
+      hospitalId: hospital1.id,
+      doctorId: 'seed-doctor-001',
+      appointmentType: 'PRE_OP_ASSESSMENT',
+      mode: 'TELECONSULTATION',
+      meetingUrl: 'https://meet.afzalhealthcare.in/consult-cardiology-ranya',
+      interpreterLanguage: 'Arabic',
+      scheduledAt: new Date(Date.now() - 9 * dayMs),
+      status: 'COMPLETED',
+      clinicalNotes:
+        'Pre-travel video teleconsultation completed with Arabic interpreter. Angiography reviewed; patient cleared for travel.',
+      createdBy: manager.id,
+    },
+  });
+
+  await prisma.appointment.upsert({
+    where: { id: 'seed-appt-002' },
+    update: {
+      mode: 'TELECONSULTATION',
+      meetingUrl: 'https://meet.afzalhealthcare.in/rehab-cardiology-ranya',
+      interpreterLanguage: 'Arabic',
+      scheduledAt: new Date(Date.now() + 2 * dayMs),
+    },
+    create: {
+      id: 'seed-appt-002',
+      caseId: sampleCase.id,
+      patientId: patient.id,
+      hospitalId: hospital1.id,
+      doctorId: 'seed-doctor-001',
+      appointmentType: 'POST_OP_REVIEW',
+      mode: 'TELECONSULTATION',
+      meetingUrl: 'https://meet.afzalhealthcare.in/rehab-cardiology-ranya',
+      interpreterLanguage: 'Arabic',
+      scheduledAt: new Date(Date.now() + 2 * dayMs),
+      status: 'CONFIRMED',
+      clinicalNotes: 'Post-op discharge & tele-rehab review prior to return flight EK511.',
+      createdBy: manager.id,
     },
   });
 
@@ -387,6 +646,7 @@ async function main() {
     'Invoice_Sample.pdf',
     'Passport_Sample.pdf',
     'Angio_Report.pdf',
+    'Discharge_Summary_Sample.pdf',
   ];
   for (const filename of samplePdfFiles) {
     await fs.writeFile(path.join(uploadDir, filename), SAMPLE_PDF_BUFFER);
@@ -450,6 +710,19 @@ async function main() {
       uploadedBy: patientUser.id,
       verifiedBy: manager.id,
       verificationNotes: 'Pre-op diagnostic angiography labs verified by Senior Cardiologist.',
+      verifiedAt: new Date(),
+    },
+    {
+      category: 'DISCHARGE_SUMMARY',
+      fileName: 'Hospital_Discharge_Summary_Fortis_Escorts.pdf',
+      storageKey: 'Discharge_Summary_Sample.pdf',
+      fileSize: 310000,
+      mimeType: 'application/pdf',
+      verificationStatus: 'ISSUED_BY_HOSPITAL',
+      uploadedBy: doctorUser.id,
+      verifiedBy: doctorUser.id,
+      verificationNotes:
+        'Procedure: PCI x2 DES to LAD. Uncomplicated course. Continue DAPT (Aspirin 81mg + Clopidogrel 75mg), keep radial site clean/dry.',
       verifiedAt: new Date(),
     },
   ];
@@ -650,12 +923,182 @@ async function main() {
   }
   console.log(`  ✓ ${Object.keys(DEFAULT_SYSTEM_SETTINGS).length} SystemConfig defaults seeded\n`);
 
+  // ─── 10. Second Sample International Inquiry Patient (Pre-Travel Triage & Plan Consent) ─
+  console.log('Seeding second sample international inquiry patient (Omar Al-Harthy)...');
+  const omarUser = await prisma.user.upsert({
+    where: { email: 'omar@afzalhealthcare.in' },
+    update: {
+      role: 'PATIENT',
+      fullName: 'Omar Al-Harthy',
+    },
+    create: {
+      email: 'omar@afzalhealthcare.in',
+      passwordHash: patientPasswordHash,
+      role: 'PATIENT',
+      fullName: 'Omar Al-Harthy',
+      phone: '+96891234567',
+    },
+  });
+
+  const omarPassportEncrypted = encrypt('B77665544');
+  const omarPassportExpiry = new Date('2028-09-20T00:00:00.000Z');
+  const omarPatient = await prisma.patient.upsert({
+    where: { userId: omarUser.id },
+    update: {
+      passportNo: omarPassportEncrypted,
+      passportExpiry: omarPassportExpiry,
+      assignedManagerId: manager.id,
+    },
+    create: {
+      userId: omarUser.id,
+      nationality: 'Oman',
+      passportNo: omarPassportEncrypted,
+      passportExpiry: omarPassportExpiry,
+      dob: new Date('1978-11-04'),
+      bloodGroup: 'A+',
+      medicalCondition: 'Exertional angina — pre-travel cardiology workup & angiography review',
+      urgencyLevel: 'ROUTINE',
+      primaryLanguage: 'Arabic',
+      emergencyContact: {
+        name: 'Salim Al-Harthy',
+        phone: '+96891234568',
+        relation: 'Brother',
+      },
+      assignedManagerId: manager.id,
+    },
+  });
+
+  const omarMedProfileEncrypted = encryptMedicalProfile({
+    allergies: [],
+    medications: [{ name: 'Atorvastatin', dosage: '20mg', frequency: 'Nightly' }],
+    surgeries: [],
+    chronicConditions: ['Hyperlipidemia', 'Stable Angina'],
+    specialisationsRequired: ['Cardiology'],
+  });
+
+  await prisma.patientMedicalProfile.upsert({
+    where: { patientId: omarPatient.id },
+    update: {
+      allergies: omarMedProfileEncrypted.allergies as Prisma.InputJsonValue,
+      medications: omarMedProfileEncrypted.medications as Prisma.InputJsonValue,
+      surgeries: omarMedProfileEncrypted.surgeries as Prisma.InputJsonValue,
+      chronicConditions: omarMedProfileEncrypted.chronicConditions as Prisma.InputJsonValue,
+      specialisationsRequired: ['Cardiology'] as Prisma.InputJsonValue,
+    },
+    create: {
+      patientId: omarPatient.id,
+      allergies: omarMedProfileEncrypted.allergies as Prisma.InputJsonValue,
+      medications: omarMedProfileEncrypted.medications as Prisma.InputJsonValue,
+      surgeries: omarMedProfileEncrypted.surgeries as Prisma.InputJsonValue,
+      chronicConditions: omarMedProfileEncrypted.chronicConditions as Prisma.InputJsonValue,
+      specialisationsRequired: ['Cardiology'] as Prisma.InputJsonValue,
+    },
+  });
+
+  const omarTreatmentPlan = {
+    diagnosis: 'Exertional angina — suspected single-vessel coronary stenosis',
+    procedureName: 'Diagnostic Coronary Angiography & Fractional Flow Reserve (FFR)',
+    specialty: 'Cardiology',
+    hospitalLosDays: 2,
+    recoveryStayDays: 4,
+    estimatedCostUsd: 2400,
+    depositRequiredUsd: 1000,
+    currency: 'USD',
+    inclusions: [
+      'Diagnostic coronary angiography & FFR assessment',
+      'Senior cardiologist consultation & ECG/Echo panel',
+      'Airport reception & 2-day executive hospital room',
+    ],
+    exclusions: [
+      'Therapeutic angioplasty / stenting (quoted separately if indicated)',
+      'International flights & post-discharge hotel accommodation',
+    ],
+    doctorOpinionNotes:
+      'Reviewed stress echo from Muscat. Recommend elective coronary angiography at Fortis Escorts.',
+    publishedAt: new Date().toISOString(),
+    publishedBy: doctorUser.id,
+    consentAcceptedAt: null,
+    consentAcceptedBy: null,
+  };
+
+  const omarCase = await prisma.case.upsert({
+    where: { id: 'seed-case-002' },
+    update: {
+      hospitalId: hospital1.id,
+      primaryDoctorId: 'seed-doctor-001',
+      managerId: manager.id,
+      status: 'UNDER_REVIEW',
+      treatmentPlan: omarTreatmentPlan as unknown as Prisma.InputJsonValue,
+    },
+    create: {
+      id: 'seed-case-002',
+      patientId: omarPatient.id,
+      managerId: manager.id,
+      hospitalId: hospital1.id,
+      primaryDoctorId: 'seed-doctor-001',
+      status: 'UNDER_REVIEW',
+      notes: 'Pre-travel file review assigned to Dr. Ashok Seth; treatment plan awaiting patient consent.',
+      isUrgent: false,
+      treatmentPlan: omarTreatmentPlan as unknown as Prisma.InputJsonValue,
+    },
+  });
+
+  await prisma.clinicalStep.deleteMany({ where: { caseId: omarCase.id } });
+  const omarSteps = buildStandardMvtPathwaySteps('CARDIOLOGY');
+  for (const step of omarSteps) {
+    const isIntakeDone = step.actionType === 'UPLOAD_DOCS' || step.actionType === 'VOTE_MDT';
+    const isProformaAction = step.actionType === 'ISSUE_PROFORMA';
+    await prisma.clinicalStep.create({
+      data: {
+        caseId: omarCase.id,
+        stageName: step.stageName,
+        stageOrder: step.stageOrder,
+        stepOrder: step.stepOrder,
+        title: step.title,
+        category: step.category,
+        status: isIntakeDone
+          ? 'COMPLETED'
+          : isProformaAction
+            ? 'ACTION_REQUIRED'
+            : 'PENDING',
+        actionType: step.actionType ?? null,
+        requiredRole: step.requiredRole ?? null,
+        completedAt: isIntakeDone ? new Date() : null,
+      },
+    });
+  }
+
+  await prisma.document.deleteMany({ where: { patientId: omarPatient.id } });
+  const omarPassportDoc = await prisma.document.create({
+    data: {
+      patientId: omarPatient.id,
+      uploadedBy: omarUser.id,
+      category: 'PASSPORT',
+      fileName: 'Oman_Passport_Omar_Al_Harthy.pdf',
+      fileUrl: 'Passport_Sample.pdf',
+      storageKey: 'Passport_Sample.pdf',
+      fileSize: 412000,
+      mimeType: 'application/pdf',
+      verificationStatus: 'VERIFIED',
+      verifiedBy: manager.id,
+      verificationNotes: 'Omani passport verified (> 6 months validity).',
+      verifiedAt: new Date(),
+    },
+  });
+  await prisma.document.update({
+    where: { id: omarPassportDoc.id },
+    data: { fileUrl: `/api/v1/documents/${omarPassportDoc.id}/download` },
+  });
+
+  console.log(`  ✓ Second inquiry patient: omar@afzalhealthcare.in / Patient@123 (UNDER_REVIEW)\n`);
+
   console.log('✅ Database seeded successfully!\n');
   console.log('Test credentials:');
   console.log('  Super Admin: admin@afzalhealthcare.in / Admin@123');
   console.log('  Manager:     manager@afzalhealthcare.in / Manager@123');
   console.log('  Doctor:      doctor@afzalhealthcare.in / Doctor@123');
-  console.log('  Patient:     patient@afzalhealthcare.in / Patient@123');
+  console.log('  Patient 1:   patient@afzalhealthcare.in / Patient@123');
+  console.log('  Patient 2:   omar@afzalhealthcare.in / Patient@123');
 
   // Suppress unused variable warnings
   void admin;

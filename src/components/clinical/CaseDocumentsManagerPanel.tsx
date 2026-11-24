@@ -339,15 +339,47 @@ export function CaseDocumentsManagerPanel({
             required
           />
 
-          <div className="space-y-1">
-            <label className="block font-medium text-surface-700">
-              Notes (Optional)
-            </label>
+          <div className="space-y-1.5">
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <label className="block font-medium text-surface-700">
+                {effectiveCategory === 'DISCHARGE_SUMMARY'
+                  ? 'Discharge Summary Clinical Details'
+                  : 'Notes (Optional)'}
+              </label>
+              {effectiveCategory === 'DISCHARGE_SUMMARY' && (
+                <button
+                  type="button"
+                  onClick={() =>
+                    setIssueNotes(
+                      [
+                        'Procedure Performed: ',
+                        'Hospital Course: ',
+                        'Discharge Medications: ',
+                        'Wound Care & Activity: ',
+                        'Emergency Red Flags: Seek urgent medical care for fever >38C, chest pain, dyspnea, active bleeding, or acute swelling.',
+                      ].join('\n')
+                    )
+                  }
+                  className="text-xs font-medium text-primary-700 hover:text-primary-800 underline"
+                >
+                  Insert structured discharge template
+                </button>
+              )}
+            </div>
+            {effectiveCategory === 'DISCHARGE_SUMMARY' && (
+              <p className="text-xs text-surface-500">
+                Include Procedure Performed, Hospital Course, Discharge Medications, Wound Care, and Emergency Red Flags.
+              </p>
+            )}
             <textarea
-              rows={2}
+              rows={effectiveCategory === 'DISCHARGE_SUMMARY' ? 5 : 2}
               value={issueNotes}
               onChange={(e) => setIssueNotes(e.target.value)}
-              placeholder="Add hospital details, visa reference, or clinical notes..."
+              placeholder={
+                effectiveCategory === 'DISCHARGE_SUMMARY'
+                  ? 'Procedure Performed, Hospital Course, Discharge Medications, Wound Care, Emergency Red Flags...'
+                  : 'Add hospital details, visa reference, or clinical notes...'
+              }
               className="w-full p-2.5 rounded-md border border-surface-300 bg-white text-surface-900 focus:border-primary-600 focus:outline-none"
             />
           </div>

@@ -64,6 +64,10 @@ interface PendingClinicalCase {
   id: string;
   status: string;
   isUrgent: boolean;
+  treatmentPlan?: {
+    procedureName?: string;
+    consentAcceptedAt?: string | null;
+  } | null;
   patient: {
     nationality: string;
     user: { fullName: string };
@@ -374,6 +378,11 @@ export default function DoctorDashboardPage() {
                         </div>
                         <div className="flex flex-wrap items-center gap-1.5">
                           <CaseStatusBadge status={c.status} />
+                          {(c.status === 'INQUIRY_RECEIVED' || c.status === 'UNDER_REVIEW') && (
+                            <Badge variant="primary" size="sm">
+                              Pre-Travel File Review
+                            </Badge>
+                          )}
                           {c.fitToFlyClearance?.isCleared ? (
                             <Badge variant="success" size="sm">
                               <Plane className="w-3 h-3" /> Fit-to-Fly Cleared
@@ -384,6 +393,14 @@ export default function DoctorDashboardPage() {
                             </Badge>
                           )}
                         </div>
+                        {c.treatmentPlan?.procedureName && (
+                          <p className="text-xs text-surface-600">
+                            Plan: <span className="font-medium text-surface-800">{c.treatmentPlan.procedureName}</span>
+                            {c.treatmentPlan.consentAcceptedAt
+                              ? ' • Consent confirmed'
+                              : ' • Awaiting patient consent'}
+                          </p>
+                        )}
                       </div>
 
                       <Link href={`/doctor/cases/${c.id}`}>

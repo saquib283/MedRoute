@@ -9,7 +9,10 @@ import { requireAuth, getClientIP } from '@/lib/api/auth-helper';
 import { apiSuccess, apiError } from '@/lib/api/response';
 import { ERROR_CODES } from '@/lib/api/errors';
 import { createAuditLog, AUDIT_ACTIONS } from '@/lib/api/audit-logger';
-import { formatPatientForViewer } from '@/lib/services/phi.service';
+import {
+  formatPatientForViewer,
+  formatTravelLogisticsForViewer,
+} from '@/lib/services/phi.service';
 
 export async function GET(request: NextRequest) {
   try {
@@ -27,25 +30,27 @@ export async function GET(request: NextRequest) {
       return apiError(ERROR_CODES.USER_NOT_FOUND, 'Active doctor profile not found', 404);
     }
 
-    // Get unique patient IDs who have an active (non-cancelled) appointment with this doctor
-    const distinctAppointments = await prisma.appointment.findMany({
-      where: {
-        doctorId: doctorProfile.id,
-        status: { not: 'CANCELLED' },
-      },
-      select: { patientId: true },
-      distinct: ['patientId'],
-    });
-
-    const patientIds = distinctAppointments.map((a) => a.patientId);
-
-    if (patientIds.length === 0) {
-      return apiSuccess({ patients: [] });
-    }
-
-    // Fetch full patient data for these patients
+    // Fetch full patient data for patients assigned via primaryDoctorId or active appointments
     const patients = await prisma.patient.findMany({
-      where: { id: { in: patientIds } },
+      where: {
+        OR: [
+          {
+            cases: {
+              some: {
+                primaryDoctorId: doctorProfile.id,
+              },
+            },
+          },
+          {
+            appointments: {
+              some: {
+                doctorId: doctorProfile.id,
+                status: { not: 'CANCELLED' },
+              },
+            },
+          },
+        ],
+      },
       include: {
         user: { select: { fullName: true, email: true, phone: true } },
         medicalProfile: true,
@@ -62,9 +67,29 @@ export async function GET(request: NextRequest) {
       },
     });
 
-    const formattedPatients = patients.map((p) =>
-      formatPatientForViewer(p, { maskPassport: true })
-    );
+    if (patients.length === 0) {
+      return apiSuccess({ patients: [] });
+    }
+
+    const formattedPatients = patients.map((p) => {
+      const formatted = formatPatientForViewer(p, { maskPassport: true });
+      if (Array.isArray(formatted.cases)) {
+        return {
+          ...formatted,
+          cases: formatted.cases.map((c) =>
+            'travelLogistics' in c && c.travelLogistics !== undefined
+              ? {
+                  ...c,
+                  travelLogistics: formatTravelLogisticsForViewer(c.travelLogistics, {
+                    maskPassport: true,
+                  }),
+                }
+              : c
+          ),
+        };
+      }
+      return formatted;
+    });
 
     void createAuditLog({
       actorId: authUser!.userId,
