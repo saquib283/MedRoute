@@ -6,6 +6,7 @@ const mockTxMedicalProfileCreate = jest.fn();
 const mockTxCaseCreate = jest.fn();
 const mockTxCaseUpdateMany = jest.fn();
 const mockTxCaseFindMany = jest.fn();
+const mockTxClinicalStepCreateMany = jest.fn();
 const mockTxAuditCreate = jest.fn();
 const mockTxNotificationCreateMany = jest.fn();
 
@@ -33,6 +34,7 @@ jest.mock('@/lib/prisma', () => ({
           updateMany: mockTxCaseUpdateMany,
           findMany: mockTxCaseFindMany,
         },
+        clinicalStep: { createMany: mockTxClinicalStepCreateMany },
         auditLog: { create: mockTxAuditCreate },
         notification: { createMany: mockTxNotificationCreateMany },
       }),
@@ -74,6 +76,14 @@ describe('Onboarding & Atomic Coordinator Assignment', () => {
     expect(mockTxCaseCreate.mock.calls[0][0].data.managerId).toBe('mgr-1');
     expect(mockTxMedicalProfileCreate).toHaveBeenCalledWith({
       data: { patientId: 'pat-1' },
+    });
+    expect(mockTxClinicalStepCreateMany).toHaveBeenCalledTimes(1);
+    const onboardSeededSteps = mockTxClinicalStepCreateMany.mock.calls[0][0].data;
+    expect(onboardSeededSteps[0]).toMatchObject({
+      caseId: 'case-1',
+      stageOrder: 1,
+      stepOrder: 1,
+      status: 'IN_PROGRESS',
     });
     expect(mockTxAuditCreate).toHaveBeenCalledTimes(1);
   });
@@ -130,6 +140,7 @@ describe('Onboarding & Atomic Coordinator Assignment', () => {
       where: { patientId: 'pat-1', status: { not: 'CLOSED' } },
       data: { managerId: 'mgr-1' },
     });
+    expect(mockTxClinicalStepCreateMany).toHaveBeenCalledTimes(1);
     expect(mockTxAuditCreate).toHaveBeenCalledTimes(1);
   });
 

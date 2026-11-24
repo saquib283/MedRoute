@@ -35,8 +35,35 @@ export async function GET(request: NextRequest) {
             phone: true,
           },
         },
+        hospital: {
+          select: {
+            id: true,
+            name: true,
+            city: true,
+            address: true,
+            accreditation: true,
+          },
+        },
+        primaryDoctor: {
+          select: {
+            id: true,
+            fullName: true,
+            qualification: true,
+            languages: true,
+            specialisation: {
+              select: {
+                id: true,
+                name: true,
+              },
+            },
+          },
+        },
         clinicalSteps: {
-          orderBy: { createdAt: 'asc' },
+          orderBy: [
+            { stageOrder: 'asc' },
+            { stepOrder: 'asc' },
+            { createdAt: 'asc' },
+          ],
         },
         fitToFlyClearance: true,
       },

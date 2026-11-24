@@ -16,6 +16,7 @@ const HOSPITAL_OFFICIAL_CATEGORIES = new Set([
   'PROFORMA_INVOICE',
   'MEDICAL_OPINION',
   'FIT_TO_FLY_CERTIFICATE',
+  'DISCHARGE_SUMMARY',
 ]);
 
 export function matchesPatientDocumentCategoryFilter(

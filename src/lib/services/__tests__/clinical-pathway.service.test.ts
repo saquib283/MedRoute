@@ -116,6 +116,18 @@ describe('Task 2: Clinical Pathway Service & Multi-Role Authorization', () => {
     });
     expect(unrelatedDoc.ok).toBe(false);
     if (!unrelatedDoc.ok) expect(unrelatedDoc.status).toBe(403);
+
+    // Primary specialist doctor assigned via Case.primaryDoctorId has pre-travel access WITHOUT any appointment
+    mockedPrisma.case.findUnique.mockResolvedValueOnce({
+      ...baseCase,
+      status: 'UNDER_REVIEW',
+      primaryDoctorId: 'doc-1',
+    });
+    const preTravelPrimaryDoc = await authorizeCaseClinicalAccess('case-1', {
+      userId: 'doc-user-1',
+      role: 'DOCTOR',
+    });
+    expect(preTravelPrimaryDoc.ok).toBe(true);
   });
 
   it('returns 404 when case is missing in getCasePathwayForViewer and formats patient for authorized viewer', async () => {

@@ -4,7 +4,13 @@
  */
 
 import { z } from 'zod';
-import { CASE_STATUS_ORDER } from '@/lib/constants';
+import {
+  APPOINTMENT_MODES,
+  CASE_STATUS_ORDER,
+  DOCUMENT_CATEGORIES,
+  FOLLOW_UP_MILESTONES,
+  SSR_ASSISTANCE_CODES,
+} from '@/lib/constants';
 
 // ─── Auth Schemas ───────────────────────────────────────────────────
 
@@ -28,6 +34,12 @@ export const registerSchema = z.object({
   // Patient-specific fields for self-registration
   nationality: z.string().min(2, 'Nationality is required'),
   passportNo: z.string().min(5, 'Passport number is required'),
+  passportExpiry: z
+    .string()
+    .refine((val) => !isNaN(Date.parse(val)), {
+      message: 'Invalid passport expiry date',
+    })
+    .optional(),
   dob: z.string().refine((val) => !isNaN(Date.parse(val)), {
     message: 'Invalid date of birth',
   }),
@@ -70,6 +82,13 @@ export const resetPasswordSchema = z.object({
 export const patientProfileSchema = z.object({
   nationality: z.string().min(2).optional(),
   passportNo: z.string().min(5).optional(),
+  passportExpiry: z
+    .string()
+    .nullable()
+    .optional()
+    .refine((val) => !val || !isNaN(Date.parse(val)), {
+      message: 'Invalid passport expiry date',
+    }),
   dob: z
     .string()
     .refine((val) => !isNaN(Date.parse(val)), {
@@ -126,9 +145,23 @@ export const createCaseSchema = z.object({
 export const updateCaseStatusSchema = z.object({
   status: z.enum(CASE_STATUS_ORDER),
   notes: z.string().max(5000).optional(),
+  overrideReason: z.string().max(2000).nullable().optional(),
 });
 
 // ─── Appointment Schemas ────────────────────────────────────────────
+
+export const appointmentModeSchema = z.enum([
+  APPOINTMENT_MODES.TELECONSULTATION,
+  APPOINTMENT_MODES.IN_PERSON,
+]);
+
+export const documentCategorySchema = z.enum(
+  Object.values(DOCUMENT_CATEGORIES) as [string, ...string[]]
+);
+
+export const ssrAssistanceCodeSchema = z.enum(SSR_ASSISTANCE_CODES);
+
+export const followUpMilestoneCodeSchema = z.enum(FOLLOW_UP_MILESTONES);
 
 export const bookAppointmentSchema = z.object({
   caseId: z.string().min(1),
@@ -141,6 +174,12 @@ export const bookAppointmentSchema = z.object({
     'SURGERY',
     'POST_OP_REVIEW',
   ]),
+  mode: appointmentModeSchema.optional(),
+  meetingUrl: z
+    .union([z.string().url('Invalid meeting URL').max(500), z.literal('')])
+    .nullable()
+    .optional(),
+  interpreterLanguage: z.string().max(100).nullable().optional(),
   scheduledAt: z.string().refine((val) => {
     const date = new Date(val);
     return !isNaN(date.getTime()) && date > new Date();

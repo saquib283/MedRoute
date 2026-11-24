@@ -56,6 +56,11 @@ enum AppointmentStatus {
   RESCHEDULED
 }
 
+enum AppointmentMode {
+  TELECONSULTATION
+  IN_PERSON
+}
+
 enum DocumentCategory {
   PASSPORT
   VISA
@@ -67,6 +72,7 @@ enum DocumentCategory {
   FIT_TO_FLY_CERTIFICATE
   FRRO_REGISTRATION
   INSURANCE
+  DISCHARGE_SUMMARY
 }
 
 enum NotificationChannel {
@@ -114,6 +120,7 @@ model Patient {
   userId            String       @unique @map("user_id")
   nationality       String
   passportNo        String       @map("passport_no") // encrypted at application level (AES-256)
+  passportExpiry    DateTime?    @map("passport_expiry")
   dob               DateTime
   bloodGroup        String?      @map("blood_group")
   medicalCondition  String?      @map("medical_condition") @db.Text
@@ -155,19 +162,26 @@ model PatientMedicalProfile {
 }
 
 model Case {
-  id            String     @id @default(cuid())
-  patientId     String     @map("patient_id")
-  managerId     String?    @map("manager_id")
-  status        CaseStatus @default(INQUIRY_RECEIVED)
-  notes         String?    @db.Text
-  isUrgent      Boolean    @default(false) @map("is_urgent")
-  escalationNote String?   @map("escalation_note") @db.Text
-  createdAt     DateTime   @default(now()) @map("created_at")
-  lastUpdatedAt DateTime   @updatedAt @map("last_updated_at")
+  id                  String     @id @default(cuid())
+  patientId           String     @map("patient_id")
+  managerId           String?    @map("manager_id")
+  hospitalId          String?    @map("hospital_id")
+  primaryDoctorId     String?    @map("primary_doctor_id")
+  status              CaseStatus @default(INQUIRY_RECEIVED)
+  notes               String?    @db.Text
+  isUrgent            Boolean    @default(false) @map("is_urgent")
+  escalationNote      String?    @map("escalation_note") @db.Text
+  treatmentPlan       Json?      @map("treatment_plan")
+  travelLogistics     Json?      @map("travel_logistics")
+  postReturnFollowUps Json?      @map("post_return_follow_ups")
+  createdAt           DateTime   @default(now()) @map("created_at")
+  lastUpdatedAt       DateTime   @updatedAt @map("last_updated_at")
 
   // Relations
   patient            Patient              @relation(fields: [patientId], references: [id])
   manager            User?                @relation("ManagerCases", fields: [managerId], references: [id])
+  hospital           Hospital?            @relation(fields: [hospitalId], references: [id])
+  primaryDoctor      Doctor?              @relation("PrimaryDoctorCases", fields: [primaryDoctorId], references: [id])
   appointments       Appointment[]
   clinicalSteps      ClinicalStep[]
   fitToFlyClearance  FitToFlyClearance?
@@ -176,6 +190,8 @@ model Case {
 
   @@index([patientId])
   @@index([managerId])
+  @@index([hospitalId])
+  @@index([primaryDoctorId])
   @@index([status])
   @@map("cases")
 }
@@ -207,6 +223,7 @@ model Hospital {
   updatedAt      DateTime @updatedAt @map("updated_at")
 
   // Relations
+  cases               Case[]
   doctors             Doctor[]
   appointments        Appointment[]
   commissionOverrides CommissionOverride[]
@@ -237,6 +254,7 @@ model Doctor {
   hospital       Hospital       @relation(fields: [hospitalId], references: [id])
   specialisation Specialisation @relation(fields: [specialisationId], references: [id])
   appointments   Appointment[]
+  primaryCases   Case[]         @relation("PrimaryDoctorCases")
 
   @@index([hospitalId])
   @@index([specialisationId])
@@ -250,8 +268,11 @@ model Appointment {
   patientId          String            @map("patient_id")
   hospitalId         String            @map("hospital_id")
   doctorId           String            @map("doctor_id")
-  appointmentType    AppointmentType   @map("appointment_type")
-  scheduledAt        DateTime          @map("scheduled_at")
+  appointmentType     AppointmentType   @map("appointment_type")
+  mode                AppointmentMode   @default(IN_PERSON)
+  meetingUrl          String?           @map("meeting_url") @db.VarChar(500)
+  interpreterLanguage String?           @map("interpreter_language") @db.VarChar(100)
+  scheduledAt         DateTime          @map("scheduled_at")
   status             AppointmentStatus @default(SCHEDULED)
   cancellationReason String?           @map("cancellation_reason")
   clinicalNotes      String?           @map("clinical_notes") @db.Text
@@ -499,6 +520,11 @@ model FitToFlyClearance {
   clearanceDate DateTime? @map("clearance_date")
   restrictions  String?   @db.Text
   reEvalDate    DateTime? @map("re_eval_date")
+  checklist     Json?
+  ssrCode       String?   @default("NONE") @map("ssr_code") @db.VarChar(32)
+  requiresMedif Boolean   @default(false) @map("requires_medif")
+  flightNumber  String?   @map("flight_number") @db.VarChar(64)
+  departureDate DateTime? @map("departure_date")
   createdAt     DateTime  @default(now()) @map("created_at")
   updatedAt     DateTime  @updatedAt @map("updated_at")
 

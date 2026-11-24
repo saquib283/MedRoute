@@ -111,6 +111,54 @@ export const APPOINTMENT_STATUS_LABELS: Record<string, string> = {
   RESCHEDULED: 'Rescheduled',
 };
 
+// ─── Appointment Modes ──────────────────────────────────────────────
+
+export const APPOINTMENT_MODES = {
+  TELECONSULTATION: 'TELECONSULTATION',
+  IN_PERSON: 'IN_PERSON',
+} as const;
+
+export type AppointmentModeType = (typeof APPOINTMENT_MODES)[keyof typeof APPOINTMENT_MODES];
+
+export const APPOINTMENT_MODE_LABELS: Record<string, string> = {
+  TELECONSULTATION: 'Video Teleconsultation',
+  IN_PERSON: 'In-Person Hospital Visit',
+};
+
+// ─── Airline SSR Assistance & Post-Return Follow-Ups ────────────────
+
+export const SSR_ASSISTANCE_CODES = [
+  'NONE',
+  'WCHR',
+  'WCHS',
+  'WCHC',
+  'MEDA',
+] as const;
+
+export type SsrAssistanceCode = (typeof SSR_ASSISTANCE_CODES)[number];
+
+export const SSR_ASSISTANCE_LABELS: Record<SsrAssistanceCode, string> = {
+  NONE: 'No Special Airport Assistance',
+  WCHR: 'WCHR — Wheelchair (Ramp / Long Distance)',
+  WCHS: 'WCHS — Wheelchair (Steps / Cannot Climb Stairs)',
+  WCHC: 'WCHC — Wheelchair (Cabin Seat / Immobile)',
+  MEDA: 'MEDA — Medical Clearance / Oxygen Support',
+};
+
+export const FOLLOW_UP_MILESTONES = [
+  'DAY_7',
+  'DAY_30',
+  'DAY_90',
+] as const;
+
+export type FollowUpMilestoneCode = (typeof FOLLOW_UP_MILESTONES)[number];
+
+export const FOLLOW_UP_MILESTONE_LABELS: Record<FollowUpMilestoneCode, string> = {
+  DAY_7: 'Day 7 Post-Return Check-In',
+  DAY_30: 'Day 30 Recovery Review',
+  DAY_90: 'Day 90 Long-Term Outcome Check-In',
+};
+
 // ─── Document Categories ────────────────────────────────────────────
 
 export const DOCUMENT_CATEGORIES = {
@@ -124,6 +172,7 @@ export const DOCUMENT_CATEGORIES = {
   FIT_TO_FLY_CERTIFICATE: 'FIT_TO_FLY_CERTIFICATE',
   FRRO_REGISTRATION: 'FRRO_REGISTRATION',
   INSURANCE: 'INSURANCE',
+  DISCHARGE_SUMMARY: 'DISCHARGE_SUMMARY',
 } as const;
 
 export const DOCUMENT_CATEGORY_LABELS: Record<string, string> = {
@@ -137,6 +186,7 @@ export const DOCUMENT_CATEGORY_LABELS: Record<string, string> = {
   FIT_TO_FLY_CERTIFICATE: 'Fit-to-Fly Certificate',
   FRRO_REGISTRATION: 'FRRO Registration',
   INSURANCE: 'Medical Insurance',
+  DISCHARGE_SUMMARY: 'Hospital Discharge Summary',
 };
 
 // ─── Urgency Levels ─────────────────────────────────────────────────

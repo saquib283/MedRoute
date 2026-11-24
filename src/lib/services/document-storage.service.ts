@@ -299,7 +299,12 @@ export async function streamDocumentById(
     include: {
       patient: {
         include: {
-          cases: { select: { managerId: true } },
+          cases: {
+            select: {
+              managerId: true,
+              primaryDoctor: { select: { userId: true } },
+            },
+          },
           appointments: {
             where: { status: { not: 'CANCELLED' } },
             include: { doctor: { select: { userId: true } } },
@@ -316,9 +321,14 @@ export async function streamDocumentById(
   const caseManagerIds = document.patient.cases
     .map((c) => c.managerId)
     .filter((id): id is string => Boolean(id));
-  const doctorUserIds = document.patient.appointments
-    .map((a) => a.doctor.userId)
-    .filter((id): id is string => Boolean(id));
+  const doctorUserIds = Array.from(
+    new Set(
+      [
+        ...document.patient.cases.map((c) => c.primaryDoctor?.userId),
+        ...document.patient.appointments.map((a) => a.doctor.userId),
+      ].filter((id): id is string => Boolean(id))
+    )
+  );
 
   const authorized = canUserAccessPatientDocument(authUser, {
     patientUserId: document.patient.userId,

@@ -13,6 +13,7 @@ import {
   assertManagerCapacity,
   getSystemSettings,
 } from '@/lib/services/system-settings.service';
+import { buildStandardMvtPathwaySteps } from '@/lib/services/case-lifecycle.service';
 
 export interface OnboardPatientInput {
   email: string;
@@ -21,6 +22,7 @@ export interface OnboardPatientInput {
   phone?: string;
   nationality: string;
   passportNo: string;
+  passportExpiry?: string | null;
   dob: string;
   primaryLanguage?: string;
   medicalCondition?: string;
@@ -152,6 +154,9 @@ export async function onboardPatient(
         userId: user.id,
         nationality: input.nationality.trim(),
         passportNo: encryptedPassport,
+        ...(input.passportExpiry
+          ? { passportExpiry: new Date(input.passportExpiry) }
+          : {}),
         dob: dobDate,
         primaryLanguage: input.primaryLanguage?.trim() || null,
         medicalCondition: input.medicalCondition?.trim() || null,
@@ -177,6 +182,24 @@ export async function onboardPatient(
           input.medicalCondition?.trim() ||
           null,
       },
+    });
+
+    const initialSteps = buildStandardMvtPathwaySteps();
+    await tx.clinicalStep.createMany({
+      data: initialSteps.map((step) => ({
+        caseId: initialCase.id,
+        stageName: step.stageName,
+        stageOrder: step.stageOrder,
+        stepOrder: step.stepOrder,
+        title: step.title,
+        category: step.category,
+        status: step.status,
+        decisionBranch: step.decisionBranch ?? null,
+        doctorNotes: step.doctorNotes ?? null,
+        actionType: step.actionType ?? null,
+        requiredRole: step.requiredRole ?? null,
+        actionUrl: step.actionUrl ?? null,
+      })),
     });
 
     await tx.auditLog.create({
@@ -224,6 +247,7 @@ export interface CreateCaseForPatientInput {
   notes?: string;
   isUrgent?: boolean;
   managerId?: string | null;
+  specialtyId?: string;
   actorId: string;
   callerRole?: UserRole;
   ipAddress?: string;
@@ -328,6 +352,24 @@ export async function createCaseForPatient(input: CreateCaseForPatientInput) {
           },
         },
       },
+    });
+
+    const seededSteps = buildStandardMvtPathwaySteps(input.specialtyId);
+    await tx.clinicalStep.createMany({
+      data: seededSteps.map((step) => ({
+        caseId: createdCase.id,
+        stageName: step.stageName,
+        stageOrder: step.stageOrder,
+        stepOrder: step.stepOrder,
+        title: step.title,
+        category: step.category,
+        status: step.status,
+        decisionBranch: step.decisionBranch ?? null,
+        doctorNotes: step.doctorNotes ?? null,
+        actionType: step.actionType ?? null,
+        requiredRole: step.requiredRole ?? null,
+        actionUrl: step.actionUrl ?? null,
+      })),
     });
 
     await tx.auditLog.create({
