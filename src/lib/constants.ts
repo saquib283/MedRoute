@@ -252,3 +252,50 @@ export const DAYS_OF_WEEK = [
   'SAT',
   'SUN',
 ] as const;
+
+// ─── Leads CRM & B2B Referral Partners ──────────────────────────────
+
+export const LEAD_STATUS_LABELS: Record<string, string> = {
+  NEW: 'New Inquiry',
+  CONTACTED: 'Contacted',
+  MEDICAL_RECORDS_REQUESTED: 'Records Requested',
+  CLINICAL_REVIEW: 'Clinical Review',
+  QUOTE_SHARED: 'Quote Shared',
+  NURTURING: 'Nurturing',
+  QUALIFIED: 'Qualified',
+  CONVERTED: 'Converted',
+  LOST: 'Lost',
+};
+
+export const LEAD_SOURCE_LABELS: Record<string, string> = {
+  WEBSITE_INQUIRY: 'Website Inquiry',
+  WHATSAPP: 'WhatsApp',
+  PHONE_CALL: 'Phone Call',
+  B2B_PARTNER: 'B2B Partner',
+  DOCTOR_REFERRAL: 'Doctor Referral',
+  EMBASSY_SPONSOR: 'Embassy / Ministry',
+  META_GOOGLE_ADS: 'Meta / Google Ads',
+  EMAIL_CAMPAIGN: 'Email Campaign',
+  WALK_IN: 'Walk-In',
+};
+
+export const LEAD_LOST_REASON_LABELS: Record<string, string> = {
+  PRICE_TOO_HIGH: 'Treatment / Travel Cost Too High',
+  CHOSE_COMPETITOR: 'Chose Another Hospital / Country',
+  VISA_DENIED_OR_PASSPORT: 'Visa Denied or Passport Unavailable',
+  MEDICAL_UNFIT: 'Medically Unfit for Travel / Surgery',
+  NO_RESPONSE: 'Unresponsive After Follow-Ups',
+  DUPLICATE: 'Duplicate Inquiry',
+  TIMELINE_POSTPONED: 'Treatment Postponed Indefinitely',
+  OTHER: 'Other',
+};
+
+export const MVT_SPECIALTY_OPTIONS = [
+  { value: 'CARDIOLOGY', label: 'Cardiology & Cardiac Surgery' },
+  { value: 'ONCOLOGY', label: 'Oncology & Surgical Oncology' },
+  { value: 'ORTHOPEDICS', label: 'Orthopedics & Joint Replacement' },
+  { value: 'NEUROSURGERY', label: 'Neurosurgery & Spine' },
+  { value: 'TRANSPLANT', label: 'Organ & Bone Marrow Transplant' },
+  { value: 'IVF', label: 'IVF & Reproductive Medicine' },
+  { value: 'GENERAL', label: 'General Surgery & Multi-Specialty' },
+] as const;

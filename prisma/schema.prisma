@@ -81,6 +81,47 @@ enum NotificationChannel {
   SMS
 }
 
+enum LeadStatus {
+  NEW
+  CONTACTED
+  MEDICAL_RECORDS_REQUESTED
+  CLINICAL_REVIEW
+  QUOTE_SHARED
+  NURTURING
+  QUALIFIED
+  CONVERTED
+  LOST
+}
+
+enum LeadSource {
+  WEBSITE_INQUIRY
+  WHATSAPP
+  PHONE_CALL
+  B2B_PARTNER
+  DOCTOR_REFERRAL
+  EMBASSY_SPONSOR
+  META_GOOGLE_ADS
+  EMAIL_CAMPAIGN
+  WALK_IN
+}
+
+enum LeadTemperature {
+  HOT
+  WARM
+  COLD
+}
+
+enum LeadActivityType {
+  NOTE
+  WHATSAPP
+  PHONE_CALL
+  EMAIL
+  QUOTE_ESTIMATE
+  STATUS_CHANGE
+  FOLLOW_UP_SCHEDULED
+  CONVERSION
+}
+
 
 // ─── Core Models ────────────────────────────────────────────────────
 
@@ -111,6 +152,8 @@ model User {
   receivedMessages    Message[]        @relation("ReceivedMessages")
   doctorProfile       Doctor?          @relation("DoctorProfile")
   createdBills        MedicalBill[]    @relation("CreatedBills")
+  managedLeads        Lead[]           @relation("ManagerLeads")
+  leadActivities      LeadActivity[]   @relation("LeadActivityActor")
 
   @@map("users")
 }
@@ -167,6 +210,7 @@ model Case {
   managerId           String?    @map("manager_id")
   hospitalId          String?    @map("hospital_id")
   primaryDoctorId     String?    @map("primary_doctor_id")
+  referralPartnerId   String?    @map("referral_partner_id")
   status              CaseStatus @default(INQUIRY_RECEIVED)
   notes               String?    @db.Text
   isUrgent            Boolean    @default(false) @map("is_urgent")
@@ -182,6 +226,7 @@ model Case {
   manager            User?                @relation("ManagerCases", fields: [managerId], references: [id])
   hospital           Hospital?            @relation(fields: [hospitalId], references: [id])
   primaryDoctor      Doctor?              @relation("PrimaryDoctorCases", fields: [primaryDoctorId], references: [id])
+  referralPartner    ReferralPartner?     @relation(fields: [referralPartnerId], references: [id], onDelete: SetNull)
   appointments       Appointment[]
   clinicalSteps      ClinicalStep[]
   fitToFlyClearance  FitToFlyClearance?
@@ -192,6 +237,7 @@ model Case {
   @@index([managerId])
   @@index([hospitalId])
   @@index([primaryDoctorId])
+  @@index([referralPartnerId])
   @@index([status])
   @@map("cases")
 }
@@ -639,4 +685,110 @@ model HotelBooking {
   @@index([hotelId])
   @@index([caseId])
   @@map("hotel_bookings")
+}
+
+// ─── Advanced Leads CRM & B2B Referral Partners ─────────────────────
+
+model ReferralPartner {
+  id                String   @id @default(cuid())
+  name              String
+  code              String   @unique
+  partnerType       String   @map("partner_type")
+  country           String
+  contactName       String?  @map("contact_name")
+  contactEmail      String?  @map("contact_email")
+  contactPhone      String?  @map("contact_phone")
+  commissionPercent Decimal  @default(10.00) @map("commission_percent") @db.Decimal(5, 2)
+  isActive          Boolean  @default(true) @map("is_active")
+  notes             String?  @db.Text
+  createdAt         DateTime @default(now()) @map("created_at")
+  updatedAt         DateTime @updatedAt @map("updated_at")
+
+  // Relations
+  leads Lead[]
+  cases Case[]
+
+  @@index([partnerType])
+  @@index([isActive])
+  @@index([country])
+  @@map("referral_partners")
+}
+
+model Lead {
+  id                    String          @id @default(cuid())
+  referenceNo           String          @unique @map("reference_no")
+  fullName              String          @map("full_name")
+  email                 String?
+  phone                 String?
+  whatsappNumber        String?         @map("whatsapp_number")
+  nationality           String
+  countryOfResidence    String?         @map("country_of_residence")
+  preferredLanguage     String?         @map("preferred_language")
+  medicalCondition      String          @map("medical_condition") @db.Text
+  specialtyInterest     String?         @map("specialty_interest")
+  urgencyLevel          UrgencyLevel    @default(ROUTINE) @map("urgency_level")
+  hasDiagnosticReports  Boolean         @default(false) @map("has_diagnostic_reports")
+  passportReady         Boolean         @default(false) @map("passport_ready")
+  preferredTravelWindow String?         @map("preferred_travel_window")
+  estimatedBudgetUsd    Decimal?        @map("estimated_budget_usd") @db.Decimal(12, 2)
+  preliminaryQuoteUsd   Decimal?        @map("preliminary_quote_usd") @db.Decimal(12, 2)
+  preliminaryQuoteNotes String?         @map("preliminary_quote_notes") @db.Text
+  targetHospitalId      String?         @map("target_hospital_id")
+  targetDoctorId        String?         @map("target_doctor_id")
+  status                LeadStatus      @default(NEW)
+  source                LeadSource      @default(WEBSITE_INQUIRY)
+  leadScore             Int             @default(0) @map("lead_score")
+  temperature           LeadTemperature @default(WARM)
+  assignedManagerId     String?         @map("assigned_manager_id")
+  referralPartnerId     String?         @map("referral_partner_id")
+  utmSource             String?         @map("utm_source")
+  utmMedium             String?         @map("utm_medium")
+  utmCampaign           String?         @map("utm_campaign")
+  firstResponseDueAt    DateTime        @map("first_response_due_at")
+  firstRespondedAt      DateTime?       @map("first_responded_at")
+  lastContactedAt       DateTime?       @map("last_contacted_at")
+  nextFollowUpAt        DateTime?       @map("next_follow_up_at")
+  lostReason            String?         @map("lost_reason")
+  lostNotes             String?         @map("lost_notes") @db.Text
+  convertedPatientId    String?         @map("converted_patient_id")
+  convertedCaseId       String?         @unique @map("converted_case_id")
+  convertedAt           DateTime?       @map("converted_at")
+  createdAt             DateTime        @default(now()) @map("created_at")
+  updatedAt             DateTime        @updatedAt @map("updated_at")
+
+  // Relations
+  assignedManager User?            @relation("ManagerLeads", fields: [assignedManagerId], references: [id], onDelete: SetNull)
+  referralPartner ReferralPartner? @relation(fields: [referralPartnerId], references: [id], onDelete: SetNull)
+  activities      LeadActivity[]
+
+  @@index([status])
+  @@index([assignedManagerId])
+  @@index([source])
+  @@index([temperature, leadScore])
+  @@index([firstResponseDueAt])
+  @@index([nextFollowUpAt])
+  @@index([email])
+  @@index([phone])
+  @@index([referralPartnerId])
+  @@map("leads")
+}
+
+model LeadActivity {
+  id           String           @id @default(cuid())
+  leadId       String           @map("lead_id")
+  actorId      String?          @map("actor_id")
+  activityType LeadActivityType @map("activity_type")
+  summary      String
+  details      Json?
+  dueAt        DateTime?        @map("due_at")
+  completedAt  DateTime?        @map("completed_at")
+  createdAt    DateTime         @default(now()) @map("created_at")
+
+  // Relations
+  lead  Lead  @relation(fields: [leadId], references: [id], onDelete: Cascade)
+  actor User? @relation("LeadActivityActor", fields: [actorId], references: [id], onDelete: SetNull)
+
+  @@index([leadId, createdAt])
+  @@index([dueAt])
+  @@map("lead_activities")
 }
