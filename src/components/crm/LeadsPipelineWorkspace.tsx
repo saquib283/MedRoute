@@ -193,6 +193,7 @@ export function LeadsPipelineWorkspace({ role }: LeadsPipelineWorkspaceProps) {
         if (temperatureFilter) params.set('temperature', temperatureFilter);
         if (slaFilter) params.set('slaState', slaFilter);
         if (sourceFilter) params.set('source', sourceFilter);
+        if (specialtyFilter) params.set('specialtyInterest', specialtyFilter);
         if (partnerFilter) params.set('referralPartnerId', partnerFilter);
         if (assignedFilter) params.set('assignedManagerId', assignedFilter);
         if (followUpsDueOnly) params.set('followUpsDue', 'true');
@@ -219,6 +220,7 @@ export function LeadsPipelineWorkspace({ role }: LeadsPipelineWorkspaceProps) {
       temperatureFilter,
       slaFilter,
       sourceFilter,
+      specialtyFilter,
       partnerFilter,
       assignedFilter,
       followUpsDueOnly,
@@ -277,23 +279,18 @@ export function LeadsPipelineWorkspace({ role }: LeadsPipelineWorkspaceProps) {
     };
   }, []);
 
-  const displayedLeads = useMemo(() => {
-    if (!specialtyFilter) return leads;
-    return leads.filter((l) => l.specialtyInterest === specialtyFilter);
-  }, [leads, specialtyFilter]);
-
   const leadsByStatus = useMemo(() => {
     const grouped: Record<string, LeadRecord[]> = {};
     for (const s of LEAD_STATUSES) {
       grouped[s] = [];
     }
-    for (const lead of displayedLeads) {
+    for (const lead of leads) {
       if (grouped[lead.status]) {
         grouped[lead.status].push(lead);
       }
     }
     return grouped;
-  }, [displayedLeads]);
+  }, [leads]);
 
   const hasActiveFilters = Boolean(
     search.trim() ||
@@ -797,7 +794,7 @@ export function LeadsPipelineWorkspace({ role }: LeadsPipelineWorkspaceProps) {
         {hasActiveFilters && (
           <div className="flex items-center justify-between pt-1 text-xs text-surface-600">
             <span className="tabular-nums">
-              Showing {displayedLeads.length} lead{displayedLeads.length === 1 ? '' : 's'}
+              Showing {leads.length} of {meta.total} lead{meta.total === 1 ? '' : 's'}
             </span>
             <button
               type="button"
@@ -967,14 +964,14 @@ export function LeadsPipelineWorkspace({ role }: LeadsPipelineWorkspaceProps) {
                 </tr>
               </thead>
               <tbody className="divide-y divide-surface-200">
-                {displayedLeads.length === 0 ? (
+                {leads.length === 0 ? (
                   <tr>
                     <td colSpan={7} className="px-5 py-12 text-center text-xs text-surface-500">
                       No leads match your current filters.
                     </td>
                   </tr>
                 ) : (
-                  displayedLeads.map((lead) => (
+                  leads.map((lead) => (
                     <tr key={lead.id} className="hover:bg-surface-50 transition-colors">
                       <td className="px-4 py-3.5 align-top">
                         <p className="font-mono text-[11px] text-surface-500">{lead.referenceNo}</p>

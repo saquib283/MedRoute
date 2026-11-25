@@ -628,6 +628,25 @@ describe('Task 2: Leads CRM Service, Language Router, Deduplication, Activities 
       }
       expect(mockedPrisma.lead.update).not.toHaveBeenCalled();
     });
+
+    it('passes specialtyInterest filter into prisma.lead.findMany where clause in listLeadsForActor', async () => {
+      mockedPrisma.lead.findMany.mockResolvedValueOnce([]);
+      mockedPrisma.lead.count.mockResolvedValue(0);
+
+      const res = await listLeadsForActor(
+        { specialtyInterest: 'CARDIOLOGY', page: 1, limit: 25 },
+        adminActor
+      );
+
+      expect(res.ok).toBe(true);
+      expect(mockedPrisma.lead.findMany).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: {
+            AND: [{ specialtyInterest: 'CARDIOLOGY' }],
+          },
+        })
+      );
+    });
   });
 
   // Ensure imported route handlers remain referenced and callable

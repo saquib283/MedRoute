@@ -42,6 +42,7 @@ export interface LeadListQuery {
   status?: string;
   source?: string;
   temperature?: string;
+  specialtyInterest?: string;
   assignedManagerId?: string;
   referralPartnerId?: string;
   slaState?: string;
@@ -1013,6 +1014,9 @@ export async function listLeadsForActor(
   }
   if (query.temperature) {
     andClauses.push({ temperature: query.temperature as LeadTemperature });
+  }
+  if (query.specialtyInterest && query.specialtyInterest.trim()) {
+    andClauses.push({ specialtyInterest: query.specialtyInterest.trim() });
   }
   if (query.referralPartnerId) {
     andClauses.push({ referralPartnerId: query.referralPartnerId });

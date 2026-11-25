@@ -28,6 +28,7 @@ export async function GET(request: NextRequest) {
         status: searchParams.get('status') || undefined,
         source: searchParams.get('source') || undefined,
         temperature: searchParams.get('temperature') || undefined,
+        specialtyInterest: searchParams.get('specialtyInterest') || undefined,
         assignedManagerId: searchParams.get('assignedManagerId') || undefined,
         referralPartnerId: searchParams.get('referralPartnerId') || undefined,
         slaState: searchParams.get('slaState') || undefined,

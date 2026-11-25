@@ -71,6 +71,23 @@ export interface LeadDossierWorkspaceProps {
 
 type HydrateScope = 'ALL' | 'NONE';
 
+type RightRailField =
+  | 'status'
+  | 'targetHospitalId'
+  | 'targetDoctorId'
+  | 'specialtyInterest'
+  | 'urgencyLevel'
+  | 'preferredTravelWindow'
+  | 'preliminaryQuoteUsd'
+  | 'preliminaryQuoteNotes'
+  | 'referralPartnerId'
+  | 'assignedManagerId'
+  | 'hasDiagnosticReports'
+  | 'passportReady'
+  | 'nextFollowUpAt'
+  | 'lostReason'
+  | 'lostNotes';
+
 const COMPOSER_TYPES = [
   { value: 'WHATSAPP', label: 'WhatsApp', Icon: MessageCircle },
   { value: 'PHONE_CALL', label: 'Phone Call', Icon: Phone },
@@ -114,8 +131,9 @@ export function LeadDossierWorkspace({ leadId, role, backHref }: LeadDossierWork
   const [nowMs, setNowMs] = useState<number | null>(null);
   const [showScoreBreakdown, setShowScoreBreakdown] = useState(false);
 
-  // Right-rail triage & quote form state (preserved across activity refreshes)
-  const isRightRailDirtyRef = useRef(false);
+  // Right-rail triage & quote form state (per-field dirty tracking across activity refreshes)
+  const dirtyFieldsRef = useRef<Set<RightRailField>>(new Set());
+  const [dirtyCount, setDirtyCount] = useState(0);
   const [targetStatus, setTargetStatus] = useState('NEW');
   const [targetHospitalId, setTargetHospitalId] = useState('');
   const [targetDoctorId, setTargetDoctorId] = useState('');
@@ -151,27 +169,44 @@ export function LeadDossierWorkspace({ leadId, role, backHref }: LeadDossierWork
   );
   const [preselectedPatientId, setPreselectedPatientId] = useState<string | undefined>(undefined);
 
-  const hydrateRightRail = useCallback((loaded: LeadRecord) => {
-    setTargetStatus(loaded.status);
-    setTargetHospitalId(loaded.targetHospitalId || '');
-    setTargetDoctorId(loaded.targetDoctorId || '');
-    setSpecialtyInterest(loaded.specialtyInterest || '');
-    setUrgencyLevel(loaded.urgencyLevel || 'ROUTINE');
-    setPreferredTravelWindow(loaded.preferredTravelWindow || '');
-    setPreliminaryQuoteUsd(
-      loaded.preliminaryQuoteUsd !== null && loaded.preliminaryQuoteUsd !== undefined
-        ? String(loaded.preliminaryQuoteUsd)
-        : ''
-    );
-    setPreliminaryQuoteNotes(loaded.preliminaryQuoteNotes || '');
-    setReferralPartnerId(loaded.referralPartnerId || '');
-    setAssignedManagerId(loaded.assignedManagerId || '');
-    setHasDiagnosticReports(Boolean(loaded.hasDiagnosticReports));
-    setPassportReady(Boolean(loaded.passportReady));
-    setNextFollowUpAt(toDateTimeLocalInput(loaded.nextFollowUpAt));
-    setLostReason(loaded.lostReason || '');
-    setLostNotes(loaded.lostNotes || '');
-    isRightRailDirtyRef.current = false;
+  const hydrateRightRail = useCallback((loaded: LeadRecord, forceAll: boolean) => {
+    const dirty = dirtyFieldsRef.current;
+    const shouldSync = (field: RightRailField) => forceAll || !dirty.has(field);
+
+    if (shouldSync('status')) setTargetStatus(loaded.status);
+    if (shouldSync('targetHospitalId')) setTargetHospitalId(loaded.targetHospitalId || '');
+    if (shouldSync('targetDoctorId')) setTargetDoctorId(loaded.targetDoctorId || '');
+    if (shouldSync('specialtyInterest')) setSpecialtyInterest(loaded.specialtyInterest || '');
+    if (shouldSync('urgencyLevel')) setUrgencyLevel(loaded.urgencyLevel || 'ROUTINE');
+    if (shouldSync('preferredTravelWindow')) {
+      setPreferredTravelWindow(loaded.preferredTravelWindow || '');
+    }
+    if (shouldSync('preliminaryQuoteUsd')) {
+      setPreliminaryQuoteUsd(
+        loaded.preliminaryQuoteUsd !== null && loaded.preliminaryQuoteUsd !== undefined
+          ? String(loaded.preliminaryQuoteUsd)
+          : ''
+      );
+    }
+    if (shouldSync('preliminaryQuoteNotes')) {
+      setPreliminaryQuoteNotes(loaded.preliminaryQuoteNotes || '');
+    }
+    if (shouldSync('referralPartnerId')) setReferralPartnerId(loaded.referralPartnerId || '');
+    if (shouldSync('assignedManagerId')) setAssignedManagerId(loaded.assignedManagerId || '');
+    if (shouldSync('hasDiagnosticReports')) {
+      setHasDiagnosticReports(Boolean(loaded.hasDiagnosticReports));
+    }
+    if (shouldSync('passportReady')) setPassportReady(Boolean(loaded.passportReady));
+    if (shouldSync('nextFollowUpAt')) {
+      setNextFollowUpAt(toDateTimeLocalInput(loaded.nextFollowUpAt));
+    }
+    if (shouldSync('lostReason')) setLostReason(loaded.lostReason || '');
+    if (shouldSync('lostNotes')) setLostNotes(loaded.lostNotes || '');
+
+    if (forceAll) {
+      dirtyFieldsRef.current.clear();
+      setDirtyCount(0);
+    }
   }, []);
 
   const fetchDossier = useCallback(
@@ -194,12 +229,7 @@ export function LeadDossierWorkspace({ leadId, role, backHref }: LeadDossierWork
         setDoctors((json.data.availableDoctors || []) as DoctorDirectoryItem[]);
         setCoordinators((json.data.availableCoordinators || []) as CoordinatorOption[]);
 
-        if (options.hydrateScope === 'ALL') {
-          hydrateRightRail(loadedLead);
-        } else if (!isRightRailDirtyRef.current) {
-          // Safe sync when user has no unsaved edits (e.g. NEW auto-advanced to CONTACTED)
-          hydrateRightRail(loadedLead);
-        }
+        hydrateRightRail(loadedLead, options.hydrateScope === 'ALL');
       } catch {
         setLoadError('Network error loading lead dossier.');
       } finally {
@@ -422,28 +452,50 @@ export function LeadDossierWorkspace({ leadId, role, backHref }: LeadDossierWork
       return;
     }
 
+    const dirty = dirtyFieldsRef.current;
+    if (dirty.size === 0) {
+      toast.info('No unsaved changes');
+      return;
+    }
+
+    const payload: Record<string, unknown> = {};
+    if (dirty.has('status')) payload.status = targetStatus;
+    if (dirty.has('targetHospitalId')) payload.targetHospitalId = targetHospitalId || null;
+    if (dirty.has('targetDoctorId')) payload.targetDoctorId = targetDoctorId || null;
+    if (dirty.has('specialtyInterest')) payload.specialtyInterest = specialtyInterest || null;
+    if (dirty.has('urgencyLevel')) payload.urgencyLevel = urgencyLevel;
+    if (dirty.has('preferredTravelWindow')) {
+      payload.preferredTravelWindow = preferredTravelWindow || null;
+    }
+    if (dirty.has('preliminaryQuoteUsd')) {
+      payload.preliminaryQuoteUsd = preliminaryQuoteUsd.trim() ? Number(preliminaryQuoteUsd) : null;
+    }
+    if (dirty.has('preliminaryQuoteNotes')) {
+      payload.preliminaryQuoteNotes = preliminaryQuoteNotes.trim() || null;
+    }
+    if (dirty.has('referralPartnerId')) payload.referralPartnerId = referralPartnerId || null;
+    if (role === 'ADMIN' && dirty.has('assignedManagerId')) {
+      payload.assignedManagerId = assignedManagerId || null;
+    }
+    if (dirty.has('hasDiagnosticReports')) payload.hasDiagnosticReports = hasDiagnosticReports;
+    if (dirty.has('passportReady')) payload.passportReady = passportReady;
+    if (dirty.has('nextFollowUpAt')) {
+      payload.nextFollowUpAt = nextFollowUpAt ? new Date(nextFollowUpAt).toISOString() : null;
+    }
+    if (dirty.has('lostReason') || (dirty.has('status') && targetStatus === 'LOST')) {
+      payload.lostReason = targetStatus === 'LOST' ? lostReason || null : null;
+    }
+    if (dirty.has('lostNotes') || (dirty.has('status') && targetStatus === 'LOST')) {
+      payload.lostNotes = targetStatus === 'LOST' ? lostNotes.trim() || null : null;
+    }
+
+    if (Object.keys(payload).length === 0) {
+      toast.info('No unsaved changes');
+      return;
+    }
+
     setSavingTriage(true);
     try {
-      const payload: Record<string, unknown> = {
-        status: targetStatus,
-        targetHospitalId: targetHospitalId || null,
-        targetDoctorId: targetDoctorId || null,
-        specialtyInterest: specialtyInterest || null,
-        urgencyLevel,
-        preferredTravelWindow: preferredTravelWindow || null,
-        preliminaryQuoteUsd: preliminaryQuoteUsd.trim() ? Number(preliminaryQuoteUsd) : null,
-        preliminaryQuoteNotes: preliminaryQuoteNotes.trim() || null,
-        referralPartnerId: referralPartnerId || null,
-        hasDiagnosticReports,
-        passportReady,
-        nextFollowUpAt: nextFollowUpAt ? new Date(nextFollowUpAt).toISOString() : null,
-        lostReason: targetStatus === 'LOST' ? lostReason || null : null,
-        lostNotes: targetStatus === 'LOST' ? lostNotes.trim() || null : null,
-      };
-      if (role === 'ADMIN') {
-        payload.assignedManagerId = assignedManagerId || null;
-      }
-
       const res = await fetch(`/api/v1/leads/${lead.id}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
@@ -455,7 +507,8 @@ export function LeadDossierWorkspace({ leadId, role, backHref }: LeadDossierWork
         return;
       }
 
-      isRightRailDirtyRef.current = false;
+      dirtyFieldsRef.current.clear();
+      setDirtyCount(0);
       toast.success('Lead triage, quote, and stage saved.', 'Dossier Updated');
       await fetchDossier({ hydrateScope: 'ALL', silent: true });
     } catch (err) {
@@ -465,8 +518,11 @@ export function LeadDossierWorkspace({ leadId, role, backHref }: LeadDossierWork
     }
   };
 
-  const markDirty = () => {
-    isRightRailDirtyRef.current = true;
+  const markFieldDirty = (field: RightRailField) => {
+    if (!dirtyFieldsRef.current.has(field)) {
+      dirtyFieldsRef.current.add(field);
+      setDirtyCount(dirtyFieldsRef.current.size);
+    }
   };
 
   if (loading) {
@@ -829,7 +885,7 @@ export function LeadDossierWorkspace({ leadId, role, backHref }: LeadDossierWork
                       key={tpl}
                       type="button"
                       onClick={() => setActivitySummary(tpl)}
-                      className="px-2.5 py-1 rounded-md bg-surface-100 hover:bg-surface-200 text-[11px] font-medium text-surface-700 transition-colors"
+                      className="inline-flex items-center min-h-11 px-2.5 py-1 rounded-md bg-surface-100 hover:bg-surface-200 text-[11px] font-medium text-surface-700 transition-colors"
                     >
                       + {tpl}
                     </button>
@@ -995,7 +1051,7 @@ export function LeadDossierWorkspace({ leadId, role, backHref }: LeadDossierWork
                 label="Pipeline Stage"
                 value={targetStatus}
                 onChange={(val) => {
-                  markDirty();
+                  markFieldDirty('status');
                   setTargetStatus(val);
                 }}
                 options={statusOptions}
@@ -1009,7 +1065,7 @@ export function LeadDossierWorkspace({ leadId, role, backHref }: LeadDossierWork
                     required
                     value={lostReason}
                     onChange={(val) => {
-                      markDirty();
+                      markFieldDirty('lostReason');
                       setLostReason(val);
                     }}
                     options={[
@@ -1033,7 +1089,7 @@ export function LeadDossierWorkspace({ leadId, role, backHref }: LeadDossierWork
                       rows={2}
                       value={lostNotes}
                       onChange={(e) => {
-                        markDirty();
+                        markFieldDirty('lostNotes');
                         setLostNotes(e.target.value);
                       }}
                       disabled={isLockedConverted}
@@ -1047,13 +1103,14 @@ export function LeadDossierWorkspace({ leadId, role, backHref }: LeadDossierWork
                 label="Target Partner Hospital"
                 value={targetHospitalId}
                 onChange={(val) => {
-                  markDirty();
+                  markFieldDirty('targetHospitalId');
                   setTargetHospitalId(val);
                   if (
                     val &&
                     targetDoctorId &&
                     !doctors.some((d) => d.id === targetDoctorId && d.hospitalId === val)
                   ) {
+                    markFieldDirty('targetDoctorId');
                     setTargetDoctorId('');
                   }
                 }}
@@ -1066,7 +1123,7 @@ export function LeadDossierWorkspace({ leadId, role, backHref }: LeadDossierWork
                 label="Target Attending Doctor"
                 value={targetDoctorId}
                 onChange={(val) => {
-                  markDirty();
+                  markFieldDirty('targetDoctorId');
                   setTargetDoctorId(val);
                 }}
                 options={doctorOptions}
@@ -1080,7 +1137,7 @@ export function LeadDossierWorkspace({ leadId, role, backHref }: LeadDossierWork
                 min="0"
                 value={preliminaryQuoteUsd}
                 onChange={(e) => {
-                  markDirty();
+                  markFieldDirty('preliminaryQuoteUsd');
                   setPreliminaryQuoteUsd(e.target.value);
                 }}
                 placeholder="e.g. 11500"
@@ -1099,7 +1156,7 @@ export function LeadDossierWorkspace({ leadId, role, backHref }: LeadDossierWork
                   rows={2}
                   value={preliminaryQuoteNotes}
                   onChange={(e) => {
-                    markDirty();
+                    markFieldDirty('preliminaryQuoteNotes');
                     setPreliminaryQuoteNotes(e.target.value);
                   }}
                   disabled={isLockedConverted}
@@ -1113,7 +1170,7 @@ export function LeadDossierWorkspace({ leadId, role, backHref }: LeadDossierWork
                   label="Specialty Interest"
                   value={specialtyInterest}
                   onChange={(val) => {
-                    markDirty();
+                    markFieldDirty('specialtyInterest');
                     setSpecialtyInterest(val);
                   }}
                   options={[
@@ -1127,7 +1184,7 @@ export function LeadDossierWorkspace({ leadId, role, backHref }: LeadDossierWork
                   label="Urgency Level"
                   value={urgencyLevel}
                   onChange={(val) => {
-                    markDirty();
+                    markFieldDirty('urgencyLevel');
                     setUrgencyLevel(val);
                   }}
                   options={LEAD_URGENCY_LEVELS.map((u) => ({ value: u, label: u }))}
@@ -1138,7 +1195,7 @@ export function LeadDossierWorkspace({ leadId, role, backHref }: LeadDossierWork
                   label="Preferred Travel Window"
                   value={preferredTravelWindow}
                   onChange={(val) => {
-                    markDirty();
+                    markFieldDirty('preferredTravelWindow');
                     setPreferredTravelWindow(val);
                   }}
                   options={[
@@ -1155,7 +1212,7 @@ export function LeadDossierWorkspace({ leadId, role, backHref }: LeadDossierWork
                   label="B2B Referral Partner"
                   value={referralPartnerId}
                   onChange={(val) => {
-                    markDirty();
+                    markFieldDirty('referralPartnerId');
                     setReferralPartnerId(val);
                   }}
                   options={partnerOptions}
@@ -1168,7 +1225,7 @@ export function LeadDossierWorkspace({ leadId, role, backHref }: LeadDossierWork
                     label="Assigned Coordinator"
                     value={assignedManagerId}
                     onChange={(val) => {
-                      markDirty();
+                      markFieldDirty('assignedManagerId');
                       setAssignedManagerId(val);
                     }}
                     options={[
@@ -1186,7 +1243,7 @@ export function LeadDossierWorkspace({ leadId, role, backHref }: LeadDossierWork
                 type="datetime-local"
                 value={nextFollowUpAt}
                 onChange={(e) => {
-                  markDirty();
+                  markFieldDirty('nextFollowUpAt');
                   setNextFollowUpAt(e.target.value);
                 }}
                 disabled={isLockedConverted}
@@ -1198,7 +1255,7 @@ export function LeadDossierWorkspace({ leadId, role, backHref }: LeadDossierWork
                     type="checkbox"
                     checked={hasDiagnosticReports}
                     onChange={(e) => {
-                      markDirty();
+                      markFieldDirty('hasDiagnosticReports');
                       setHasDiagnosticReports(e.target.checked);
                     }}
                     disabled={isLockedConverted}
@@ -1211,7 +1268,7 @@ export function LeadDossierWorkspace({ leadId, role, backHref }: LeadDossierWork
                     type="checkbox"
                     checked={passportReady}
                     onChange={(e) => {
-                      markDirty();
+                      markFieldDirty('passportReady');
                       setPassportReady(e.target.checked);
                     }}
                     disabled={isLockedConverted}
@@ -1228,14 +1285,26 @@ export function LeadDossierWorkspace({ leadId, role, backHref }: LeadDossierWork
               )}
 
               {!isLockedConverted && (
-                <Button
-                  type="submit"
-                  fullWidth
-                  isLoading={savingTriage}
-                  disabled={!transitionGuard.allowed}
-                >
-                  Save Triage &amp; Quote
-                </Button>
+                <div className="flex items-center gap-2">
+                  {dirtyCount > 0 && (
+                    <Button
+                      type="button"
+                      variant="secondary"
+                      onClick={() => hydrateRightRail(lead, true)}
+                      disabled={savingTriage}
+                    >
+                      Reset
+                    </Button>
+                  )}
+                  <Button
+                    type="submit"
+                    fullWidth
+                    isLoading={savingTriage}
+                    disabled={!transitionGuard.allowed}
+                  >
+                    Save Triage &amp; Quote
+                  </Button>
+                </div>
               )}
             </form>
           </Card>
