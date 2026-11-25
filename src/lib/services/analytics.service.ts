@@ -6,6 +6,10 @@
 
 import type { Prisma } from '@prisma/client';
 import prisma from '@/lib/prisma';
+import {
+  computeLeadsCrmAnalytics,
+  type LeadsFunnelAnalyticsPayload,
+} from '@/lib/services/leads-conversion.service';
 
 export interface CommissionOverrideWindow {
   rate: number | Prisma.Decimal;
@@ -78,6 +82,7 @@ export interface PlatformAnalyticsPayload {
       partnerCommissionUsd: number;
     };
   };
+  leadsFunnel: LeadsFunnelAnalyticsPayload;
 }
 
 function roundCurrency(value: number): number {
@@ -425,6 +430,8 @@ export async function computePlatformAnalytics(
     partnerCommissionUsd += Number(booking.commissionAmountUsd);
   }
 
+  const leadsFunnel = await computeLeadsCrmAnalytics(now);
+
   return {
     platformTotals: {
       totalUsers,
@@ -463,5 +470,6 @@ export async function computePlatformAnalytics(
         partnerCommissionUsd: roundCurrency(partnerCommissionUsd),
       },
     },
+    leadsFunnel,
   };
 }

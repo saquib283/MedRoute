@@ -43,6 +43,49 @@ export interface CampaignRecipientRow {
 export async function findCampaignRecipients(
   targetRole: string
 ): Promise<CampaignRecipientRow[]> {
+  if (targetRole === 'LEADS_ACTIVE') {
+    if (typeof prisma?.lead?.findMany !== 'function') {
+      return [];
+    }
+
+    const activeLeads = await prisma.lead.findMany({
+      where: {
+        status: { notIn: ['CONVERTED', 'LOST'] },
+        email: { not: null },
+      },
+      select: {
+        id: true,
+        fullName: true,
+        email: true,
+        nationality: true,
+        status: true,
+      },
+    });
+
+    const seenEmails = new Set<string>();
+    const recipients: CampaignRecipientRow[] = [];
+
+    for (const lead of activeLeads) {
+      const normalizedEmail = lead.email?.trim().toLowerCase();
+      if (!normalizedEmail || seenEmails.has(normalizedEmail)) {
+        continue;
+      }
+      seenEmails.add(normalizedEmail);
+      recipients.push({
+        id: lead.id,
+        fullName: lead.fullName,
+        email: normalizedEmail,
+        role: 'LEAD',
+        patient: {
+          nationality: lead.nationality,
+          cases: [{ status: lead.status }],
+        },
+      });
+    }
+
+    return recipients;
+  }
+
   const userWhere: Record<string, unknown> = { isActive: true };
   if (targetRole !== 'ALL') {
     userWhere.role = targetRole as UserRole;
@@ -97,8 +140,42 @@ export async function dispatchCampaignToRecipients(
     preloadedRecipients ?? (await findCampaignRecipients(targetRole));
 
   if (targetUsers.length > 0) {
-    const notifications = buildNotifications(campaignId, template, targetUsers);
-    await prisma.notification.createMany({ data: notifications });
+    if (targetRole === 'LEADS_ACTIVE') {
+      const cleanBody = sanitizeEmailHtml(template.body);
+      const leadActivities = targetUsers.map((leadRecipient) => {
+        const ctx = toRecipientContext(leadRecipient);
+        const interpolatedSubject = interpolateCampaignTemplate(template.subject, ctx, {
+          escapeHtml: false,
+        });
+        const interpolatedBody = interpolateCampaignTemplate(cleanBody, ctx, {
+          escapeHtml: true,
+        });
+
+        return {
+          leadId: leadRecipient.id,
+          actorId: null,
+          activityType: 'EMAIL' as const,
+          summary: `Campaign: ${interpolatedSubject}`.slice(0, 191),
+          details: {
+            campaignId,
+            subject: interpolatedSubject,
+            bodyLength: interpolatedBody.length,
+          },
+        };
+      });
+
+      if (typeof prisma?.leadActivity?.createMany === 'function') {
+        await prisma.leadActivity.createMany({ data: leadActivities });
+      }
+
+      console.log(
+        `[Lead Nurture Campaign] Campaign (ID: ${campaignId}) dispatched sanitized HTML email ` +
+          `to ${targetUsers.length} active leads. SMTP send stubbed — ready for provider integration.`
+      );
+    } else {
+      const notifications = buildNotifications(campaignId, template, targetUsers);
+      await prisma.notification.createMany({ data: notifications });
+    }
   }
 
   const updatedCampaign = await prisma.emailCampaign.update({

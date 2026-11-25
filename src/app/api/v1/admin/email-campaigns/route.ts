@@ -19,7 +19,7 @@ import { z } from 'zod';
 const createCampaignSchema = z.object({
   name: z.string().min(1).max(200),
   templateId: z.string().min(1),
-  targetRole: z.enum(['ALL', 'PATIENT', 'MANAGER', 'ADMIN', 'DOCTOR']),
+  targetRole: z.enum(['ALL', 'PATIENT', 'MANAGER', 'ADMIN', 'DOCTOR', 'LEADS_ACTIVE']),
   scheduledAt: z.string().optional().nullable(),
 });
 
