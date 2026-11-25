@@ -5,6 +5,7 @@ import {
   validateLeadStatusTransition,
   buildWhatsAppFollowUpUrl,
   publicInquirySchema,
+  updateReferralPartnerSchema,
 } from '@/lib/validation/leads-crm-schemas';
 
 describe('Leads CRM Pure Scoring, SLA & Guardrail Engine', () => {
@@ -155,5 +156,15 @@ describe('Leads CRM Pure Scoring, SLA & Guardrail Engine', () => {
       urgencyLevel: 'SEMI_URGENT',
     });
     expect(valid.success).toBe(true);
+  });
+
+  test('updateReferralPartnerSchema leaves omitted commissionPercent and isActive undefined', () => {
+    const parsed = updateReferralPartnerSchema.safeParse({
+      name: 'Updated Partner Name',
+    });
+    expect(parsed.success).toBe(true);
+    if (!parsed.success) return;
+    expect(parsed.data.commissionPercent).toBeUndefined();
+    expect(parsed.data.isActive).toBeUndefined();
   });
 });

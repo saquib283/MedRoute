@@ -357,30 +357,50 @@ export const convertLeadSchema = z.discriminatedUnion('mode', [
 
 export type ConvertLeadInput = z.infer<typeof convertLeadSchema>;
 
-export const referralPartnerSchema = z.object({
+const partnerCodeSchema = z
+  .string()
+  .trim()
+  .transform((val) => val.toUpperCase())
+  .pipe(
+    z
+      .string()
+      .min(3, 'Partner code must be at least 3 characters')
+      .max(40, 'Partner code must be at most 40 characters')
+      .regex(/^[A-Z0-9_-]+$/, 'Code must contain only A-Z, 0-9, hyphens, or underscores')
+  );
+
+const referralPartnerBaseFields = {
   name: z.string().trim().min(2, 'Partner name is required').max(160),
-  code: z
-    .string()
-    .trim()
-    .transform((val) => val.toUpperCase())
-    .pipe(
-      z
-        .string()
-        .min(3, 'Partner code must be at least 3 characters')
-        .max(40, 'Partner code must be at most 40 characters')
-        .regex(/^[A-Z0-9_-]+$/, 'Code must contain only A-Z, 0-9, hyphens, or underscores')
-    ),
+  code: partnerCodeSchema,
   partnerType: z.enum(REFERRAL_PARTNER_TYPES),
   country: z.string().trim().min(2, 'Country is required').max(100),
   contactName: optionalTrimmedString(120),
   contactEmail: optionalEmailSchema,
   contactPhone: optionalPhoneSchema,
+  notes: optionalTrimmedString(2000),
+};
+
+export const referralPartnerSchema = z.object({
+  ...referralPartnerBaseFields,
   commissionPercent: z.coerce.number().min(0).max(50).optional().default(10),
   isActive: z.boolean().optional().default(true),
-  notes: optionalTrimmedString(2000),
+});
+
+export const updateReferralPartnerSchema = z.object({
+  name: referralPartnerBaseFields.name.optional(),
+  code: referralPartnerBaseFields.code.optional(),
+  partnerType: referralPartnerBaseFields.partnerType.optional(),
+  country: referralPartnerBaseFields.country.optional(),
+  contactName: referralPartnerBaseFields.contactName,
+  contactEmail: referralPartnerBaseFields.contactEmail,
+  contactPhone: referralPartnerBaseFields.contactPhone,
+  commissionPercent: z.coerce.number().min(0).max(50).optional(),
+  isActive: z.boolean().optional(),
+  notes: referralPartnerBaseFields.notes,
 });
 
 export type ReferralPartnerInput = z.infer<typeof referralPartnerSchema>;
+export type UpdateReferralPartnerInput = z.infer<typeof updateReferralPartnerSchema>;
 
 // ─── Pure Deterministic Scoring, SLA & Guardrail Engine ─────────────
 

@@ -56,6 +56,7 @@ import {
   listReferralPartners,
   createReferralPartner,
   updateReferralPartner,
+  exportLeadsCsvForAdmin,
 } from '@/lib/services/leads-crm.service';
 import { GET as getLeadsRoute, POST as postLeadsRoute } from '@/app/api/v1/leads/route';
 import { GET as getLeadDossierRoute, PATCH as patchLeadRoute } from '@/app/api/v1/leads/[id]/route';
@@ -536,6 +537,96 @@ describe('Task 2: Leads CRM Service, Language Router, Deduplication, Activities 
       const csvText = await adminExportRes.text();
       expect(csvText).toContain("'=CMD");
       expect(csvText).toContain('OMAN-CARE-01');
+    });
+
+    it('preserves omitted commissionPercent and isActive on partial referral partner PATCH', async () => {
+      mockedPrisma.referralPartner.findUnique.mockResolvedValueOnce({
+        id: 'rp-1',
+        name: 'Oman Care',
+        code: 'OMAN-CARE-01',
+        partnerType: 'FACILITATOR_AGENCY',
+        country: 'Oman',
+        commissionPercent: 18,
+        isActive: false,
+      });
+      mockedPrisma.referralPartner.update.mockResolvedValueOnce({
+        id: 'rp-1',
+        name: 'Oman Care Updated',
+        code: 'OMAN-CARE-01',
+        partnerType: 'FACILITATOR_AGENCY',
+        country: 'Oman',
+        commissionPercent: 18,
+        isActive: false,
+      });
+
+      const patchRes = await updateReferralPartner(
+        'rp-1',
+        { name: 'Oman Care Updated' },
+        adminActor
+      );
+
+      expect(patchRes.ok).toBe(true);
+      expect(mockedPrisma.referralPartner.update).toHaveBeenCalledWith({
+        where: { id: 'rp-1' },
+        data: { name: 'Oman Care Updated' },
+      });
+      const updateCallData = mockedPrisma.referralPartner.update.mock.calls[0][0].data;
+      expect(updateCallData).not.toHaveProperty('commissionPercent');
+      expect(updateCallData).not.toHaveProperty('isActive');
+    });
+
+    it('returns 400 BAD_REQUEST for invalid status/source/temperature filters in listLeadsForActor and exportLeadsCsvForAdmin', async () => {
+      const badStatusList = await listLeadsForActor({ status: 'BOGUS_STATUS' }, adminActor);
+      expect(badStatusList.ok).toBe(false);
+      if (!badStatusList.ok) {
+        expect(badStatusList.status).toBe(400);
+        expect(badStatusList.code).toBe('BAD_REQUEST');
+      }
+
+      const badSourceList = await listLeadsForActor({ source: 'BOGUS_SOURCE' }, adminActor);
+      expect(badSourceList.ok).toBe(false);
+      if (!badSourceList.ok) {
+        expect(badSourceList.status).toBe(400);
+        expect(badSourceList.code).toBe('BAD_REQUEST');
+      }
+
+      const badTempExport = await exportLeadsCsvForAdmin({ temperature: 'SCORCHING' }, adminActor);
+      expect(badTempExport.ok).toBe(false);
+      if (!badTempExport.ok) {
+        expect(badTempExport.status).toBe(400);
+        expect(badTempExport.code).toBe('BAD_REQUEST');
+      }
+
+      expect(mockedPrisma.lead.findMany).not.toHaveBeenCalled();
+    });
+
+    it('returns 400 BAD_REQUEST when updateLeadForActor receives a non-existent referralPartnerId', async () => {
+      mockedPrisma.lead.findUnique.mockResolvedValueOnce({
+        id: 'lead-1',
+        status: 'NEW',
+        assignedManagerId: 'mgr-1',
+        urgencyLevel: 'ROUTINE',
+        hasDiagnosticReports: false,
+        medicalCondition: 'Cardiac checkup needed',
+        passportReady: false,
+        source: 'WEBSITE_INQUIRY',
+        firstResponseDueAt: new Date(),
+      });
+      mockedPrisma.referralPartner.findUnique.mockResolvedValueOnce(null);
+
+      const res = await updateLeadForActor(
+        'lead-1',
+        { referralPartnerId: 'missing-partner-id' },
+        adminActor
+      );
+
+      expect(res.ok).toBe(false);
+      if (!res.ok) {
+        expect(res.status).toBe(400);
+        expect(res.code).toBe('BAD_REQUEST');
+        expect(res.message).toBe('Referral partner not found');
+      }
+      expect(mockedPrisma.lead.update).not.toHaveBeenCalled();
     });
   });
 

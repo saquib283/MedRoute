@@ -15,10 +15,14 @@ import {
   computeLeadSlaState,
   createLeadSchema,
   getLeadSlaMinutes,
+  LEAD_SOURCES,
+  LEAD_STATUSES,
+  LEAD_TEMPERATURES,
   logLeadActivitySchema,
   publicInquirySchema,
   referralPartnerSchema,
   updateLeadSchema,
+  updateReferralPartnerSchema,
   validateLeadStatusTransition,
   type LeadSlaState,
 } from '@/lib/validation/leads-crm-schemas';
@@ -96,6 +100,62 @@ function checkAndRecordPublicInquiryRateLimit(ipAddress: string, nowMs: number =
   recent.push(nowMs);
   publicInquiryIpHits.set(key, recent);
   return true;
+}
+
+function validateLeadEnumFilters(query: {
+  status?: string;
+  source?: string;
+  temperature?: string;
+}): { ok: true } | { ok: false; code: string; message: string; status: number } {
+  if (query.status && !(LEAD_STATUSES as readonly string[]).includes(query.status)) {
+    return {
+      ok: false,
+      code: ERROR_CODES.BAD_REQUEST,
+      message: `Invalid lead status filter: ${query.status}`,
+      status: 400,
+    };
+  }
+  if (query.source && !(LEAD_SOURCES as readonly string[]).includes(query.source)) {
+    return {
+      ok: false,
+      code: ERROR_CODES.BAD_REQUEST,
+      message: `Invalid lead source filter: ${query.source}`,
+      status: 400,
+    };
+  }
+  if (
+    query.temperature &&
+    !(LEAD_TEMPERATURES as readonly string[]).includes(query.temperature)
+  ) {
+    return {
+      ok: false,
+      code: ERROR_CODES.BAD_REQUEST,
+      message: `Invalid lead temperature filter: ${query.temperature}`,
+      status: 400,
+    };
+  }
+  return { ok: true };
+}
+
+async function assertReferralPartnerExists(
+  referralPartnerId: string
+): Promise<{ ok: true } | { ok: false; code: string; message: string; status: number }> {
+  if (typeof prisma?.referralPartner?.findUnique !== 'function') {
+    return { ok: true };
+  }
+  const partner = await prisma.referralPartner.findUnique({
+    where: { id: referralPartnerId },
+    select: { id: true },
+  });
+  if (!partner) {
+    return {
+      ok: false,
+      code: ERROR_CODES.BAD_REQUEST,
+      message: 'Referral partner not found',
+      status: 400,
+    };
+  }
+  return { ok: true };
 }
 
 function isStaffActor(actor: LeadActor): boolean {
@@ -674,18 +734,10 @@ export async function createStaffLead(
     }
   }
 
-  if (data.referralPartnerId && typeof prisma?.referralPartner?.findUnique === 'function') {
-    const partner = await prisma.referralPartner.findUnique({
-      where: { id: data.referralPartnerId },
-      select: { id: true },
-    });
-    if (!partner) {
-      return {
-        ok: false,
-        code: ERROR_CODES.BAD_REQUEST,
-        message: 'Selected referral partner not found',
-        status: 400,
-      };
+  if (data.referralPartnerId) {
+    const partnerCheck = await assertReferralPartnerExists(data.referralPartnerId);
+    if (!partnerCheck.ok) {
+      return partnerCheck;
     }
   }
 
@@ -929,6 +981,11 @@ export async function listLeadsForActor(
       message: 'Only coordinators and administrators can view leads',
       status: 403,
     };
+  }
+
+  const filterCheck = validateLeadEnumFilters(query);
+  if (!filterCheck.ok) {
+    return filterCheck;
   }
 
   const page = Math.max(1, Number.isFinite(query.page) ? Number(query.page) : 1);
@@ -1350,6 +1407,13 @@ export async function updateLeadForActor(
         message: transition.reason,
         status: 400,
       };
+    }
+  }
+
+  if (typeof data.referralPartnerId === 'string') {
+    const partnerCheck = await assertReferralPartnerExists(data.referralPartnerId);
+    if (!partnerCheck.ok) {
+      return partnerCheck;
     }
   }
 
@@ -1827,7 +1891,7 @@ export async function updateReferralPartner(
     };
   }
 
-  const parsed = referralPartnerSchema.partial().safeParse(input);
+  const parsed = updateReferralPartnerSchema.safeParse(input);
   if (!parsed.success) {
     return {
       ok: false,
@@ -1904,6 +1968,11 @@ export async function exportLeadsCsvForAdmin(
       message: 'Admin access required',
       status: 403,
     };
+  }
+
+  const filterCheck = validateLeadEnumFilters(query);
+  if (!filterCheck.ok) {
+    return filterCheck;
   }
 
   const where: Prisma.LeadWhereInput = {
