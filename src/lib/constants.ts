@@ -299,3 +299,18 @@ export const MVT_SPECIALTY_OPTIONS = [
   { value: 'IVF', label: 'IVF & Reproductive Medicine' },
   { value: 'GENERAL', label: 'General Surgery & Multi-Specialty' },
 ] as const;
+
+export const COMMON_LANGUAGES = [
+  'English',
+  'Arabic',
+  'French',
+  'Hindi',
+  'Urdu',
+  'Bengali',
+  'Swahili',
+  'Russian',
+  'Somali',
+  'Amharic',
+  'Portuguese',
+  'Spanish',
+] as const;

@@ -27,6 +27,7 @@ jest.mock('@/lib/prisma', () => ({
 import prisma from '@/lib/prisma';
 import { POST as submitPublicInquiry } from '@/app/api/v1/public/inquiries/route';
 import { resetPublicInquiryRateLimitForTests } from '@/lib/services/leads-crm.service';
+import { publicInquirySchema } from '@/lib/validation/leads-crm-schemas';
 
 const mockedPrisma = prisma as unknown as {
   referralPartner: Record<string, jest.Mock>;
@@ -162,5 +163,125 @@ describe('POST /api/v1/public/inquiries', () => {
     expect(res.status).toBe(422);
     expect(json.success).toBe(false);
     expect(json.error.code).toBe('VALIDATION_ERROR');
+  });
+
+  it('attributes B2B ?ref= partner code, UTM tags, and preferredTravelWindow on submission', async () => {
+    mockedPrisma.referralPartner.findUnique.mockResolvedValueOnce({
+      id: 'partner-om-01',
+      isActive: true,
+    });
+
+    const req = new NextRequest('http://localhost/api/v1/public/inquiries', {
+      method: 'POST',
+      headers: {
+        'content-type': 'application/json',
+        'x-forwarded-for': '198.51.100.88',
+      },
+      body: JSON.stringify({
+        ...validPayload,
+        email: '',
+        preferredTravelWindow: 'WITHIN_30D',
+        hasDiagnosticReports: true,
+        passportReady: true,
+        referralCode: 'oman-care-01',
+        utmSource: 'google',
+        utmMedium: 'cpc',
+        utmCampaign: 'cardiac-2026',
+      }),
+    });
+
+    const res = await submitPublicInquiry(req);
+    const json = await res.json();
+
+    expect(res.status).toBe(201);
+    expect(json.success).toBe(true);
+    expect(mockedPrisma.referralPartner.findUnique).toHaveBeenCalledWith({
+      where: { code: 'OMAN-CARE-01' },
+      select: { id: true, isActive: true },
+    });
+    expect(mockedPrisma.lead.create).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({
+          email: null,
+          source: 'B2B_PARTNER',
+          referralPartnerId: 'partner-om-01',
+          preferredTravelWindow: 'WITHIN_30D',
+          hasDiagnosticReports: true,
+          passportReady: true,
+          utmSource: 'google',
+          utmMedium: 'cpc',
+          utmCampaign: 'cardiac-2026',
+        }),
+      })
+    );
+  });
+});
+
+describe('publicInquirySchema validation & normalization', () => {
+  it('normalizes empty optional strings to null while preserving valid attribution and travel window', () => {
+    const parsed = publicInquirySchema.safeParse({
+      fullName: '  Ahmed Al-Harthy  ',
+      email: '   ',
+      phone: '+96891234567',
+      whatsappNumber: '',
+      nationality: 'Oman',
+      countryOfResidence: '',
+      preferredLanguage: '   ',
+      medicalCondition: 'Seeking orthopedic consultation for total knee replacement',
+      specialtyInterest: '',
+      urgencyLevel: 'ROUTINE',
+      hasDiagnosticReports: false,
+      passportReady: false,
+      preferredTravelWindow: '',
+      estimatedBudgetUsd: '',
+      referralCode: 'PARTNER-GCC',
+      utmSource: 'meta',
+      utmMedium: '',
+      utmCampaign: 'ortho_q4',
+    });
+
+    expect(parsed.success).toBe(true);
+    if (!parsed.success) return;
+
+    expect(parsed.data.fullName).toBe('Ahmed Al-Harthy');
+    expect(parsed.data.email).toBeNull();
+    expect(parsed.data.whatsappNumber).toBeNull();
+    expect(parsed.data.countryOfResidence).toBeNull();
+    expect(parsed.data.preferredLanguage).toBeNull();
+    expect(parsed.data.specialtyInterest).toBeNull();
+    expect(parsed.data.preferredTravelWindow).toBeNull();
+    expect(parsed.data.estimatedBudgetUsd).toBeNull();
+    expect(parsed.data.referralCode).toBe('PARTNER-GCC');
+    expect(parsed.data.utmSource).toBe('meta');
+    expect(parsed.data.utmMedium).toBeNull();
+    expect(parsed.data.utmCampaign).toBe('ortho_q4');
+  });
+
+  it('accepts all valid PREFERRED_TRAVEL_WINDOWS and enforces minimum medical description clarity', () => {
+    const tooShort = publicInquirySchema.safeParse({
+      fullName: 'Sara Ali',
+      email: 'sara@example.com',
+      nationality: 'Kenya',
+      medicalCondition: 'pain',
+      preferredTravelWindow: 'IMMEDIATE_7D',
+    });
+
+    expect(tooShort.success).toBe(false);
+    if (!tooShort.success) {
+      expect(tooShort.error.flatten().fieldErrors.medicalCondition).toBeDefined();
+    }
+
+    const validWindow = publicInquirySchema.safeParse({
+      fullName: 'Sara Ali',
+      email: 'sara@example.com',
+      nationality: 'Kenya',
+      medicalCondition: 'Chronic lumbar disc herniation requiring spine opinion',
+      preferredTravelWindow: 'IMMEDIATE_7D',
+    });
+
+    expect(validWindow.success).toBe(true);
+    if (validWindow.success) {
+      expect(validWindow.data.preferredTravelWindow).toBe('IMMEDIATE_7D');
+    }
   });
 });

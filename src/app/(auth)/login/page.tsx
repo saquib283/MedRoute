@@ -313,6 +313,20 @@ export default function LoginPage() {
                 Create an account
               </Link>
             </p>
+
+            <div className="bg-surface-50 border border-surface-200 rounded-lg p-3">
+              <Link
+                href="/inquiry"
+                className="min-h-11 flex items-center justify-between gap-2 text-xs font-medium text-surface-700 hover:text-primary-700 transition-colors"
+              >
+                <span className="leading-relaxed">
+                  Exploring treatment options or don&apos;t have your passport yet?{' '}
+                  <span className="text-primary-600 font-semibold">
+                    Request a Free Medical Opinion &amp; Cost Estimate &rarr;
+                  </span>
+                </span>
+              </Link>
+            </div>
           </form>
         </>
       )}
