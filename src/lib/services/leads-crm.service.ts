@@ -1165,6 +1165,24 @@ export async function getLeadDossierForActor(
   LeadServiceResult<{
     lead: ReturnType<typeof enrichLeadForStaff>;
     potentialDuplicates: DuplicateMatchSummary[];
+    availableHospitals: Array<{
+      id: string;
+      name: string;
+      city: string;
+      accreditation: string | null;
+    }>;
+    availableDoctors: Array<{
+      id: string;
+      fullName: string;
+      hospitalId: string;
+      qualification: string | null;
+      specialisation: { id: string; name: string } | null;
+    }>;
+    availableCoordinators: Array<{
+      id: string;
+      fullName: string;
+      email: string;
+    }>;
   }>
 > {
   if (!isStaffActor(actor)) {
@@ -1219,17 +1237,58 @@ export async function getLeadDossierForActor(
     };
   }
 
-  const potentialDuplicates = await findPotentialDuplicates({
-    email: lead.email,
-    phone: lead.phone ?? lead.whatsappNumber,
-    excludeLeadId: lead.id,
-  });
+  const [potentialDuplicates, hospitals, doctors, coordinators] = await Promise.all([
+    findPotentialDuplicates({
+      email: lead.email,
+      phone: lead.phone ?? lead.whatsappNumber,
+      excludeLeadId: lead.id,
+    }),
+    typeof prisma?.hospital?.findMany === 'function'
+      ? prisma.hospital.findMany({
+          where: { isActive: true },
+          select: {
+            id: true,
+            name: true,
+            city: true,
+            accreditation: true,
+          },
+          orderBy: { name: 'asc' },
+        })
+      : Promise.resolve([]),
+    typeof prisma?.doctor?.findMany === 'function'
+      ? prisma.doctor.findMany({
+          where: { isActive: true },
+          select: {
+            id: true,
+            fullName: true,
+            hospitalId: true,
+            qualification: true,
+            specialisation: { select: { id: true, name: true } },
+          },
+          orderBy: { fullName: 'asc' },
+        })
+      : Promise.resolve([]),
+    actor.role === 'ADMIN' && typeof prisma?.user?.findMany === 'function'
+      ? prisma.user.findMany({
+          where: { role: 'MANAGER', isActive: true },
+          select: {
+            id: true,
+            fullName: true,
+            email: true,
+          },
+          orderBy: { fullName: 'asc' },
+        })
+      : Promise.resolve([]),
+  ]);
 
   return {
     ok: true,
     data: {
       lead: enrichLeadForStaff(lead as unknown as Record<string, unknown>, actor),
       potentialDuplicates,
+      availableHospitals: Array.isArray(hospitals) ? hospitals : [],
+      availableDoctors: Array.isArray(doctors) ? doctors : [],
+      availableCoordinators: Array.isArray(coordinators) ? coordinators : [],
     },
   };
 }

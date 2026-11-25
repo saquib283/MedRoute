@@ -18,8 +18,15 @@ const mockTxAuditLogCreate = jest.fn();
 const mockTxNotificationCreateMany = jest.fn();
 
 const mockLeadFindMany = jest.fn();
+const mockLeadFindUnique = jest.fn();
+const mockLeadUpdate = jest.fn();
+const mockLeadActivityCreate = jest.fn();
 const mockLeadActivityCreateMany = jest.fn();
 const mockReferralPartnerFindMany = jest.fn();
+const mockPatientFindMany = jest.fn();
+const mockHospitalFindMany = jest.fn();
+const mockDoctorFindMany = jest.fn();
+const mockUserFindMany = jest.fn();
 const mockCaseFindMany = jest.fn();
 const mockMedicalBillFindMany = jest.fn();
 const mockEmailCampaignUpdate = jest.fn();
@@ -30,12 +37,27 @@ jest.mock('@/lib/prisma', () => ({
   default: {
     lead: {
       findMany: (...args: unknown[]) => mockLeadFindMany(...args),
+      findUnique: (...args: unknown[]) => mockLeadFindUnique(...args),
+      update: (...args: unknown[]) => mockLeadUpdate(...args),
     },
     leadActivity: {
+      create: (...args: unknown[]) => mockLeadActivityCreate(...args),
       createMany: (...args: unknown[]) => mockLeadActivityCreateMany(...args),
     },
     referralPartner: {
       findMany: (...args: unknown[]) => mockReferralPartnerFindMany(...args),
+    },
+    patient: {
+      findMany: (...args: unknown[]) => mockPatientFindMany(...args),
+    },
+    hospital: {
+      findMany: (...args: unknown[]) => mockHospitalFindMany(...args),
+    },
+    doctor: {
+      findMany: (...args: unknown[]) => mockDoctorFindMany(...args),
+    },
+    user: {
+      findMany: (...args: unknown[]) => mockUserFindMany(...args),
     },
     case: {
       findMany: (...args: unknown[]) => mockCaseFindMany(...args),
@@ -105,6 +127,8 @@ import {
   findCampaignRecipients,
   dispatchCampaignToRecipients,
 } from '@/lib/services/email-campaign.service';
+import { GET as getLeadDossierRoute } from '@/app/api/v1/leads/[id]/route';
+import { POST as postLeadActivityRoute } from '@/app/api/v1/leads/[id]/activities/route';
 import { POST as convertLeadRoute } from '@/app/api/v1/leads/[id]/convert/route';
 import { clearSystemSettingsCache } from '@/lib/services/system-settings.service';
 import { buildStandardMvtPathwaySteps } from '@/lib/validation/lifecycle-schemas';
@@ -744,6 +768,164 @@ describe('Task 3: Atomic Lead Conversion, Funnel Analytics & LEADS_ACTIVE Nurtur
         leadId: 'lead-1',
         patientId: 'pat-existing-1',
         caseId: 'case-route-1',
+      });
+    });
+
+    it('rejects unassigned manager with 403 and supports full Dossier -> Activity -> Convert API flow returning 201 with caseId & patientId', async () => {
+      // 1) Dossier GET returns lead, duplicates, and active hospital/doctor options for MANAGER without calling /api/v1/admin/*
+      mockLeadFindUnique.mockResolvedValueOnce({
+        ...makeSampleLead({ status: 'NEW', assignedManagerId: 'mgr-1', activities: [] }),
+        assignedManager: { id: 'mgr-1', fullName: 'Layla Al-Mansoor', email: 'm@example.com' },
+        referralPartner: null,
+        activities: [],
+      });
+      mockLeadFindMany.mockResolvedValueOnce([]);
+      mockPatientFindMany.mockResolvedValueOnce([]);
+      mockHospitalFindMany.mockResolvedValueOnce([
+        { id: 'hosp-1', name: 'Apollo Heart Institute', city: 'New Delhi', accreditation: 'JCI' },
+      ]);
+      mockDoctorFindMany.mockResolvedValueOnce([
+        {
+          id: 'doc-1',
+          fullName: 'Arvind Mehta',
+          hospitalId: 'hosp-1',
+          qualification: 'MCh CTVS',
+          specialisation: { id: 'spec-1', name: 'Cardiology' },
+        },
+      ]);
+
+      const dossierReq = new NextRequest('http://localhost/api/v1/leads/lead-1', {
+        headers: {
+          'x-user-id': 'mgr-1',
+          'x-user-email': 'm@example.com',
+          'x-user-role': 'MANAGER',
+        },
+      });
+      const dossierRes = await getLeadDossierRoute(dossierReq, {
+        params: Promise.resolve({ id: 'lead-1' }),
+      });
+      const dossierJson = await dossierRes.json();
+      expect(dossierRes.status).toBe(200);
+      expect(dossierJson.data.availableHospitals).toHaveLength(1);
+      expect(dossierJson.data.availableDoctors).toHaveLength(1);
+
+      // 2) Activity POST logs WhatsApp touchpoint and stamps CONTACTED
+      mockLeadFindUnique.mockResolvedValueOnce(
+        makeSampleLead({ status: 'NEW', assignedManagerId: 'mgr-1' })
+      );
+      mockLeadActivityCreate.mockResolvedValueOnce({
+        id: 'act-wa-route-1',
+        leadId: 'lead-1',
+        activityType: 'WHATSAPP',
+        summary: 'Shared cardiac evaluation checklist on WhatsApp',
+        createdAt: new Date(),
+      });
+      mockLeadUpdate.mockResolvedValueOnce({
+        ...makeSampleLead({ status: 'CONTACTED', assignedManagerId: 'mgr-1' }),
+      });
+
+      const activityReq = new NextRequest('http://localhost/api/v1/leads/lead-1/activities', {
+        method: 'POST',
+        headers: {
+          'content-type': 'application/json',
+          'x-user-id': 'mgr-1',
+          'x-user-email': 'm@example.com',
+          'x-user-role': 'MANAGER',
+        },
+        body: JSON.stringify({
+          activityType: 'WHATSAPP',
+          summary: 'Shared cardiac evaluation checklist on WhatsApp',
+        }),
+      });
+      const activityRes = await postLeadActivityRoute(activityReq, {
+        params: Promise.resolve({ id: 'lead-1' }),
+      });
+      expect(activityRes.status).toBe(201);
+
+      // 3) Unassigned manager attempting to convert another manager's lead gets 403
+      mockTxLeadFindUnique.mockResolvedValueOnce(
+        makeSampleLead({ assignedManagerId: 'mgr-other' })
+      );
+      const otherMgrReq = new NextRequest('http://localhost/api/v1/leads/lead-1/convert', {
+        method: 'POST',
+        headers: {
+          'content-type': 'application/json',
+          'x-user-id': 'mgr-1',
+          'x-user-email': 'm@example.com',
+          'x-user-role': 'MANAGER',
+        },
+        body: JSON.stringify({
+          mode: 'NEW_PATIENT',
+          email: 'tariq@example.com',
+          passportNo: 'OM4455667',
+          dob: '1978-04-12',
+        }),
+      });
+      const otherMgrRes = await convertLeadRoute(otherMgrReq, {
+        params: Promise.resolve({ id: 'lead-1' }),
+      });
+      expect(otherMgrRes.status).toBe(403);
+
+      // 4) Assigned manager converts via NEW_PATIENT -> 201 returning caseId & patientId
+      mockTxLeadFindUnique.mockResolvedValueOnce(makeSampleLead({ assignedManagerId: 'mgr-1' }));
+      mockTxUserFindUnique.mockResolvedValueOnce(null);
+      mockTxHospitalFindUnique.mockResolvedValueOnce({ id: 'hosp-1', isActive: true });
+      mockTxDoctorFindUnique.mockResolvedValueOnce({
+        id: 'doc-1',
+        userId: 'u-doc-1',
+        hospitalId: 'hosp-1',
+        isActive: true,
+      });
+      mockTxUserCreate.mockResolvedValueOnce({
+        id: 'u-pat-flow-1',
+        email: 'tariq@example.com',
+        fullName: 'Tariq Al-Balushi',
+        role: 'PATIENT',
+      });
+      mockTxPatientCreate.mockResolvedValueOnce({
+        id: 'pat-flow-1',
+        userId: 'u-pat-flow-1',
+        assignedManagerId: 'mgr-1',
+      });
+      mockTxMedicalProfileCreate.mockResolvedValueOnce({ id: 'mp-flow-1', patientId: 'pat-flow-1' });
+      mockTxCaseCreate.mockResolvedValueOnce({
+        id: 'case-flow-1',
+        patientId: 'pat-flow-1',
+        managerId: 'mgr-1',
+        status: 'UNDER_REVIEW',
+      });
+      mockTxLeadUpdateMany.mockResolvedValueOnce({ count: 1 });
+
+      const convertReq = new NextRequest('http://localhost/api/v1/leads/lead-1/convert', {
+        method: 'POST',
+        headers: {
+          'content-type': 'application/json',
+          'x-user-id': 'mgr-1',
+          'x-user-email': 'm@example.com',
+          'x-user-role': 'MANAGER',
+        },
+        body: JSON.stringify({
+          mode: 'NEW_PATIENT',
+          email: 'tariq@example.com',
+          passportNo: 'OM4455667',
+          dob: '1978-04-12',
+          hospitalId: 'hosp-1',
+          primaryDoctorId: 'doc-1',
+          specialtyId: 'CARDIOLOGY',
+        }),
+      });
+      const convertRes = await convertLeadRoute(convertReq, {
+        params: Promise.resolve({ id: 'lead-1' }),
+      });
+      const convertJson = await convertRes.json();
+
+      expect(convertRes.status).toBe(201);
+      expect(convertJson.success).toBe(true);
+      expect(convertJson.data).toMatchObject({
+        leadId: 'lead-1',
+        patientId: 'pat-flow-1',
+        caseId: 'case-flow-1',
+        mode: 'NEW_PATIENT',
       });
     });
   });

@@ -15,6 +15,7 @@ import { NotificationBell } from '@/components/notifications/NotificationBell';
 import {
   LayoutDashboard,
   Users,
+  UserPlus,
   Briefcase,
   Building2,
   Calendar,
@@ -42,6 +43,7 @@ const NAV_SECTIONS: NavSection[] = [
     title: 'Case Management',
     items: [
       { label: 'Overview', href: '/manager/dashboard', Icon: LayoutDashboard },
+      { label: 'Leads CRM', href: '/manager/leads', Icon: UserPlus },
       { label: 'Patient Cohort', href: '/manager/patients', Icon: Users },
       { label: 'Case Files', href: '/manager/cases', Icon: Briefcase },
     ],
@@ -75,6 +77,8 @@ export default function ManagerLayout({
   const [userName, setUserName] = useState('');
   const [userEmail, setUserEmail] = useState('');
   const [alertBannerText, setAlertBannerText] = useState('');
+  const [leadsBadgeCount, setLeadsBadgeCount] = useState(0);
+  const [leadsHasSlaAlert, setLeadsHasSlaAlert] = useState(false);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -98,6 +102,22 @@ export default function ManagerLayout({
             setUserName(data.data?.user?.fullName || 'Coordinator');
             setUserEmail(data.data?.user?.email || '');
             setAlertBannerText(data.data?.alertBannerText || '');
+          }
+
+          try {
+            const leadsRes = await fetch('/api/v1/leads?limit=1');
+            if (leadsRes.ok) {
+              const leadsData = await leadsRes.json();
+              const kpis = leadsData.data?.kpis;
+              if (!cancelled && kpis) {
+                const sla = Number(kpis.slaAttention || 0);
+                const unclaimed = Number(kpis.newUnclaimed || 0);
+                setLeadsHasSlaAlert(sla > 0);
+                setLeadsBadgeCount(sla > 0 ? sla : unclaimed);
+              }
+            }
+          } catch {
+            // Non-fatal leads badge failure
           }
         } else {
           if (!cancelled) router.push('/login');
@@ -133,6 +153,9 @@ export default function ManagerLayout({
   const activeLabel = useMemo(() => {
     if (pathname.startsWith('/manager/cases/') && pathname.endsWith('/pathway')) {
       return 'Clinical Pathway';
+    }
+    if (pathname.startsWith('/manager/leads/')) {
+      return 'Lead Dossier';
     }
     return ALL_NAV_ITEMS.find((item) => item.href === pathname)?.label || 'Operations';
   }, [pathname]);
@@ -220,7 +243,18 @@ export default function ManagerLayout({
                           }`}
                           aria-hidden="true"
                         />
-                        <span className="truncate">{item.label}</span>
+                        <span className="flex-1 truncate">{item.label}</span>
+                        {item.href === '/manager/leads' && leadsBadgeCount > 0 && (
+                          <span
+                            className={`px-1.5 py-0.5 rounded-md border text-[11px] font-medium tabular-nums ${
+                              leadsHasSlaAlert
+                                ? 'bg-danger-50 text-danger-700 border-danger-200'
+                                : 'bg-primary-50 text-primary-800 border-primary-200'
+                            }`}
+                          >
+                            {leadsBadgeCount}
+                          </span>
+                        )}
                       </Link>
                     );
                   })}

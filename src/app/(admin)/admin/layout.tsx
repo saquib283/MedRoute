@@ -18,6 +18,7 @@ import {
   Calendar,
   AlertTriangle,
   Users,
+  UserPlus,
   UserCheck,
   Building2,
   Hotel,
@@ -44,6 +45,8 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
   const [userRole, setUserRole] = useState('');
   const [loading, setLoading] = useState(true);
   const [escalationCount, setEscalationCount] = useState(0);
+  const [leadsBadgeCount, setLeadsBadgeCount] = useState(0);
+  const [leadsHasSlaAlert, setLeadsHasSlaAlert] = useState(false);
   const [alertBannerText, setAlertBannerText] = useState('');
 
   useEffect(() => {
@@ -92,12 +95,32 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
 
   useEffect(() => {
     if (!userRole) return;
-    fetch('/api/v1/admin/escalations?limit=1')
-      .then((r) => r.json())
-      .then((d) => {
-        if (d.success) setEscalationCount(d.data.pagination.total);
-      })
-      .catch(() => {});
+    let cancelled = false;
+    const timer = setTimeout(() => {
+      fetch('/api/v1/admin/escalations?limit=1')
+        .then((r) => r.json())
+        .then((d) => {
+          if (!cancelled && d.success) setEscalationCount(d.data.pagination.total);
+        })
+        .catch(() => {});
+
+      fetch('/api/v1/leads?limit=1')
+        .then((r) => r.json())
+        .then((d) => {
+          if (!cancelled && d.success && d.data?.kpis) {
+            const sla = Number(d.data.kpis.slaAttention || 0);
+            const unclaimed = Number(d.data.kpis.newUnclaimed || 0);
+            setLeadsHasSlaAlert(sla > 0);
+            setLeadsBadgeCount(sla > 0 ? sla : unclaimed);
+          }
+        })
+        .catch(() => {});
+    }, 0);
+
+    return () => {
+      cancelled = true;
+      clearTimeout(timer);
+    };
   }, [userRole]);
 
   const handleLogout = async () => {
@@ -118,6 +141,13 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
         label: 'Operations',
         items: [
           { href: '/admin/dashboard', icon: LayoutDashboard, label: 'Dashboard' },
+          {
+            href: '/admin/leads',
+            icon: UserPlus,
+            label: 'Leads CRM',
+            badge: leadsBadgeCount > 0 ? leadsBadgeCount : undefined,
+            badgeTone: leadsHasSlaAlert ? 'danger' : 'primary',
+          },
           { href: '/admin/cases', icon: Briefcase, label: 'All Cases' },
           { href: '/admin/appointments', icon: Calendar, label: 'All Appointments' },
           {
@@ -125,6 +155,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
             icon: AlertTriangle,
             label: 'Escalations',
             badge: escalationCount > 0 ? escalationCount : undefined,
+            badgeTone: 'danger',
           },
         ],
       },
@@ -165,12 +196,15 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
           ]
         : []),
     ],
-    [escalationCount, isAdmin]
+    [escalationCount, leadsBadgeCount, leadsHasSlaAlert, isAdmin]
   );
 
   const activeLabel = useMemo(() => {
     if (pathname.startsWith('/admin/cases/') && pathname.endsWith('/pathway')) {
       return 'Clinical Pathway';
+    }
+    if (pathname.startsWith('/admin/leads/')) {
+      return 'Lead Dossier';
     }
     const all = menuSections.flatMap((s) => s.items);
     return all.find((item) => item.href === pathname)?.label || 'Administration';
@@ -258,7 +292,13 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
                           />
                           <span className="flex-1 truncate">{item.label}</span>
                           {'badge' in item && item.badge && (
-                            <span className="px-1.5 py-0.5 rounded bg-danger-50 text-danger-700 border border-danger-200 text-[11px] font-medium tabular-nums">
+                            <span
+                              className={`px-1.5 py-0.5 rounded-md border text-[11px] font-medium tabular-nums ${
+                                'badgeTone' in item && item.badgeTone === 'primary'
+                                  ? 'bg-primary-50 text-primary-800 border-primary-200'
+                                  : 'bg-danger-50 text-danger-700 border-danger-200'
+                              }`}
+                            >
                               {item.badge}
                             </span>
                           )}
