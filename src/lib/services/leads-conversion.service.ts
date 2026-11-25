@@ -19,6 +19,13 @@ import {
   LEAD_STATUSES,
 } from '@/lib/validation/leads-crm-schemas';
 
+class LeadConversionConflictError extends Error {
+  constructor(message = 'Lead has already been converted') {
+    super(message);
+    this.name = 'LeadConversionConflictError';
+  }
+}
+
 export type ConversionServiceResult<T> =
   | { ok: true; data: T }
   | { ok: false; code: string; message: string; status: number; details?: unknown };
@@ -178,7 +185,8 @@ export async function convertLeadToPatientCase(
   const data = parsed.data;
   const now = new Date();
 
-  return prisma.$transaction(async (tx) => {
+  try {
+    return await prisma.$transaction(async (tx) => {
     const lead = await tx.lead.findUnique({
       where: { id: leadId },
     });
@@ -432,8 +440,12 @@ export async function convertLeadToPatientCase(
       })),
     });
 
-    await tx.lead.update({
-      where: { id: lead.id },
+    const claimed = await tx.lead.updateMany({
+      where: {
+        id: lead.id,
+        status: { notIn: ['CONVERTED', 'LOST'] },
+        convertedCaseId: null,
+      },
       data: {
         status: 'CONVERTED',
         convertedPatientId: targetPatientId,
@@ -445,6 +457,10 @@ export async function convertLeadToPatientCase(
           : {}),
       },
     });
+
+    if (claimed.count !== 1) {
+      throw new LeadConversionConflictError();
+    }
 
     if (typeof tx.leadActivity?.create === 'function') {
       await tx.leadActivity.create({
@@ -529,7 +545,24 @@ export async function convertLeadToPatientCase(
         ...(generatedTemporaryPassword ? { generatedTemporaryPassword } : {}),
       },
     };
-  });
+    });
+  } catch (err) {
+    if (
+      err instanceof LeadConversionConflictError ||
+      (typeof err === 'object' &&
+        err !== null &&
+        'code' in err &&
+        (err as { code?: string }).code === 'P2025')
+    ) {
+      return {
+        ok: false,
+        code: 'CONFLICT',
+        message: 'Lead has already been converted',
+        status: 409,
+      };
+    }
+    throw err;
+  }
 }
 
 function emptyLeadsFunnelAnalytics(): LeadsFunnelAnalyticsPayload {

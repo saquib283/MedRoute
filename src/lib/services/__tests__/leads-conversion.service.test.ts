@@ -1,7 +1,7 @@
 import { NextRequest } from 'next/server';
 
 const mockTxLeadFindUnique = jest.fn();
-const mockTxLeadUpdate = jest.fn();
+const mockTxLeadUpdateMany = jest.fn();
 const mockTxLeadActivityCreate = jest.fn();
 const mockTxUserFindUnique = jest.fn();
 const mockTxUserCreate = jest.fn();
@@ -56,7 +56,7 @@ jest.mock('@/lib/prisma', () => ({
       fn({
         lead: {
           findUnique: mockTxLeadFindUnique,
-          update: mockTxLeadUpdate,
+          updateMany: mockTxLeadUpdateMany,
         },
         leadActivity: {
           create: mockTxLeadActivityCreate,
@@ -185,12 +185,7 @@ describe('Task 3: Atomic Lead Conversion, Funnel Analytics & LEADS_ACTIVE Nurtur
         managerId: 'mgr-1',
         status: 'UNDER_REVIEW',
       });
-      mockTxLeadUpdate.mockResolvedValue({
-        id: 'lead-1',
-        status: 'CONVERTED',
-        convertedPatientId: 'pat-new',
-        convertedCaseId: 'case-new-1',
-      });
+      mockTxLeadUpdateMany.mockResolvedValue({ count: 1 });
 
       const res = await convertLeadToPatientCase(
         'lead-1',
@@ -258,10 +253,14 @@ describe('Task 3: Atomic Lead Conversion, Funnel Analytics & LEADS_ACTIVE Nurtur
         status: 'IN_PROGRESS',
       });
 
-      // Lead marked CONVERTED + activity + audit + notifications
-      expect(mockTxLeadUpdate).toHaveBeenCalledWith(
+      // Lead marked CONVERTED with atomic concurrency predicate + activity + audit + notifications
+      expect(mockTxLeadUpdateMany).toHaveBeenCalledWith(
         expect.objectContaining({
-          where: { id: 'lead-1' },
+          where: {
+            id: 'lead-1',
+            status: { notIn: ['CONVERTED', 'LOST'] },
+            convertedCaseId: null,
+          },
           data: expect.objectContaining({
             status: 'CONVERTED',
             convertedPatientId: 'pat-new',
@@ -405,6 +404,59 @@ describe('Task 3: Atomic Lead Conversion, Funnel Analytics & LEADS_ACTIVE Nurtur
       expect(mismatchRes.ok).toBe(false);
       if (!mismatchRes.ok) expect(mismatchRes.status).toBe(400);
     });
+
+    it('returns 409 CONFLICT and rolls back when tx.lead.updateMany returns count: 0 due to a concurrent conversion race', async () => {
+      mockTxLeadFindUnique.mockResolvedValueOnce(makeSampleLead());
+      mockTxUserFindUnique.mockResolvedValueOnce(null);
+      mockTxUserCreate.mockResolvedValueOnce({
+        id: 'u-race-1',
+        email: 'tariq@example.com',
+        fullName: 'Tariq Al-Balushi',
+        role: 'PATIENT',
+      });
+      mockTxPatientCreate.mockResolvedValueOnce({
+        id: 'pat-race-1',
+        userId: 'u-race-1',
+        assignedManagerId: 'mgr-1',
+      });
+      mockTxMedicalProfileCreate.mockResolvedValueOnce({ id: 'mp-race-1', patientId: 'pat-race-1' });
+      mockTxCaseCreate.mockResolvedValueOnce({
+        id: 'case-race-1',
+        patientId: 'pat-race-1',
+        managerId: 'mgr-1',
+        status: 'INQUIRY_RECEIVED',
+      });
+      mockTxLeadUpdateMany.mockResolvedValueOnce({ count: 0 });
+
+      const raceRes = await convertLeadToPatientCase(
+        'lead-1',
+        {
+          mode: 'NEW_PATIENT',
+          email: 'tariq@example.com',
+          passportNo: 'OM4455667',
+          dob: '1978-04-12',
+        },
+        { userId: 'mgr-1', role: 'MANAGER' }
+      );
+
+      expect(mockTxLeadUpdateMany).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: {
+            id: 'lead-1',
+            status: { notIn: ['CONVERTED', 'LOST'] },
+            convertedCaseId: null,
+          },
+        })
+      );
+      expect(raceRes).toEqual({
+        ok: false,
+        code: 'CONFLICT',
+        message: 'Lead has already been converted',
+        status: 409,
+      });
+      expect(mockTxLeadActivityCreate).not.toHaveBeenCalled();
+      expect(mockTxAuditLogCreate).not.toHaveBeenCalled();
+    });
   });
 
   describe('convertLeadToPatientCase — EXISTING_PATIENT mode', () => {
@@ -427,12 +479,7 @@ describe('Task 3: Atomic Lead Conversion, Funnel Analytics & LEADS_ACTIVE Nurtur
         managerId: 'mgr-1',
         status: 'INQUIRY_RECEIVED',
       });
-      mockTxLeadUpdate.mockResolvedValue({
-        id: 'lead-1',
-        status: 'CONVERTED',
-        convertedPatientId: 'pat-existing-1',
-        convertedCaseId: 'case-existing-2',
-      });
+      mockTxLeadUpdateMany.mockResolvedValue({ count: 1 });
 
       const res = await convertLeadToPatientCase(
         'lead-1',
@@ -671,7 +718,7 @@ describe('Task 3: Atomic Lead Conversion, Funnel Analytics & LEADS_ACTIVE Nurtur
         managerId: 'mgr-1',
         status: 'INQUIRY_RECEIVED',
       });
-      mockTxLeadUpdate.mockResolvedValueOnce({ id: 'lead-1', status: 'CONVERTED' });
+      mockTxLeadUpdateMany.mockResolvedValueOnce({ count: 1 });
 
       const okReq = new NextRequest('http://localhost/api/v1/leads/lead-1/convert', {
         method: 'POST',
