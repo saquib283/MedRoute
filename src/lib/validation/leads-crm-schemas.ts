@@ -315,7 +315,11 @@ export type LogLeadActivityInput = z.infer<typeof logLeadActivitySchema>;
 
 const newPatientConversionSchema = z.object({
   mode: z.literal('NEW_PATIENT'),
-  email: z.string().trim().email('Valid email address is required for patient portal account'),
+  email: z
+    .string()
+    .trim()
+    .max(191, 'Email must be at most 191 characters')
+    .email('Valid email address is required for patient portal account'),
   passportNo: z.string().trim().min(5, 'Passport number must be at least 5 characters').max(64),
   dob: z.string().refine((val) => !Number.isNaN(Date.parse(val)), {
     message: 'Valid date of birth is required',

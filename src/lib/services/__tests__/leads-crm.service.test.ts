@@ -22,6 +22,7 @@ jest.mock('@/lib/prisma', () => ({
       findUnique: jest.fn(),
       count: jest.fn(),
       update: jest.fn(),
+      updateMany: jest.fn(),
     },
     leadActivity: {
       create: jest.fn(),
@@ -346,8 +347,8 @@ describe('Task 2: Leads CRM Service, Language Router, Deduplication, Activities 
       expect(forbiddenDossier.ok).toBe(false);
       if (!forbiddenDossier.ok) expect(forbiddenDossier.status).toBe(403);
 
-      // MANAGER allowed on unassigned lead and can CLAIM it
-      mockedPrisma.lead.findUnique.mockResolvedValueOnce({
+      // MANAGER allowed on unassigned lead and can CLAIM it atomically
+      const poolLeadSnapshot = {
         id: 'lead-pool',
         referenceNo: 'LD-2026-555555',
         fullName: 'Amina Yusuf',
@@ -361,19 +362,24 @@ describe('Task 2: Leads CRM Service, Language Router, Deduplication, Activities 
         assignedManagerId: null,
         firstResponseDueAt: new Date('2026-11-26T12:00:00.000Z'),
         firstRespondedAt: null,
-      });
-      mockedPrisma.lead.update.mockResolvedValueOnce({
-        id: 'lead-pool',
+      };
+      mockedPrisma.lead.findUnique.mockResolvedValueOnce(poolLeadSnapshot);
+      mockedPrisma.lead.updateMany.mockResolvedValueOnce({ count: 1 });
+      mockedPrisma.lead.findUnique.mockResolvedValueOnce({
+        ...poolLeadSnapshot,
         assignedManagerId: 'mgr-1',
-        status: 'NEW',
       });
 
       const claimRes = await updateLeadForActor('lead-pool', { action: 'CLAIM' }, mgr1Actor);
       expect(claimRes.ok).toBe(true);
-      expect(mockedPrisma.lead.update).toHaveBeenCalledWith(
+      expect(mockedPrisma.lead.updateMany).toHaveBeenCalledWith(
         expect.objectContaining({
-          where: { id: 'lead-pool' },
-          data: expect.objectContaining({ assignedManagerId: 'mgr-1' }),
+          where: expect.objectContaining({
+            id: 'lead-pool',
+            status: { notIn: ['CONVERTED', 'LOST'] },
+            OR: [{ assignedManagerId: null }, { assignedManagerId: 'mgr-1' }],
+          }),
+          data: { assignedManagerId: 'mgr-1' },
         })
       );
 
@@ -644,6 +650,91 @@ describe('Task 2: Leads CRM Service, Language Router, Deduplication, Activities 
           where: {
             AND: [{ specialtyInterest: 'CARDIOLOGY' }],
           },
+        })
+      );
+    });
+
+    it('rejects partial PATCH (without status) on a CONVERTED lead with 409 without calling prisma.lead.update', async () => {
+      mockedPrisma.lead.findUnique.mockResolvedValueOnce({
+        id: 'lead-converted-1',
+        status: 'CONVERTED',
+        assignedManagerId: 'mgr-1',
+        firstResponseDueAt: new Date(),
+      });
+
+      const res = await updateLeadForActor(
+        'lead-converted-1',
+        { preliminaryQuoteUsd: 9500, medicalCondition: 'Attempted edit after conversion' },
+        mgr1Actor
+      );
+
+      expect(res.ok).toBe(false);
+      if (!res.ok) {
+        expect(res.status).toBe(409);
+        expect(res.code).toBe('INVALID_STATUS_TRANSITION');
+        expect(res.message).toBe('Converted leads are locked and cannot be edited');
+      }
+      expect(mockedPrisma.lead.update).not.toHaveBeenCalled();
+      expect(mockedPrisma.lead.updateMany).not.toHaveBeenCalled();
+    });
+
+    it('returns 409 CONFLICT on CLAIM race loss (updateMany count: 0) without logging duplicate claim activity', async () => {
+      mockedPrisma.lead.findUnique.mockResolvedValueOnce({
+        id: 'lead-race-1',
+        status: 'NEW',
+        assignedManagerId: null,
+        firstResponseDueAt: new Date(),
+      });
+      mockedPrisma.lead.updateMany.mockResolvedValueOnce({ count: 0 });
+
+      const res = await updateLeadForActor('lead-race-1', { action: 'CLAIM' }, mgr1Actor);
+
+      expect(res.ok).toBe(false);
+      if (!res.ok) {
+        expect(res.status).toBe(409);
+        expect(res.code).toBe('CONFLICT');
+      }
+      expect(mockedPrisma.leadActivity.create).not.toHaveBeenCalled();
+      expect(mockedPrisma.auditLog.create).not.toHaveBeenCalled();
+    });
+
+    it('detects duplicates via distinct whatsappNumber in findPotentialDuplicates and clamps fractional pagination in listLeadsForActor', async () => {
+      mockedPrisma.lead.findMany.mockResolvedValueOnce([
+        {
+          id: 'lead-wa-dup',
+          referenceNo: 'LD-2026-008811',
+          fullName: 'Salim Al-Harthy',
+          email: null,
+          phone: null,
+          whatsappNumber: '+971 55 888 7766',
+          status: 'NEW',
+          createdAt: new Date('2026-11-21T10:00:00.000Z'),
+        },
+      ]);
+      mockedPrisma.patient.findMany.mockResolvedValueOnce([]);
+
+      const waMatches = await findPotentialDuplicates({
+        phone: '+968 9000 1111',
+        whatsappNumber: '+971-55-888-7766',
+        excludeLeadId: 'lead-new-self',
+      });
+
+      expect(waMatches).toHaveLength(1);
+      expect(waMatches[0].id).toBe('lead-wa-dup');
+      expect(waMatches[0].matchedBy).toEqual(['PHONE']);
+
+      mockedPrisma.lead.findMany.mockResolvedValueOnce([]);
+      mockedPrisma.lead.count.mockResolvedValue(0);
+
+      const pageRes = await listLeadsForActor({ page: 1.5, limit: 10.9 }, adminActor);
+      expect(pageRes.ok).toBe(true);
+      if (pageRes.ok) {
+        expect(pageRes.data.meta).toEqual({ page: 1, limit: 10, total: 0 });
+      }
+      expect(mockedPrisma.lead.findMany).toHaveBeenLastCalledWith(
+        expect.objectContaining({
+          skip: 0,
+          take: 10,
         })
       );
     });

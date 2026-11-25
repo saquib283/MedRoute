@@ -1611,6 +1611,7 @@ async function main() {
         convertedPatientId: spec.convertedPatientId ?? null,
         convertedCaseId: spec.convertedCaseId ?? null,
         convertedAt: spec.convertedAt ?? null,
+        createdAt: spec.createdAt,
       },
       create: {
         id: spec.id,

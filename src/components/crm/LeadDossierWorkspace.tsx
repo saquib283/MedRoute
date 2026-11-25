@@ -330,13 +330,22 @@ export function LeadDossierWorkspace({ leadId, role, backHref }: LeadDossierWork
     [filteredDoctors]
   );
 
-  const partnerOptions: SelectOption[] = useMemo(
-    () => [
-      { value: '', label: 'Direct / No Partner' },
-      ...partners.map((p) => ({ value: p.id, label: `${p.name} (${p.code})` })),
-    ],
-    [partners]
-  );
+  const partnerOptions: SelectOption[] = useMemo(() => {
+    const options: SelectOption[] = partners.map((p) => ({
+      value: p.id,
+      label: `${p.name} (${p.code})`,
+    }));
+
+    const assignedPartner = lead?.referralPartner;
+    if (assignedPartner && !partners.some((p) => p.id === assignedPartner.id)) {
+      options.unshift({
+        value: assignedPartner.id,
+        label: `${assignedPartner.name} (${assignedPartner.code} — Inactive)`,
+      });
+    }
+
+    return [{ value: '', label: 'Direct / No Partner' }, ...options];
+  }, [partners, lead?.referralPartner]);
 
   const statusOptions: SelectOption[] = useMemo(
     () =>

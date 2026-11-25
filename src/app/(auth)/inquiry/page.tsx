@@ -217,11 +217,29 @@ export default function PublicInquiryPage() {
       const res = await fetch('/api/v1/public/inquiries', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(rawPayload),
+        body: JSON.stringify(parsed.data),
       });
 
       const data = await res.json();
       if (!res.ok || !data.success) {
+        if (res.status === 422 && data.error?.details && typeof data.error.details === 'object') {
+          const rawDetails = data.error.details as Record<string, unknown>;
+          const serverFieldErrors =
+            rawDetails.fieldErrors && typeof rawDetails.fieldErrors === 'object'
+              ? (rawDetails.fieldErrors as Record<string, unknown>)
+              : rawDetails;
+          const nextErrors: Record<string, string> = {};
+          for (const [key, value] of Object.entries(serverFieldErrors)) {
+            if (Array.isArray(value) && value.length > 0 && typeof value[0] === 'string') {
+              nextErrors[key] = value[0];
+            } else if (typeof value === 'string' && value.trim()) {
+              nextErrors[key] = value;
+            }
+          }
+          if (Object.keys(nextErrors).length > 0) {
+            setFieldErrors(nextErrors);
+          }
+        }
         const errMsg =
           data.error?.message || 'Unable to submit your medical opinion request. Please try again.';
         setFormError(errMsg);

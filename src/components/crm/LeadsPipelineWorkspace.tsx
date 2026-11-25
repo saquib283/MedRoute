@@ -6,7 +6,7 @@
  * + Log Inquiry modal, 1-click Claim, and Admin CSV Export / Bulk Import.
  */
 
-import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import Link from 'next/link';
 import { Card } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
@@ -60,40 +60,66 @@ export interface LeadsPipelineWorkspaceProps {
   role: 'MANAGER' | 'ADMIN';
 }
 
-function parseCsvLine(line: string): string[] {
-  const result: string[] = [];
-  let current = '';
+function parseCsvRecords(rawCsv: string): string[][] {
+  const input = rawCsv.replace(/^\uFEFF/, '');
+  const records: string[][] = [];
+  let currentRow: string[] = [];
+  let currentField = '';
   let inQuotes = false;
-  for (let i = 0; i < line.length; i += 1) {
-    const ch = line[i];
-    if (ch === '"') {
-      if (inQuotes && line[i + 1] === '"') {
-        current += '"';
-        i += 1;
+
+  for (let i = 0; i < input.length; i += 1) {
+    const ch = input[i];
+    if (inQuotes) {
+      if (ch === '"') {
+        if (input[i + 1] === '"') {
+          currentField += '"';
+          i += 1;
+        } else {
+          inQuotes = false;
+        }
       } else {
-        inQuotes = !inQuotes;
+        currentField += ch;
       }
-    } else if (ch === ',' && !inQuotes) {
-      result.push(current.trim());
-      current = '';
+      continue;
+    }
+
+    if (ch === '"') {
+      inQuotes = true;
+    } else if (ch === ',') {
+      currentRow.push(currentField.trim());
+      currentField = '';
+    } else if (ch === '\r' || ch === '\n') {
+      if (ch === '\r' && input[i + 1] === '\n') {
+        i += 1;
+      }
+      currentRow.push(currentField.trim());
+      currentField = '';
+      if (currentRow.some((cell) => cell.length > 0)) {
+        records.push(currentRow);
+      }
+      currentRow = [];
     } else {
-      current += ch;
+      currentField += ch;
     }
   }
-  result.push(current.trim());
-  return result;
+
+  if (currentField.length > 0 || currentRow.length > 0) {
+    currentRow.push(currentField.trim());
+    if (currentRow.some((cell) => cell.length > 0)) {
+      records.push(currentRow);
+    }
+  }
+
+  return records;
 }
 
 function parseCsvToObjects(rawCsv: string): Record<string, string>[] {
-  const lines = rawCsv
-    .split(/\r?\n/)
-    .map((l) => l.trim())
-    .filter(Boolean);
-  if (lines.length < 2) return [];
-  const headers = parseCsvLine(lines[0]);
+  const records = parseCsvRecords(rawCsv);
+  if (records.length < 2) return [];
+  const headers = records[0];
   const rows: Record<string, string>[] = [];
-  for (let i = 1; i < lines.length; i += 1) {
-    const values = parseCsvLine(lines[i]);
+  for (let i = 1; i < records.length; i += 1) {
+    const values = records[i];
     const row: Record<string, string> = {};
     headers.forEach((h, idx) => {
       if (h) {
@@ -114,6 +140,26 @@ const DEFAULT_KPIS: LeadsKpiSummary = {
   convertedCount: 0,
 };
 
+const INITIAL_NEW_LEAD = {
+  fullName: '',
+  nationality: '',
+  countryOfResidence: '',
+  preferredLanguage: 'English',
+  phone: '',
+  whatsappNumber: '',
+  email: '',
+  medicalCondition: '',
+  specialtyInterest: '',
+  urgencyLevel: 'ROUTINE',
+  source: 'PHONE_CALL',
+  preferredTravelWindow: '',
+  estimatedBudgetUsd: '',
+  referralPartnerId: '',
+  assignedManagerId: '',
+  hasDiagnosticReports: false,
+  passportReady: false,
+};
+
 export function LeadsPipelineWorkspace({ role }: LeadsPipelineWorkspaceProps) {
   const basePath = role === 'ADMIN' ? '/admin/leads' : '/manager/leads';
 
@@ -127,6 +173,7 @@ export function LeadsPipelineWorkspace({ role }: LeadsPipelineWorkspaceProps) {
 
   // Filters
   const [search, setSearch] = useState('');
+  const [debouncedSearch, setDebouncedSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState('');
   const [temperatureFilter, setTemperatureFilter] = useState('');
   const [slaFilter, setSlaFilter] = useState('');
@@ -135,6 +182,8 @@ export function LeadsPipelineWorkspace({ role }: LeadsPipelineWorkspaceProps) {
   const [partnerFilter, setPartnerFilter] = useState('');
   const [assignedFilter, setAssignedFilter] = useState('');
   const [followUpsDueOnly, setFollowUpsDueOnly] = useState(false);
+
+  const fetchSeqRef = useRef(0);
 
   // Supporting metadata
   const [partners, setPartners] = useState<ReferralPartnerOption[]>([]);
@@ -149,25 +198,7 @@ export function LeadsPipelineWorkspace({ role }: LeadsPipelineWorkspaceProps) {
     referenceNo: string;
     duplicates: DuplicateMatchItem[];
   } | null>(null);
-  const [newLead, setNewLead] = useState({
-    fullName: '',
-    nationality: '',
-    countryOfResidence: '',
-    preferredLanguage: 'English',
-    phone: '',
-    whatsappNumber: '',
-    email: '',
-    medicalCondition: '',
-    specialtyInterest: '',
-    urgencyLevel: 'ROUTINE',
-    source: 'PHONE_CALL',
-    preferredTravelWindow: '',
-    estimatedBudgetUsd: '',
-    referralPartnerId: '',
-    assignedManagerId: '',
-    hasDiagnosticReports: false,
-    passportReady: false,
-  });
+  const [newLead, setNewLead] = useState(INITIAL_NEW_LEAD);
 
   // Admin CSV Import Modal
   const [isImportOpen, setIsImportOpen] = useState(false);
@@ -179,8 +210,16 @@ export function LeadsPipelineWorkspace({ role }: LeadsPipelineWorkspaceProps) {
     errors: Array<{ row: number; error: string }>;
   } | null>(null);
 
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedSearch(search);
+    }, 250);
+    return () => clearTimeout(timer);
+  }, [search]);
+
   const fetchLeads = useCallback(
     async (page = 1) => {
+      const seq = ++fetchSeqRef.current;
       setLoading(true);
       try {
         const limit = viewMode === 'KANBAN' ? 100 : 25;
@@ -188,7 +227,7 @@ export function LeadsPipelineWorkspace({ role }: LeadsPipelineWorkspaceProps) {
           page: String(page),
           limit: String(limit),
         });
-        if (search.trim()) params.set('search', search.trim());
+        if (debouncedSearch.trim()) params.set('search', debouncedSearch.trim());
         if (statusFilter) params.set('status', statusFilter);
         if (temperatureFilter) params.set('temperature', temperatureFilter);
         if (slaFilter) params.set('slaState', slaFilter);
@@ -200,6 +239,7 @@ export function LeadsPipelineWorkspace({ role }: LeadsPipelineWorkspaceProps) {
 
         const res = await fetch(`/api/v1/leads?${params.toString()}`);
         const json = await res.json();
+        if (seq !== fetchSeqRef.current) return;
         if (!res.ok || !json.success) {
           toast.apiError(json, 'Failed to load leads pipeline.');
           return;
@@ -208,14 +248,17 @@ export function LeadsPipelineWorkspace({ role }: LeadsPipelineWorkspaceProps) {
         setKpis(json.data?.kpis || DEFAULT_KPIS);
         setMeta(json.meta || { page, limit, total: 0 });
       } catch (err) {
+        if (seq !== fetchSeqRef.current) return;
         toast.apiError(err, 'Network error loading leads.');
       } finally {
-        setLoading(false);
+        if (seq === fetchSeqRef.current) {
+          setLoading(false);
+        }
       }
     },
     [
       viewMode,
-      search,
+      debouncedSearch,
       statusFilter,
       temperatureFilter,
       slaFilter,
@@ -306,6 +349,7 @@ export function LeadsPipelineWorkspace({ role }: LeadsPipelineWorkspaceProps) {
 
   const clearAllFilters = () => {
     setSearch('');
+    setDebouncedSearch('');
     setStatusFilter('');
     setTemperatureFilter('');
     setSlaFilter('');
@@ -314,6 +358,13 @@ export function LeadsPipelineWorkspace({ role }: LeadsPipelineWorkspaceProps) {
     setPartnerFilter('');
     setAssignedFilter('');
     setFollowUpsDueOnly(false);
+  };
+
+  const openCreateModal = () => {
+    setCreateError(null);
+    setCreatedDuplicateInfo(null);
+    setNewLead(INITIAL_NEW_LEAD);
+    setIsCreateOpen(true);
   };
 
   const handleClaimLead = async (leadId: string) => {
@@ -340,6 +391,7 @@ export function LeadsPipelineWorkspace({ role }: LeadsPipelineWorkspaceProps) {
 
   const handleCreateLead = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (createdDuplicateInfo) return;
     setCreateError(null);
     setCreatedDuplicateInfo(null);
 
@@ -388,6 +440,7 @@ export function LeadsPipelineWorkspace({ role }: LeadsPipelineWorkspaceProps) {
       const createdLead = json.data?.lead as LeadRecord;
       const duplicates = (json.data?.potentialDuplicates || []) as DuplicateMatchItem[];
       toast.success(`Inquiry ${createdLead.referenceNo} logged (Score ${createdLead.leadScore}/100).`);
+      setNewLead(INITIAL_NEW_LEAD);
       await fetchLeads(1);
 
       if (duplicates.length > 0) {
@@ -398,25 +451,6 @@ export function LeadsPipelineWorkspace({ role }: LeadsPipelineWorkspaceProps) {
         });
       } else {
         setIsCreateOpen(false);
-        setNewLead({
-          fullName: '',
-          nationality: '',
-          countryOfResidence: '',
-          preferredLanguage: 'English',
-          phone: '',
-          whatsappNumber: '',
-          email: '',
-          medicalCondition: '',
-          specialtyInterest: '',
-          urgencyLevel: 'ROUTINE',
-          source: 'PHONE_CALL',
-          preferredTravelWindow: '',
-          estimatedBudgetUsd: '',
-          referralPartnerId: '',
-          assignedManagerId: '',
-          hasDiagnosticReports: false,
-          passportReady: false,
-        });
       }
     } catch (err) {
       toast.apiError(err, 'Network error logging inquiry.');
@@ -588,11 +622,7 @@ export function LeadsPipelineWorkspace({ role }: LeadsPipelineWorkspaceProps) {
           <Button
             type="button"
             size="sm"
-            onClick={() => {
-              setCreateError(null);
-              setCreatedDuplicateInfo(null);
-              setIsCreateOpen(true);
-            }}
+            onClick={openCreateModal}
           >
             <Plus className="w-4 h-4" aria-hidden="true" />
             <span>Log Inquiry</span>
@@ -1107,8 +1137,8 @@ export function LeadsPipelineWorkspace({ role }: LeadsPipelineWorkspaceProps) {
         subtitle="Creates a scored CRM lead with automatic SLA countdown and duplicate detection."
         maxWidthClass="max-w-2xl"
       >
-        <form onSubmit={handleCreateLead} className="space-y-4">
-          {createdDuplicateInfo && (
+        {createdDuplicateInfo ? (
+          <div className="space-y-4">
             <div className="p-3.5 rounded-md bg-warning-50 border border-warning-200 text-xs text-warning-900 space-y-2">
               <p className="font-semibold">
                 Inquiry {createdDuplicateInfo.referenceNo} logged — Potential Duplicate(s) Detected
@@ -1120,26 +1150,38 @@ export function LeadsPipelineWorkspace({ role }: LeadsPipelineWorkspaceProps) {
                   </li>
                 ))}
               </ul>
-              <div className="pt-1 flex items-center gap-2">
-                <Link
-                  href={`${basePath}/${createdDuplicateInfo.leadId}`}
-                  className="inline-flex items-center justify-center min-h-11 px-3 rounded-md bg-primary-600 text-white font-medium"
-                >
-                  Open Lead Dossier
-                </Link>
-                <Button
-                  type="button"
-                  variant="secondary"
-                  size="sm"
-                  onClick={() => setIsCreateOpen(false)}
-                >
-                  Close
-                </Button>
-              </div>
             </div>
-          )}
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
+            <div className="flex flex-wrap items-center justify-end gap-2.5 pt-2 border-t border-surface-200">
+              <Button
+                type="button"
+                variant="secondary"
+                onClick={() => setIsCreateOpen(false)}
+              >
+                Close
+              </Button>
+              <Button
+                type="button"
+                variant="secondary"
+                onClick={() => {
+                  setCreatedDuplicateInfo(null);
+                  setCreateError(null);
+                  setNewLead(INITIAL_NEW_LEAD);
+                }}
+              >
+                Log Another Inquiry
+              </Button>
+              <Link
+                href={`${basePath}/${createdDuplicateInfo.leadId}`}
+                className="inline-flex items-center justify-center min-h-11 px-4 py-2 rounded-md bg-primary-600 hover:bg-primary-700 text-white text-sm font-medium border border-primary-700/20 shadow-2xs transition-colors"
+              >
+                Open Lead Dossier
+              </Link>
+            </div>
+          </div>
+        ) : (
+          <form onSubmit={handleCreateLead} className="space-y-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
             <Input
               label="Patient Full Name"
               required
@@ -1332,7 +1374,8 @@ export function LeadsPipelineWorkspace({ role }: LeadsPipelineWorkspaceProps) {
               Save &amp; Score Lead
             </Button>
           </div>
-        </form>
+          </form>
+        )}
       </Modal>
 
       {/* ─── Admin CSV Bulk Import Modal ────────────────────────────── */}

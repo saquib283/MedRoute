@@ -23,6 +23,9 @@ jest.mock('@/lib/prisma', () => ({
     user: {
       findMany: jest.fn(),
     },
+    lead: {
+      findMany: jest.fn(),
+    },
     notification: {
       createMany: jest.fn(),
     },
@@ -41,7 +44,11 @@ import {
   POST as postCampaign,
   PATCH as patchCampaigns,
 } from '@/app/api/v1/admin/email-campaigns/route';
-import { processQueuedCampaigns } from '@/lib/services/email-campaign.service';
+import {
+  dispatchImmediateCampaign,
+  findCampaignRecipients,
+  processQueuedCampaigns,
+} from '@/lib/services/email-campaign.service';
 
 const mockedPrisma = prisma as unknown as Record<string, Record<string, jest.Mock>>;
 
@@ -373,5 +380,49 @@ describe('Task 3: Email Campaign Sanitizer, Placeholder Interpolation & CSV Hard
     const res = csvResponse(csv, 'cases";evil\r\n.csv');
     expect(res.headers.get('Content-Disposition')).toBe('attachment; filename="cases__evil__.csv"');
     expect(res.headers.get('X-Content-Type-Options')).toBe('nosniff');
+  });
+
+  it('filters malformed emails in LEADS_ACTIVE and reports No active recipients found for this audience when empty', async () => {
+    mockedPrisma.lead.findMany.mockResolvedValueOnce([
+      {
+        id: 'l-bad',
+        fullName: 'Bad Email',
+        email: 'not-an-email',
+        nationality: 'Oman',
+        status: 'NEW',
+      },
+      {
+        id: 'l-good-1',
+        fullName: 'Good One',
+        email: '  Patient@Example.com ',
+        nationality: 'Oman',
+        status: 'CONTACTED',
+      },
+      {
+        id: 'l-good-dup',
+        fullName: 'Good Dup',
+        email: 'patient@example.com',
+        nationality: 'Oman',
+        status: 'QUALIFIED',
+      },
+    ]);
+
+    const recipients = await findCampaignRecipients('LEADS_ACTIVE');
+    expect(recipients).toHaveLength(1);
+    expect(recipients[0].id).toBe('l-good-1');
+    expect(recipients[0].email).toBe('patient@example.com');
+
+    mockedPrisma.lead.findMany.mockResolvedValueOnce([]);
+    const emptyDispatch = await dispatchImmediateCampaign({
+      name: 'Empty Leads Blast',
+      templateId: 'tpl-1',
+      template: { name: 'T1', subject: 'Hi', body: '<p>Hi</p>' },
+      targetRole: 'LEADS_ACTIVE',
+      createdBy: 'adm-1',
+    });
+    expect(emptyDispatch).toEqual({
+      ok: false,
+      error: 'No active recipients found for this audience',
+    });
   });
 });

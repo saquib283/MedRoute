@@ -91,6 +91,18 @@ export function resetPublicInquiryRateLimitForTests(): void {
 function checkAndRecordPublicInquiryRateLimit(ipAddress: string, nowMs: number = Date.now()): boolean {
   const key = ipAddress.trim() || 'unknown';
   const windowStart = nowMs - PUBLIC_INQUIRY_WINDOW_MS;
+
+  if (publicInquiryIpHits.size > 5000) {
+    for (const [entryKey, timestamps] of publicInquiryIpHits.entries()) {
+      const active = timestamps.filter((ts) => ts > windowStart);
+      if (active.length === 0) {
+        publicInquiryIpHits.delete(entryKey);
+      } else if (active.length !== timestamps.length) {
+        publicInquiryIpHits.set(entryKey, active);
+      }
+    }
+  }
+
   const recent = (publicInquiryIpHits.get(key) ?? []).filter((ts) => ts > windowStart);
 
   if (recent.length >= PUBLIC_INQUIRY_MAX_PER_WINDOW) {
@@ -534,27 +546,34 @@ export async function capturePublicInquiry(
 }
 
 /**
- * Find potential duplicate Leads and Patients by normalized email and last-9 phone digits.
+ * Find potential duplicate Leads and Patients by normalized email and last-9 phone digits
+ * across both primary phone and WhatsApp numbers.
  * Never exposes raw email, raw phone, or passport numbers.
  */
 export async function findPotentialDuplicates(params: {
   email?: string | null;
   phone?: string | null;
+  whatsappNumber?: string | null;
   excludeLeadId?: string;
 }): Promise<DuplicateMatchSummary[]> {
   const normEmail = normalizeEmail(params.email);
-  const last9 = normalizePhoneLast9(params.phone);
+  const phoneLast9Set = new Set<string>();
+  const primaryLast9 = normalizePhoneLast9(params.phone);
+  if (primaryLast9) phoneLast9Set.add(primaryLast9);
+  const whatsappLast9 = normalizePhoneLast9(params.whatsappNumber);
+  if (whatsappLast9) phoneLast9Set.add(whatsappLast9);
+  const phoneLast9List = Array.from(phoneLast9Set);
 
-  if (!normEmail && !last9) {
+  if (!normEmail && phoneLast9List.length === 0) {
     return [];
   }
 
-  const last4 = last9 ? last9.slice(-4) : null;
+  const last4List = Array.from(new Set(phoneLast9List.map((digits) => digits.slice(-4))));
   const leadOrConditions: Prisma.LeadWhereInput[] = [];
   if (normEmail) {
     leadOrConditions.push({ email: normEmail });
   }
-  if (last4) {
+  for (const last4 of last4List) {
     leadOrConditions.push({ phone: { contains: last4 } });
     leadOrConditions.push({ whatsappNumber: { contains: last4 } });
   }
@@ -563,7 +582,7 @@ export async function findPotentialDuplicates(params: {
   if (normEmail) {
     patientOrConditions.push({ email: normEmail });
   }
-  if (last4) {
+  for (const last4 of last4List) {
     patientOrConditions.push({ phone: { contains: last4 } });
   }
 
@@ -624,10 +643,11 @@ export async function findPotentialDuplicates(params: {
     if (normEmail && normalizeEmail(lead.email) === normEmail) {
       matchedBy.push('EMAIL');
     }
+    const candPhoneLast9 = normalizePhoneLast9(lead.phone);
+    const candWaLast9 = normalizePhoneLast9(lead.whatsappNumber);
     if (
-      last9 &&
-      (normalizePhoneLast9(lead.phone) === last9 ||
-        normalizePhoneLast9(lead.whatsappNumber) === last9)
+      (candPhoneLast9 && phoneLast9Set.has(candPhoneLast9)) ||
+      (candWaLast9 && phoneLast9Set.has(candWaLast9))
     ) {
       matchedBy.push('PHONE');
     }
@@ -652,7 +672,8 @@ export async function findPotentialDuplicates(params: {
     if (normEmail && normalizeEmail(patient.user?.email) === normEmail) {
       matchedBy.push('EMAIL');
     }
-    if (last9 && normalizePhoneLast9(patient.user?.phone) === last9) {
+    const patPhoneLast9 = normalizePhoneLast9(patient.user?.phone);
+    if (patPhoneLast9 && phoneLast9Set.has(patPhoneLast9)) {
       matchedBy.push('PHONE');
     }
 
@@ -838,7 +859,8 @@ export async function createStaffLead(
 
   const potentialDuplicates = await findPotentialDuplicates({
     email: created.email,
-    phone: created.phone ?? created.whatsappNumber,
+    phone: created.phone,
+    whatsappNumber: created.whatsappNumber,
     excludeLeadId: created.id,
   });
 
@@ -989,8 +1011,10 @@ export async function listLeadsForActor(
     return filterCheck;
   }
 
-  const page = Math.max(1, Number.isFinite(query.page) ? Number(query.page) : 1);
-  const limit = Math.min(100, Math.max(1, Number.isFinite(query.limit) ? Number(query.limit) : 20));
+  const rawPage = Number.isFinite(query.page) ? Math.floor(Number(query.page)) : 1;
+  const rawLimit = Number.isFinite(query.limit) ? Math.floor(Number(query.limit)) : 20;
+  const page = Math.max(1, rawPage);
+  const limit = Math.min(100, Math.max(1, rawLimit));
   const now = new Date();
   const soonCutoff = new Date(now.getTime() + 15 * 60 * 1000);
 
@@ -1244,7 +1268,8 @@ export async function getLeadDossierForActor(
   const [potentialDuplicates, hospitals, doctors, coordinators] = await Promise.all([
     findPotentialDuplicates({
       email: lead.email,
-      phone: lead.phone ?? lead.whatsappNumber,
+      phone: lead.phone,
+      whatsappNumber: lead.whatsappNumber,
       excludeLeadId: lead.id,
     }),
     typeof prisma?.hospital?.findMany === 'function'
@@ -1340,28 +1365,42 @@ export async function updateLeadForActor(
     };
   }
 
+  if (existing.status === 'CONVERTED') {
+    return {
+      ok: false,
+      code: ERROR_CODES.INVALID_STATUS_TRANSITION,
+      message: 'Converted leads are locked and cannot be edited',
+      status: 409,
+    };
+  }
+
   const isClaimAction =
     Boolean(input) &&
     typeof input === 'object' &&
     (input as Record<string, unknown>).action === 'CLAIM';
 
   if (isClaimAction) {
-    if (
-      existing.assignedManagerId !== null &&
-      existing.assignedManagerId !== actor.userId &&
-      actor.role !== 'ADMIN'
-    ) {
+    const claimResult = await prisma.lead.updateMany({
+      where: {
+        id: leadId,
+        status: { notIn: ['CONVERTED', 'LOST'] },
+        ...(actor.role === 'ADMIN'
+          ? {}
+          : { OR: [{ assignedManagerId: null }, { assignedManagerId: actor.userId }] }),
+      },
+      data: { assignedManagerId: actor.userId },
+    });
+    if (claimResult.count !== 1) {
       return {
         ok: false,
-        code: ERROR_CODES.FORBIDDEN,
-        message: 'Lead is already assigned to another coordinator',
-        status: 403,
+        code: ERROR_CODES.CONFLICT,
+        message: 'Lead has already been claimed by another coordinator or is closed',
+        status: 409,
       };
     }
 
-    const claimed = await prisma.lead.update({
+    const claimed = await prisma.lead.findUnique({
       where: { id: leadId },
-      data: { assignedManagerId: actor.userId },
       include: {
         assignedManager: { select: { id: true, fullName: true, email: true } },
         referralPartner: {
@@ -1377,26 +1416,37 @@ export async function updateLeadForActor(
       },
     });
 
-    if (typeof prisma?.leadActivity?.create === 'function') {
-      await prisma.leadActivity.create({
-        data: {
-          leadId,
-          actorId: actor.userId,
-          activityType: 'NOTE',
-          summary: 'Lead claimed from intake pool',
-        },
-      });
+    if (!claimed) {
+      return {
+        ok: false,
+        code: ERROR_CODES.NOT_FOUND,
+        message: 'Lead not found',
+        status: 404,
+      };
     }
 
-    await createAuditLog({
-      actorId: actor.userId,
-      action: AUDIT_ACTIONS.UPDATE_LEAD,
-      entityType: 'Lead',
-      entityId: leadId,
-      oldValue: { assignedManagerId: existing.assignedManagerId },
-      newValue: { assignedManagerId: actor.userId },
-      ipAddress: actor.ipAddress,
-    });
+    if (existing.assignedManagerId !== actor.userId) {
+      if (typeof prisma?.leadActivity?.create === 'function') {
+        await prisma.leadActivity.create({
+          data: {
+            leadId,
+            actorId: actor.userId,
+            activityType: 'NOTE',
+            summary: 'Lead claimed from intake pool',
+          },
+        });
+      }
+
+      await createAuditLog({
+        actorId: actor.userId,
+        action: AUDIT_ACTIONS.UPDATE_LEAD,
+        entityType: 'Lead',
+        entityId: leadId,
+        oldValue: { assignedManagerId: existing.assignedManagerId },
+        newValue: { assignedManagerId: actor.userId },
+        ipAddress: actor.ipAddress,
+      });
+    }
 
     return {
       ok: true,

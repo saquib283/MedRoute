@@ -108,29 +108,37 @@ export default function ReferralPartnersPage() {
   const [form, setForm] = useState<PartnerFormState>(EMPTY_FORM);
   const [saving, setSaving] = useState(false);
 
-  const loadPartners = useCallback(async () => {
+  const loadPartners = useCallback(async (isCancelled?: () => boolean) => {
     setLoading(true);
     try {
       const res = await fetch('/api/v1/referral-partners');
       const json = await res.json();
+      if (isCancelled?.()) return;
       if (json.success) {
         setPartners(json.data?.partners ?? []);
       } else {
         toast.error(json.error?.message || 'Failed to load referral partners');
       }
     } catch (err) {
+      if (isCancelled?.()) return;
       console.error('Failed to fetch referral partners:', err);
       toast.error('Failed to load referral partners');
     } finally {
-      setLoading(false);
+      if (!isCancelled?.()) {
+        setLoading(false);
+      }
     }
   }, []);
 
   useEffect(() => {
+    let cancelled = false;
     const timer = setTimeout(() => {
-      void loadPartners();
+      void loadPartners(() => cancelled);
     }, 0);
-    return () => clearTimeout(timer);
+    return () => {
+      cancelled = true;
+      clearTimeout(timer);
+    };
   }, [loadPartners]);
 
   const filteredPartners = useMemo(() => {
@@ -580,6 +588,8 @@ export default function ReferralPartnersPage() {
             <Input
               label="Attribution Code"
               required
+              minLength={3}
+              maxLength={40}
               value={form.code}
               onChange={(e) =>
                 setForm({

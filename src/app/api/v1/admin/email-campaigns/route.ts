@@ -108,7 +108,7 @@ export async function POST(request: NextRequest) {
 
       const targetUsers = await findCampaignRecipients(targetRole);
       if (targetUsers.length === 0) {
-        return apiError(ERROR_CODES.BAD_REQUEST, 'No active users found for this audience', 400);
+        return apiError(ERROR_CODES.BAD_REQUEST, 'No active recipients found for this audience', 400);
       }
 
       const campaign = await prisma.emailCampaign.create({

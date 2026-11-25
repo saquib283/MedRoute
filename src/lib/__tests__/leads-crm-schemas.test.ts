@@ -5,6 +5,7 @@ import {
   validateLeadStatusTransition,
   buildWhatsAppFollowUpUrl,
   publicInquirySchema,
+  convertLeadSchema,
   updateReferralPartnerSchema,
 } from '@/lib/validation/leads-crm-schemas';
 
@@ -166,5 +167,54 @@ describe('Leads CRM Pure Scoring, SLA & Guardrail Engine', () => {
     if (!parsed.success) return;
     expect(parsed.data.commissionPercent).toBeUndefined();
     expect(parsed.data.isActive).toBeUndefined();
+  });
+
+  test('validateLeadStatusTransition rejects exit from CONVERTED and allows QUOTE_SHARED via targetHospitalId alone', () => {
+    const exitConverted = validateLeadStatusTransition({
+      currentStatus: 'CONVERTED',
+      nextStatus: 'QUALIFIED',
+    });
+    expect(exitConverted.allowed).toBe(false);
+
+    const quoteViaHospitalOnly = validateLeadStatusTransition({
+      currentStatus: 'CLINICAL_REVIEW',
+      nextStatus: 'QUOTE_SHARED',
+      targetHospitalId: 'hosp-1',
+    });
+    expect(quoteViaHospitalOnly.allowed).toBe(true);
+  });
+
+  test('buildWhatsAppFollowUpUrl returns null for missing or short phone numbers', () => {
+    expect(
+      buildWhatsAppFollowUpUrl({
+        phone: null,
+        fullName: 'Tariq Al-Said',
+        referenceNo: 'LD-2026-00102',
+      })
+    ).toBeNull();
+
+    expect(
+      buildWhatsAppFollowUpUrl({
+        phone: '+12-345',
+        fullName: 'Tariq Al-Said',
+        referenceNo: 'LD-2026-00102',
+      })
+    ).toBeNull();
+  });
+
+  test('convertLeadSchema NEW_PATIENT rejects email exceeding 191 characters', () => {
+    const longEmail = `${'a'.repeat(182)}@example.com`;
+    expect(longEmail.length).toBeGreaterThan(191);
+    const parsed = convertLeadSchema.safeParse({
+      mode: 'NEW_PATIENT',
+      email: longEmail,
+      passportNo: 'OM1234567',
+      dob: '1980-01-01',
+    });
+    expect(parsed.success).toBe(false);
+    if (!parsed.success) {
+      const fieldErrors = parsed.error.flatten().fieldErrors as Record<string, string[] | undefined>;
+      expect(fieldErrors.email?.[0]).toBe('Email must be at most 191 characters');
+    }
   });
 });

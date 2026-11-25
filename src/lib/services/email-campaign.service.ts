@@ -12,6 +12,8 @@ import {
   type CampaignRecipientContext,
 } from '@/lib/validation/email-sanitizer';
 
+const LIGHTWEIGHT_EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
 const RECIPIENT_USER_SELECT = {
   id: true,
   fullName: true,
@@ -67,7 +69,11 @@ export async function findCampaignRecipients(
 
     for (const lead of activeLeads) {
       const normalizedEmail = lead.email?.trim().toLowerCase();
-      if (!normalizedEmail || seenEmails.has(normalizedEmail)) {
+      if (
+        !normalizedEmail ||
+        !LIGHTWEIGHT_EMAIL_REGEX.test(normalizedEmail) ||
+        seenEmails.has(normalizedEmail)
+      ) {
         continue;
       }
       seenEmails.add(normalizedEmail);
@@ -211,7 +217,7 @@ export async function dispatchImmediateCampaign(
   if (targetUsers.length === 0) {
     return {
       ok: false as const,
-      error: 'No active users found for this audience',
+      error: 'No active recipients found for this audience',
     };
   }
 
