@@ -6,12 +6,16 @@
 
 import fs from 'fs/promises';
 import path from 'path';
-import { DocumentCategory, Prisma, PrismaClient } from '@prisma/client';
+import { DocumentCategory, LeadActivityType, LeadSource, LeadStatus, Prisma, PrismaClient, UrgencyLevel } from '@prisma/client';
 import bcrypt from 'bcryptjs';
 import { encrypt } from '../src/lib/auth/crypto';
 import { encryptMedicalProfile } from '../src/lib/api/phi-encryption';
 import { DEFAULT_SYSTEM_SETTINGS } from '../src/lib/services/system-settings.service';
 import { buildStandardMvtPathwaySteps } from '../src/lib/validation/lifecycle-schemas';
+import {
+  computeLeadFirstResponseDueAt,
+  computeLeadScoreAndTemperature,
+} from '../src/lib/validation/leads-crm-schemas';
 
 const prisma = new PrismaClient();
 
@@ -935,7 +939,94 @@ async function main() {
   }
   console.log(`  ✓ ${Object.keys(DEFAULT_SYSTEM_SETTINGS).length} SystemConfig defaults seeded\n`);
 
-  // ─── 10. Second Sample International Inquiry Patient (Pre-Travel Triage & Plan Consent) ─
+  // ─── 10. B2B Referral Partners ───────────────────────────────────
+  console.log('Seeding B2B Referral Partners...');
+  const partnerGulf = await prisma.referralPartner.upsert({
+    where: { code: 'GULF-MUSCAT' },
+    update: {
+      name: 'Gulf MedConnect Muscat',
+      partnerType: 'FACILITATOR_AGENCY',
+      country: 'Oman',
+      contactName: 'Dr. Tariq Al-Lawati',
+      contactEmail: 'referrals@gulfmedconnect.om',
+      contactPhone: '+96824501122',
+      commissionPercent: 12.0,
+      isActive: true,
+      notes: 'Primary GCC cardiac & orthopaedic patient facilitator partner based in Muscat.',
+    },
+    create: {
+      id: 'seed-partner-001',
+      name: 'Gulf MedConnect Muscat',
+      code: 'GULF-MUSCAT',
+      partnerType: 'FACILITATOR_AGENCY',
+      country: 'Oman',
+      contactName: 'Dr. Tariq Al-Lawati',
+      contactEmail: 'referrals@gulfmedconnect.om',
+      contactPhone: '+96824501122',
+      commissionPercent: 12.0,
+      isActive: true,
+      notes: 'Primary GCC cardiac & orthopaedic patient facilitator partner based in Muscat.',
+    },
+  });
+
+  const partnerNairobi = await prisma.referralPartner.upsert({
+    where: { code: 'NAIROBI-HEART' },
+    update: {
+      name: 'Nairobi Heart & Ortho Clinic',
+      partnerType: 'REFERRING_PHYSICIAN',
+      country: 'Kenya',
+      contactName: 'Dr. Wanjiku Kamau',
+      contactEmail: 'intl.desk@nairobiheartortho.co.ke',
+      contactPhone: '+254202718900',
+      commissionPercent: 8.5,
+      isActive: true,
+      notes: 'East Africa specialist cardiology & joint replacement referral clinic.',
+    },
+    create: {
+      id: 'seed-partner-002',
+      name: 'Nairobi Heart & Ortho Clinic',
+      code: 'NAIROBI-HEART',
+      partnerType: 'REFERRING_PHYSICIAN',
+      country: 'Kenya',
+      contactName: 'Dr. Wanjiku Kamau',
+      contactEmail: 'intl.desk@nairobiheartortho.co.ke',
+      contactPhone: '+254202718900',
+      commissionPercent: 8.5,
+      isActive: true,
+      notes: 'East Africa specialist cardiology & joint replacement referral clinic.',
+    },
+  });
+
+  const partnerBaghdad = await prisma.referralPartner.upsert({
+    where: { code: 'EMBASSY-IRQ' },
+    update: {
+      name: 'Embassy Medical Desk Baghdad',
+      partnerType: 'EMBASSY_MINISTRY',
+      country: 'Iraq',
+      contactName: 'Mustafa Al-Dulaimi',
+      contactEmail: 'medical.attach@baghdad-health.iq',
+      contactPhone: '+9647701234567',
+      commissionPercent: 10.0,
+      isActive: true,
+      notes: 'Sponsored tertiary oncology, neurosurgery & transplant referrals.',
+    },
+    create: {
+      id: 'seed-partner-003',
+      name: 'Embassy Medical Desk Baghdad',
+      code: 'EMBASSY-IRQ',
+      partnerType: 'EMBASSY_MINISTRY',
+      country: 'Iraq',
+      contactName: 'Mustafa Al-Dulaimi',
+      contactEmail: 'medical.attach@baghdad-health.iq',
+      contactPhone: '+9647701234567',
+      commissionPercent: 10.0,
+      isActive: true,
+      notes: 'Sponsored tertiary oncology, neurosurgery & transplant referrals.',
+    },
+  });
+  console.log('  ✓ 3 B2B Referral Partners created (GULF-MUSCAT, NAIROBI-HEART, EMBASSY-IRQ)\n');
+
+  // ─── 11. Second Sample International Inquiry Patient (Pre-Travel Triage & Plan Consent) ─
   console.log('Seeding second sample international inquiry patient (Omar Al-Harthy)...');
   const omarUser = await prisma.user.upsert({
     where: { email: 'omar@afzalhealthcare.in' },
@@ -1039,6 +1130,7 @@ async function main() {
       hospitalId: hospital1.id,
       primaryDoctorId: 'seed-doctor-001',
       managerId: manager.id,
+      referralPartnerId: partnerGulf.id,
       status: 'UNDER_REVIEW',
       treatmentPlan: omarTreatmentPlan as unknown as Prisma.InputJsonValue,
     },
@@ -1048,6 +1140,7 @@ async function main() {
       managerId: manager.id,
       hospitalId: hospital1.id,
       primaryDoctorId: 'seed-doctor-001',
+      referralPartnerId: partnerGulf.id,
       status: 'UNDER_REVIEW',
       notes: 'Pre-travel file review assigned to Dr. Ashok Seth; treatment plan awaiting patient consent.',
       isUrgent: false,
@@ -1103,6 +1196,479 @@ async function main() {
   });
 
   console.log(`  ✓ Second inquiry patient: omar@afzalhealthcare.in / Patient@123 (UNDER_REVIEW)\n`);
+
+  // Partner-attributed billing record on seed-case-002 for B2B ROI analytics
+  await prisma.medicalBill.upsert({
+    where: { billNumber: 'INV-2026-0043' },
+    update: {
+      caseId: omarCase.id,
+      patientId: omarPatient.id,
+      hospitalId: hospital1.id,
+      totalAmount: 2400.0,
+      paidAmount: 1000.0,
+      status: 'PARTIALLY_PAID',
+    },
+    create: {
+      billNumber: 'INV-2026-0043',
+      caseId: omarCase.id,
+      patientId: omarPatient.id,
+      hospitalId: hospital1.id,
+      title: 'Diagnostic Coronary Angiography & FFR Deposit Invoice',
+      category: 'DIAGNOSTICS',
+      totalAmount: 2400.0,
+      paidAmount: 1000.0,
+      currency: 'USD',
+      status: 'PARTIALLY_PAID',
+      dueDate: new Date(Date.now() + 14 * dayMs),
+      notes: 'Referred via Gulf MedConnect Muscat (GULF-MUSCAT). Pre-travel deposit recorded.',
+      createdBy: manager.id,
+    },
+  });
+
+  // ─── 12. Advanced Leads CRM Pipeline & Activities ────────────────
+  console.log('Seeding international Leads CRM records & activity timelines...');
+
+  const now = new Date();
+  const hourMs = 3600000;
+
+  interface SeedLeadSpec {
+    id: string;
+    referenceNo: string;
+    fullName: string;
+    email: string | null;
+    phone: string | null;
+    whatsappNumber: string | null;
+    nationality: string;
+    countryOfResidence: string | null;
+    preferredLanguage: string | null;
+    medicalCondition: string;
+    specialtyInterest: string | null;
+    urgencyLevel: UrgencyLevel;
+    hasDiagnosticReports: boolean;
+    passportReady: boolean;
+    preferredTravelWindow: string | null;
+    estimatedBudgetUsd: number | null;
+    preliminaryQuoteUsd: number | null;
+    preliminaryQuoteNotes: string | null;
+    targetHospitalId: string | null;
+    targetDoctorId: string | null;
+    status: LeadStatus;
+    source: LeadSource;
+    assignedManagerId: string | null;
+    referralPartnerId: string | null;
+    createdAt: Date;
+    firstRespondedAt: Date | null;
+    lastContactedAt: Date | null;
+    nextFollowUpAt: Date | null;
+    lostReason?: string | null;
+    lostNotes?: string | null;
+    convertedPatientId?: string | null;
+    convertedCaseId?: string | null;
+    convertedAt?: Date | null;
+    activities: Array<{
+      activityType: LeadActivityType;
+      summary: string;
+      actorId: string | null;
+      dueAt?: Date | null;
+      completedAt?: Date | null;
+      createdAt: Date;
+    }>;
+  }
+
+  const seedLeads: SeedLeadSpec[] = [
+    {
+      id: 'seed-lead-001',
+      referenceNo: 'LD-2026-SEED01',
+      fullName: 'Amina Abubakar',
+      email: 'amina.abubakar@example.ng',
+      phone: '+2348035550192',
+      whatsappNumber: '+2348035550192',
+      nationality: 'Nigeria',
+      countryOfResidence: 'Nigeria',
+      preferredLanguage: 'English',
+      medicalCondition:
+        'Stage II invasive ductal breast carcinoma; biopsy & PET-CT completed in Abuja, seeking surgical oncology + radiation opinion.',
+      specialtyInterest: 'ONCOLOGY',
+      urgencyLevel: 'URGENT',
+      hasDiagnosticReports: true,
+      passportReady: true,
+      preferredTravelWindow: 'IMMEDIATE_7D',
+      estimatedBudgetUsd: 9500,
+      preliminaryQuoteUsd: null,
+      preliminaryQuoteNotes: null,
+      targetHospitalId: hospital2.id,
+      targetDoctorId: null,
+      status: 'NEW',
+      source: 'WEBSITE_INQUIRY',
+      assignedManagerId: null,
+      referralPartnerId: null,
+      createdAt: new Date(now.getTime() - 2 * hourMs),
+      firstRespondedAt: null,
+      lastContactedAt: null,
+      nextFollowUpAt: new Date(now.getTime() + 1 * hourMs),
+      activities: [
+        {
+          activityType: 'NOTE',
+          summary: 'Public web inquiry captured (WEBSITE_INQUIRY) — urgent oncology triage requested',
+          actorId: null,
+          createdAt: new Date(now.getTime() - 2 * hourMs),
+        },
+      ],
+    },
+    {
+      id: 'seed-lead-002',
+      referenceNo: 'LD-2026-SEED02',
+      fullName: 'Khalid Al-Qahtani',
+      email: 'khalid.qahtani@example.sa',
+      phone: '+966505551144',
+      whatsappNumber: '+966505551144',
+      nationality: 'Saudi Arabia',
+      countryOfResidence: 'Saudi Arabia',
+      preferredLanguage: 'Arabic',
+      medicalCondition:
+        'Severe tricompartmental osteoarthritis right knee; wheelchair-bound for 3 months, seeking robotic total knee replacement.',
+      specialtyInterest: 'ORTHOPEDICS',
+      urgencyLevel: 'SEMI_URGENT',
+      hasDiagnosticReports: false,
+      passportReady: true,
+      preferredTravelWindow: 'WITHIN_30D',
+      estimatedBudgetUsd: 7800,
+      preliminaryQuoteUsd: null,
+      preliminaryQuoteNotes: null,
+      targetHospitalId: hospital1.id,
+      targetDoctorId: 'seed-doctor-003',
+      status: 'CONTACTED',
+      source: 'WHATSAPP',
+      assignedManagerId: manager.id,
+      referralPartnerId: null,
+      createdAt: new Date(now.getTime() - 18 * hourMs),
+      firstRespondedAt: new Date(now.getTime() - 17.5 * hourMs),
+      lastContactedAt: new Date(now.getTime() - 16 * hourMs),
+      nextFollowUpAt: new Date(now.getTime() + 18 * hourMs),
+      activities: [
+        {
+          activityType: 'WHATSAPP',
+          summary: 'Initial Arabic WhatsApp triage completed; requested standing knee X-ray DICOM files',
+          actorId: manager.id,
+          completedAt: new Date(now.getTime() - 17.5 * hourMs),
+          createdAt: new Date(now.getTime() - 17.5 * hourMs),
+        },
+        {
+          activityType: 'FOLLOW_UP_SCHEDULED',
+          summary: 'Follow up with family on X-ray upload and companion passport copy',
+          actorId: manager.id,
+          dueAt: new Date(now.getTime() + 18 * hourMs),
+          createdAt: new Date(now.getTime() - 16 * hourMs),
+        },
+      ],
+    },
+    {
+      id: 'seed-lead-003',
+      referenceNo: 'LD-2026-SEED03',
+      fullName: 'Samuel Ochieng',
+      email: 'samuel.ochieng@example.ke',
+      phone: '+254712555830',
+      whatsappNumber: '+254712555830',
+      nationality: 'Kenya',
+      countryOfResidence: 'Kenya',
+      preferredLanguage: 'English',
+      medicalCondition:
+        'L4-L5 lumbar disc herniation with progressive bilateral radiculopathy; MRI reports uploaded via Nairobi clinic.',
+      specialtyInterest: 'ORTHOPEDICS',
+      urgencyLevel: 'SEMI_URGENT',
+      hasDiagnosticReports: true,
+      passportReady: true,
+      preferredTravelWindow: 'WITHIN_30D',
+      estimatedBudgetUsd: 6500,
+      preliminaryQuoteUsd: 5900,
+      preliminaryQuoteNotes: 'Microdiscectomy package estimate pending Dr. S.K. Rajan review',
+      targetHospitalId: hospital1.id,
+      targetDoctorId: 'seed-doctor-003',
+      status: 'CLINICAL_REVIEW',
+      source: 'B2B_PARTNER',
+      assignedManagerId: manager.id,
+      referralPartnerId: partnerNairobi.id,
+      createdAt: new Date(now.getTime() - 2 * dayMs),
+      firstRespondedAt: new Date(now.getTime() - 2 * dayMs + 25 * 60000),
+      lastContactedAt: new Date(now.getTime() - 1 * dayMs),
+      nextFollowUpAt: new Date(now.getTime() + 12 * hourMs),
+      activities: [
+        {
+          activityType: 'PHONE_CALL',
+          summary: 'Coordinated referral intake call with Nairobi Heart & Ortho Clinic nurse desk',
+          actorId: manager.id,
+          completedAt: new Date(now.getTime() - 2 * dayMs + 25 * 60000),
+          createdAt: new Date(now.getTime() - 2 * dayMs + 25 * 60000),
+        },
+        {
+          activityType: 'STATUS_CHANGE',
+          summary: 'Moved to CLINICAL_REVIEW with lumbar MRI forwarded to Dr. S.K. Rajan',
+          actorId: manager.id,
+          createdAt: new Date(now.getTime() - 1 * dayMs),
+        },
+      ],
+    },
+    {
+      id: 'seed-lead-004',
+      referenceNo: 'LD-2026-SEED04',
+      fullName: 'Zainab Al-Khatib',
+      email: 'zainab.alkhatib@example.iq',
+      phone: '+9647715550911',
+      whatsappNumber: '+9647715550911',
+      nationality: 'Iraq',
+      countryOfResidence: 'Iraq',
+      preferredLanguage: 'Arabic',
+      medicalCondition:
+        'Recurrent pituitary macroadenoma requiring endoscopic transsphenoidal resection & endocrinology follow-up.',
+      specialtyInterest: 'NEUROSURGERY',
+      urgencyLevel: 'URGENT',
+      hasDiagnosticReports: true,
+      passportReady: true,
+      preferredTravelWindow: 'WITHIN_30D',
+      estimatedBudgetUsd: 11000,
+      preliminaryQuoteUsd: 8800,
+      preliminaryQuoteNotes:
+        'Includes endoscopic neurosurgery, 48h neuro-ICU, 4 days private ward, and Arabic interpreter.',
+      targetHospitalId: hospital2.id,
+      targetDoctorId: 'seed-doctor-002',
+      status: 'QUOTE_SHARED',
+      source: 'EMBASSY_SPONSOR',
+      assignedManagerId: manager.id,
+      referralPartnerId: partnerBaghdad.id,
+      createdAt: new Date(now.getTime() - 4 * dayMs),
+      firstRespondedAt: new Date(now.getTime() - 4 * dayMs + 10 * 60000),
+      lastContactedAt: new Date(now.getTime() - 8 * hourMs),
+      nextFollowUpAt: new Date(now.getTime() + 24 * hourMs),
+      activities: [
+        {
+          activityType: 'EMAIL',
+          summary: 'Confirmed embassy medical sponsorship letter receipt with Baghdad desk',
+          actorId: manager.id,
+          completedAt: new Date(now.getTime() - 4 * dayMs + 10 * 60000),
+          createdAt: new Date(now.getTime() - 4 * dayMs + 10 * 60000),
+        },
+        {
+          activityType: 'QUOTE_ESTIMATE',
+          summary: 'Shared $8,800 USD Medanta neurosurgery pro-forma estimate with Embassy attaché',
+          actorId: manager.id,
+          completedAt: new Date(now.getTime() - 8 * hourMs),
+          createdAt: new Date(now.getTime() - 8 * hourMs),
+        },
+      ],
+    },
+    {
+      id: 'seed-lead-005',
+      referenceNo: 'LD-2026-SEED05',
+      fullName: 'Omar Al-Harthy',
+      email: 'omar@afzalhealthcare.in',
+      phone: '+96891234567',
+      whatsappNumber: '+96891234567',
+      nationality: 'Oman',
+      countryOfResidence: 'Oman',
+      preferredLanguage: 'Arabic',
+      medicalCondition: 'Exertional angina — pre-travel cardiology workup & angiography review',
+      specialtyInterest: 'CARDIOLOGY',
+      urgencyLevel: 'ROUTINE',
+      hasDiagnosticReports: true,
+      passportReady: true,
+      preferredTravelWindow: 'WITHIN_30D',
+      estimatedBudgetUsd: 3000,
+      preliminaryQuoteUsd: 2400,
+      preliminaryQuoteNotes: 'Diagnostic Coronary Angiography & FFR at Fortis Escorts',
+      targetHospitalId: hospital1.id,
+      targetDoctorId: 'seed-doctor-001',
+      status: 'CONVERTED',
+      source: 'B2B_PARTNER',
+      assignedManagerId: manager.id,
+      referralPartnerId: partnerGulf.id,
+      createdAt: new Date(now.getTime() - 7 * dayMs),
+      firstRespondedAt: new Date(now.getTime() - 7 * dayMs + 20 * 60000),
+      lastContactedAt: new Date(now.getTime() - 5 * dayMs),
+      nextFollowUpAt: null,
+      convertedPatientId: omarPatient.id,
+      convertedCaseId: omarCase.id,
+      convertedAt: new Date(now.getTime() - 5 * dayMs),
+      activities: [
+        {
+          activityType: 'WHATSAPP',
+          summary: 'Received Oman stress echo & referral packet from Gulf MedConnect Muscat',
+          actorId: manager.id,
+          completedAt: new Date(now.getTime() - 7 * dayMs + 20 * 60000),
+          createdAt: new Date(now.getTime() - 7 * dayMs + 20 * 60000),
+        },
+        {
+          activityType: 'CONVERSION',
+          summary: `Converted to Patient & Case #${omarCase.id.slice(0, 8)} (UNDER_REVIEW)`,
+          actorId: manager.id,
+          completedAt: new Date(now.getTime() - 5 * dayMs),
+          createdAt: new Date(now.getTime() - 5 * dayMs),
+        },
+      ],
+    },
+    {
+      id: 'seed-lead-006',
+      referenceNo: 'LD-2026-SEED06',
+      fullName: 'Farhana Rahman',
+      email: 'farhana.rahman@example.bd',
+      phone: '+8801711550234',
+      whatsappNumber: '+8801711550234',
+      nationality: 'Bangladesh',
+      countryOfResidence: 'Bangladesh',
+      preferredLanguage: 'Bengali',
+      medicalCondition: 'Symptomatic gallstones requesting elective laparoscopic cholecystectomy.',
+      specialtyInterest: 'GENERAL',
+      urgencyLevel: 'ROUTINE',
+      hasDiagnosticReports: false,
+      passportReady: false,
+      preferredTravelWindow: 'EXPLORING',
+      estimatedBudgetUsd: 2500,
+      preliminaryQuoteUsd: 2200,
+      preliminaryQuoteNotes: 'Elective laparoscopic cholecystectomy package estimate',
+      targetHospitalId: hospital2.id,
+      targetDoctorId: null,
+      status: 'LOST',
+      source: 'META_GOOGLE_ADS',
+      assignedManagerId: manager.id,
+      referralPartnerId: null,
+      createdAt: new Date(now.getTime() - 10 * dayMs),
+      firstRespondedAt: new Date(now.getTime() - 10 * dayMs + 90 * 60000),
+      lastContactedAt: new Date(now.getTime() - 6 * dayMs),
+      nextFollowUpAt: null,
+      lostReason: 'TIMELINE_POSTPONED',
+      lostNotes: 'Family postponed international travel by 6 months due to passport renewal.',
+      activities: [
+        {
+          activityType: 'PHONE_CALL',
+          summary: 'Spoke with patient spouse regarding passport validity and travel window',
+          actorId: manager.id,
+          completedAt: new Date(now.getTime() - 10 * dayMs + 90 * 60000),
+          createdAt: new Date(now.getTime() - 10 * dayMs + 90 * 60000),
+        },
+        {
+          activityType: 'STATUS_CHANGE',
+          summary: 'Marked LOST (TIMELINE_POSTPONED) — passport renewal pending',
+          actorId: manager.id,
+          completedAt: new Date(now.getTime() - 6 * dayMs),
+          createdAt: new Date(now.getTime() - 6 * dayMs),
+        },
+      ],
+    },
+  ];
+
+  for (const spec of seedLeads) {
+    const scoreResult = computeLeadScoreAndTemperature({
+      urgencyLevel: spec.urgencyLevel,
+      hasDiagnosticReports: spec.hasDiagnosticReports,
+      medicalCondition: spec.medicalCondition,
+      specialtyInterest: spec.specialtyInterest,
+      passportReady: spec.passportReady,
+      preferredTravelWindow: spec.preferredTravelWindow,
+      estimatedBudgetUsd: spec.estimatedBudgetUsd,
+      source: spec.source,
+      email: spec.email,
+      phone: spec.phone,
+      whatsappNumber: spec.whatsappNumber,
+    });
+    const firstResponseDueAt = computeLeadFirstResponseDueAt(
+      spec.urgencyLevel,
+      scoreResult.temperature,
+      spec.createdAt
+    );
+
+    const upsertedLead = await prisma.lead.upsert({
+      where: { referenceNo: spec.referenceNo },
+      update: {
+        fullName: spec.fullName,
+        email: spec.email,
+        phone: spec.phone,
+        whatsappNumber: spec.whatsappNumber,
+        nationality: spec.nationality,
+        countryOfResidence: spec.countryOfResidence,
+        preferredLanguage: spec.preferredLanguage,
+        medicalCondition: spec.medicalCondition,
+        specialtyInterest: spec.specialtyInterest,
+        urgencyLevel: spec.urgencyLevel,
+        hasDiagnosticReports: spec.hasDiagnosticReports,
+        passportReady: spec.passportReady,
+        preferredTravelWindow: spec.preferredTravelWindow,
+        estimatedBudgetUsd: spec.estimatedBudgetUsd,
+        preliminaryQuoteUsd: spec.preliminaryQuoteUsd,
+        preliminaryQuoteNotes: spec.preliminaryQuoteNotes,
+        targetHospitalId: spec.targetHospitalId,
+        targetDoctorId: spec.targetDoctorId,
+        status: spec.status,
+        source: spec.source,
+        leadScore: scoreResult.score,
+        temperature: scoreResult.temperature,
+        assignedManagerId: spec.assignedManagerId,
+        referralPartnerId: spec.referralPartnerId,
+        firstResponseDueAt,
+        firstRespondedAt: spec.firstRespondedAt,
+        lastContactedAt: spec.lastContactedAt,
+        nextFollowUpAt: spec.nextFollowUpAt,
+        lostReason: spec.lostReason ?? null,
+        lostNotes: spec.lostNotes ?? null,
+        convertedPatientId: spec.convertedPatientId ?? null,
+        convertedCaseId: spec.convertedCaseId ?? null,
+        convertedAt: spec.convertedAt ?? null,
+      },
+      create: {
+        id: spec.id,
+        referenceNo: spec.referenceNo,
+        fullName: spec.fullName,
+        email: spec.email,
+        phone: spec.phone,
+        whatsappNumber: spec.whatsappNumber,
+        nationality: spec.nationality,
+        countryOfResidence: spec.countryOfResidence,
+        preferredLanguage: spec.preferredLanguage,
+        medicalCondition: spec.medicalCondition,
+        specialtyInterest: spec.specialtyInterest,
+        urgencyLevel: spec.urgencyLevel,
+        hasDiagnosticReports: spec.hasDiagnosticReports,
+        passportReady: spec.passportReady,
+        preferredTravelWindow: spec.preferredTravelWindow,
+        estimatedBudgetUsd: spec.estimatedBudgetUsd,
+        preliminaryQuoteUsd: spec.preliminaryQuoteUsd,
+        preliminaryQuoteNotes: spec.preliminaryQuoteNotes,
+        targetHospitalId: spec.targetHospitalId,
+        targetDoctorId: spec.targetDoctorId,
+        status: spec.status,
+        source: spec.source,
+        leadScore: scoreResult.score,
+        temperature: scoreResult.temperature,
+        assignedManagerId: spec.assignedManagerId,
+        referralPartnerId: spec.referralPartnerId,
+        firstResponseDueAt,
+        firstRespondedAt: spec.firstRespondedAt,
+        lastContactedAt: spec.lastContactedAt,
+        nextFollowUpAt: spec.nextFollowUpAt,
+        lostReason: spec.lostReason ?? null,
+        lostNotes: spec.lostNotes ?? null,
+        convertedPatientId: spec.convertedPatientId ?? null,
+        convertedCaseId: spec.convertedCaseId ?? null,
+        convertedAt: spec.convertedAt ?? null,
+        createdAt: spec.createdAt,
+      },
+    });
+
+    await prisma.leadActivity.deleteMany({ where: { leadId: upsertedLead.id } });
+    for (const act of spec.activities) {
+      await prisma.leadActivity.create({
+        data: {
+          leadId: upsertedLead.id,
+          actorId: act.actorId,
+          activityType: act.activityType,
+          summary: act.summary,
+          dueAt: act.dueAt ?? null,
+          completedAt: act.completedAt ?? null,
+          createdAt: act.createdAt,
+        },
+      });
+    }
+  }
+
+  console.log(`  ✓ ${seedLeads.length} Leads CRM records & activity timelines seeded\n`);
 
   console.log('✅ Database seeded successfully!\n');
   console.log('Test credentials:');

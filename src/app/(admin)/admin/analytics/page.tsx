@@ -8,7 +8,14 @@
  */
 
 import { useState, useEffect } from 'react';
+import Link from 'next/link';
 import { Card } from '@/components/ui/Card';
+import { Badge } from '@/components/ui/Badge';
+import {
+  LEAD_LOST_REASON_LABELS,
+  LEAD_SOURCE_LABELS,
+  LEAD_STATUS_LABELS,
+} from '@/lib/constants';
 
 interface AnalyticsData {
   platformTotals: {
@@ -52,6 +59,33 @@ interface AnalyticsData {
       partnerCommissionUsd: number;
     };
   };
+  leadsFunnel?: {
+    totalLeads: number;
+    activeLeads: number;
+    convertedLeads: number;
+    lostLeads: number;
+    conversionRatePercent: number;
+    avgFirstResponseMinutes: number;
+    slaBreachCount: number;
+    slaCompliancePercent: number;
+    stageCounts: Array<{ status: string; count: number }>;
+    sourceBreakdown: Array<{ source: string; count: number; convertedCount: number }>;
+    lostReasonBreakdown: Array<{ reason: string; count: number }>;
+    partnerPerformance: Array<{
+      id: string;
+      name: string;
+      code: string;
+      partnerType: string;
+      country: string;
+      commissionPercent: number;
+      totalLeads: number;
+      convertedLeads: number;
+      conversionRatePercent: number;
+      attributedCases: number;
+      attributedRevenueUsd: number;
+      estimatedPartnerCommissionUsd: number;
+    }>;
+  };
 }
 
 const APPT_TYPE_LABELS: Record<string, string> = {
@@ -82,22 +116,31 @@ export default function AnalyticsPage() {
   const [accessDenied, setAccessDenied] = useState(false);
 
   useEffect(() => {
+    let cancelled = false;
     async function fetchAnalytics() {
       try {
         const res = await fetch('/api/v1/admin/analytics');
         const json = await res.json();
-        if (json.success) {
-          setData(json.data);
-        } else if (res.status === 403) {
-          setAccessDenied(true);
+        if (!cancelled) {
+          if (json.success) {
+            setData(json.data);
+          } else if (res.status === 403) {
+            setAccessDenied(true);
+          }
         }
       } catch (err) {
         console.error('Analytics fetch error:', err);
       } finally {
-        setLoading(false);
+        if (!cancelled) setLoading(false);
       }
     }
-    fetchAnalytics();
+    const timer = setTimeout(() => {
+      void fetchAnalytics();
+    }, 0);
+    return () => {
+      cancelled = true;
+      clearTimeout(timer);
+    };
   }, []);
 
   if (loading) {
@@ -126,6 +169,9 @@ export default function AnalyticsPage() {
 
   const p = data.platformTotals;
   const rev = data.revenueEstimates;
+  const funnel = data.leadsFunnel;
+  const maxStageCount = funnel ? Math.max(...funnel.stageCounts.map((s) => s.count), 1) : 1;
+  const maxSourceCount = funnel ? Math.max(...funnel.sourceBreakdown.map((s) => s.count), 1) : 1;
   const maxMonthly = Math.max(...data.monthlyRegistrations.map((m) => m.total), 1);
   const maxNationality = data.nationalityDistribution[0]?.count || 1;
   const totalApptTypes = data.appointmentTypeBreakdown.reduce((s, a) => s + a.count, 0) || 1;
@@ -259,6 +305,272 @@ export default function AnalyticsPage() {
           </div>
         </Card>
       </div>
+
+      {/* Leads Acquisition & Conversion Funnel + B2B Partner ROI */}
+      {funnel && (
+        <div className="space-y-6">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+            <div>
+              <h2 className="text-base sm:text-lg font-semibold text-surface-900">
+                Leads Acquisition &amp; Conversion Funnel
+              </h2>
+              <p className="text-xs text-surface-500 mt-0.5">
+                Pre-conversion inquiry velocity, speed-to-lead SLA compliance, and B2B referral partner ROI
+              </p>
+            </div>
+            <div className="flex items-center gap-2">
+              <Link
+                href="/admin/leads"
+                className="inline-flex items-center min-h-11 px-3 rounded-md border border-surface-300 bg-white hover:bg-surface-50 text-xs font-medium text-surface-700 transition-colors"
+              >
+                Open Leads CRM
+              </Link>
+              <Link
+                href="/admin/referral-partners"
+                className="inline-flex items-center min-h-11 px-3 rounded-md border border-surface-300 bg-white hover:bg-surface-50 text-xs font-medium text-surface-700 transition-colors"
+              >
+                Manage B2B Partners
+              </Link>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4">
+            <Card padding="md">
+              <p className="text-xs font-medium text-surface-500">Total leads</p>
+              <p className="text-2xl font-semibold tracking-tight tabular-nums text-surface-900 mt-1">
+                {funnel.totalLeads}
+              </p>
+              <p className="text-xs text-surface-500 mt-1 tabular-nums">
+                {funnel.activeLeads} active • {funnel.lostLeads} lost
+              </p>
+            </Card>
+            <Card padding="md">
+              <p className="text-xs font-medium text-surface-500">Converted leads</p>
+              <p className="text-2xl font-semibold tracking-tight tabular-nums text-success-700 mt-1">
+                {funnel.convertedLeads}
+              </p>
+              <p className="text-xs text-surface-500 mt-1 tabular-nums">
+                {funnel.conversionRatePercent}% conversion rate
+              </p>
+            </Card>
+            <Card padding="md">
+              <p className="text-xs font-medium text-surface-500">Avg first response</p>
+              <p className="text-2xl font-semibold tracking-tight tabular-nums text-surface-900 mt-1">
+                {funnel.avgFirstResponseMinutes}m
+              </p>
+              <p className="text-xs text-surface-500 mt-1">Speed-to-lead average</p>
+            </Card>
+            <Card padding="md">
+              <p className="text-xs font-medium text-surface-500">SLA compliance</p>
+              <p className="text-2xl font-semibold tracking-tight tabular-nums text-primary-700 mt-1">
+                {funnel.slaCompliancePercent}%
+              </p>
+              <p className="text-xs text-surface-500 mt-1">On-time first touch</p>
+            </Card>
+            <Card padding="md">
+              <p className="text-xs font-medium text-surface-500">SLA breaches</p>
+              <p
+                className={`text-2xl font-semibold tracking-tight tabular-nums mt-1 ${
+                  funnel.slaBreachCount > 0 ? 'text-danger-700' : 'text-surface-900'
+                }`}
+              >
+                {funnel.slaBreachCount}
+              </p>
+              <p className="text-xs text-surface-500 mt-1">Overdue or late response</p>
+            </Card>
+          </div>
+
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            <Card padding="lg" className="lg:col-span-2">
+              <h3 className="text-sm sm:text-base font-semibold text-surface-900 mb-0.5">
+                Pipeline stage distribution
+              </h3>
+              <p className="text-xs text-surface-500 mb-4">
+                Lead progression across all 9 clinical triage &amp; conversion stages
+              </p>
+              <div className="space-y-3">
+                {funnel.stageCounts.map((stage) => {
+                  const pct = Math.round((stage.count / maxStageCount) * 100);
+                  const barColor =
+                    stage.status === 'CONVERTED'
+                      ? 'bg-success-600'
+                      : stage.status === 'LOST'
+                        ? 'bg-surface-400'
+                        : 'bg-primary-600';
+                  return (
+                    <div key={stage.status} className="space-y-1">
+                      <div className="flex items-center justify-between text-xs">
+                        <span className="font-medium text-surface-700">
+                          {LEAD_STATUS_LABELS[stage.status] || stage.status}
+                        </span>
+                        <span className="font-semibold tabular-nums text-surface-900">
+                          {stage.count}
+                        </span>
+                      </div>
+                      <div className="h-2 bg-surface-100 rounded-full overflow-hidden">
+                        <div
+                          className={`h-full rounded-full transition-all duration-500 ${barColor}`}
+                          style={{ width: `${stage.count > 0 ? Math.max(pct, 4) : 0}%` }}
+                        />
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </Card>
+
+            <Card padding="lg" className="space-y-6">
+              <div>
+                <h3 className="text-sm sm:text-base font-semibold text-surface-900 mb-0.5">
+                  Source attribution
+                </h3>
+                <p className="text-xs text-surface-500 mb-3">Inquiries &amp; conversions by channel</p>
+                <div className="space-y-2.5">
+                  {funnel.sourceBreakdown.length === 0 ? (
+                    <p className="text-xs text-surface-500 py-3">No lead sources recorded yet.</p>
+                  ) : (
+                    funnel.sourceBreakdown.map((src) => {
+                      const pct = Math.round((src.count / maxSourceCount) * 100);
+                      return (
+                        <div key={src.source} className="space-y-1">
+                          <div className="flex items-center justify-between text-xs">
+                            <span className="font-medium text-surface-700">
+                              {LEAD_SOURCE_LABELS[src.source] || src.source}
+                            </span>
+                            <span className="tabular-nums text-surface-600">
+                              <span className="font-semibold text-surface-900">{src.count}</span>
+                              {' '}({src.convertedCount} conv.)
+                            </span>
+                          </div>
+                          <div className="h-1.5 bg-surface-100 rounded-full overflow-hidden">
+                            <div
+                              className="h-full rounded-full bg-primary-600"
+                              style={{ width: `${Math.max(pct, 6)}%` }}
+                            />
+                          </div>
+                        </div>
+                      );
+                    })
+                  )}
+                </div>
+              </div>
+
+              <div className="border-t border-surface-200 pt-4">
+                <h3 className="text-xs font-semibold text-surface-800 mb-2">
+                  Lost reason diagnostics
+                </h3>
+                {funnel.lostReasonBreakdown.length === 0 ? (
+                  <p className="text-xs text-surface-500">No lost leads recorded.</p>
+                ) : (
+                  <div className="space-y-2">
+                    {funnel.lostReasonBreakdown.map((item) => (
+                      <div
+                        key={item.reason}
+                        className="flex items-center justify-between p-2 rounded-md bg-surface-100 border border-surface-200 text-xs"
+                      >
+                        <span className="text-surface-700 font-medium truncate pr-2">
+                          {LEAD_LOST_REASON_LABELS[item.reason] || item.reason}
+                        </span>
+                        <span className="font-semibold tabular-nums text-surface-900 shrink-0">
+                          {item.count}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </Card>
+          </div>
+
+          <Card className="p-0! overflow-hidden">
+            <div className="px-5 py-4 border-b border-surface-200 flex items-center justify-between gap-3">
+              <div>
+                <h3 className="text-sm sm:text-base font-semibold text-surface-900">
+                  B2B Referral Partner ROI
+                </h3>
+                <p className="text-xs text-surface-500 mt-0.5">
+                  Attributed leads, patient conversions, MedicalBill revenue, and estimated partner commissions
+                </p>
+              </div>
+              <Badge variant="primary">B2B Attribution</Badge>
+            </div>
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="border-b border-surface-200 bg-surface-100">
+                    <th className="px-5 py-3 text-left text-[11px] font-medium uppercase tracking-wide text-surface-500">
+                      Partner
+                    </th>
+                    <th className="px-5 py-3 text-left text-[11px] font-medium uppercase tracking-wide text-surface-500">
+                      Country
+                    </th>
+                    <th className="px-5 py-3 text-right text-[11px] font-medium uppercase tracking-wide text-surface-500">
+                      Comm. %
+                    </th>
+                    <th className="px-5 py-3 text-right text-[11px] font-medium uppercase tracking-wide text-surface-500">
+                      Leads
+                    </th>
+                    <th className="px-5 py-3 text-right text-[11px] font-medium uppercase tracking-wide text-surface-500">
+                      Converted
+                    </th>
+                    <th className="px-5 py-3 text-right text-[11px] font-medium uppercase tracking-wide text-surface-500">
+                      Cases
+                    </th>
+                    <th className="px-5 py-3 text-right text-[11px] font-medium uppercase tracking-wide text-surface-500">
+                      Attributed Revenue
+                    </th>
+                    <th className="px-5 py-3 text-right text-[11px] font-medium uppercase tracking-wide text-surface-500">
+                      Est. Commission
+                    </th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-surface-200">
+                  {funnel.partnerPerformance.length === 0 ? (
+                    <tr>
+                      <td colSpan={8} className="px-5 py-8 text-center text-sm text-surface-500">
+                        No B2B referral partner performance data yet.
+                      </td>
+                    </tr>
+                  ) : (
+                    funnel.partnerPerformance.map((partner) => (
+                      <tr key={partner.id} className="hover:bg-surface-100/60 transition-colors">
+                        <td className="px-5 py-3.5">
+                          <p className="font-medium text-surface-900">{partner.name}</p>
+                          <p className="text-xs font-mono text-surface-500">{partner.code}</p>
+                        </td>
+                        <td className="px-5 py-3.5 text-surface-600">{partner.country}</td>
+                        <td className="px-5 py-3.5 text-right font-medium tabular-nums text-surface-700">
+                          {partner.commissionPercent.toFixed(1)}%
+                        </td>
+                        <td className="px-5 py-3.5 text-right font-semibold tabular-nums text-surface-900">
+                          {partner.totalLeads}
+                        </td>
+                        <td className="px-5 py-3.5 text-right tabular-nums text-surface-700">
+                          <span className="font-semibold text-surface-900">
+                            {partner.convertedLeads}
+                          </span>{' '}
+                          <span className="text-xs text-surface-500">
+                            ({partner.conversionRatePercent}%)
+                          </span>
+                        </td>
+                        <td className="px-5 py-3.5 text-right font-semibold tabular-nums text-surface-900">
+                          {partner.attributedCases}
+                        </td>
+                        <td className="px-5 py-3.5 text-right font-semibold tabular-nums text-surface-900">
+                          {formatUsd(partner.attributedRevenueUsd)}
+                        </td>
+                        <td className="px-5 py-3.5 text-right font-semibold tabular-nums text-primary-800">
+                          {formatUsd(partner.estimatedPartnerCommissionUsd)}
+                        </td>
+                      </tr>
+                    ))
+                  )}
+                </tbody>
+              </table>
+            </div>
+          </Card>
+        </div>
+      )}
 
       {/* Row 1: Monthly Registrations + Appointment Types */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">

@@ -21,6 +21,7 @@ import {
   UserPlus,
   UserCheck,
   Building2,
+  Handshake,
   Hotel,
   Stethoscope,
   Award,
@@ -170,6 +171,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
         label: 'Partners',
         items: [
           { href: '/admin/hospitals', icon: Building2, label: 'Hospitals' },
+          { href: '/admin/referral-partners', icon: Handshake, label: 'Referral Partners' },
           { href: '/admin/accommodations', icon: Hotel, label: 'Accommodations' },
           { href: '/admin/doctors', icon: Stethoscope, label: 'Doctors' },
           { href: '/admin/specialisations', icon: Award, label: 'Specialisations' },

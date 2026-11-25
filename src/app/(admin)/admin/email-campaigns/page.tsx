@@ -50,7 +50,17 @@ const AUDIENCE_OPTIONS = [
   { value: 'MANAGER', label: 'All Managers' },
   { value: 'DOCTOR', label: 'All Doctors' },
   { value: 'ADMIN', label: 'All Admins' },
+  { value: 'LEADS_ACTIVE', label: 'Active Pre-Conversion Leads (LEADS_ACTIVE)' },
 ];
+
+const AUDIENCE_LABELS: Record<string, string> = {
+  ALL: 'All Users',
+  PATIENT: 'All Patients',
+  MANAGER: 'All Managers',
+  DOCTOR: 'All Doctors',
+  ADMIN: 'All Admins',
+  LEADS_ACTIVE: 'Active Leads',
+};
 
 export default function EmailCampaignsPage() {
   const [campaigns, setCampaigns] = useState<Campaign[]>([]);
@@ -265,7 +275,7 @@ export default function EmailCampaignsPage() {
                     <tr key={c.id} className="hover:bg-surface-100/60 transition-colors">
                       <td className="px-5 py-3.5 font-medium text-surface-900">{c.name}</td>
                       <td className="px-5 py-3.5 text-surface-600">{c.template.name}</td>
-                      <td className="px-5 py-3.5"><Badge variant="default">{c.targetRole}</Badge></td>
+                      <td className="px-5 py-3.5"><Badge variant={c.targetRole === 'LEADS_ACTIVE' ? 'primary' : 'default'}>{AUDIENCE_LABELS[c.targetRole] || c.targetRole}</Badge></td>
                       <td className="px-5 py-3.5"><Badge variant={STATUS_VARIANTS[c.status] || 'default'} dot>{c.status}</Badge></td>
                       <td className="px-5 py-3.5 text-surface-600 font-medium tabular-nums">{c.sentCount}</td>
                       <td className="px-5 py-3.5 text-surface-500 text-xs tabular-nums">
@@ -391,7 +401,9 @@ export default function EmailCampaignsPage() {
                   <p className="text-xs text-warning-700 mt-0.5">
                     {form.scheduledAt
                       ? `This will queue the campaign to process automatically at ${new Date(form.scheduledAt).toLocaleString()}.`
-                      : 'This will create email notifications for all active users matching the target audience. The campaign cannot be undone.'}
+                      : form.targetRole === 'LEADS_ACTIVE'
+                        ? 'This will dispatch campaign emails to all active pre-conversion leads with a valid email address. The campaign cannot be undone.'
+                        : 'This will create email notifications for all active users matching the target audience. The campaign cannot be undone.'}
                   </p>
                 </div>
               </div>
@@ -436,7 +448,7 @@ export default function EmailCampaignsPage() {
                   </div>
                   <div>
                     <p className="text-xs font-medium text-surface-500">Audience</p>
-                    <p className="text-sm text-surface-700 mt-0.5">{viewingCampaign.targetRole}</p>
+                    <p className="text-sm text-surface-700 mt-0.5">{AUDIENCE_LABELS[viewingCampaign.targetRole] || viewingCampaign.targetRole}</p>
                   </div>
                 </div>
                 <div className="grid grid-cols-3 gap-3">

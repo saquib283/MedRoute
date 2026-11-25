@@ -14,12 +14,15 @@ jest.mock('@/lib/prisma', () => ({
     medicalBill: { findMany: jest.fn() },
     commissionOverride: { findMany: jest.fn() },
     hotelBooking: { findMany: jest.fn() },
+    lead: { findMany: jest.fn() },
+    referralPartner: { findMany: jest.fn() },
   },
 }));
 
 import prisma from '@/lib/prisma';
 import {
   buildLast12MonthBuckets,
+  computePlatformAnalytics,
   resolveHospitalCommissionRate,
 } from '@/lib/services/analytics.service';
 import { GET as getAdminAnalytics } from '@/app/api/v1/admin/analytics/route';
@@ -52,6 +55,8 @@ function setupBaselineMocks() {
   mockedPrisma.commissionOverride.findMany.mockResolvedValue([]);
   mockedPrisma.medicalBill.findMany.mockResolvedValue([]);
   mockedPrisma.hotelBooking.findMany.mockResolvedValue([]);
+  mockedPrisma.lead.findMany.mockResolvedValue([]);
+  mockedPrisma.referralPartner.findMany.mockResolvedValue([]);
 }
 
 describe('Task 4: Financial Analytics & CommissionOverride Engine', () => {
@@ -283,5 +288,155 @@ describe('Task 4: Financial Analytics & CommissionOverride Engine', () => {
     });
     const res = await getAdminAnalytics(req);
     expect(res.status).toBe(403);
+  });
+
+  it('computes leadsFunnel with stageCounts, conversionRatePercent, slaBreachCount, and partnerPerformance in computePlatformAnalytics', async () => {
+    const now = new Date('2026-11-25T10:00:00.000Z');
+    setupBaselineMocks();
+
+    // Call 1 in computePlatformAnalytics: closedCasesData; Call 2 in computeLeadsCrmAnalytics: attributedCases
+    mockedPrisma.case.findMany
+      .mockResolvedValueOnce([])
+      .mockResolvedValueOnce([
+        { id: 'case-p1', referralPartnerId: 'rp-1' },
+      ]);
+
+    // Call 1 in computePlatformAnalytics: all medicalBills; Call 2 in computeLeadsCrmAnalytics: partner-attributed bills
+    mockedPrisma.medicalBill.findMany
+      .mockResolvedValueOnce([
+        {
+          id: 'bill-p1',
+          hospitalId: 'hosp-1',
+          totalAmount: 10000,
+          paidAmount: 4000,
+          status: 'PARTIALLY_PAID',
+          createdAt: new Date('2026-11-20T10:00:00.000Z'),
+        },
+      ])
+      .mockResolvedValueOnce([
+        {
+          totalAmount: 10000,
+          caseId: 'case-p1',
+          case: { referralPartnerId: 'rp-1' },
+        },
+      ]);
+
+    mockedPrisma.referralPartner.findMany.mockResolvedValue([
+      {
+        id: 'rp-1',
+        name: 'Gulf MedConnect Muscat',
+        code: 'GULF-MUSCAT',
+        partnerType: 'FACILITATOR_AGENCY',
+        country: 'Oman',
+        commissionPercent: 12,
+      },
+      {
+        id: 'rp-2',
+        name: 'Nairobi Heart & Ortho Clinic',
+        code: 'NAIROBI-HEART',
+        partnerType: 'REFERRING_PHYSICIAN',
+        country: 'Kenya',
+        commissionPercent: 8,
+      },
+    ]);
+
+    mockedPrisma.lead.findMany.mockResolvedValue([
+      {
+        id: 'lead-1',
+        status: 'CONVERTED',
+        source: 'B2B_PARTNER',
+        lostReason: null,
+        referralPartnerId: 'rp-1',
+        convertedCaseId: 'case-p1',
+        createdAt: new Date('2026-11-24T09:00:00.000Z'),
+        firstResponseDueAt: new Date('2026-11-24T10:00:00.000Z'),
+        firstRespondedAt: new Date('2026-11-24T09:30:00.000Z'), // 30m, on time
+      },
+      {
+        id: 'lead-2',
+        status: 'NEW',
+        source: 'B2B_PARTNER',
+        lostReason: null,
+        referralPartnerId: 'rp-1',
+        convertedCaseId: null,
+        createdAt: new Date('2026-11-25T08:00:00.000Z'),
+        firstResponseDueAt: new Date('2026-11-25T09:00:00.000Z'), // breached relative to 10:00
+        firstRespondedAt: null,
+      },
+      {
+        id: 'lead-3',
+        status: 'CLINICAL_REVIEW',
+        source: 'WEBSITE_INQUIRY',
+        lostReason: null,
+        referralPartnerId: 'rp-2',
+        convertedCaseId: null,
+        createdAt: new Date('2026-11-25T09:00:00.000Z'),
+        firstResponseDueAt: new Date('2026-11-25T10:00:00.000Z'),
+        firstRespondedAt: new Date('2026-11-25T10:15:00.000Z'), // 75m, responded late -> breach
+      },
+      {
+        id: 'lead-4',
+        status: 'LOST',
+        source: 'WHATSAPP',
+        lostReason: 'PRICE_TOO_HIGH',
+        referralPartnerId: null,
+        convertedCaseId: null,
+        createdAt: new Date('2026-11-25T09:30:00.000Z'),
+        firstResponseDueAt: new Date('2026-11-25T13:30:00.000Z'),
+        firstRespondedAt: new Date('2026-11-25T09:45:00.000Z'), // 15m, on time
+      },
+    ]);
+
+    const result = await computePlatformAnalytics(now);
+
+    expect(result.leadsFunnel.totalLeads).toBe(4);
+    expect(result.leadsFunnel.activeLeads).toBe(2);
+    expect(result.leadsFunnel.convertedLeads).toBe(1);
+    expect(result.leadsFunnel.lostLeads).toBe(1);
+    expect(result.leadsFunnel.conversionRatePercent).toBe(25);
+    expect(result.leadsFunnel.avgFirstResponseMinutes).toBe(40); // (30 + 75 + 15) / 3
+    expect(result.leadsFunnel.slaBreachCount).toBe(2);
+    expect(result.leadsFunnel.slaCompliancePercent).toBe(50);
+
+    const newStage = result.leadsFunnel.stageCounts.find((s) => s.status === 'NEW');
+    const reviewStage = result.leadsFunnel.stageCounts.find((s) => s.status === 'CLINICAL_REVIEW');
+    const convertedStage = result.leadsFunnel.stageCounts.find((s) => s.status === 'CONVERTED');
+    const lostStage = result.leadsFunnel.stageCounts.find((s) => s.status === 'LOST');
+    expect(newStage?.count).toBe(1);
+    expect(reviewStage?.count).toBe(1);
+    expect(convertedStage?.count).toBe(1);
+    expect(lostStage?.count).toBe(1);
+    expect(result.leadsFunnel.lostReasonBreakdown).toEqual([
+      { reason: 'PRICE_TOO_HIGH', count: 1 },
+    ]);
+
+    expect(result.leadsFunnel.partnerPerformance[0]).toEqual({
+      id: 'rp-1',
+      name: 'Gulf MedConnect Muscat',
+      code: 'GULF-MUSCAT',
+      partnerType: 'FACILITATOR_AGENCY',
+      country: 'Oman',
+      commissionPercent: 12,
+      totalLeads: 2,
+      convertedLeads: 1,
+      conversionRatePercent: 50,
+      attributedCases: 1,
+      attributedRevenueUsd: 10000,
+      estimatedPartnerCommissionUsd: 1200,
+    });
+    expect(result.leadsFunnel.partnerPerformance[1]).toEqual({
+      id: 'rp-2',
+      name: 'Nairobi Heart & Ortho Clinic',
+      code: 'NAIROBI-HEART',
+      partnerType: 'REFERRING_PHYSICIAN',
+      country: 'Kenya',
+      commissionPercent: 8,
+      totalLeads: 1,
+      convertedLeads: 0,
+      conversionRatePercent: 0,
+      attributedCases: 0,
+      attributedRevenueUsd: 0,
+      estimatedPartnerCommissionUsd: 0,
+    });
   });
 });

@@ -6,6 +6,7 @@
  */
 
 import { useState, useEffect } from 'react';
+import Link from 'next/link';
 import { Card } from '@/components/ui/Card';
 import { Badge } from '@/components/ui/Badge';
 
@@ -18,6 +19,8 @@ interface DashboardData {
     activeCases: number;
     appointmentsThisPeriod: number;
     pendingEscalations: number;
+    openLeads?: number;
+    slaBreachedLeads?: number;
   };
   trends: { appointments: number; cases: number };
   statusDistribution: { status: string; count: number }[];
@@ -89,19 +92,26 @@ export default function AdminDashboardPage() {
   const [period, setPeriod] = useState('7d');
 
   useEffect(() => {
+    let cancelled = false;
     async function fetchDashboard() {
       setLoading(true);
       try {
         const res = await fetch(`/api/v1/admin/dashboard?period=${period}`);
         const json = await res.json();
-        if (json.success) setData(json.data);
+        if (!cancelled && json.success) setData(json.data);
       } catch (err) {
         console.error('Dashboard fetch error:', err);
       } finally {
-        setLoading(false);
+        if (!cancelled) setLoading(false);
       }
     }
-    fetchDashboard();
+    const timer = setTimeout(() => {
+      void fetchDashboard();
+    }, 0);
+    return () => {
+      cancelled = true;
+      clearTimeout(timer);
+    };
   }, [period]);
 
   if (loading) {
@@ -113,6 +123,7 @@ export default function AdminDashboardPage() {
   }
 
   const m = data?.metrics;
+  const slaBreachedCount = m?.slaBreachedLeads ?? 0;
   const kpis = [
     { label: 'Total users', value: m?.totalUsers || 0, icon: UsersIcon },
     { label: 'Active patients', value: m?.totalPatients || 0, icon: PatientIcon },
@@ -121,6 +132,21 @@ export default function AdminDashboardPage() {
     { label: 'Active cases', value: m?.activeCases || 0, icon: CasesIcon, trend: data?.trends.cases },
     { label: 'Appointments', value: m?.appointmentsThisPeriod || 0, icon: CalendarIcon, trend: data?.trends.appointments },
     { label: 'Pending escalations', value: m?.pendingEscalations || 0, icon: EscalationIcon },
+    {
+      label: 'Active leads',
+      value: m?.openLeads ?? 0,
+      icon: LeadsIcon,
+      href: '/admin/leads',
+      hrefLabel: 'Open Leads CRM',
+    },
+    {
+      label: 'SLA attention',
+      value: slaBreachedCount,
+      icon: SlaAlertIcon,
+      href: '/admin/leads',
+      hrefLabel: slaBreachedCount > 0 ? 'Review SLA breaches' : 'View lead SLAs',
+      tone: slaBreachedCount > 0 ? ('danger' as const) : undefined,
+    },
   ];
 
   // For segmented bar representation
@@ -166,9 +192,21 @@ export default function AdminDashboardPage() {
               <div className="flex items-start justify-between gap-3">
                 <div className="space-y-1">
                   <p className="text-xs font-medium text-surface-500">{kpi.label}</p>
-                  <p className="text-2xl font-semibold tracking-tight tabular-nums text-surface-900">{kpi.value}</p>
+                  <p
+                    className={`text-2xl font-semibold tracking-tight tabular-nums ${
+                      'tone' in kpi && kpi.tone === 'danger' ? 'text-danger-700' : 'text-surface-900'
+                    }`}
+                  >
+                    {kpi.value}
+                  </p>
                 </div>
-                <div className="w-9 h-9 rounded-md bg-surface-100 text-surface-600 border border-surface-200 flex items-center justify-center shrink-0">
+                <div
+                  className={`w-9 h-9 rounded-md border flex items-center justify-center shrink-0 ${
+                    'tone' in kpi && kpi.tone === 'danger'
+                      ? 'bg-danger-50 text-danger-700 border-danger-200'
+                      : 'bg-surface-100 text-surface-600 border-surface-200'
+                  }`}
+                >
                   <Icon className="w-4 h-4" />
                 </div>
               </div>
@@ -177,6 +215,15 @@ export default function AdminDashboardPage() {
                 <div className="flex items-center gap-2 mt-4 pt-3 border-t border-surface-200">
                   <TrendBadge value={kpi.trend} />
                   <span className="text-xs text-surface-500 font-medium">vs previous period</span>
+                </div>
+              ) : 'href' in kpi && kpi.href ? (
+                <div className="mt-3 pt-2 border-t border-surface-200">
+                  <Link
+                    href={kpi.href}
+                    className="inline-flex items-center min-h-11 text-xs font-medium text-primary-700 hover:text-primary-800 transition-colors"
+                  >
+                    {kpi.hrefLabel} →
+                  </Link>
                 </div>
               ) : (
                 <div className="h-4 mt-4" />
@@ -398,6 +445,12 @@ function EscalationIcon(p: React.SVGProps<SVGSVGElement>) {
 }
 function MapPinIcon(p: React.SVGProps<SVGSVGElement>) {
   return <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2} {...p}><path strokeLinecap="round" strokeLinejoin="round" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" /><path strokeLinecap="round" strokeLinejoin="round" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" /></svg>;
+}
+function LeadsIcon(p: React.SVGProps<SVGSVGElement>) {
+  return <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2} {...p}><path strokeLinecap="round" strokeLinejoin="round" d="M18 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z" /></svg>;
+}
+function SlaAlertIcon(p: React.SVGProps<SVGSVGElement>) {
+  return <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2} {...p}><path strokeLinecap="round" strokeLinejoin="round" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>;
 }
 
 

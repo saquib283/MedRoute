@@ -13,6 +13,8 @@ interface DashboardMetrics {
   totalPatients: number;
   activeCases: number;
   upcomingAppointments: number;
+  openLeads?: number;
+  slaBreachedLeads?: number;
 }
 
 export default function ManagerDashboard() {
@@ -20,20 +22,27 @@ export default function ManagerDashboard() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    let cancelled = false;
     async function fetchMetrics() {
       try {
         const res = await fetch('/api/v1/manager/dashboard');
         if (res.ok) {
           const data = await res.json();
-          setMetrics(data.metrics);
+          if (!cancelled) setMetrics(data.metrics);
         }
       } catch (err) {
         console.error('Failed to load dashboard metrics:', err);
       } finally {
-        setLoading(false);
+        if (!cancelled) setLoading(false);
       }
     }
-    fetchMetrics();
+    const timer = setTimeout(() => {
+      void fetchMetrics();
+    }, 0);
+    return () => {
+      cancelled = true;
+      clearTimeout(timer);
+    };
   }, []);
 
   if (loading) {
@@ -59,7 +68,7 @@ export default function ManagerDashboard() {
       </div>
 
       {/* KPI Cards Grid */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
         <Card className="p-5 flex items-start justify-between gap-4">
           <div>
             <p className="text-xs font-medium text-surface-500">Assigned Cohort</p>
@@ -76,7 +85,7 @@ export default function ManagerDashboard() {
 
         <Card className="p-5 flex items-start justify-between gap-4">
           <div>
-            <p className="text-xs font-medium text-surface-500">Active Inquiries</p>
+            <p className="text-xs font-medium text-surface-500">Active Cases</p>
             <p className="text-2xl font-semibold tracking-tight tabular-nums text-surface-900 mt-1.5">
               {metrics?.activeCases ?? 0}
             </p>
@@ -101,6 +110,60 @@ export default function ManagerDashboard() {
             </svg>
           </div>
         </Card>
+
+        <Card className="p-5 flex flex-col justify-between">
+          <div className="flex items-start justify-between gap-4">
+            <div>
+              <p className="text-xs font-medium text-surface-500">Active Leads</p>
+              <p className="text-2xl font-semibold tracking-tight tabular-nums text-surface-900 mt-1.5">
+                {metrics?.openLeads ?? 0}
+              </p>
+            </div>
+            <div className="w-9 h-9 rounded-md bg-primary-50 text-primary-700 border border-primary-200 flex items-center justify-center shrink-0">
+              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.75}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M18 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z" />
+              </svg>
+            </div>
+          </div>
+          <Link
+            href="/manager/leads"
+            className="inline-flex items-center min-h-11 mt-2 text-xs font-medium text-primary-700 hover:text-primary-800 transition-colors"
+          >
+            Open Leads CRM →
+          </Link>
+        </Card>
+
+        <Card className="p-5 flex flex-col justify-between">
+          <div className="flex items-start justify-between gap-4">
+            <div>
+              <p className="text-xs font-medium text-surface-500">SLA Attention</p>
+              <p
+                className={`text-2xl font-semibold tracking-tight tabular-nums mt-1.5 ${
+                  (metrics?.slaBreachedLeads ?? 0) > 0 ? 'text-danger-700' : 'text-surface-900'
+                }`}
+              >
+                {metrics?.slaBreachedLeads ?? 0}
+              </p>
+            </div>
+            <div
+              className={`w-9 h-9 rounded-md border flex items-center justify-center shrink-0 ${
+                (metrics?.slaBreachedLeads ?? 0) > 0
+                  ? 'bg-danger-50 text-danger-700 border-danger-200'
+                  : 'bg-surface-100 text-surface-600 border-surface-200'
+              }`}
+            >
+              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.75}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+            </div>
+          </div>
+          <Link
+            href="/manager/leads"
+            className="inline-flex items-center min-h-11 mt-2 text-xs font-medium text-primary-700 hover:text-primary-800 transition-colors"
+          >
+            {(metrics?.slaBreachedLeads ?? 0) > 0 ? 'Respond to overdue leads →' : 'View lead SLA queue →'}
+          </Link>
+        </Card>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
@@ -113,6 +176,15 @@ export default function ManagerDashboard() {
             </p>
           </div>
           <div className="space-y-2.5 mt-5">
+            <Link
+              href="/manager/leads"
+              className="w-full min-h-[44px] px-3.5 py-2 inline-flex items-center justify-start gap-2.5 text-xs font-medium rounded-md bg-white hover:bg-surface-50 text-surface-700 border border-surface-300 hover:border-surface-400 shadow-2xs transition-colors"
+            >
+              <svg className="w-4 h-4 text-primary-600 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.75}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M18 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z" />
+              </svg>
+              Open Leads CRM Pipeline
+            </Link>
             <Link
               href="/manager/appointments"
               className="w-full min-h-[44px] px-3.5 py-2 inline-flex items-center justify-start gap-2.5 text-xs font-medium rounded-md bg-white hover:bg-surface-50 text-surface-700 border border-surface-300 hover:border-surface-400 shadow-2xs transition-colors"
