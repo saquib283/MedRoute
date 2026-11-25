@@ -72,6 +72,10 @@ export const PERMISSIONS = {
   'manage:email-campaigns': ['ADMIN'],
   'manage:email-templates': ['ADMIN'],
   'view:advanced-analytics': ['ADMIN'],
+
+  // Advanced Leads CRM & B2B Referral Partners
+  'manage:leads': ['MANAGER', 'ADMIN'],
+  'manage:referral-partners': ['ADMIN'],
 } as const;
 
 export type Permission = keyof typeof PERMISSIONS;
@@ -126,6 +130,8 @@ export const PUBLIC_ROUTES = [
   '/login',
   '/register',
   '/forgot-password',
+  '/inquiry',
+  '/api/v1/public/inquiries',
   '/api/v1/auth/login',
   '/api/v1/auth/register',
   '/api/v1/auth/2fa/setup',
@@ -143,6 +149,8 @@ export const ROUTE_ROLES: Record<string, UserRole[]> = {
   '/doctor': ['DOCTOR'],
   '/manager': ['MANAGER', 'ADMIN'],
   '/admin': ['ADMIN'],
+  '/leads': ['MANAGER', 'ADMIN'],
+  '/referral-partners': ['MANAGER', 'ADMIN'],
   '/notifications': ['PATIENT', 'MANAGER', 'DOCTOR', 'ADMIN'],
 };
 
