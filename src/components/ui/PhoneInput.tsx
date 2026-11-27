@@ -293,7 +293,7 @@ export function PhoneInput({
         </label>
       )}
 
-      <div className="relative flex rounded-xl shadow-2xs">
+      <div className="relative flex rounded-xl shadow-xs">
         {/* Custom Country Code Dropdown Trigger */}
         <div className="relative shrink-0">
           <button

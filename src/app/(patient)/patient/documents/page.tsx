@@ -9,6 +9,7 @@ import { useState, useEffect, useMemo, useRef, useCallback } from 'react';
 import { Card } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { Badge } from '@/components/ui/Badge';
+import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
 import { Select, SelectOption } from '@/components/ui/Select';
 import { DOCUMENT_CATEGORY_LABELS } from '@/lib/constants';
 import {
@@ -166,22 +167,28 @@ export default function DocumentVaultPage() {
     }
   };
 
-  const handleDelete = async (docId: string, docName: string) => {
-    if (!confirm(`Are you sure you want to delete "${docName}" from your vault?`)) return;
+  const [deleteTarget, setDeleteTarget] = useState<{ id: string; name: string } | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
 
+  const executeDelete = async () => {
+    if (!deleteTarget) return;
+    setIsDeleting(true);
     try {
-      const res = await fetch(`/api/v1/patient/documents?id=${docId}`, {
+      const res = await fetch(`/api/v1/patient/documents?id=${deleteTarget.id}`, {
         method: 'DELETE',
       });
       const data = await res.json();
       if (data.success) {
-        setSuccessMsg(`Document "${docName}" deleted.`);
+        setSuccessMsg(`Document "${deleteTarget.name}" deleted.`);
+        setDeleteTarget(null);
         fetchDocuments();
       } else {
         setErrorMsg(data.error?.message || 'Failed to delete file.');
       }
     } catch {
       setErrorMsg('Network error deleting document.');
+    } finally {
+      setIsDeleting(false);
     }
   };
 
@@ -493,7 +500,7 @@ export default function DocumentVaultPage() {
                         </a>
                         <button
                           type="button"
-                          onClick={() => handleDelete(doc.id, doc.originalName)}
+                          onClick={() => setDeleteTarget({ id: doc.id, name: doc.originalName })}
                           className="p-1.5 rounded-lg text-danger-600 hover:bg-danger-50 transition-colors"
                           title="Delete Document"
                         >
@@ -546,7 +553,7 @@ export default function DocumentVaultPage() {
                             </a>
                             <button
                               type="button"
-                              onClick={() => handleDelete(doc.id, doc.originalName)}
+                              onClick={() => setDeleteTarget({ id: doc.id, name: doc.originalName })}
                               className="text-danger-600 font-semibold hover:underline flex items-center gap-1"
                             >
                               <Trash2 className="w-3.5 h-3.5" /> Delete
@@ -575,6 +582,20 @@ export default function DocumentVaultPage() {
           )}
         </div>
       </div>
+
+      <ConfirmDialog
+        open={Boolean(deleteTarget)}
+        title="Delete Document"
+        message={
+          deleteTarget
+            ? `Delete "${deleteTarget.name}" from your document vault? This cannot be undone.`
+            : ''
+        }
+        confirmLabel="Delete"
+        loading={isDeleting}
+        onConfirm={executeDelete}
+        onCancel={() => setDeleteTarget(null)}
+      />
     </div>
   );
 }

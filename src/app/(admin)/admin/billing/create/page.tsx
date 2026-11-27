@@ -18,12 +18,6 @@ import {
   Save,
   ArrowLeft,
   Receipt,
-  Scale,
-  Building2,
-  Hotel,
-  Layers,
-  Send,
-  DollarSign,
   Calculator,
 } from 'lucide-react';
 
@@ -67,17 +61,14 @@ export default function CreateMasterInvoicePage() {
   const [selectedHospitalId, setSelectedHospitalId] = useState('');
   const [selectedHostelId, setSelectedHostelId] = useState('');
   const [currency, setCurrency] = useState('USD');
-  const [dueDate, setDueDate] = useState('');
-  const [notes, setNotes] = useState('');
+  const [dueDate] = useState('');
+  const [notes] = useState('');
   const [isMilestoneMode, setIsMilestoneMode] = useState(false);
-  const [procedureTitle, setProcedureTitle] = useState('Comprehensive Surgical & Hospital Package');
+  const [procedureTitle] = useState('Comprehensive Surgical & Hospital Package');
 
   // Line items
   const [lineItems, setLineItems] = useState<LineItem[]>([
-    { description: 'Hospital Surgical & OT Charges (Includes Surgeon & Anaesthetist Fees)', quantity: 1, unitPrice: 5000, category: 'PROCEDURE' },
-    { description: 'Medical Guest House Deluxe Accommodation (7 Nights + Cardiac Diet)', quantity: 7, unitPrice: 80, category: 'ROOM' },
-    { description: 'Airport Stretcher & Specialized Ambulance Transfer', quantity: 2, unitPrice: 60, category: 'TRANSPORT' },
-    { description: 'MediRoute Technology Platform & Visa Facilitation Fee', quantity: 1, unitPrice: 300, category: 'FEE' },
+    { description: '', quantity: 1, unitPrice: 0, category: 'PROCEDURE' },
   ]);
 
   useEffect(() => {
@@ -209,6 +200,14 @@ export default function CreateMasterInvoicePage() {
     }
   };
 
+  if (loadingInitial) {
+    return (
+      <div className="flex items-center justify-center min-h-[400px]">
+        <div className="w-7 h-7 border-3 border-primary-600 border-t-transparent rounded-full animate-spin" />
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-6 animate-fade-in max-w-6xl mx-auto pb-12">
       <div className="flex items-center gap-3">
@@ -315,7 +314,7 @@ export default function CreateMasterInvoicePage() {
                   onChange={(e) => setIsMilestoneMode(e.target.checked)}
                   className="sr-only peer"
                 />
-                <div className="w-11 h-6 bg-surface-300 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-surface-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-primary-900"></div>
+                <div className="w-11 h-6 bg-surface-300 peer-focus:ring-2 peer-focus:ring-primary-500/30 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-surface-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-primary-900"></div>
               </label>
             </div>
           </Card>
@@ -354,9 +353,9 @@ export default function CreateMasterInvoicePage() {
                 <span className="font-mono font-bold text-primary-800">+{facilitationGross.toLocaleString()}</span>
               </div>
 
-              <div className="p-3 bg-gradient-to-r from-primary-900 to-primary-800 text-white rounded-xl mt-3 space-y-1">
-                <span className="text-[10px] uppercase font-bold text-primary-200 block">Total MedRoute Net Margin</span>
-                <span className="text-lg font-black font-mono block">
+              <div className="p-3.5 bg-primary-50 border border-primary-200 text-primary-950 rounded-xl mt-3 space-y-1">
+                <span className="text-[10px] uppercase font-bold text-primary-700 block">Total MediRoute Net Margin</span>
+                <span className="text-lg font-bold font-mono block">
                   {currency} {totalMedRouteMargin.toLocaleString()}
                 </span>
               </div>
@@ -378,7 +377,7 @@ export default function CreateMasterInvoicePage() {
 
           <div className="space-y-3">
             {lineItems.map((item, idx) => (
-              <div key={idx} className="p-3 bg-surface-50 rounded-xl border border-surface-200/80 grid grid-cols-12 gap-3 items-center text-xs">
+              <div key={idx} className="p-3 bg-surface-50 rounded-xl border border-surface-200/80 grid grid-cols-1 md:grid-cols-12 gap-3 items-center text-xs">
                 <div className="col-span-5">
                   <label className="block text-[10px] font-bold text-surface-500 mb-1">Description</label>
                   <input
@@ -426,10 +425,11 @@ export default function CreateMasterInvoicePage() {
                   />
                 </div>
 
-                <div className="col-span-1 flex justify-end pt-4">
+                <div className="md:col-span-1 flex justify-end md:pt-4">
                   <button
                     type="button"
                     onClick={() => removeLineItem(idx)}
+                    aria-label="Remove line item"
                     className="p-1.5 text-danger-500 hover:bg-danger-50 rounded-lg transition-colors"
                   >
                     <Trash2 className="w-4 h-4" />
@@ -441,7 +441,7 @@ export default function CreateMasterInvoicePage() {
 
           <div className="pt-4 border-t border-surface-200 flex items-center justify-between">
             <span className="text-sm font-bold text-surface-800">Total Patient Package Amount</span>
-            <span className="text-2xl font-black text-surface-900 font-mono">
+            <span className="text-2xl font-bold text-surface-900 font-mono">
               {currency} {subtotal.toLocaleString()}
             </span>
           </div>
@@ -452,7 +452,7 @@ export default function CreateMasterInvoicePage() {
           <Link href="/admin/billing">
             <Button type="button" variant="secondary">Cancel</Button>
           </Link>
-          <Button type="submit" isLoading={submitting} disabled={submitting} size="lg" className="shadow-lg">
+          <Button type="submit" isLoading={submitting} disabled={submitting} size="lg">
             <Save className="w-4 h-4 mr-2" />
             {isMilestoneMode ? 'Generate 3-Stage Milestone Invoices' : 'Issue Consolidated Master Invoice'}
           </Button>

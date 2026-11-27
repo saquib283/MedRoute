@@ -12,6 +12,7 @@ import { Badge } from '@/components/ui/Badge';
 import { DatePicker } from '@/components/ui/DatePicker';
 import { Select } from '@/components/ui/Select';
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
+import { Modal } from '@/components/ui/Modal';
 import { toast } from '@/components/ui/Toast';
 
 interface Hospital {
@@ -79,6 +80,11 @@ export default function AdminHospitalsPage() {
     name: '',
   });
   const [deactivating, setDeactivating] = useState(false);
+  const [overrideDeleteConfirm, setOverrideDeleteConfirm] = useState<{ open: boolean; id: string }>({
+    open: false,
+    id: '',
+  });
+  const [deletingOverride, setDeletingOverride] = useState(false);
 
   // Fetch role on mount
   useEffect(() => {
@@ -154,19 +160,29 @@ export default function AdminHospitalsPage() {
     }
   };
 
-  const handleDeleteOverride = async (id: string) => {
-    if (!confirm('Are you sure you want to cancel and remove this commission override?')) return;
+  const handleDeleteOverride = (id: string) => {
+    setOverrideDeleteConfirm({ open: true, id });
+  };
+
+  const confirmDeleteOverride = async () => {
+    if (!overrideDeleteConfirm.id) return;
+    setDeletingOverride(true);
     try {
-      const res = await fetch(`/api/v1/admin/hospitals/overrides?id=${id}`, { method: 'DELETE' });
+      const res = await fetch(`/api/v1/admin/hospitals/overrides?id=${overrideDeleteConfirm.id}`, {
+        method: 'DELETE',
+      });
       const data = await res.json();
       if (data.success) {
         toast.success('Override removed successfully');
+        setOverrideDeleteConfirm({ open: false, id: '' });
         fetchOverrides(selectedHospitalId);
       } else {
         toast.error(data.error?.message || 'Failed to delete override');
       }
     } catch {
       toast.error('Failed to delete override');
+    } finally {
+      setDeletingOverride(false);
     }
   };
 
@@ -523,113 +539,108 @@ export default function AdminHospitalsPage() {
         </div>
       )}
 
-      {showModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-surface-900/40 backdrop-blur-xs">
-          <div className="bg-white rounded-lg shadow-xl w-full max-w-lg animate-scale-up max-h-[90vh] overflow-y-auto">
-            <div className="px-6 py-4 border-b border-surface-100 flex items-center justify-between sticky top-0 bg-white z-10">
-              <h3 className="text-sm font-bold text-surface-900">{editing ? 'Edit Hospital' : 'Add Hospital'}</h3>
-              <button onClick={() => setShowModal(false)} className="text-surface-400 hover:text-surface-600 font-bold text-lg">
-                ×
-              </button>
-            </div>
-            <form onSubmit={handleSave} className="p-6 space-y-4">
-              <div className="space-y-1.5">
-                <label className="block text-xs font-semibold text-surface-700">Name</label>
-                <input
-                  type="text"
-                  required
-                  value={form.name}
-                  onChange={(e) => setForm({ ...form, name: e.target.value })}
-                  className="w-full p-2.5 border border-surface-300 rounded text-sm focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500"
-                />
-              </div>
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-1.5">
-                  <label className="block text-xs font-semibold text-surface-700">City</label>
-                  <input
-                    type="text"
-                    required
-                    value={form.city}
-                    onChange={(e) => setForm({ ...form, city: e.target.value })}
-                    className="w-full p-2.5 border border-surface-300 rounded text-sm focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500"
-                  />
-                </div>
-                <div className="space-y-1.5">
-                  <label className="block text-xs font-semibold text-surface-700">Accreditation</label>
-                  <input
-                    type="text"
-                    value={form.accreditation}
-                    onChange={(e) => setForm({ ...form, accreditation: e.target.value })}
-                    className="w-full p-2.5 border border-surface-300 rounded text-sm focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500"
-                  />
-                </div>
-              </div>
-              <div className="space-y-1.5">
-                <label className="block text-xs font-semibold text-surface-700">Address</label>
-                <textarea
-                  rows={2}
-                  required
-                  value={form.address}
-                  onChange={(e) => setForm({ ...form, address: e.target.value })}
-                  className="w-full p-2.5 border border-surface-300 rounded text-sm focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500"
-                />
-              </div>
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-1.5">
-                  <label className="block text-xs font-semibold text-surface-700">Contact Person</label>
-                  <input
-                    type="text"
-                    value={form.contactPerson}
-                    onChange={(e) => setForm({ ...form, contactPerson: e.target.value })}
-                    className="w-full p-2.5 border border-surface-300 rounded text-sm focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500"
-                  />
-                </div>
-                <div className="space-y-1.5">
-                  <label className="block text-xs font-semibold text-surface-700">Commission %</label>
-                  <input
-                    type="number"
-                    step="0.01"
-                    value={form.commissionRate}
-                    onChange={(e) => setForm({ ...form, commissionRate: e.target.value })}
-                    className="w-full p-2.5 border border-surface-300 rounded text-sm focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500"
-                  />
-                </div>
-              </div>
-              <div className="space-y-1.5">
-                <label className="block text-xs font-semibold text-surface-700">Departments (comma-separated)</label>
-                <input
-                  type="text"
-                  value={form.departments}
-                  onChange={(e) => setForm({ ...form, departments: e.target.value })}
-                  className="w-full p-2.5 border border-surface-300 rounded text-sm focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500"
-                  placeholder="Cardiology, Neurology, Orthopaedics"
-                />
-              </div>
-              {editing && (
-                <div className="flex items-center gap-2">
-                  <input
-                    type="checkbox"
-                    id="hospActive"
-                    checked={form.isActive}
-                    onChange={(e) => setForm({ ...form, isActive: e.target.checked })}
-                  />
-                  <label htmlFor="hospActive" className="text-sm font-medium text-surface-700">
-                    Active
-                  </label>
-                </div>
-              )}
-              <div className="flex gap-3 pt-2">
-                <Button type="button" variant="secondary" className="flex-1" onClick={() => setShowModal(false)}>
-                  Cancel
-                </Button>
-                <Button type="submit" className="flex-1" isLoading={saving}>
-                  {editing ? 'Save' : 'Create'}
-                </Button>
-              </div>
-            </form>
+      <Modal
+        open={showModal}
+        onClose={() => setShowModal(false)}
+        title={editing ? 'Edit Hospital' : 'Add Hospital'}
+        maxWidth="lg"
+      >
+        <form onSubmit={handleSave} className="space-y-4">
+          <div className="space-y-1.5">
+            <label className="block text-xs font-semibold text-surface-700">Name</label>
+            <input
+              type="text"
+              required
+              value={form.name}
+              onChange={(e) => setForm({ ...form, name: e.target.value })}
+              className="w-full p-2.5 border border-surface-300 rounded text-sm focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500"
+            />
           </div>
-        </div>
-      )}
+          <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-1.5">
+              <label className="block text-xs font-semibold text-surface-700">City</label>
+              <input
+                type="text"
+                required
+                value={form.city}
+                onChange={(e) => setForm({ ...form, city: e.target.value })}
+                className="w-full p-2.5 border border-surface-300 rounded text-sm focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500"
+              />
+            </div>
+            <div className="space-y-1.5">
+              <label className="block text-xs font-semibold text-surface-700">Accreditation</label>
+              <input
+                type="text"
+                value={form.accreditation}
+                onChange={(e) => setForm({ ...form, accreditation: e.target.value })}
+                className="w-full p-2.5 border border-surface-300 rounded text-sm focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500"
+              />
+            </div>
+          </div>
+          <div className="space-y-1.5">
+            <label className="block text-xs font-semibold text-surface-700">Address</label>
+            <textarea
+              rows={2}
+              required
+              value={form.address}
+              onChange={(e) => setForm({ ...form, address: e.target.value })}
+              className="w-full p-2.5 border border-surface-300 rounded text-sm focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500"
+            />
+          </div>
+          <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-1.5">
+              <label className="block text-xs font-semibold text-surface-700">Contact Person</label>
+              <input
+                type="text"
+                value={form.contactPerson}
+                onChange={(e) => setForm({ ...form, contactPerson: e.target.value })}
+                className="w-full p-2.5 border border-surface-300 rounded text-sm focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500"
+              />
+            </div>
+            <div className="space-y-1.5">
+              <label className="block text-xs font-semibold text-surface-700">Commission %</label>
+              <input
+                type="number"
+                step="0.01"
+                value={form.commissionRate}
+                onChange={(e) => setForm({ ...form, commissionRate: e.target.value })}
+                className="w-full p-2.5 border border-surface-300 rounded text-sm focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500"
+              />
+            </div>
+          </div>
+          <div className="space-y-1.5">
+            <label className="block text-xs font-semibold text-surface-700">Departments (comma-separated)</label>
+            <input
+              type="text"
+              value={form.departments}
+              onChange={(e) => setForm({ ...form, departments: e.target.value })}
+              className="w-full p-2.5 border border-surface-300 rounded text-sm focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500"
+              placeholder="Cardiology, Neurology, Orthopaedics"
+            />
+          </div>
+          {editing && (
+            <div className="flex items-center gap-2">
+              <input
+                type="checkbox"
+                id="hospActive"
+                checked={form.isActive}
+                onChange={(e) => setForm({ ...form, isActive: e.target.checked })}
+              />
+              <label htmlFor="hospActive" className="text-sm font-medium text-surface-700">
+                Active
+              </label>
+            </div>
+          )}
+          <div className="flex gap-3 pt-2">
+            <Button type="button" variant="secondary" className="flex-1" onClick={() => setShowModal(false)}>
+              Cancel
+            </Button>
+            <Button type="submit" className="flex-1" isLoading={saving}>
+              {editing ? 'Save' : 'Create'}
+            </Button>
+          </div>
+        </form>
+      </Modal>
 
       {/* Confirm Deactivation */}
       <ConfirmDialog
@@ -641,6 +652,17 @@ export default function AdminHospitalsPage() {
         loading={deactivating}
         onConfirm={handleDeactivate}
         onCancel={() => setDeactivateConfirm({ open: false, id: '', name: '' })}
+      />
+
+      <ConfirmDialog
+        open={overrideDeleteConfirm.open}
+        title="Remove Commission Override"
+        message="Are you sure you want to remove this temporary commission override?"
+        confirmLabel="Remove"
+        variant="danger"
+        loading={deletingOverride}
+        onConfirm={confirmDeleteOverride}
+        onCancel={() => setOverrideDeleteConfirm({ open: false, id: '' })}
       />
     </div>
   );

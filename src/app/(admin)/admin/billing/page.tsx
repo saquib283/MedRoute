@@ -12,23 +12,13 @@ import { Button } from '@/components/ui/Button';
 import { PageHeader } from '@/components/ui/PageHeader';
 import { StatusBadge } from '@/components/ui/StatusBadge';
 import { Tabs, TabPanel } from '@/components/ui/Tabs';
+import { Modal } from '@/components/ui/Modal';
 import { toast } from '@/components/ui/Toast';
 import {
   Receipt,
-  Percent,
   PlusCircle,
-  Building2,
-  Hotel,
-  Clock,
-  CheckCircle2,
-  TrendingUp,
-  Download,
   Settings,
   Scale,
-  DollarSign,
-  AlertCircle,
-  FileSpreadsheet,
-  ExternalLink,
 } from 'lucide-react';
 
 interface InvoiceItem {
@@ -87,7 +77,7 @@ export default function AdminBillingMasterPage() {
   // Commission Rules State
   const [rules, setRules] = useState<CommissionRuleItem[]>([]);
   const [partners, setPartners] = useState<{ hospitals: { id: string; name: string }[]; hostels: { id: string; name: string }[] }>({ hospitals: [], hostels: [] });
-  const [loadingRules, setLoadingRules] = useState(false);
+  const [, setLoadingRules] = useState(false);
 
   // New Rule Form State
   const [showAddRule, setShowAddRule] = useState(false);
@@ -151,10 +141,16 @@ export default function AdminBillingMasterPage() {
     }
   }, []);
 
+  const [settlementModalId, setSettlementModalId] = useState<string | null>(null);
+  const [utrReference, setUtrReference] = useState('');
+  const [processingSettlement, setProcessingSettlement] = useState(false);
+
   useEffect(() => {
-    fetchInvoices();
-    fetchRules();
-    fetchSettlements();
+    queueMicrotask(() => {
+      fetchInvoices();
+      fetchRules();
+      fetchSettlements();
+    });
   }, [fetchInvoices, fetchRules, fetchSettlements]);
 
   const handleCreateRule = async (e: React.FormEvent) => {
@@ -201,31 +197,46 @@ export default function AdminBillingMasterPage() {
     }
   };
 
-  const handleProcessSettlement = async (id: string) => {
-    const ref = prompt('Enter Bank Wire / Transfer Reference UTR Number:');
-    if (!ref) return;
+  const handleProcessSettlement = (id: string) => {
+    setSettlementModalId(id);
+    setUtrReference('');
+  };
 
+  const submitSettlement = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!settlementModalId || !utrReference.trim()) {
+      toast.error('Please enter transfer reference number');
+      return;
+    }
+
+    setProcessingSettlement(true);
     try {
       const res = await fetch('/api/v1/finance/settlements', {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ id, status: 'PROCESSED', paymentReference: ref }),
+        body: JSON.stringify({ id: settlementModalId, status: 'PROCESSED', paymentReference: utrReference.trim() }),
       });
       const d = await res.json();
       if (d.success) {
-        toast.success('Partner payout marked as PROCESSED');
+        toast.success('Partner payout marked as processed');
+        setSettlementModalId(null);
+        setUtrReference('');
         fetchSettlements();
+      } else {
+        toast.error(d.error || 'Failed to process settlement');
       }
     } catch {
       toast.error('Failed to process settlement');
+    } finally {
+      setProcessingSettlement(false);
     }
   };
 
   return (
-    <div className="space-y-6 animate-fade-in max-w-7xl mx-auto pb-12">
+    <div className="space-y-6 animate-fade-in pb-12">
       <PageHeader
-        title="Financial & Commission Engine Command Center"
-        subtitle="Automated multi-party split invoicing, dynamic partner commission configurator, and B2B settlement vouchers"
+        title="Billing &amp; Commission Engine"
+        subtitle="Multi-party split invoices, partner commission rules, and payout settlements"
         breadcrumbs={[
           { label: 'Admin', href: '/admin/dashboard' },
           { label: 'Billing & Commissions' },
@@ -234,43 +245,38 @@ export default function AdminBillingMasterPage() {
 
       {/* High-Level Revenue Header */}
       {invoiceSummary && (
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-          <div className="p-4 bg-white border border-surface-200 rounded-2xl shadow-2xs space-y-1">
-            <span className="text-[10px] font-bold uppercase tracking-wider text-surface-400 block">Total Patient Billings</span>
-            <span className="text-2xl font-black text-surface-900 font-mono block">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+          <Card className="p-4 space-y-1">
+            <span className="text-[11px] font-semibold uppercase tracking-wider text-surface-500 block">Total Patient Billings</span>
+            <span className="text-2xl font-bold text-surface-900 font-mono block">
               ₹{invoiceSummary.totalBilled.toLocaleString()}
             </span>
-            <span className="text-[11px] text-surface-500 block">All international packages</span>
-          </div>
+            <span className="text-xs text-surface-500 block">All international packages</span>
+          </Card>
 
-          <div className="p-4 bg-white border border-surface-200 rounded-2xl shadow-2xs space-y-1">
-            <span className="text-[10px] font-bold uppercase tracking-wider text-surface-400 block">MedRoute Commission Margin</span>
-            <div className="flex items-baseline justify-between">
-              <span className="text-2xl font-black text-primary-800 font-mono">
-                ₹{invoiceSummary.totalCommission.toLocaleString()}
-              </span>
-              <span className="text-xs font-bold text-primary-700 bg-primary-50 px-2 py-0.5 rounded-full">
-                Active Cut
-              </span>
-            </div>
-            <span className="text-[11px] text-surface-500 block">Net retained platform margin</span>
-          </div>
+          <Card className="p-4 space-y-1">
+            <span className="text-[11px] font-semibold uppercase tracking-wider text-surface-500 block">Platform Commission</span>
+            <span className="text-2xl font-bold text-primary-800 font-mono block">
+              ₹{invoiceSummary.totalCommission.toLocaleString()}
+            </span>
+            <span className="text-xs text-surface-500 block">Net retained platform margin</span>
+          </Card>
 
-          <div className="p-4 bg-white border border-surface-200 rounded-2xl shadow-2xs space-y-1">
-            <span className="text-[10px] font-bold uppercase tracking-wider text-surface-400 block">Collections Realized</span>
-            <span className="text-2xl font-black text-success-700 font-mono block">
+          <Card className="p-4 space-y-1">
+            <span className="text-[11px] font-semibold uppercase tracking-wider text-surface-500 block">Collections Realized</span>
+            <span className="text-2xl font-bold text-success-700 font-mono block">
               ₹{invoiceSummary.totalPaid.toLocaleString()}
             </span>
-            <span className="text-[11px] text-surface-500 block">Settled via international wires</span>
-          </div>
+            <span className="text-xs text-surface-500 block">Settled via wire transfers</span>
+          </Card>
 
-          <div className="p-4 bg-white border border-surface-200 rounded-2xl shadow-2xs space-y-1">
-            <span className="text-[10px] font-bold uppercase tracking-wider text-surface-400 block">Outstanding Balance Due</span>
-            <span className="text-2xl font-black text-warning-700 font-mono block">
+          <Card className="p-4 space-y-1">
+            <span className="text-[11px] font-semibold uppercase tracking-wider text-surface-500 block">Outstanding Balance</span>
+            <span className="text-2xl font-bold text-warning-700 font-mono block">
               ₹{invoiceSummary.totalOutstanding.toLocaleString()}
             </span>
-            <span className="text-[11px] text-surface-500 block">Awaiting milestone discharge</span>
-          </div>
+            <span className="text-xs text-surface-500 block">Awaiting milestone settlement</span>
+          </Card>
         </div>
       )}
 
@@ -554,6 +560,48 @@ export default function AdminBillingMasterPage() {
           </Card>
         </TabPanel>
       )}
+
+      <Modal
+        open={!!settlementModalId}
+        onClose={() => {
+          setSettlementModalId(null);
+          setUtrReference('');
+        }}
+        title="Record Partner Payout UTR"
+        subtitle="Confirm bank settlement reference for partner reconciliation"
+        maxWidth="md"
+      >
+        <form onSubmit={submitSettlement} className="space-y-4">
+          <div className="space-y-1.5">
+            <label className="block text-xs font-semibold text-surface-700">
+              Bank UTR / Remittance Reference Number *
+            </label>
+            <input
+              type="text"
+              required
+              value={utrReference}
+              onChange={(e) => setUtrReference(e.target.value)}
+              placeholder="e.g. HDFC524891003421"
+              className="w-full px-3 py-2 bg-white border border-surface-300 rounded-lg text-sm font-mono focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500"
+            />
+          </div>
+          <div className="flex justify-end gap-2 pt-2">
+            <Button
+              type="button"
+              variant="secondary"
+              onClick={() => {
+                setSettlementModalId(null);
+                setUtrReference('');
+              }}
+            >
+              Cancel
+            </Button>
+            <Button type="submit" isLoading={processingSettlement}>
+              Confirm Settlement
+            </Button>
+          </div>
+        </form>
+      </Modal>
     </div>
   );
 }

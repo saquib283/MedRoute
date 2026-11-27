@@ -10,6 +10,7 @@ import { Card } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { DatePicker } from '@/components/ui/DatePicker';
 import { Select } from '@/components/ui/Select';
+import { Modal } from '@/components/ui/Modal';
 
 enum AccommodationStatus {
   PENDING = 'PENDING',
@@ -310,82 +311,75 @@ export default function AccommodationsManager() {
       </Card>
 
       {/* Booking Wizard Modal */}
-      {isBookModalOpen && (
-        <div className="fixed inset-0 bg-surface-900/30 backdrop-blur-xs flex items-center justify-center z-50 p-4">
-          <Card className="bg-white max-w-md w-full p-6 space-y-4 border border-surface-200 shadow-lg animate-slide-up">
-            <div className="flex justify-between items-center pb-2.5 border-b border-surface-100">
-              <h3 className="font-bold text-surface-900 text-base">Book Hostel Lodging</h3>
-              <button onClick={() => setIsBookModalOpen(false)} className="text-surface-400 hover:text-surface-600 font-semibold text-sm">
-                Cancel
-              </button>
-            </div>
+      <Modal
+        open={isBookModalOpen}
+        onClose={() => setIsBookModalOpen(false)}
+        title="Book Stay Accommodation"
+        maxWidth="md"
+      >
+        {formError && (
+          <div className="bg-danger-50 text-danger-700 p-2.5 rounded-lg border border-danger-200 mb-4 text-xs">
+            {formError}
+          </div>
+        )}
 
-            {formError && (
-              <div className="bg-red-50 text-red-700 p-2.5 rounded border border-red-200">
-                {formError}
-              </div>
-            )}
+        <form onSubmit={handleCreateBooking} className="space-y-4 font-semibold text-surface-700">
+          <Select
+            label="Patient"
+            value={targetPatientId}
+            onChange={setTargetPatientId}
+            options={[
+              { value: '', label: 'Select patient' },
+              ...patients.map((p) => ({
+                value: p.id,
+                label: `${p.user.fullName} ${p.cases.length === 0 ? '(No active case)' : ''}`,
+              })),
+            ]}
+            required
+          />
 
-            <form onSubmit={handleCreateBooking} className="space-y-4 font-semibold text-surface-700">
-              <Select
-                label="Patient Selection"
-                value={targetPatientId}
-                onChange={setTargetPatientId}
-                options={[
-                  { value: '', label: '-- Choose patient --' },
-                  ...patients.map((p) => ({
-                    value: p.id,
-                    label: `${p.user.fullName} ${p.cases.length === 0 ? '(No active cases)' : ''}`
-                  }))
-                ]}
-                required
-              />
+          <Select
+            label="Property"
+            value={targetHostelId}
+            onChange={setTargetHostelId}
+            options={[
+              { value: '', label: 'Select partner property' },
+              ...hostels.map((h) => ({
+                value: h.id,
+                label: `${h.name} (${h.city}) — ₹${Number(h.pricingPerNight).toLocaleString()}/night`,
+              })),
+            ]}
+            required
+          />
 
-              <Select
-                label="Hostel Property"
-                value={targetHostelId}
-                onChange={setTargetHostelId}
-                options={[
-                  { value: '', label: '-- Choose partner hostel --' },
-                  ...hostels.map((h) => ({
-                    value: h.id,
-                    label: `${h.name} (${h.city}) — $${h.pricingPerNight}/night`
-                  }))
-                ]}
-                required
-              />
+          <Select
+            label="Room Type"
+            value={targetRoomType}
+            onChange={(val) => setTargetRoomType(val as RoomType)}
+            options={[
+              { value: RoomType.SINGLE, label: 'Single Private Room' },
+              { value: RoomType.DOUBLE, label: 'Shared Double Room' },
+              { value: RoomType.SUITE, label: 'Executive Suite' },
+              { value: RoomType.DORMITORY, label: 'Shared Ward Room' },
+            ]}
+            required
+          />
 
-              <Select
-                label="Room Type"
-                value={targetRoomType}
-                onChange={(val) => setTargetRoomType(val as RoomType)}
-                options={[
-                  { value: RoomType.SINGLE, label: 'Single Private Room' },
-                  { value: RoomType.DOUBLE, label: 'Shared Double Room' },
-                  { value: RoomType.SUITE, label: 'Full Recovery Suite' },
-                  { value: RoomType.DORMITORY, label: 'Shared Ward Room' }
-                ]}
-                required
-              />
+          <div className="grid grid-cols-2 gap-3">
+            <DatePicker label="Check-in Date" value={checkInDate} onChange={setCheckInDate} placeholder="Pick check-in" />
+            <DatePicker label="Check-out Date" value={checkOutDate} onChange={setCheckOutDate} placeholder="Pick check-out" />
+          </div>
 
-              {/* Dates */}
-              <div className="grid grid-cols-2 gap-3">
-                <DatePicker label="Check-in Date" value={checkInDate} onChange={setCheckInDate} placeholder="Pick check-in" />
-                <DatePicker label="Check-out Date" value={checkOutDate} onChange={setCheckOutDate} placeholder="Pick check-out" />
-              </div>
-
-              <div className="pt-3 border-t border-surface-100 flex gap-2">
-                <Button className="flex-1" type="submit" disabled={submitting}>
-                  {submitting ? 'Registering booking...' : 'Confirm Lodging'}
-                </Button>
-                <Button className="flex-1" variant="secondary" type="button" onClick={() => setIsBookModalOpen(false)}>
-                  Cancel
-                </Button>
-              </div>
-            </form>
-          </Card>
-        </div>
-      )}
+          <div className="pt-3 border-t border-surface-200 flex gap-2">
+            <Button className="flex-1" variant="secondary" type="button" onClick={() => setIsBookModalOpen(false)}>
+              Cancel
+            </Button>
+            <Button className="flex-1" type="submit" disabled={submitting}>
+              {submitting ? 'Booking...' : 'Confirm Booking'}
+            </Button>
+          </div>
+        </form>
+      </Modal>
     </div>
   );
 }

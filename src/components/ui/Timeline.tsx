@@ -1,6 +1,7 @@
 'use client';
 
 import React from 'react';
+import { Check } from 'lucide-react';
 
 interface TimelineEvent {
   id: string;
@@ -24,28 +25,26 @@ export function Timeline({ events, className = '' }: TimelineProps) {
       <div className="absolute left-[19px] top-3 bottom-3 w-0.5 bg-surface-200" />
 
       <div className="space-y-0">
-        {events.map((event, idx) => (
-          <div key={event.id} className="relative flex gap-4 pb-8 last:pb-0">
+        {events.map((event) => (
+          <div key={event.id} className="relative flex gap-4 pb-7 last:pb-0">
             {/* Dot / Icon */}
             <div className="relative z-10 shrink-0">
-              <div className={`w-10 h-10 rounded-full flex items-center justify-center border-2 transition-all ${
+              <div className={`w-10 h-10 rounded-full flex items-center justify-center border-2 ${
                 event.status === 'completed'
                   ? 'bg-success-50 border-success-500 text-success-600'
                   : event.status === 'active'
-                  ? 'bg-primary-50 border-primary-500 text-primary-600 ring-4 ring-primary-100'
+                  ? 'bg-primary-50 border-primary-600 text-primary-700 ring-4 ring-primary-100'
                   : event.status === 'cancelled'
                   ? 'bg-danger-50 border-danger-300 text-danger-500'
                   : 'bg-surface-50 border-surface-300 text-surface-400'
               }`}>
                 {event.icon || (
                   event.status === 'completed' ? (
-                    <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
-                      <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
-                    </svg>
+                    <Check className="w-4 h-4" />
                   ) : event.status === 'active' ? (
-                    <div className="w-3 h-3 rounded-full bg-primary-500 animate-pulse" />
+                    <div className="w-2.5 h-2.5 rounded-full bg-primary-600" />
                   ) : (
-                    <div className="w-2.5 h-2.5 rounded-full bg-surface-300" />
+                    <div className="w-2 h-2 rounded-full bg-surface-300" />
                   )
                 )}
               </div>

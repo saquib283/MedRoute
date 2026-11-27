@@ -6,15 +6,15 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { Card } from '@/components/ui/Card';
-import { Button } from '@/components/ui/Button';
+import { Badge } from '@/components/ui/Badge';
 import { PageHeader } from '@/components/ui/PageHeader';
+import { EmptyState } from '@/components/ui/EmptyState';
+import { PriceTag } from '@/components/ui/PriceTag';
 import { toast } from '@/components/ui/Toast';
 import {
   Stethoscope,
   GraduationCap,
-  Calendar,
-  CheckCircle2,
-  DollarSign,
+  IndianRupee,
   Languages,
 } from 'lucide-react';
 
@@ -52,48 +52,52 @@ export default function HospitalDoctorsPage() {
   }, []);
 
   useEffect(() => {
-    fetchDoctors();
+    queueMicrotask(() => fetchDoctors());
   }, [fetchDoctors]);
 
   return (
-    <div className="space-y-6 animate-fade-in max-w-7xl mx-auto pb-12">
+    <div className="space-y-6 animate-fade-in">
       <PageHeader
-        title="Hospital Specialist Doctors Roster"
-        subtitle="Empanelled super-specialist surgeons and physicians available for international patient teleconsultations and surgical procedures"
+        title="Specialist Roster"
+        subtitle="Participating specialists available for international consultations and surgical reviews"
         breadcrumbs={[
           { label: 'Hospital IPS', href: '/hospital/dashboard' },
-          { label: 'Doctor Specialists' },
+          { label: 'Specialist Roster' },
         ]}
       />
 
       {loading ? (
-        <div className="py-24 flex justify-center"><div className="w-10 h-10 border-4 border-primary-600 border-t-transparent rounded-full animate-spin" /></div>
+        <div className="py-24 flex justify-center"><div className="w-8 h-8 border-4 border-primary-600 border-t-transparent rounded-full animate-spin" /></div>
       ) : doctors.length === 0 ? (
-        <div className="p-12 text-center bg-white border border-surface-200 rounded-2xl text-surface-400">
-          No doctors empanelled under this hospital.
-        </div>
+        <Card>
+          <EmptyState
+            icon={<Stethoscope className="w-6 h-6" />}
+            title="No specialists listed"
+            description="Doctors assigned to this partner hospital will appear here."
+          />
+        </Card>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
           {doctors.map((doc) => (
-            <Card key={doc.id} className="p-5 bg-white border border-surface-200 rounded-2xl shadow-2xs space-y-3">
-              <div className="flex items-start justify-between">
-                <div className="flex items-center gap-3">
-                  <div className="w-11 h-11 rounded-full bg-primary-100 text-primary-800 font-bold flex items-center justify-center text-sm shrink-0">
-                    <Stethoscope className="w-5 h-5 text-primary-700" />
+            <Card key={doc.id} className="p-5 space-y-3">
+              <div className="flex items-start justify-between gap-2">
+                <div className="flex items-center gap-3 min-w-0">
+                  <div className="w-10 h-10 rounded-full bg-primary-50 text-primary-700 font-semibold flex items-center justify-center shrink-0">
+                    <Stethoscope className="w-5 h-5" />
                   </div>
-                  <div>
-                    <h3 className="text-sm font-bold text-surface-900">Dr. {doc.fullName}</h3>
-                    <span className="text-xs font-semibold text-primary-700 block">
-                      {doc.specialisation?.name || 'Super Specialist'}
+                  <div className="min-w-0">
+                    <h3 className="text-sm font-semibold text-surface-900 truncate">Dr. {doc.fullName}</h3>
+                    <span className="text-xs font-medium text-primary-700 block truncate">
+                      {doc.specialisation?.name || 'Specialist'}
                     </span>
                   </div>
                 </div>
-                <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-success-50 text-success-800 border border-success-200">
-                  Active Roster
-                </span>
+                <Badge variant={doc.isActive ? 'success' : 'default'} size="sm">
+                  {doc.isActive ? 'Active' : 'Inactive'}
+                </Badge>
               </div>
 
-              <div className="space-y-1.5 text-xs text-surface-600 pt-2 border-t border-surface-100">
+              <div className="space-y-1.5 text-xs text-surface-600 pt-2.5 border-t border-surface-200">
                 {doc.qualification && (
                   <div className="flex items-center gap-2">
                     <GraduationCap className="w-3.5 h-3.5 text-surface-400 shrink-0" />
@@ -101,12 +105,24 @@ export default function HospitalDoctorsPage() {
                   </div>
                 )}
                 <div className="flex items-center gap-2">
-                  <DollarSign className="w-3.5 h-3.5 text-surface-400 shrink-0" />
-                  <span>OPD Consult Fee: ₹{doc.consultationFee ? Number(doc.consultationFee).toLocaleString() : '2,500'}</span>
+                  <IndianRupee className="w-3.5 h-3.5 text-surface-400 shrink-0" />
+                  <span>
+                    Consult Fee:{' '}
+                    {doc.consultationFee != null ? (
+                      <PriceTag amountInINR={doc.consultationFee} />
+                    ) : (
+                      'On request'
+                    )}
+                  </span>
                 </div>
                 <div className="flex items-center gap-2">
                   <Languages className="w-3.5 h-3.5 text-surface-400 shrink-0" />
-                  <span>Languages: English, Hindi, Arabic (Interpreter)</span>
+                  <span>
+                    Languages:{' '}
+                    {doc.languages && doc.languages.length > 0
+                      ? doc.languages.join(', ')
+                      : 'Not specified'}
+                  </span>
                 </div>
               </div>
             </Card>

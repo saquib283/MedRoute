@@ -8,10 +8,8 @@
 import { useState, useEffect, useCallback } from 'react';
 import { Card } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
-import { Input } from '@/components/ui/Input';
 import { PageHeader } from '@/components/ui/PageHeader';
 import { StatCard } from '@/components/ui/StatCard';
-import { StatusBadge } from '@/components/ui/StatusBadge';
 import { toast } from '@/components/ui/Toast';
 import { useCurrency } from '@/lib/currency/CurrencyContext';
 import {
@@ -19,14 +17,12 @@ import {
   RefreshCw,
   Lock,
   Unlock,
-  TrendingUp,
   Percent,
   Edit2,
   Check,
   X,
   Search,
   DollarSign,
-  ShieldCheck,
 } from 'lucide-react';
 
 interface RateDetail {
@@ -71,7 +67,7 @@ export default function CurrencySettingsPage() {
   }, []);
 
   useEffect(() => {
-    fetchRates();
+    queueMicrotask(() => fetchRates());
   }, [fetchRates]);
 
   const handleSyncLive = async () => {
@@ -263,7 +259,7 @@ export default function CurrencySettingsPage() {
                       {/* Currency Name & Flag */}
                       <td className="py-3 px-3 font-semibold text-surface-900">
                         <div className="flex items-center gap-2">
-                          <span className="text-lg">{meta?.flag || '🌐'}</span>
+                          <span className="text-lg">{meta?.flag || 'FX'}</span>
                           <div>
                             <p className="font-bold text-surface-900">{r.toCurrency}</p>
                             <p className="text-[11px] text-surface-400">{meta?.name || r.toCurrency}</p>

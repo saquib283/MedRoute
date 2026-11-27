@@ -255,7 +255,7 @@ export function DatePicker({
                       w-8 h-8 rounded-xl text-xs font-semibold flex items-center justify-center transition-all
                       ${
                         isSelected
-                          ? 'bg-primary-600 text-white font-bold shadow-2xs'
+                          ? 'bg-primary-600 text-white font-bold shadow-xs'
                           : isToday
                           ? 'border border-primary-500 text-primary-700 bg-primary-50'
                           : 'text-surface-700 hover:bg-surface-100'

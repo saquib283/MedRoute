@@ -11,22 +11,20 @@ import {
   Building2,
   Lock,
   HelpCircle,
-  ArrowLeft,
-  CheckCircle2,
 } from 'lucide-react';
 
 export const metadata: Metadata = {
   title: 'Terms & Conditions — MediRoute India',
   description:
-    'Terms of service and patient facilitation agreement for MediRoute India medical tourism services.',
+    'Terms of service and patient facilitation agreement for MediRoute India medical coordination services.',
 };
 
 export default function TermsPage() {
   return (
-    <div className="min-h-screen bg-surface-50 font-sans text-surface-800">
+    <div className="min-h-screen bg-surface-100 font-sans text-surface-800">
       {/* Top Header */}
-      <header className="sticky top-0 z-30 bg-white/90 backdrop-blur-md border-b border-surface-200">
-        <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
+      <header className="sticky top-0 z-30 bg-white border-b border-surface-200">
+        <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
           <Link href="/" className="flex items-center gap-2">
             <Image src={logoImg} alt="MediRoute India" height={32} className="h-8 w-auto object-contain" priority />
           </Link>
@@ -35,11 +33,11 @@ export default function TermsPage() {
               href="/inquire"
               className="text-xs sm:text-sm font-semibold text-primary-700 hover:text-primary-800"
             >
-              Get Free Quote
+              Request Estimate
             </Link>
             <Link
               href="/login"
-              className="px-3.5 py-1.5 text-xs sm:text-sm font-bold text-white bg-primary-600 hover:bg-primary-700 rounded-lg transition-colors shadow-xs"
+              className="px-3.5 py-1.5 text-xs sm:text-sm font-semibold text-white bg-primary-600 hover:bg-primary-700 rounded-lg transition-colors"
             >
               Sign In
             </Link>
@@ -47,39 +45,39 @@ export default function TermsPage() {
         </div>
       </header>
 
-      {/* Hero Banner */}
-      <section className="bg-gradient-to-br from-primary-950 via-primary-900 to-primary-800 text-white py-12 sm:py-16">
-        <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 text-center space-y-4">
-          <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-white/10 text-primary-200 text-xs font-semibold border border-white/15">
+      {/* Document Header */}
+      <section className="bg-white border-b border-surface-200 py-10 sm:py-12">
+        <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 space-y-3">
+          <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-surface-100 text-surface-700 text-xs font-semibold border border-surface-200">
             <FileText className="w-3.5 h-3.5" />
             <span>Effective Date: August 28, 2026</span>
           </div>
-          <h1 className="text-3xl sm:text-4xl font-extrabold tracking-tight">
-            Terms & Conditions
+          <h1 className="text-3xl font-bold text-surface-900 tracking-tight">
+            Terms &amp; Conditions
           </h1>
-          <p className="text-sm sm:text-base text-primary-200/80 max-w-2xl mx-auto font-light leading-relaxed">
-            Please read these Terms of Service carefully before utilizing MediRoute India&apos;s medical travel coordination, hospital liaison, and concierge services.
+          <p className="text-sm sm:text-base text-surface-600 max-w-2xl leading-relaxed">
+            Terms governing MediRoute India&apos;s medical travel coordination, hospital liaison, and support services.
           </p>
         </div>
       </section>
 
       {/* Main Content */}
-      <main className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-12 space-y-10">
-        {/* Important Healthcare Facilitation Disclaimer Alert */}
-        <div className="p-5 sm:p-6 bg-warning-50 border-2 border-warning-300 rounded-2xl flex items-start gap-4 shadow-xs">
-          <AlertTriangle className="w-6 h-6 text-warning-700 shrink-0 mt-0.5" />
-          <div className="space-y-2">
-            <h3 className="text-base font-bold text-warning-900 uppercase tracking-wide">
-              Medical Disclaimer & Nature of Services
-            </h3>
+      <main className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-10 space-y-6">
+        {/* Healthcare Facilitation Disclaimer */}
+        <div className="p-5 bg-warning-50 border border-warning-300 rounded-xl flex items-start gap-3.5">
+          <AlertTriangle className="w-5 h-5 text-warning-700 shrink-0 mt-0.5" />
+          <div className="space-y-1.5">
+            <h2 className="text-sm font-bold text-warning-900 uppercase tracking-wide">
+              Medical Disclaimer &amp; Nature of Services
+            </h2>
             <p className="text-sm text-warning-800 leading-relaxed">
-              <strong>MediRoute India Pvt. Ltd. is a healthcare facilitation, travel concierge, and medical coordination platform.</strong> MediRoute India is <strong>not</strong> a hospital, clinic, or medical practitioner. We do not provide medical advice, diagnosis, or treatment. All clinical evaluations, surgeries, diagnoses, and medical procedures are executed solely by independent, licensed partner hospitals and physicians in India.
+              <strong>MediRoute India Pvt. Ltd. is a healthcare facilitation and medical travel coordination platform.</strong> MediRoute India is <strong>not</strong> a hospital, clinic, or medical practitioner and does not provide medical advice, diagnosis, or treatment. All clinical evaluations, procedures, and medical care are provided solely by independent licensed partner hospitals and physicians in India.
             </p>
           </div>
         </div>
 
         {/* Section 1 */}
-        <section className="space-y-3 bg-white p-6 sm:p-8 rounded-2xl border border-surface-200 shadow-2xs">
+        <section className="space-y-3 bg-white p-6 sm:p-7 rounded-xl border border-surface-200 shadow-xs">
           <div className="flex items-center gap-2.5 text-primary-700">
             <Building2 className="w-5 h-5" />
             <h2 className="text-lg font-bold text-surface-900">1. Scope of Facilitation Services</h2>
@@ -98,7 +96,7 @@ export default function TermsPage() {
         </section>
 
         {/* Section 2 */}
-        <section className="space-y-3 bg-white p-6 sm:p-8 rounded-2xl border border-surface-200 shadow-2xs">
+        <section className="space-y-3 bg-white p-6 sm:p-8 rounded-xl border border-surface-200 shadow-xs">
           <div className="flex items-center gap-2.5 text-primary-700">
             <CreditCard className="w-5 h-5" />
             <h2 className="text-lg font-bold text-surface-900">2. Financial Terms, Cost Estimates & Currency Conversion</h2>
@@ -117,7 +115,7 @@ export default function TermsPage() {
         </section>
 
         {/* Section 3 */}
-        <section className="space-y-3 bg-white p-6 sm:p-8 rounded-2xl border border-surface-200 shadow-2xs">
+        <section className="space-y-3 bg-white p-6 sm:p-8 rounded-xl border border-surface-200 shadow-xs">
           <div className="flex items-center gap-2.5 text-primary-700">
             <Plane className="w-5 h-5" />
             <h2 className="text-lg font-bold text-surface-900">3. Travel, Medical Visas & FRRO Compliance</h2>
@@ -133,7 +131,7 @@ export default function TermsPage() {
         </section>
 
         {/* Section 4 */}
-        <section className="space-y-3 bg-white p-6 sm:p-8 rounded-2xl border border-surface-200 shadow-2xs">
+        <section className="space-y-3 bg-white p-6 sm:p-8 rounded-xl border border-surface-200 shadow-xs">
           <div className="flex items-center gap-2.5 text-primary-700">
             <Shield className="w-5 h-5" />
             <h2 className="text-lg font-bold text-surface-900">4. Patient Responsibilities & Medical Records</h2>
@@ -150,7 +148,7 @@ export default function TermsPage() {
         </section>
 
         {/* Section 5 */}
-        <section className="space-y-3 bg-white p-6 sm:p-8 rounded-2xl border border-surface-200 shadow-2xs">
+        <section className="space-y-3 bg-white p-6 sm:p-8 rounded-xl border border-surface-200 shadow-xs">
           <div className="flex items-center gap-2.5 text-primary-700">
             <Lock className="w-5 h-5" />
             <h2 className="text-lg font-bold text-surface-900">5. Limitation of Liability & Medical Malpractice</h2>
@@ -166,7 +164,7 @@ export default function TermsPage() {
         </section>
 
         {/* Section 6 */}
-        <section className="space-y-3 bg-white p-6 sm:p-8 rounded-2xl border border-surface-200 shadow-2xs">
+        <section className="space-y-3 bg-white p-6 sm:p-8 rounded-xl border border-surface-200 shadow-xs">
           <div className="flex items-center gap-2.5 text-primary-700">
             <HelpCircle className="w-5 h-5" />
             <h2 className="text-lg font-bold text-surface-900">6. Governing Law & Dispute Resolution</h2>

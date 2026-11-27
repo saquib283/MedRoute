@@ -10,6 +10,8 @@ import Link from 'next/link';
 import { Card } from '@/components/ui/Card';
 import { Badge } from '@/components/ui/Badge';
 import { Button } from '@/components/ui/Button';
+import { PageHeader } from '@/components/ui/PageHeader';
+import { StatCard } from '@/components/ui/StatCard';
 import {
   Calendar,
   FolderLock,
@@ -17,9 +19,7 @@ import {
   CheckCircle2,
   MessageSquare,
   FileText,
-  ShieldCheck,
   Stethoscope,
-  ArrowRight,
   Home,
 } from 'lucide-react';
 
@@ -104,119 +104,73 @@ export default function PatientDashboard() {
   }
 
   return (
-    <div className="space-y-8 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 animate-fade-in">
-      {/* ─── Hero / Welcome Banner ───────────────────────────────────────── */}
-      <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6 bg-gradient-to-r from-primary-900 via-primary-800 to-primary-950 p-6 sm:p-8 rounded-3xl text-white shadow-md relative overflow-hidden">
-        <div className="absolute -top-10 -right-10 w-48 h-48 rounded-full bg-primary-500/20 blur-3xl pointer-events-none" />
-
-        <div className="space-y-2 max-w-2xl relative z-10">
-          <div className="inline-flex items-center gap-2 bg-primary-800/80 border border-primary-700/60 px-3 py-1 rounded-full text-[11px] font-semibold text-primary-200">
-            <ShieldCheck className="w-3.5 h-3.5 text-success-400" />
-            <span>HIPAA Compliant Patient Portal</span>
+    <div className="space-y-6 animate-fade-in">
+      <PageHeader
+        title="Care Overview"
+        subtitle="Track treatment milestones, appointments, uploaded reports, and coordinator updates"
+        actions={
+          <div className="flex flex-wrap items-center gap-2">
+            <Link href="/patient/profile">
+              <Button variant="secondary" size="sm">Edit Profile</Button>
+            </Link>
+            <Link href="/patient/documents">
+              <Button size="sm">Upload Document</Button>
+            </Link>
           </div>
-          <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight flex items-center gap-2">
-            Welcome to MediRoute India
-          </h1>
-          <p className="text-sm text-primary-200 leading-relaxed">
-            Track your treatment roadmap, communicate directly with your case coordinator, and manage medical records securely.
-          </p>
-        </div>
+        }
+      />
 
-        <div className="flex items-center gap-3 relative z-10 shrink-0">
-          <Link href="/patient/profile">
-            <button
-              type="button"
-              className="px-4 py-2.5 bg-primary-800/80 hover:bg-primary-700/80 border border-primary-600/60 text-white rounded-xl text-xs font-bold transition-all"
-            >
-              Edit Profile
-            </button>
-          </Link>
-          <Link href="/patient/documents">
-            <button
-              type="button"
-              className="px-4 py-2.5 bg-white hover:bg-primary-50 text-primary-900 rounded-xl text-xs font-bold transition-all shadow-xs"
-            >
-              Upload Medical Report
-            </button>
-          </Link>
-        </div>
-      </div>
-
-      {/* ─── Metric KPI Widgets Grid ─────────────────────────────────────── */}
+      {/* Metric KPI Widgets Grid */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        {/* KPI 1 */}
-        <Card className="p-5 rounded-2xl border border-surface-200 shadow-xs hover:shadow-md transition-all flex items-center justify-between">
-          <div>
-            <p className="text-xs font-bold uppercase tracking-wider text-surface-600">Upcoming Consults</p>
-            <h3 className="text-2xl font-extrabold text-surface-900 mt-1">{appointmentsCount}</h3>
-            <Link href="/patient/appointments" className="text-[11px] font-semibold text-primary-600 hover:text-primary-700 mt-1 inline-flex items-center gap-1">
-              View Schedule <ArrowRight className="w-3 h-3" />
-            </Link>
-          </div>
-          <div className="w-12 h-12 rounded-2xl bg-primary-50 text-primary-600 border border-primary-100 flex items-center justify-center font-bold text-xl shrink-0">
-            <Calendar className="w-6 h-6" />
-          </div>
-        </Card>
-
-        {/* KPI 2 */}
-        <Card className="p-5 rounded-2xl border border-surface-200 shadow-xs hover:shadow-md transition-all flex items-center justify-between">
-          <div>
-            <p className="text-xs font-bold uppercase tracking-wider text-surface-500">Document Vault</p>
-            <h3 className="text-2xl font-extrabold text-surface-900 mt-1">{documentsCount}</h3>
-            <Link href="/patient/documents" className="text-[11px] font-semibold text-info-600 hover:text-info-700 mt-1 inline-flex items-center gap-1">
-              Manage Vault <ArrowRight className="w-3 h-3" />
-            </Link>
-          </div>
-          <div className="w-12 h-12 rounded-2xl bg-info-50 text-info-600 border border-info-100 flex items-center justify-center font-bold text-xl shrink-0">
-            <FolderLock className="w-6 h-6" />
-          </div>
-        </Card>
-
-        {/* KPI 3 */}
-        <Card className="p-5 rounded-2xl border border-surface-200 shadow-xs hover:shadow-md transition-all flex items-center justify-between">
-          <div className="min-w-0 pr-2">
-            <p className="text-xs font-bold uppercase tracking-wider text-surface-500">Case Manager</p>
-            <h3 className="text-base font-extrabold text-surface-900 mt-1 truncate">
-              {activeCase?.manager?.fullName || 'Unassigned'}
-            </h3>
-            <Link href="/patient/messages" className="text-[11px] font-semibold text-success-600 hover:text-success-700 mt-1 inline-flex items-center gap-1">
-              Open Chat <ArrowRight className="w-3 h-3" />
-            </Link>
-          </div>
-          <div className="w-12 h-12 rounded-2xl bg-success-50 text-success-600 border border-success-100 flex items-center justify-center font-bold text-xl shrink-0">
-            <UserCheck className="w-6 h-6" />
-          </div>
-        </Card>
-
-        {/* KPI 4 */}
-        <Card className="p-5 rounded-2xl border border-surface-200 shadow-xs hover:shadow-md transition-all flex flex-col justify-between">
+        <StatCard
+          title="Upcoming Consults"
+          value={appointmentsCount}
+          subtitle="Scheduled visits"
+          variant="primary"
+          icon={<Calendar className="w-5 h-5" />}
+        />
+        <StatCard
+          title="Document Vault"
+          value={documentsCount}
+          subtitle="Encrypted files"
+          variant="default"
+          icon={<FolderLock className="w-5 h-5" />}
+        />
+        <StatCard
+          title="Case Coordinator"
+          value={activeCase?.manager?.fullName || 'Pending'}
+          subtitle="Assigned liaison"
+          variant="success"
+          icon={<UserCheck className="w-5 h-5" />}
+        />
+        <Card className="p-5 flex flex-col justify-between">
           <div className="flex items-center justify-between text-xs">
-            <span className="font-bold uppercase tracking-wider text-surface-600">Journey Progress</span>
+            <span className="font-semibold uppercase tracking-wider text-surface-500">Case Progress</span>
             <span className="font-bold text-primary-700">{progressPercentage}%</span>
           </div>
-          <div className="w-full bg-surface-100 h-3 rounded-full overflow-hidden my-2">
+          <div className="w-full bg-surface-100 h-2.5 rounded-full overflow-hidden my-2">
             <div
-              className="bg-primary-600 h-full rounded-full transition-all duration-500"
+              className="bg-primary-600 h-full rounded-full transition-all duration-300"
               style={{ width: `${progressPercentage}%` }}
             />
           </div>
           <span className="text-xs text-surface-500">
-            Phase {activeIndex + 1} of {STATUS_STEPS.length}: {STATUS_STEPS[activeIndex]?.label}
+            Step {activeIndex + 1} of {STATUS_STEPS.length}: {STATUS_STEPS[activeIndex]?.label}
           </span>
         </Card>
       </div>
 
-      {/* ─── Treatment Roadmap & Case Stepper ─────────────────────────────── */}
-      <Card className="p-6 rounded-2xl shadow-xs border border-surface-200 space-y-6">
-        <div className="border-b border-surface-100 pb-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+      {/* Treatment Roadmap & Case Stepper */}
+      <Card className="space-y-6">
+        <div className="border-b border-surface-200 pb-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
           <div>
-            <h2 className="text-base font-bold text-surface-900 tracking-tight">Treatment Journey Roadmap</h2>
-            <p className="text-xs text-surface-600 mt-0.5">Track your clinical milestones from inquiry to post-treatment recovery.</p>
+            <h2 className="text-base font-semibold text-surface-900">Treatment Roadmap</h2>
+            <p className="text-xs text-surface-500 mt-0.5">Clinical milestones from initial inquiry through recovery</p>
           </div>
 
           {activeCase && (
             <div className="flex items-center gap-2">
-              <span className="text-xs font-semibold text-surface-600">Current Phase:</span>
+              <span className="text-xs font-medium text-surface-500">Current Stage:</span>
               <Badge variant={activeCase.status === 'CLOSED' ? 'default' : 'primary'} dot>
                 {STATUS_STEPS[activeIndex]?.label || activeCase.status}
               </Badge>
@@ -326,24 +280,21 @@ export default function PatientDashboard() {
           )}
         </Card>
 
-        {/* Action Required Checklist */}
-        <Card className="lg:col-span-2 p-6 rounded-2xl shadow-xs border border-surface-200 space-y-4">
-          <div className="border-b border-surface-100 pb-3 flex items-center justify-between">
-            <h3 className="text-xs font-bold text-surface-900 uppercase tracking-wider">Action Items & Shortcuts</h3>
-            <span className="text-[10px] font-bold text-primary-600 bg-primary-50 px-2 py-0.5 rounded-md border border-primary-100">
-              High Priority
-            </span>
+        {/* Action Checklist */}
+        <Card className="lg:col-span-2 space-y-4">
+          <div className="border-b border-surface-200 pb-3">
+            <h3 className="text-xs font-semibold text-surface-900 uppercase tracking-wider">Next Steps &amp; Shortcuts</h3>
           </div>
 
           <div className="space-y-3">
-            <div className="p-4 border border-surface-200 rounded-xl bg-surface-50/60 hover:bg-surface-50 transition-colors flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs">
+            <div className="p-4 border border-surface-200 rounded-lg bg-surface-50 flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs">
               <div className="flex items-start gap-3">
-                <div className="w-8 h-8 rounded-xl bg-primary-100 text-primary-800 flex items-center justify-center shrink-0">
+                <div className="w-8 h-8 rounded-lg bg-primary-50 text-primary-700 border border-primary-100 flex items-center justify-center shrink-0">
                   <FileText className="w-4 h-4" />
                 </div>
                 <div>
-                  <p className="font-bold text-surface-900">Upload Recent Lab Reports & ECG</p>
-                  <p className="text-xs text-surface-600 mt-0.5">Required by Indian hospital specialists prior to confirmed scheduling.</p>
+                  <p className="font-semibold text-surface-900">Upload Recent Lab Reports &amp; Scans</p>
+                  <p className="text-xs text-surface-600 mt-0.5">Needed by partner specialists prior to scheduling.</p>
                 </div>
               </div>
               <Link href="/patient/documents">
@@ -353,14 +304,14 @@ export default function PatientDashboard() {
               </Link>
             </div>
 
-            <div className="p-4 border border-surface-200 rounded-xl bg-surface-50/60 hover:bg-surface-50 transition-colors flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs">
+            <div className="p-4 border border-surface-200 rounded-lg bg-surface-50 flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs">
               <div className="flex items-start gap-3">
-                <div className="w-8 h-8 rounded-xl bg-success-100 text-success-800 flex items-center justify-center shrink-0">
+                <div className="w-8 h-8 rounded-lg bg-primary-50 text-primary-700 border border-primary-100 flex items-center justify-center shrink-0">
                   <Stethoscope className="w-4 h-4" />
                 </div>
                 <div>
-                  <p className="font-bold text-surface-900">Review Care Specialties</p>
-                  <p className="text-xs text-surface-600 mt-0.5">Select the medical specialties required for your treatment itinerary.</p>
+                  <p className="font-semibold text-surface-900">Update Medical History &amp; Specialties</p>
+                  <p className="text-xs text-surface-600 mt-0.5">Keep allergies, medications, and specialty preferences current.</p>
                 </div>
               </div>
               <Link href="/patient/profile">
@@ -370,19 +321,19 @@ export default function PatientDashboard() {
               </Link>
             </div>
 
-            <div className="p-4 border border-surface-200 rounded-xl bg-surface-50/60 hover:bg-surface-50 transition-colors flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs">
+            <div className="p-4 border border-surface-200 rounded-lg bg-surface-50 flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs">
               <div className="flex items-start gap-3">
-                <div className="w-8 h-8 rounded-xl bg-teal-100 text-teal-800 flex items-center justify-center shrink-0">
+                <div className="w-8 h-8 rounded-lg bg-primary-50 text-primary-700 border border-primary-100 flex items-center justify-center shrink-0">
                   <Home className="w-4 h-4" />
                 </div>
                 <div>
-                  <p className="font-bold text-surface-900">Reserve Recuperation Hostel</p>
-                  <p className="text-xs text-surface-600 mt-0.5">Book verified local hostel lodging for your treatment and recovery timeline.</p>
+                  <p className="font-semibold text-surface-900">Browse Recovery Accommodations</p>
+                  <p className="text-xs text-surface-600 mt-0.5">View verified nearby stays for your treatment dates.</p>
                 </div>
               </div>
               <Link href="/patient/accommodations">
                 <Button variant="secondary" size="sm" className="self-start sm:self-auto">
-                  Book Lodging
+                  View Stays
                 </Button>
               </Link>
             </div>

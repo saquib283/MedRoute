@@ -6,14 +6,11 @@ import {
   Shield,
   Lock,
   Eye,
-  FileCheck,
   Globe2,
   Database,
   UserCheck,
   Clock,
   Mail,
-  AlertCircle,
-  FileText,
 } from 'lucide-react';
 
 export const metadata: Metadata = {
@@ -24,10 +21,10 @@ export const metadata: Metadata = {
 
 export default function PrivacyPolicyPage() {
   return (
-    <div className="min-h-screen bg-surface-50 font-sans text-surface-800">
+    <div className="min-h-screen bg-surface-100 font-sans text-surface-800">
       {/* Top Header */}
-      <header className="sticky top-0 z-30 bg-white/90 backdrop-blur-md border-b border-surface-200">
-        <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
+      <header className="sticky top-0 z-30 bg-white border-b border-surface-200">
+        <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
           <Link href="/" className="flex items-center gap-2">
             <Image src={logoImg} alt="MediRoute India" height={32} className="h-8 w-auto object-contain" priority />
           </Link>
@@ -40,7 +37,7 @@ export default function PrivacyPolicyPage() {
             </Link>
             <Link
               href="/login"
-              className="px-3.5 py-1.5 text-xs sm:text-sm font-bold text-white bg-primary-600 hover:bg-primary-700 rounded-lg transition-colors shadow-xs"
+              className="px-3.5 py-1.5 text-xs sm:text-sm font-semibold text-white bg-primary-600 hover:bg-primary-700 rounded-lg transition-colors"
             >
               Sign In
             </Link>
@@ -48,39 +45,39 @@ export default function PrivacyPolicyPage() {
         </div>
       </header>
 
-      {/* Hero Banner */}
-      <section className="bg-gradient-to-br from-primary-950 via-primary-900 to-primary-800 text-white py-12 sm:py-16">
-        <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 text-center space-y-4">
-          <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-white/10 text-primary-200 text-xs font-semibold border border-white/15">
+      {/* Document Header */}
+      <section className="bg-white border-b border-surface-200 py-10 sm:py-12">
+        <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 space-y-3">
+          <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-primary-50 text-primary-800 text-xs font-semibold border border-primary-200">
             <Shield className="w-3.5 h-3.5" />
-            <span>HIPAA & Digital Personal Data Protection Standards</span>
+            <span>HIPAA &amp; DPDP Act Compliance</span>
           </div>
-          <h1 className="text-3xl sm:text-4xl font-extrabold tracking-tight">
+          <h1 className="text-3xl font-bold text-surface-900 tracking-tight">
             Privacy Policy
           </h1>
-          <p className="text-sm sm:text-base text-primary-200/80 max-w-2xl mx-auto font-light leading-relaxed">
-            How MediRoute India protects your Protected Health Information (ePHI), passport credentials, and cross-border clinical data.
+          <p className="text-sm sm:text-base text-surface-600 max-w-2xl leading-relaxed">
+            How MediRoute India collects, protects, and shares electronic protected health information (ePHI), passport records, and travel data.
           </p>
         </div>
       </section>
 
       {/* Main Content */}
-      <main className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-12 space-y-10">
+      <main className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-10 space-y-6">
         {/* Commitment Highlight */}
-        <div className="p-6 bg-primary-50 border border-primary-200 rounded-2xl flex items-start gap-4 shadow-2xs">
-          <Lock className="w-6 h-6 text-primary-700 shrink-0 mt-1" />
-          <div className="space-y-1.5">
-            <h3 className="text-base font-bold text-primary-900">
-              Our Commitment to Health Data Privacy
-            </h3>
-            <p className="text-sm text-primary-800 leading-relaxed">
-              MediRoute India Pvt. Ltd. (&ldquo;MediRoute&rdquo;, &ldquo;we&rdquo;, &ldquo;our&rdquo;, or &ldquo;us&rdquo;) is dedicated to safeguarding the privacy and security of international patients. We implement enterprise-grade technical safeguards compliant with the <strong>Health Insurance Portability and Accountability Act (HIPAA)</strong> and India&apos;s <strong>Digital Personal Data Protection Act (DPDP)</strong>.
+        <div className="p-5 bg-primary-50 border border-primary-200 rounded-xl flex items-start gap-3.5">
+          <Lock className="w-5 h-5 text-primary-700 shrink-0 mt-0.5" />
+          <div className="space-y-1">
+            <h2 className="text-sm font-bold text-primary-950">
+              Data Protection Commitment
+            </h2>
+            <p className="text-sm text-primary-900 leading-relaxed">
+              MediRoute India Pvt. Ltd. applies technical and administrative safeguards aligned with the <strong>Health Insurance Portability and Accountability Act (HIPAA)</strong> and India&apos;s <strong>Digital Personal Data Protection Act (DPDP)</strong>.
             </p>
           </div>
         </div>
 
         {/* Section 1 */}
-        <section className="space-y-3 bg-white p-6 sm:p-8 rounded-2xl border border-surface-200 shadow-2xs">
+        <section className="space-y-3 bg-white p-6 sm:p-7 rounded-xl border border-surface-200 shadow-xs">
           <div className="flex items-center gap-2.5 text-primary-700">
             <Database className="w-5 h-5" />
             <h2 className="text-lg font-bold text-surface-900">1. Information We Collect</h2>
@@ -97,7 +94,7 @@ export default function PrivacyPolicyPage() {
         </section>
 
         {/* Section 2 */}
-        <section className="space-y-3 bg-white p-6 sm:p-8 rounded-2xl border border-surface-200 shadow-2xs">
+        <section className="space-y-3 bg-white p-6 sm:p-8 rounded-xl border border-surface-200 shadow-xs">
           <div className="flex items-center gap-2.5 text-primary-700">
             <Eye className="w-5 h-5" />
             <h2 className="text-lg font-bold text-surface-900">2. How We Use Your Protected Health Information</h2>
@@ -114,7 +111,7 @@ export default function PrivacyPolicyPage() {
         </section>
 
         {/* Section 3 */}
-        <section className="space-y-3 bg-white p-6 sm:p-8 rounded-2xl border border-surface-200 shadow-2xs">
+        <section className="space-y-3 bg-white p-6 sm:p-8 rounded-xl border border-surface-200 shadow-xs">
           <div className="flex items-center gap-2.5 text-primary-700">
             <Globe2 className="w-5 h-5" />
             <h2 className="text-lg font-bold text-surface-900">3. Cross-Border Transfers & Third-Party Sharing</h2>
@@ -135,7 +132,7 @@ export default function PrivacyPolicyPage() {
         </section>
 
         {/* Section 4 */}
-        <section className="space-y-3 bg-white p-6 sm:p-8 rounded-2xl border border-surface-200 shadow-2xs">
+        <section className="space-y-3 bg-white p-6 sm:p-8 rounded-xl border border-surface-200 shadow-xs">
           <div className="flex items-center gap-2.5 text-primary-700">
             <Shield className="w-5 h-5" />
             <h2 className="text-lg font-bold text-surface-900">4. Technical Safeguards & Data Security</h2>
@@ -153,7 +150,7 @@ export default function PrivacyPolicyPage() {
         </section>
 
         {/* Section 5 */}
-        <section className="space-y-3 bg-white p-6 sm:p-8 rounded-2xl border border-surface-200 shadow-2xs">
+        <section className="space-y-3 bg-white p-6 sm:p-8 rounded-xl border border-surface-200 shadow-xs">
           <div className="flex items-center gap-2.5 text-primary-700">
             <UserCheck className="w-5 h-5" />
             <h2 className="text-lg font-bold text-surface-900">5. Your Privacy Rights</h2>
@@ -170,7 +167,7 @@ export default function PrivacyPolicyPage() {
         </section>
 
         {/* Section 6 */}
-        <section className="space-y-3 bg-white p-6 sm:p-8 rounded-2xl border border-surface-200 shadow-2xs">
+        <section className="space-y-3 bg-white p-6 sm:p-8 rounded-xl border border-surface-200 shadow-xs">
           <div className="flex items-center gap-2.5 text-primary-700">
             <Clock className="w-5 h-5" />
             <h2 className="text-lg font-bold text-surface-900">6. Cookies & Regional Localization</h2>
@@ -183,7 +180,7 @@ export default function PrivacyPolicyPage() {
         </section>
 
         {/* Section 7 */}
-        <section className="space-y-3 bg-white p-6 sm:p-8 rounded-2xl border border-surface-200 shadow-2xs">
+        <section className="space-y-3 bg-white p-6 sm:p-8 rounded-xl border border-surface-200 shadow-xs">
           <div className="flex items-center gap-2.5 text-primary-700">
             <Mail className="w-5 h-5" />
             <h2 className="text-lg font-bold text-surface-900">7. Data Protection Officer & Privacy Inquiries</h2>

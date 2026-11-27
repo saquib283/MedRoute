@@ -12,6 +12,7 @@ import { Button } from '@/components/ui/Button';
 import { Badge } from '@/components/ui/Badge';
 import { Select } from '@/components/ui/Select';
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
+import { Modal } from '@/components/ui/Modal';
 import { toast } from '@/components/ui/Toast';
 
 interface EmailTemplate {
@@ -239,84 +240,81 @@ export default function EmailTemplatesPage() {
       </Card>
 
       {/* Create/Edit Modal */}
-      {showModal && (
-        <div className="fixed inset-0 z-50 flex items-start justify-center p-4 pt-[5vh] bg-surface-900/40 backdrop-blur-xs overflow-y-auto">
-          <div className="bg-white rounded-lg shadow-xl w-full max-w-3xl animate-scale-up my-8">
-            <div className="px-6 py-4 border-b border-surface-100 flex items-center justify-between">
-              <h3 className="text-sm font-bold text-surface-900">{editing ? 'Edit Template' : 'Create New Template'}</h3>
-              <button onClick={() => setShowModal(false)} className="text-surface-400 hover:text-surface-600 font-bold text-lg">×</button>
+      <Modal
+        open={showModal}
+        onClose={() => setShowModal(false)}
+        title={editing ? 'Edit Template' : 'Create New Template'}
+        maxWidth="3xl"
+      >
+        <form onSubmit={handleSave} className="space-y-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div className="space-y-1.5">
+              <label className="block text-xs font-semibold text-surface-700">Template Name *</label>
+              <input type="text" required value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} className="w-full p-2.5 border border-surface-300 rounded text-sm focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500" placeholder="e.g., Welcome Email" />
             </div>
-            <form onSubmit={handleSave} className="p-6 space-y-4">
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div className="space-y-1.5">
-                  <label className="block text-xs font-semibold text-surface-700">Template Name *</label>
-                  <input type="text" required value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} className="w-full p-2.5 border border-surface-300 rounded text-sm focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500" placeholder="e.g., Welcome Email" />
-                </div>
-                <Select
-                  label="Category"
-                  value={form.category}
-                  onChange={(val) => setForm({ ...form, category: val })}
-                  options={CATEGORIES.map((c) => ({ value: c, label: c.charAt(0).toUpperCase() + c.slice(1) }))}
-                  required
-                />
-              </div>
-
-              <div className="space-y-1.5">
-                <label className="block text-xs font-semibold text-surface-700">Subject Line *</label>
-                <input type="text" required value={form.subject} onChange={(e) => setForm({ ...form, subject: e.target.value })} className="w-full p-2.5 border border-surface-300 rounded text-sm focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500" placeholder="e.g., Welcome to MediRoute India, {{fullName}}" />
-              </div>
-
-              {/* Placeholder Hints */}
-              <div className="flex flex-wrap gap-1.5">
-                <span className="text-[10px] font-bold text-surface-500 uppercase tracking-wider self-center mr-1">Placeholders:</span>
-                {PLACEHOLDER_HINTS.map((ph) => (
-                  <button
-                    key={ph}
-                    type="button"
-                    onClick={() => setForm({ ...form, body: form.body + ph })}
-                    className="px-2 py-0.5 bg-primary-50 text-primary-700 border border-primary-200 rounded text-[10px] font-mono font-bold hover:bg-primary-100 transition-colors"
-                  >
-                    {ph}
-                  </button>
-                ))}
-              </div>
-
-              <div className="space-y-1.5">
-                <div className="flex items-center justify-between">
-                  <label className="block text-xs font-semibold text-surface-700">Email Body (HTML) *</label>
-                  <button type="button" onClick={() => setShowPreview(!showPreview)} className="text-xs font-semibold text-primary-600 hover:text-primary-700">
-                    {showPreview ? '← Back to Editor' : 'Preview →'}
-                  </button>
-                </div>
-                {showPreview ? (
-                  <div className="w-full min-h-[200px] max-h-[400px] overflow-auto p-4 border border-surface-300 rounded bg-white text-sm">
-                    <div dangerouslySetInnerHTML={{ __html: form.body }} />
-                  </div>
-                ) : (
-                  <textarea
-                    required
-                    value={form.body}
-                    onChange={(e) => setForm({ ...form, body: e.target.value })}
-                    rows={10}
-                    className="w-full p-3 border border-surface-300 rounded text-sm font-mono focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500 resize-y"
-                    placeholder="<h1>Hello {{fullName}},</h1><p>Welcome to MediRoute India...</p>"
-                  />
-                )}
-              </div>
-
-              <div className="space-y-1.5">
-                <label className="block text-xs font-semibold text-surface-700">Tracked Placeholders (comma-separated)</label>
-                <input type="text" value={form.placeholders} onChange={(e) => setForm({ ...form, placeholders: e.target.value })} className="w-full p-2.5 border border-surface-300 rounded text-sm focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500" placeholder="fullName, email, appointmentDate" />
-              </div>
-
-              <div className="flex gap-3 pt-2">
-                <Button type="button" variant="secondary" className="flex-1" onClick={() => setShowModal(false)}>Cancel</Button>
-                <Button type="submit" className="flex-1" isLoading={saving}>{editing ? 'Save Changes' : 'Create Template'}</Button>
-              </div>
-            </form>
+            <Select
+              label="Category"
+              value={form.category}
+              onChange={(val) => setForm({ ...form, category: val })}
+              options={CATEGORIES.map((c) => ({ value: c, label: c.charAt(0).toUpperCase() + c.slice(1) }))}
+              required
+            />
           </div>
-        </div>
-      )}
+
+          <div className="space-y-1.5">
+            <label className="block text-xs font-semibold text-surface-700">Subject Line *</label>
+            <input type="text" required value={form.subject} onChange={(e) => setForm({ ...form, subject: e.target.value })} className="w-full p-2.5 border border-surface-300 rounded text-sm focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500" placeholder="e.g., Welcome to MediRoute India, {{fullName}}" />
+          </div>
+
+          {/* Placeholder Hints */}
+          <div className="flex flex-wrap gap-1.5">
+            <span className="text-[10px] font-bold text-surface-500 uppercase tracking-wider self-center mr-1">Placeholders:</span>
+            {PLACEHOLDER_HINTS.map((ph) => (
+              <button
+                key={ph}
+                type="button"
+                onClick={() => setForm({ ...form, body: form.body + ph })}
+                className="px-2 py-0.5 bg-primary-50 text-primary-700 border border-primary-200 rounded text-[10px] font-mono font-bold hover:bg-primary-100 transition-colors"
+              >
+                {ph}
+              </button>
+            ))}
+          </div>
+
+          <div className="space-y-1.5">
+            <div className="flex items-center justify-between">
+              <label className="block text-xs font-semibold text-surface-700">Email Body (HTML) *</label>
+              <button type="button" onClick={() => setShowPreview(!showPreview)} className="text-xs font-semibold text-primary-600 hover:text-primary-700">
+                {showPreview ? 'Back to Editor' : 'Preview'}
+              </button>
+            </div>
+            {showPreview ? (
+              <div className="w-full min-h-[200px] max-h-[400px] overflow-auto p-4 border border-surface-300 rounded bg-white text-sm">
+                <div dangerouslySetInnerHTML={{ __html: form.body }} />
+              </div>
+            ) : (
+              <textarea
+                required
+                value={form.body}
+                onChange={(e) => setForm({ ...form, body: e.target.value })}
+                rows={10}
+                className="w-full p-3 border border-surface-300 rounded text-sm font-mono focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500 resize-y"
+                placeholder="<h1>Hello {{fullName}},</h1><p>Welcome to MediRoute India...</p>"
+              />
+            )}
+          </div>
+
+          <div className="space-y-1.5">
+            <label className="block text-xs font-semibold text-surface-700">Tracked Placeholders (comma-separated)</label>
+            <input type="text" value={form.placeholders} onChange={(e) => setForm({ ...form, placeholders: e.target.value })} className="w-full p-2.5 border border-surface-300 rounded text-sm focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500" placeholder="fullName, email, appointmentDate" />
+          </div>
+
+          <div className="flex gap-3 pt-2">
+            <Button type="button" variant="secondary" className="flex-1" onClick={() => setShowModal(false)}>Cancel</Button>
+            <Button type="submit" className="flex-1" isLoading={saving}>{editing ? 'Save Changes' : 'Create Template'}</Button>
+          </div>
+        </form>
+      </Modal>
 
       {/* Delete Confirm */}
       <ConfirmDialog

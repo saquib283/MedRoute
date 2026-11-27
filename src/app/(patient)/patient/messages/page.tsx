@@ -221,7 +221,7 @@ export default function SecureMessagesPage() {
           {groupedMessages.map((group) => (
             <div key={group.date} className="space-y-4">
               <div className="flex items-center justify-center my-2">
-                <span className="px-3 py-1 bg-white border border-surface-200 text-surface-500 rounded-full text-[10px] font-bold shadow-2xs">
+                <span className="px-3 py-1 bg-white border border-surface-200 text-surface-500 rounded-full text-[10px] font-bold shadow-xs">
                   {group.date}
                 </span>
               </div>
@@ -274,21 +274,21 @@ export default function SecureMessagesPage() {
 
           {messages.length === 0 && (
             <div className="flex flex-col items-center justify-center h-full text-center p-8 space-y-3">
-              <div className="w-14 h-14 rounded-2xl bg-white border border-surface-200 shadow-xs flex items-center justify-center text-primary-600">
-                <MessageSquare className="w-7 h-7" />
+              <div className="w-12 h-12 rounded-xl bg-white border border-surface-200 flex items-center justify-center text-primary-700">
+                <MessageSquare className="w-6 h-6" />
               </div>
-              <h3 className="text-sm font-bold text-surface-900">Secure Direct Message Channel</h3>
+              <h3 className="text-sm font-semibold text-surface-900">Coordinator Messages</h3>
               <p className="text-xs text-surface-500 max-w-sm">
-                Send a coordination request regarding your medical itinerary, doctor consultation schedule, or hostel booking.
+                Send questions about your treatment itinerary, consultations, or accommodations.
               </p>
             </div>
           )}
         </div>
 
         {/* Footer Prompt Chips & Input */}
-        <div className="p-4 border-t border-surface-100 bg-white shrink-0 space-y-3">
-          <div className="flex items-center gap-2 overflow-x-auto pb-1 scrollbar-none">
-            <span className="text-[10px] font-bold uppercase tracking-wider text-surface-400 shrink-0">Quick Prompts:</span>
+        <div className="p-4 border-t border-surface-200 bg-white shrink-0 space-y-3">
+          <div className="flex items-center gap-2 overflow-x-auto pb-1">
+            <span className="text-[11px] font-semibold uppercase tracking-wider text-surface-400 shrink-0">Suggested:</span>
             {QUICK_PROMPTS.map((item) => {
               const IconComponent = item.icon;
               return (
@@ -297,9 +297,9 @@ export default function SecureMessagesPage() {
                   type="button"
                   onClick={() => setInputMessage(item.prompt)}
                   disabled={!manager}
-                  className="px-3 py-1.5 bg-surface-100 hover:bg-primary-50 hover:text-primary-700 hover:border-primary-200 border border-surface-200 rounded-xl text-xs font-semibold text-surface-700 whitespace-nowrap transition-all flex items-center gap-1.5 disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="px-3 py-1.5 bg-surface-100 hover:bg-primary-50 hover:text-primary-700 hover:border-primary-200 border border-surface-200 rounded-lg text-xs font-medium text-surface-700 whitespace-nowrap transition-colors flex items-center gap-1.5 disabled:opacity-50 disabled:cursor-not-allowed"
                 >
-                  <IconComponent className="w-3.5 h-3.5 text-primary-600" />
+                  <IconComponent className="w-3.5 h-3.5 text-primary-700" />
                   <span>{item.label}</span>
                 </button>
               );
@@ -308,7 +308,7 @@ export default function SecureMessagesPage() {
 
           <form onSubmit={handleSend} className="space-y-2">
             {errorMsg && (
-              <div className="bg-danger-50 border border-danger-200 text-danger-800 p-2.5 rounded-xl text-xs flex items-center gap-2">
+              <div className="bg-danger-50 border border-danger-200 text-danger-800 p-2.5 rounded-lg text-xs flex items-center gap-2">
                 <AlertCircle className="w-4 h-4 text-danger-600 shrink-0" />
                 <span>{errorMsg}</span>
               </div>
@@ -317,15 +317,16 @@ export default function SecureMessagesPage() {
             <div className="flex gap-2">
               <input
                 type="text"
+                aria-label="Message input"
                 placeholder={
                   manager
-                    ? 'Write a coordination request or medical inquiry...'
+                    ? 'Write a message to your coordinator...'
                     : 'Awaiting case coordinator assignment...'
                 }
                 value={inputMessage}
                 onChange={(e) => setInputMessage(e.target.value)}
                 disabled={!manager || isSending}
-                className="flex-1 min-h-[46px] px-4 bg-surface-50 border border-surface-300 rounded-xl text-xs text-surface-900 font-medium focus:outline-none focus:border-primary-600 focus:bg-white transition-all disabled:bg-surface-100 disabled:cursor-not-allowed"
+                className="flex-1 min-h-[44px] px-4 bg-white border border-surface-300 rounded-lg text-xs text-surface-900 focus:border-primary-600 transition-colors disabled:bg-surface-100 disabled:cursor-not-allowed"
               />
               <Button
                 type="submit"
@@ -333,7 +334,7 @@ export default function SecureMessagesPage() {
                 disabled={!manager || !inputMessage.trim()}
                 size="md"
               >
-                <Send className="w-4 h-4 mr-1" /> Send
+                <Send className="w-4 h-4" /> Send
               </Button>
             </div>
           </form>

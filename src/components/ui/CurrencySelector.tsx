@@ -7,8 +7,8 @@
 
 import React, { useState, useRef, useEffect } from 'react';
 import { useCurrency } from '@/lib/currency/CurrencyContext';
-import { CurrencyCode, CountryCode } from '@/lib/currency/types';
-import { Globe, ChevronDown, Check, Search } from 'lucide-react';
+import { CurrencyCode } from '@/lib/currency/types';
+import { ChevronDown, Check, Search } from 'lucide-react';
 
 interface CurrencySelectorProps {
   variant?: 'compact' | 'pill' | 'header' | 'full';
@@ -25,9 +25,7 @@ export function CurrencySelector({
     currentCurrency,
     currencyMeta,
     supportedCurrencies,
-    countries,
     setCurrency,
-    setCountry,
     rates,
   } = useCurrency();
 
@@ -77,7 +75,7 @@ export function CurrencySelector({
         <button
           type="button"
           onClick={() => setIsOpen(!isOpen)}
-          className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg border border-surface-200 bg-white hover:bg-surface-50 text-surface-700 hover:text-surface-900 transition-all text-xs font-semibold shadow-2xs cursor-pointer"
+          className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg border border-surface-200 bg-white hover:bg-surface-50 text-surface-700 hover:text-surface-900 transition-colors text-xs font-semibold shadow-xs cursor-pointer"
           aria-label="Change currency"
           title={`Viewing in ${currencyMeta.name} (${currencyMeta.code})`}
         >
@@ -197,9 +195,9 @@ export function CurrencySelector({
           </div>
 
           {/* Quick Footer */}
-          <div className="px-3 py-1.5 bg-surface-50 text-[10px] text-surface-400 flex items-center justify-between">
-            <span>Base currency: 🇮🇳 INR</span>
-            <span>Live Forex Conversion</span>
+          <div className="px-3 py-1.5 bg-surface-50 text-[10px] text-surface-500 flex items-center justify-between">
+            <span>Base currency: INR</span>
+            <span>Reference rates</span>
           </div>
         </div>
       )}

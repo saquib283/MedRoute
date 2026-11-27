@@ -15,15 +15,16 @@ import { StatusBadge } from '@/components/ui/StatusBadge';
 import { PageHeader } from '@/components/ui/PageHeader';
 import { StatCard } from '@/components/ui/StatCard';
 import { EmptyState } from '@/components/ui/EmptyState';
+import { Modal } from '@/components/ui/Modal';
 import { PriceTag } from '@/components/ui/PriceTag';
-import { useCurrency } from '@/lib/currency/CurrencyContext';
 import { toast } from '@/components/ui/Toast';
+import { useCurrency } from '@/lib/currency/CurrencyContext';
 import {
-  CASE_STATUS_LABELS, TREATMENT_PLAN_STATUS_LABELS,
+  CASE_STATUS_LABELS,
   FOLLOW_UP_TYPE_LABELS, TRANSFER_TYPE_LABELS
 } from '@/lib/constants';
 import {
-  Stethoscope, Calendar, MapPin, Hotel, Receipt, Phone,
+  Stethoscope, MapPin, Receipt, Phone,
   CheckCircle2, Clock, Plane, FileText, Heart, Activity,
   ArrowRight, Shield, AlertCircle, Download
 } from 'lucide-react';
@@ -32,9 +33,8 @@ import {
 type JourneyCase = any;
 
 export default function PatientJourneyPage() {
-  const { format, currentCurrency } = useCurrency();
+  const { format } = useCurrency();
   const [loading, setLoading] = useState(true);
-  const [cases, setCases] = useState<JourneyCase[]>([]);
   const [activeTab, setActiveTab] = useState('timeline');
   const [activeCase, setActiveCase] = useState<JourneyCase | null>(null);
 
@@ -43,7 +43,6 @@ export default function PatientJourneyPage() {
       .then(r => r.json())
       .then(d => {
         if (d.success && d.data.cases) {
-          setCases(d.data.cases);
           if (d.data.cases.length > 0) setActiveCase(d.data.cases[0]);
         }
       })
@@ -51,7 +50,7 @@ export default function PatientJourneyPage() {
       .finally(() => setLoading(false));
   }, []);
 
-  const [signingPlan, setSigningPlan] = useState<any | null>(null);
+  const [signingPlan, setSigningPlan] = useState<JourneyCase | null>(null);
   const [signerFullName, setSignerFullName] = useState('');
   const [consent1, setConsent1] = useState(false);
   const [consent2, setConsent2] = useState(false);
@@ -92,7 +91,6 @@ export default function PatientJourneyPage() {
         const res2 = await fetch('/api/v1/patient/journey');
         const d2 = await res2.json();
         if (d2.success) {
-          setCases(d2.data.cases);
           if (d2.data.cases.length > 0) setActiveCase(d2.data.cases[0]);
         }
       } else {
@@ -305,7 +303,7 @@ export default function PatientJourneyPage() {
                     </div>
 
                     {/* Items table */}
-                    <div className="border-t border-surface-100 pt-4">
+                    <div className="border-t border-surface-100 pt-4 overflow-x-auto">
                       <table className="w-full text-sm">
                         <thead>
                           <tr className="text-xs text-surface-500 uppercase border-b border-surface-200">
@@ -404,27 +402,15 @@ export default function PatientJourneyPage() {
               )}
 
               {/* Digital E-Signature Acceptance Modal */}
-              {signingPlan && (
-                <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-surface-900/60 backdrop-blur-sm animate-fade-in">
-                  <div className="w-full max-w-lg bg-white rounded-2xl border border-surface-200 shadow-2xl p-6 sm:p-8 space-y-5 animate-scale-in">
-                    <div className="flex items-center justify-between pb-3 border-b border-surface-100">
-                      <div className="flex items-center gap-2.5">
-                        <div className="w-8 h-8 rounded-full bg-primary-100 text-primary-700 flex items-center justify-center font-bold">
-                          <Shield className="w-4 h-4" />
-                        </div>
-                        <div>
-                          <h3 className="text-base font-bold text-surface-900">Digital Acceptance & E-Signature</h3>
-                          <p className="text-[11px] text-surface-500">Legal confirmation under IT Act § 10A & HIPAA Standards</p>
-                        </div>
-                      </div>
-                      <button
-                        onClick={() => setSigningPlan(null)}
-                        className="text-surface-400 hover:text-surface-600 text-sm font-bold p-1"
-                      >
-                        ✕
-                      </button>
-                    </div>
-
+              <Modal
+                open={!!signingPlan}
+                onClose={() => setSigningPlan(null)}
+                title="Digital Acceptance & E-Signature"
+                subtitle="Legal confirmation under IT Act § 10A & HIPAA Standards"
+                maxWidth="lg"
+              >
+                {signingPlan && (
+                  <div className="space-y-5">
                     <div className="p-3.5 bg-surface-50 rounded-xl border border-surface-200/80 text-xs space-y-1">
                       <p className="font-bold text-surface-900">Plan: {signingPlan.title}</p>
                       <p className="text-surface-600">
@@ -481,7 +467,7 @@ export default function PatientJourneyPage() {
                         value={signerFullName}
                         onChange={(e) => setSignerFullName(e.target.value)}
                         placeholder="Type your full legal name to e-sign"
-                        className="w-full px-3.5 py-2 text-sm bg-surface-50 border border-surface-300 rounded-xl focus:bg-white focus:border-primary-600 focus:outline-none transition-all"
+                        className="w-full px-3.5 py-2 text-sm bg-surface-50 border border-surface-300 rounded-xl focus:bg-white focus:border-primary-600 focus:outline-none focus:ring-2 focus:ring-primary-500/20 transition-all"
                       />
                     </div>
 
@@ -500,8 +486,8 @@ export default function PatientJourneyPage() {
                       </Button>
                     </div>
                   </div>
-                </div>
-              )}
+                )}
+              </Modal>
             </div>
           </TabPanel>
         )}
@@ -665,14 +651,14 @@ export default function PatientJourneyPage() {
 
                     <div className="border-t border-surface-100 pt-4 grid grid-cols-1 lg:grid-cols-2 gap-3 text-sm">
                       {ds.dietaryInstructions && (
-                        <div className="p-3 bg-info-50 rounded-lg">
-                          <p className="text-xs font-bold text-info-700 mb-1">🍽️ Diet Instructions</p>
+                        <div className="p-3 bg-info-50 rounded-lg border border-info-200">
+                          <p className="text-xs font-semibold text-info-700 mb-1">Diet Instructions</p>
                           <p className="text-info-800">{ds.dietaryInstructions}</p>
                         </div>
                       )}
                       {ds.activityRestrictions && (
-                        <div className="p-3 bg-warning-50 rounded-lg">
-                          <p className="text-xs font-bold text-warning-700 mb-1">⚠️ Activity Restrictions</p>
+                        <div className="p-3 bg-warning-50 rounded-lg border border-warning-200">
+                          <p className="text-xs font-semibold text-warning-700 mb-1">Activity Restrictions</p>
                           <p className="text-warning-800">{ds.activityRestrictions}</p>
                         </div>
                       )}

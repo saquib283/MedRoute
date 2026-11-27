@@ -11,6 +11,7 @@ import { Button } from '@/components/ui/Button';
 import { Badge } from '@/components/ui/Badge';
 import { Select, SelectOption } from '@/components/ui/Select';
 import { DatePicker } from '@/components/ui/DatePicker';
+import { Modal } from '@/components/ui/Modal';
 import { APPOINTMENT_TYPE_LABELS } from '@/lib/constants';
 import {
   Calendar,
@@ -21,8 +22,6 @@ import {
   Table,
   Clock,
   AlertCircle,
-  Stethoscope,
-  X,
 } from 'lucide-react';
 
 interface Hospital {
@@ -435,90 +434,78 @@ export default function AppointmentsPage() {
       )}
 
       {/* Booking Modal Dialog using Custom Select & DatePicker */}
-      {isModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-surface-900/40 backdrop-blur-xs">
-          <div className="bg-white rounded-2xl border border-surface-200 shadow-2xl max-w-md w-full overflow-hidden animate-scale-in">
-            <div className="px-6 py-4 border-b border-surface-100 flex items-center justify-between bg-surface-50">
-              <h3 className="text-sm font-bold text-surface-900 flex items-center gap-2">
-                <Stethoscope className="w-4 h-4 text-primary-600" /> Request Care Consultation
-              </h3>
-              <button
-                type="button"
-                onClick={() => setIsModalOpen(false)}
-                className="w-8 h-8 rounded-lg text-surface-400 hover:text-surface-700 hover:bg-surface-200 flex items-center justify-center transition-all font-bold"
-              >
-                <X className="w-4 h-4" />
-              </button>
+      <Modal
+        open={isModalOpen}
+        onClose={() => setIsModalOpen(false)}
+        title="Request Care Consultation"
+        maxWidth="md"
+      >
+        <form onSubmit={handleBook} className="space-y-4 text-xs">
+          {errorMsg && (
+            <div className="bg-danger-50 border border-danger-200 text-danger-800 p-3 rounded-xl flex items-center gap-2">
+              <AlertCircle className="w-4 h-4 text-danger-600 shrink-0" />
+              <span>{errorMsg}</span>
             </div>
+          )}
 
-            <form onSubmit={handleBook} className="p-6 space-y-4 text-xs">
-              {errorMsg && (
-                <div className="bg-danger-50 border border-danger-200 text-danger-800 p-3 rounded-xl flex items-center gap-2">
-                  <AlertCircle className="w-4 h-4 text-danger-600 shrink-0" />
-                  <span>{errorMsg}</span>
-                </div>
-              )}
+          {/* Hospital Dropdown */}
+          <Select
+            label="Select Accredited Hospital"
+            options={hospitalSelectOptions}
+            value={selectedHospital}
+            onChange={(val) => {
+              setSelectedHospital(val);
+              setSelectedDoctor('');
+            }}
+            placeholder="Choose hospital center..."
+            searchable
+            icon={<Building2 className="w-4 h-4" />}
+            required
+          />
 
-              {/* Hospital Dropdown */}
-              <Select
-                label="Select Accredited Hospital"
-                options={hospitalSelectOptions}
-                value={selectedHospital}
-                onChange={(val) => {
-                  setSelectedHospital(val);
-                  setSelectedDoctor('');
-                }}
-                placeholder="Choose hospital center..."
-                searchable
-                icon={<Building2 className="w-4 h-4" />}
-                required
-              />
+          {/* Doctor Dropdown */}
+          <Select
+            label="Choose Medical Specialist"
+            options={filteredDoctorOptions}
+            value={selectedDoctor}
+            onChange={setSelectedDoctor}
+            placeholder={selectedHospital ? 'Select clinician...' : 'Select hospital first'}
+            disabled={!selectedHospital}
+            searchable
+            icon={<UserCheck className="w-4 h-4" />}
+            required
+          />
 
-              {/* Doctor Dropdown */}
-              <Select
-                label="Choose Medical Specialist"
-                options={filteredDoctorOptions}
-                value={selectedDoctor}
-                onChange={setSelectedDoctor}
-                placeholder={selectedHospital ? 'Select clinician...' : 'Select hospital first'}
-                disabled={!selectedHospital}
-                searchable
-                icon={<UserCheck className="w-4 h-4" />}
-                required
-              />
+          {/* Consultation Type Dropdown */}
+          <Select
+            label="Consultation Type"
+            options={APPOINTMENT_TYPE_OPTIONS}
+            value={selectedType}
+            onChange={setSelectedType}
+            placeholder="Select consultation type..."
+            required
+          />
 
-              {/* Consultation Type Dropdown */}
-              <Select
-                label="Consultation Type"
-                options={APPOINTMENT_TYPE_OPTIONS}
-                value={selectedType}
-                onChange={setSelectedType}
-                placeholder="Select consultation type..."
-                required
-              />
+          {/* DatePicker UI Component */}
+          <DatePicker
+            label="Preferred Date & Time"
+            value={scheduledAt}
+            onChange={setScheduledAt}
+            placeholder="Pick consultation date..."
+            includeTime
+            required
+          />
 
-              {/* DatePicker UI Component */}
-              <DatePicker
-                label="Preferred Date & Time"
-                value={scheduledAt}
-                onChange={setScheduledAt}
-                placeholder="Pick consultation date..."
-                includeTime
-                required
-              />
-
-              <div className="flex items-center justify-end gap-3 pt-4 border-t border-surface-100">
-                <Button type="button" variant="secondary" onClick={() => setIsModalOpen(false)}>
-                  Cancel
-                </Button>
-                <Button type="submit" isLoading={isSubmitLoading}>
-                  Confirm Request
-                </Button>
-              </div>
-            </form>
+          <div className="flex items-center justify-end gap-3 pt-4 border-t border-surface-100">
+            <Button type="button" variant="secondary" onClick={() => setIsModalOpen(false)}>
+              Cancel
+            </Button>
+            <Button type="submit" isLoading={isSubmitLoading}>
+              Confirm Request
+            </Button>
           </div>
-        </div>
-      )}
+        </form>
+      </Modal>
     </div>
   );
 }

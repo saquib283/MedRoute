@@ -6,10 +6,15 @@
  */
 
 import { useState, useEffect, useCallback } from 'react';
+import { Calendar } from 'lucide-react';
 import { Card } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { Badge } from '@/components/ui/Badge';
 import { Select } from '@/components/ui/Select';
+import { PageHeader } from '@/components/ui/PageHeader';
+import { EmptyState } from '@/components/ui/EmptyState';
+import { Modal } from '@/components/ui/Modal';
+import { toast } from '@/components/ui/Toast';
 import { APPOINTMENT_TYPE_LABELS } from '@/lib/constants';
 
 interface Appointment {
@@ -77,14 +82,15 @@ export default function DoctorAppointmentsPage() {
 
       const data = await res.json();
       if (data.success) {
+        toast.success('Consultation updated');
         setSelectedAppt(null);
-        fetchAppointments(); // refresh
+        fetchAppointments();
       } else {
-        alert('Failed to update: ' + data.error?.message);
+        toast.error(data.error?.message || 'Failed to update consultation');
       }
     } catch (err) {
       console.error(err);
-      alert('Error updating appointment.');
+      toast.error('Error updating appointment');
     } finally {
       setIsUpdating(false);
     }
@@ -97,107 +103,108 @@ export default function DoctorAppointmentsPage() {
   };
 
   return (
-    <div className="max-w-6xl mx-auto space-y-8 animate-fade-in">
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-        <div>
-          <h1 className="text-2xl font-bold text-surface-900 tracking-tight">Consultations Schedule</h1>
-          <p className="text-sm text-surface-500 mt-1">Manage your appointments, update statuses, and log clinical notes.</p>
-        </div>
-        <div className="flex gap-2">
-          <Button variant={filter === 'upcoming' ? 'primary' : 'secondary'} size="sm" onClick={() => setFilter('upcoming')}>Upcoming</Button>
-          <Button variant={filter === 'past' ? 'primary' : 'secondary'} size="sm" onClick={() => setFilter('past')}>Past</Button>
-          <Button variant={filter === 'all' ? 'primary' : 'secondary'} size="sm" onClick={() => setFilter('all')}>All</Button>
-        </div>
-      </div>
+    <div className="space-y-6 animate-fade-in">
+      <PageHeader
+        title="Consultations Schedule"
+        subtitle="Manage appointments, update statuses, and record clinical notes"
+        actions={
+          <div className="flex gap-2">
+            <Button variant={filter === 'upcoming' ? 'primary' : 'secondary'} size="sm" onClick={() => setFilter('upcoming')}>Upcoming</Button>
+            <Button variant={filter === 'past' ? 'primary' : 'secondary'} size="sm" onClick={() => setFilter('past')}>Past</Button>
+            <Button variant={filter === 'all' ? 'primary' : 'secondary'} size="sm" onClick={() => setFilter('all')}>All</Button>
+          </div>
+        }
+      />
 
       {loading ? (
         <div className="flex items-center justify-center min-h-[300px]">
           <div className="w-8 h-8 border-4 border-primary-600 border-t-transparent rounded-full animate-spin" />
         </div>
+      ) : appointments.length === 0 ? (
+        <Card>
+          <EmptyState
+            icon={<Calendar className="w-6 h-6" />}
+            title="No consultations found"
+            description="No appointments match the selected schedule filter."
+          />
+        </Card>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
-          {appointments.length === 0 ? (
-            <div className="col-span-full border border-dashed border-surface-200 rounded-lg p-12 text-center text-sm text-surface-500 bg-white">
-              No appointments found for the selected filter.
-            </div>
-          ) : (
-            appointments.map((appt) => (
-              <Card key={appt.id} className="p-5 bg-white border border-surface-200 flex flex-col hover:shadow-md transition-shadow">
-                <div className="flex justify-between items-start mb-3">
-                  <Badge variant={appt.status === 'COMPLETED' ? 'success' : appt.status === 'CANCELLED' ? 'danger' : 'primary'} dot>
-                    {appt.status}
-                  </Badge>
-                  <span className="text-[10px] text-surface-400 font-bold uppercase tracking-wider">
-                    {APPOINTMENT_TYPE_LABELS[appt.appointmentType] || appt.appointmentType}
-                  </span>
-                </div>
-                
-                <h3 className="font-bold text-surface-900 mb-1">{appt.patient.user.fullName}</h3>
-                <p className="text-xs text-surface-500 mb-4">
-                  Nationality: {appt.patient.nationality} 
-                  {appt.case.isUrgent && <span className="ml-2 text-danger-600 font-bold px-1.5 py-0.5 bg-danger-50 rounded">URGENT</span>}
-                </p>
+          {appointments.map((appt) => (
+            <Card key={appt.id} className="p-5 flex flex-col">
+              <div className="flex justify-between items-start gap-2 mb-3">
+                <Badge variant={appt.status === 'COMPLETED' ? 'success' : appt.status === 'CANCELLED' ? 'danger' : 'primary'} dot>
+                  {appt.status}
+                </Badge>
+                <span className="text-[11px] text-surface-500 font-semibold uppercase tracking-wider text-right">
+                  {APPOINTMENT_TYPE_LABELS[appt.appointmentType] || appt.appointmentType}
+                </span>
+              </div>
 
-                <div className="text-xs font-semibold text-surface-700 bg-surface-50 p-3 rounded mb-4">
-                  <p>Date: {new Date(appt.scheduledAt).toLocaleString()}</p>
-                </div>
+              <h3 className="font-semibold text-surface-900 mb-1">{appt.patient.user.fullName}</h3>
+              <p className="text-xs text-surface-500 mb-4 flex items-center gap-2">
+                <span>Nationality: {appt.patient.nationality}</span>
+                {appt.case.isUrgent && (
+                  <Badge variant="danger" size="sm">Urgent</Badge>
+                )}
+              </p>
 
-                <div className="mt-auto pt-4 border-t border-surface-100 flex gap-2">
-                  <Button className="w-full" variant="secondary" size="sm" onClick={() => openUpdateModal(appt)}>
-                    {appt.status === 'COMPLETED' ? 'View/Edit Notes' : 'Update & Notes'}
-                  </Button>
-                </div>
-              </Card>
-            ))
-          )}
+              <div className="text-xs font-medium text-surface-700 bg-surface-50 border border-surface-200 p-3 rounded-lg mb-4">
+                Scheduled: {new Date(appt.scheduledAt).toLocaleString()}
+              </div>
+
+              <div className="mt-auto pt-3 border-t border-surface-200">
+                <Button className="w-full" variant="secondary" size="sm" onClick={() => openUpdateModal(appt)}>
+                  {appt.status === 'COMPLETED' ? 'View / Edit Notes' : 'Update & Notes'}
+                </Button>
+              </div>
+            </Card>
+          ))}
         </div>
       )}
 
-      {/* Update Modal */}
-      {selectedAppt && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-surface-900/40 backdrop-blur-xs">
-          <div className="bg-white rounded-lg shadow-xl w-full max-w-md animate-scale-up">
-            <div className="px-6 py-4 border-b border-surface-100 flex items-center justify-between">
-              <h3 className="text-sm font-bold text-surface-900">Update Consultation</h3>
-              <button onClick={() => setSelectedAppt(null)} className="text-surface-400 hover:text-surface-600 font-bold text-lg">×</button>
-            </div>
-            <form onSubmit={handleUpdate} className="p-6 space-y-4">
-              <div className="space-y-1.5">
-                <label className="block text-xs font-semibold text-surface-700">Patient</label>
-                <div className="p-2.5 bg-surface-50 rounded text-sm font-medium border border-surface-200">
-                  {selectedAppt.patient.user.fullName}
-                </div>
-              </div>
-              <Select
-                label="Status"
-                value={status}
-                onChange={setStatus}
-                options={[
-                  { value: 'SCHEDULED', label: 'Scheduled' },
-                  { value: 'IN_PROGRESS', label: 'In Progress' },
-                  { value: 'COMPLETED', label: 'Completed' },
-                  { value: 'CANCELLED', label: 'Cancelled' }
-                ]}
-                required
+      <Modal
+        open={Boolean(selectedAppt)}
+        onClose={() => setSelectedAppt(null)}
+        title="Update Consultation"
+        subtitle={selectedAppt?.patient.user.fullName}
+        maxWidth="md"
+      >
+        {selectedAppt && (
+          <form onSubmit={handleUpdate} className="space-y-4">
+            <Select
+              label="Status"
+              value={status}
+              onChange={setStatus}
+              options={[
+                { value: 'SCHEDULED', label: 'Scheduled' },
+                { value: 'IN_PROGRESS', label: 'In Progress' },
+                { value: 'COMPLETED', label: 'Completed' },
+                { value: 'CANCELLED', label: 'Cancelled' }
+              ]}
+              required
+            />
+            <div className="space-y-1.5">
+              <label className="block text-sm font-medium text-surface-800">Clinical Notes</label>
+              <textarea
+                rows={5}
+                value={notes}
+                onChange={(e) => setNotes(e.target.value)}
+                placeholder="Record clinical findings, prescriptions, or follow-up notes..."
+                className="w-full p-3 border border-surface-300 rounded-lg text-sm focus:border-primary-600"
               />
-              <div className="space-y-1.5">
-                <label className="block text-xs font-semibold text-surface-700">Clinical Notes</label>
-                <textarea
-                  rows={5}
-                  value={notes}
-                  onChange={(e) => setNotes(e.target.value)}
-                  placeholder="Record diagnosis, prescriptions, or post-op notes here..."
-                  className="w-full p-2.5 border border-surface-300 rounded text-sm focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500"
-                />
-              </div>
-              <div className="flex gap-3 pt-2">
-                <Button type="button" variant="secondary" className="flex-1" onClick={() => setSelectedAppt(null)}>Cancel</Button>
-                <Button type="submit" className="flex-1" isLoading={isUpdating}>Save Update</Button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
+            </div>
+            <div className="flex gap-3 pt-2">
+              <Button type="button" variant="secondary" className="flex-1" onClick={() => setSelectedAppt(null)}>
+                Cancel
+              </Button>
+              <Button type="submit" className="flex-1" isLoading={isUpdating}>
+                Save Update
+              </Button>
+            </div>
+          </form>
+        )}
+      </Modal>
     </div>
   );
 }

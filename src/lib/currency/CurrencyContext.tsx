@@ -20,7 +20,7 @@ import {
   DEFAULT_EXCHANGE_RATES,
   getCurrencyMeta,
 } from './currencies';
-import { detectClientCountry, resolveCurrency } from './detector';
+import { detectClientCountry } from './detector';
 
 interface CurrencyContextValue {
   currentCurrency: CurrencyCode;
@@ -49,30 +49,35 @@ export function CurrencyProvider({ children }: { children: React.ReactNode }) {
   const [rates, setRates] = useState<Record<string, number>>(DEFAULT_EXCHANGE_RATES);
   const [isLoading, setIsLoading] = useState<boolean>(true);
 
-  // Initialize currency & country from storage or heuristics
+  // Initialize currency & country from storage or heuristics asynchronously after hydration
   useEffect(() => {
-    try {
-      const savedCurrency = localStorage.getItem(STORAGE_KEY_CURRENCY);
-      const savedCountryCode = localStorage.getItem(STORAGE_KEY_COUNTRY);
+    let cancelled = false;
+    queueMicrotask(() => {
+      if (cancelled) return;
+      try {
+        const savedCurrency = localStorage.getItem(STORAGE_KEY_CURRENCY);
+        const savedCountryCode = localStorage.getItem(STORAGE_KEY_COUNTRY);
 
-      if (savedCountryCode && COUNTRIES[savedCountryCode]) {
-        setCurrentCountryState(COUNTRIES[savedCountryCode]);
-      } else {
-        const detected = detectClientCountry();
-        setCurrentCountryState(detected);
-      }
+        if (savedCountryCode && COUNTRIES[savedCountryCode]) {
+          setCurrentCountryState(COUNTRIES[savedCountryCode]);
+        } else {
+          setCurrentCountryState(detectClientCountry());
+        }
 
-      if (savedCurrency && (SUPPORTED_CURRENCIES[savedCurrency] || savedCurrency === 'INR')) {
-        setCurrentCurrencyState(savedCurrency);
-      } else if (savedCountryCode && COUNTRIES[savedCountryCode]) {
-        setCurrentCurrencyState(COUNTRIES[savedCountryCode].defaultCurrency);
-      } else {
-        const detected = detectClientCountry();
-        setCurrentCurrencyState(detected.defaultCurrency);
+        if (savedCurrency && (SUPPORTED_CURRENCIES[savedCurrency] || savedCurrency === 'INR')) {
+          setCurrentCurrencyState(savedCurrency);
+        } else if (savedCountryCode && COUNTRIES[savedCountryCode]) {
+          setCurrentCurrencyState(COUNTRIES[savedCountryCode].defaultCurrency);
+        } else {
+          setCurrentCurrencyState(detectClientCountry().defaultCurrency);
+        }
+      } catch (e) {
+        console.warn('LocalStorage access issue:', e);
       }
-    } catch (e) {
-      console.warn('LocalStorage access issue:', e);
-    }
+    });
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
   // Fetch live exchange rates and server geo-detection

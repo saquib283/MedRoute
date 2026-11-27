@@ -10,6 +10,7 @@ import { Card } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { Badge } from '@/components/ui/Badge';
 import { Select } from '@/components/ui/Select';
+import { Modal } from '@/components/ui/Modal';
 import { toast } from '@/components/ui/Toast';
 import { CASE_STATUS_LABELS, CASE_STATUS_ORDER } from '@/lib/constants';
 
@@ -219,61 +220,60 @@ export default function AdminCasesPage() {
       </Card>
 
       {/* Case Detail Drawer */}
-      {selectedCase && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-surface-900/40 backdrop-blur-xs">
-          <div className="bg-white rounded-lg shadow-xl w-full max-w-lg animate-scale-up max-h-[90vh] overflow-y-auto">
-            <div className="px-6 py-4 border-b border-surface-100 flex items-center justify-between sticky top-0 bg-white z-10">
-              <h3 className="text-sm font-bold text-surface-900">Case Details</h3>
-              <button onClick={() => setSelectedCase(null)} className="text-surface-400 hover:text-surface-600 font-bold text-lg">×</button>
+      <Modal
+        open={!!selectedCase}
+        onClose={() => setSelectedCase(null)}
+        title="Case Details"
+        maxWidth="lg"
+      >
+        {selectedCase && (
+          <div className="space-y-5">
+            <div className="grid grid-cols-2 gap-4">
+              <div><p className="text-[10px] font-bold text-surface-400 uppercase">Patient</p><p className="text-sm font-semibold text-surface-900 mt-0.5">{selectedCase.patient.user.fullName}</p></div>
+              <div><p className="text-[10px] font-bold text-surface-400 uppercase">Manager</p><p className="text-sm text-surface-600 mt-0.5">{selectedCase.manager?.fullName || 'Unassigned'}</p></div>
+              <div><p className="text-[10px] font-bold text-surface-400 uppercase">Status</p><p className="mt-0.5"><Badge variant={STATUS_BADGE[selectedCase.status] || 'default'}>{CASE_STATUS_LABELS[selectedCase.status]}</Badge></p></div>
+              <div><p className="text-[10px] font-bold text-surface-400 uppercase">Appointments</p><p className="text-sm text-surface-600 mt-0.5">{selectedCase._count.appointments}</p></div>
             </div>
-            <div className="p-6 space-y-5">
-              <div className="grid grid-cols-2 gap-4">
-                <div><p className="text-[10px] font-bold text-surface-400 uppercase">Patient</p><p className="text-sm font-semibold text-surface-900 mt-0.5">{selectedCase.patient.user.fullName}</p></div>
-                <div><p className="text-[10px] font-bold text-surface-400 uppercase">Manager</p><p className="text-sm text-surface-600 mt-0.5">{selectedCase.manager?.fullName || 'Unassigned'}</p></div>
-                <div><p className="text-[10px] font-bold text-surface-400 uppercase">Status</p><p className="mt-0.5"><Badge variant={STATUS_BADGE[selectedCase.status] || 'default'}>{CASE_STATUS_LABELS[selectedCase.status]}</Badge></p></div>
-                <div><p className="text-[10px] font-bold text-surface-400 uppercase">Appointments</p><p className="text-sm text-surface-600 mt-0.5">{selectedCase._count.appointments}</p></div>
+
+            {selectedCase.notes && (
+              <div><p className="text-[10px] font-bold text-surface-400 uppercase mb-1">Notes</p><p className="text-sm text-surface-600 bg-surface-50 p-3 rounded-lg border border-surface-200">{selectedCase.notes}</p></div>
+            )}
+            {selectedCase.escalationNote && (
+              <div><p className="text-[10px] font-bold text-surface-400 uppercase mb-1">Escalation Note</p><p className="text-sm text-warning-700 bg-warning-50 p-3 rounded-lg border border-warning-200">{selectedCase.escalationNote}</p></div>
+            )}
+
+            {/* Status Transition */}
+            {selectedCase.status !== 'CLOSED' && (
+              <div className="pt-3 border-t border-surface-100 space-y-2">
+                <p className="text-xs font-bold text-surface-700">Advance Status</p>
+                {(() => {
+                  const next = getNextStatus(selectedCase.status);
+                  return next ? (
+                    <Button size="sm" className="w-full" onClick={() => handleStatusChange(selectedCase.id, next)} isLoading={updating}>
+                      Move to → {CASE_STATUS_LABELS[next]}
+                    </Button>
+                  ) : null;
+                })()}
               </div>
+            )}
 
-              {selectedCase.notes && (
-                <div><p className="text-[10px] font-bold text-surface-400 uppercase mb-1">Notes</p><p className="text-sm text-surface-600 bg-surface-50 p-3 rounded-lg border border-surface-200">{selectedCase.notes}</p></div>
-              )}
-              {selectedCase.escalationNote && (
-                <div><p className="text-[10px] font-bold text-surface-400 uppercase mb-1">Escalation Note</p><p className="text-sm text-warning-700 bg-warning-50 p-3 rounded-lg border border-warning-200">{selectedCase.escalationNote}</p></div>
-              )}
-
-              {/* Status Transition */}
-              {selectedCase.status !== 'CLOSED' && (
-                <div className="pt-3 border-t border-surface-100 space-y-2">
-                  <p className="text-xs font-bold text-surface-700">Advance Status</p>
-                  {(() => {
-                    const next = getNextStatus(selectedCase.status);
-                    return next ? (
-                      <Button size="sm" className="w-full" onClick={() => handleStatusChange(selectedCase.id, next)} isLoading={updating}>
-                        Move to → {CASE_STATUS_LABELS[next]}
-                      </Button>
-                    ) : null;
-                  })()}
-                </div>
-              )}
-
-              {/* Reassign Manager */}
-              <div className="space-y-2 pt-3 border-t border-surface-100">
-                <p className="text-xs font-bold text-surface-700">Reassign Manager</p>
-                <Select
-                  value={selectedCase.manager?.id || ''}
-                  onChange={(val) => handleReassign(selectedCase.id, val)}
-                  options={[
-                    { value: '', label: '— Select Manager —' },
-                    ...managers.map((m) => ({ value: m.id, label: m.fullName }))
-                  ]}
-                  placeholder="Select Manager"
-                  disabled={updating}
-                />
-              </div>
+            {/* Reassign Manager */}
+            <div className="space-y-2 pt-3 border-t border-surface-100">
+              <p className="text-xs font-bold text-surface-700">Reassign Manager</p>
+              <Select
+                value={selectedCase.manager?.id || ''}
+                onChange={(val) => handleReassign(selectedCase.id, val)}
+                options={[
+                  { value: '', label: '— Select Manager —' },
+                  ...managers.map((m) => ({ value: m.id, label: m.fullName }))
+                ]}
+                placeholder="Select Manager"
+                disabled={updating}
+              />
             </div>
           </div>
-        </div>
-      )}
+        )}
+      </Modal>
     </div>
   );
 }

@@ -8,6 +8,7 @@
 
 import { useEffect, useState, useCallback, useRef } from 'react';
 import { useRouter, usePathname } from 'next/navigation';
+import { AlertTriangle } from 'lucide-react';
 
 const INACTIVITY_LIMIT_MS = 15 * 60 * 1000; // 15 minutes
 const WARNING_THRESHOLD_MS = 13 * 60 * 1000; // 13 minutes (2 min warning)
@@ -107,32 +108,33 @@ export function SessionTimeoutProvider({ children }: { children: React.ReactNode
       {children}
 
       {showWarning && !isPublicRoute && (
-        <div className="fixed bottom-5 right-5 z-[9999] max-w-md bg-white border-2 border-warning-500 shadow-2xl rounded-2xl p-5 animate-slide-up">
-          <div className="flex items-start gap-4">
-            <div className="w-10 h-10 rounded-full bg-warning-100 flex items-center justify-center shrink-0">
-              <svg className="w-6 h-6 text-warning-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
-              </svg>
+        <div
+          className="fixed bottom-5 right-5 z-[9999] max-w-md bg-white border border-warning-500 shadow-md rounded-xl p-5 animate-slide-up"
+          role="alert"
+        >
+          <div className="flex items-start gap-3.5">
+            <div className="w-9 h-9 rounded-full bg-warning-100 text-warning-600 flex items-center justify-center shrink-0">
+              <AlertTriangle className="w-5 h-5" />
             </div>
             <div>
-              <h3 className="text-base font-bold text-surface-900">Session Inactivity Warning</h3>
+              <h3 className="text-sm font-bold text-surface-900">Session Inactivity Warning</h3>
               <p className="text-xs text-surface-600 mt-1">
-                Your session will expire in <span className="font-mono font-bold text-warning-700">{remainingSeconds}s</span> due to inactivity (HIPAA § 164.312).
+                Your session expires in <span className="font-mono font-bold text-warning-700">{remainingSeconds}s</span> due to inactivity (HIPAA § 164.312).
               </p>
-              <div className="mt-4 flex gap-2">
+              <div className="mt-3.5 flex gap-2">
                 <button
                   type="button"
                   onClick={resetTimers}
-                  className="px-3 py-1.5 bg-primary-600 hover:bg-primary-700 text-white font-medium text-xs rounded-lg transition-colors"
+                  className="px-3 py-1.5 bg-primary-600 hover:bg-primary-700 text-white font-semibold text-xs rounded-lg transition-colors"
                 >
-                  Stay Logged In
+                  Stay Signed In
                 </button>
                 <button
                   type="button"
                   onClick={handleLogout}
-                  className="px-3 py-1.5 bg-surface-200 hover:bg-surface-300 text-surface-700 font-medium text-xs rounded-lg transition-colors"
+                  className="px-3 py-1.5 bg-surface-100 hover:bg-surface-200 border border-surface-300 text-surface-700 font-semibold text-xs rounded-lg transition-colors"
                 >
-                  Log Out Now
+                  Sign Out Now
                 </button>
               </div>
             </div>

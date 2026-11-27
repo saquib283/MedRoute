@@ -1,8 +1,8 @@
 'use client';
 
 /**
- * MediRoute India — Patient Medical Hotels Portal
- * Agoda-style hotel booking portal for international patients: search, city filter, amenity tags, hotel cards, and stay reservations.
+ * MediRoute India — Patient Accommodations Portal
+ * Hotel booking portal for international patients: search, city filter, amenity tags, property cards, and stay reservations.
  */
 
 import { useState, useEffect, useCallback, useMemo } from 'react';
@@ -12,12 +12,13 @@ import { Button } from '@/components/ui/Button';
 import { Badge } from '@/components/ui/Badge';
 import { DatePicker } from '@/components/ui/DatePicker';
 import { Select } from '@/components/ui/Select';
+import { PriceTag } from '@/components/ui/PriceTag';
+import { Modal } from '@/components/ui/Modal';
 import { toast } from '@/components/ui/Toast';
 import {
   Building2,
   Calendar,
   MapPin,
-  ShieldCheck,
   PlusCircle,
   Star,
   Search,
@@ -225,50 +226,39 @@ export default function PatientAccommodationsPage() {
   }
 
   return (
-    <div className="space-y-8 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 animate-fade-in text-xs">
-      {/* Hero Banner */}
-      <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6 bg-gradient-to-r from-teal-900 via-primary-900 to-primary-950 p-6 sm:p-8 rounded-3xl text-white shadow-md relative overflow-hidden">
-        <div className="absolute -top-10 -right-10 w-48 h-48 rounded-full bg-teal-500/20 blur-3xl pointer-events-none" />
-
-        <div className="space-y-2 max-w-2xl relative z-10">
-          <div className="inline-flex items-center gap-2 bg-teal-800/80 border border-teal-700/60 px-3 py-1 rounded-full text-xs font-semibold text-teal-200">
-            <ShieldCheck className="w-3.5 h-3.5 text-emerald-400" />
-            <span>Verified Medical Hotel Partners & Recovery Inns</span>
-          </div>
-          <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight">
-            Agoda-Style Medical Hotels Portal
-          </h1>
-          <p className="text-sm text-teal-100/90 leading-relaxed">
-            Reserve comfortable, hospital-adjacent medical hotels tailored for post-operative recovery, attendant stay, and therapy timelines in India.
+    <div className="space-y-6 animate-fade-in text-xs">
+      {/* Header */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div>
+          <h1 className="text-2xl font-bold text-surface-900 tracking-tight">Recovery Accommodations</h1>
+          <p className="text-sm text-surface-500 mt-0.5">
+            Hospital-adjacent guest houses and recovery stays tailored for patient and attendant lodging
           </p>
         </div>
-
-        <div className="relative z-10 shrink-0">
-          <Button size="lg" onClick={() => handleOpenBookModal()} className="bg-white text-primary-950 hover:bg-teal-50 shadow-sm font-bold">
-            <PlusCircle className="w-4 h-4 mr-2" /> Request Hotel Stay
-          </Button>
-        </div>
+        <Button size="sm" onClick={() => handleOpenBookModal()}>
+          <PlusCircle className="w-4 h-4" /> Request Stay
+        </Button>
       </div>
 
-      {/* Agoda-style Filter & Search Bar */}
-      <Card className="p-4 rounded-2xl border border-surface-200 shadow-xs bg-white space-y-3">
+      {/* Filter & Search Bar */}
+      <Card className="p-4 space-y-3">
         <div className="flex flex-col md:flex-row gap-3">
           <div className="relative flex-1">
-            <Search className="w-4 h-4 text-surface-400 absolute left-3.5 top-3 pointer-events-none" />
+            <Search className="w-4 h-4 text-surface-400 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" />
             <input
               type="text"
-              placeholder="Search hotels by property name, city, or medical center..."
+              placeholder="Search by property name, city, or nearby hospital..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full pl-10 pr-4 py-2.5 bg-surface-50 border border-surface-300 rounded-xl text-xs text-surface-900 focus:outline-none focus:border-primary-600 focus:bg-white"
+              className="w-full pl-9 pr-4 py-2 bg-white border border-surface-300 rounded-lg text-xs text-surface-900 focus:border-primary-600"
             />
           </div>
 
-          <div className="flex gap-2">
+          <div className="flex flex-wrap gap-2">
             <select
               value={cityFilter}
               onChange={(e) => setCityFilter(e.target.value)}
-              className="px-3.5 py-2.5 bg-surface-50 border border-surface-300 rounded-xl text-xs font-semibold text-surface-800 focus:outline-none focus:border-primary-600"
+              className="px-3 py-2 bg-white border border-surface-300 rounded-lg text-xs font-medium text-surface-800 focus:border-primary-600"
             >
               <option value="ALL">All Cities</option>
               {uniqueCities.map((city) => (
@@ -281,9 +271,9 @@ export default function PatientAccommodationsPage() {
             <select
               value={amenityFilter}
               onChange={(e) => setAmenityFilter(e.target.value)}
-              className="px-3.5 py-2.5 bg-surface-50 border border-surface-300 rounded-xl text-xs font-semibold text-surface-800 focus:outline-none focus:border-primary-600"
+              className="px-3 py-2 bg-white border border-surface-300 rounded-lg text-xs font-medium text-surface-800 focus:border-primary-600"
             >
-              <option value="ALL">All Medical Features</option>
+              <option value="ALL">All Features</option>
               <option value="Nursing">24/7 Nursing</option>
               <option value="Wheelchair">Wheelchair Access</option>
               <option value="Shuttle">Hospital Shuttle</option>
@@ -295,39 +285,39 @@ export default function PatientAccommodationsPage() {
 
       {/* My Accommodation Bookings */}
       {bookings.length > 0 && (
-        <Card className="p-6 rounded-2xl shadow-xs border border-surface-200 space-y-4 bg-white">
-          <div className="border-b border-surface-100 pb-3 flex items-center justify-between">
-            <h2 className="text-base font-bold text-surface-900 tracking-tight flex items-center gap-2">
-              <Calendar className="w-4 h-4 text-primary-600" /> My Reserved Hotel Stays
+        <Card className="space-y-4">
+          <div className="border-b border-surface-200 pb-3 flex items-center justify-between">
+            <h2 className="text-base font-semibold text-surface-900 flex items-center gap-2">
+              <Calendar className="w-4 h-4 text-primary-700" /> Reserved Stays
             </h2>
-            <Badge variant="primary" dot>Active Stay Records</Badge>
+            <Badge variant="primary" dot>Bookings</Badge>
           </div>
 
           <div className="overflow-x-auto">
             <table className="w-full text-left border-collapse text-sm">
               <thead>
-                <tr className="bg-surface-50 border-b border-surface-200/80">
-                  <th className="px-4 py-3 font-bold text-surface-800">Hotel Property</th>
-                  <th className="px-4 py-3 font-bold text-surface-800">Location</th>
-                  <th className="px-4 py-3 font-bold text-surface-800">Room Type</th>
-                  <th className="px-4 py-3 font-bold text-surface-800">Dates</th>
-                  <th className="px-4 py-3 font-bold text-surface-800">Status</th>
+                <tr className="bg-surface-50 border-b border-surface-200">
+                  <th className="px-4 py-2.5 text-xs font-semibold text-surface-600 uppercase">Property</th>
+                  <th className="px-4 py-2.5 text-xs font-semibold text-surface-600 uppercase">City</th>
+                  <th className="px-4 py-2.5 text-xs font-semibold text-surface-600 uppercase">Room</th>
+                  <th className="px-4 py-2.5 text-xs font-semibold text-surface-600 uppercase">Dates</th>
+                  <th className="px-4 py-2.5 text-xs font-semibold text-surface-600 uppercase">Status</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-surface-200/60">
+              <tbody className="divide-y divide-surface-200">
                 {bookings.map((booking) => {
                   const nights = calculateNights(booking.checkIn, booking.checkOut);
                   return (
-                    <tr key={booking.id} className="hover:bg-surface-50/60">
+                    <tr key={booking.id} className="hover:bg-surface-50">
                       <td className="px-4 py-3">
-                        <Link href={`/patient/accommodations/${booking.hostelId}`} className="font-bold text-primary-700 hover:underline">
+                        <Link href={`/patient/accommodations/${booking.hostelId}`} className="font-semibold text-primary-700 hover:underline">
                           {booking.hostel.name}
                         </Link>
                       </td>
-                      <td className="px-4 py-3 text-xs text-surface-700">{booking.hostel.city}</td>
-                      <td className="px-4 py-3 font-semibold text-surface-800">{booking.roomType}</td>
-                      <td className="px-4 py-3 text-xs text-surface-700">
-                        {new Date(booking.checkIn).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })} -{' '}
+                      <td className="px-4 py-3 text-xs text-surface-600">{booking.hostel.city}</td>
+                      <td className="px-4 py-3 text-xs font-medium text-surface-800">{booking.roomType}</td>
+                      <td className="px-4 py-3 text-xs text-surface-600">
+                        {new Date(booking.checkIn).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })} –{' '}
                         {new Date(booking.checkOut).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })} ({nights} nights)
                       </td>
                       <td className="px-4 py-3">
@@ -344,89 +334,92 @@ export default function PatientAccommodationsPage() {
         </Card>
       )}
 
-      {/* Agoda-style Hotel Property Cards Grid */}
+      {/* Property Directory */}
       <div className="space-y-4">
         <div className="flex justify-between items-center">
           <div>
-            <h2 className="text-lg font-bold text-surface-900 tracking-tight">Browse Medical Hotels</h2>
-            <p className="text-xs text-surface-600">Explore partner hotels featuring medical support and close proximity to top hospitals.</p>
+            <h2 className="text-base font-semibold text-surface-900">Verified Properties</h2>
+            <p className="text-xs text-surface-500">Accommodations near partner hospitals with clinical support features</p>
           </div>
-          <span className="text-xs font-bold text-surface-500">{filteredHostels.length} Properties Available</span>
+          <span className="text-xs font-semibold text-surface-500">{filteredHostels.length} available</span>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
           {filteredHostels.map((hostel) => {
-            const firstImg = Array.isArray(hostel.images) && hostel.images.length > 0
-              ? hostel.images[0]
-              : 'https://images.unsplash.com/photo-1566073771259-6a8506099945?auto=format&fit=crop&w=1200&q=80';
+            const firstImg = Array.isArray(hostel.images) && hostel.images.length > 0 ? hostel.images[0] : null;
 
-            const amenitiesList = Array.isArray(hostel.amenities) && hostel.amenities.length > 0
-              ? hostel.amenities
-              : ['24/7 Nursing', 'Wheelchair Access', 'Hospital Shuttle'];
+            const amenitiesList = Array.isArray(hostel.amenities) ? hostel.amenities : [];
 
             return (
               <Card
                 key={hostel.id}
-                className="p-0 rounded-3xl border border-surface-200 bg-white overflow-hidden shadow-xs hover:shadow-lg transition-all flex flex-col justify-between"
+                padding="none"
+                className="overflow-hidden flex flex-col justify-between"
               >
                 <div>
-                  {/* Photo Gallery Thumbnail */}
-                  <div className="h-48 bg-surface-100 relative overflow-hidden">
-                    {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img src={firstImg} alt={hostel.name} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" />
-                    <div className="absolute top-3 right-3 bg-surface-900/80 backdrop-blur-xs text-white px-2.5 py-1 rounded-full text-[11px] font-bold flex items-center gap-1">
-                      <Star className="w-3.5 h-3.5 text-amber-400 fill-amber-400" /> {hostel.rating || 4.8}
-                    </div>
-                    <div className="absolute bottom-3 left-3 bg-white/90 backdrop-blur-xs text-surface-900 px-3 py-1 rounded-full text-[11px] font-bold shadow-xs">
+                  <div className="h-44 bg-surface-100 relative overflow-hidden border-b border-surface-200 flex items-center justify-center">
+                    {firstImg ? (
+                      <>
+                        {/* eslint-disable-next-line @next/next/no-img-element */}
+                        <img src={firstImg} alt={hostel.name} className="w-full h-full object-cover" />
+                      </>
+                    ) : (
+                      <Building2 className="w-10 h-10 text-surface-300" />
+                    )}
+                    {hostel.rating != null && (
+                      <div className="absolute top-3 right-3 bg-surface-950/80 text-white px-2 py-0.5 rounded-md text-[11px] font-semibold flex items-center gap-1">
+                        <Star className="w-3 h-3 text-amber-400 fill-amber-400" /> {hostel.rating}
+                      </div>
+                    )}
+                    <div className="absolute bottom-3 left-3 bg-white/95 text-surface-900 px-2.5 py-0.5 rounded-md text-[11px] font-semibold border border-surface-200">
                       {hostel.city}
                     </div>
                   </div>
 
-                  {/* Card Content */}
-                  <div className="p-5 space-y-3">
-                    <div className="flex justify-between items-start">
-                      <div>
-                        <h3 className="font-bold text-surface-900 text-base line-clamp-1">{hostel.name}</h3>
-                        <p className="text-xs font-semibold text-primary-700 flex items-center gap-1 mt-0.5">
-                          <MapPin className="w-3.5 h-3.5 text-primary-600 shrink-0" /> {hostel.distanceToHospital || 'Near Partner Hospital'}
-                        </p>
+                  <div className="p-5 space-y-2.5">
+                    <div>
+                      <h3 className="font-semibold text-surface-900 text-base line-clamp-1">{hostel.name}</h3>
+                      <p className="text-xs font-medium text-primary-700 flex items-center gap-1 mt-0.5">
+                        <MapPin className="w-3.5 h-3.5 shrink-0" /> {hostel.distanceToHospital || hostel.city}
+                      </p>
+                    </div>
+
+                    {hostel.description && (
+                      <p className="text-xs text-surface-600 line-clamp-2 leading-relaxed">
+                        {hostel.description}
+                      </p>
+                    )}
+
+                    {amenitiesList.length > 0 && (
+                      <div className="flex flex-wrap gap-1 pt-1">
+                        {amenitiesList.slice(0, 3).map((amenity) => (
+                          <span key={amenity} className="px-2 py-0.5 bg-surface-100 text-surface-700 rounded text-[11px] font-medium border border-surface-200">
+                            {amenity}
+                          </span>
+                        ))}
+                        {amenitiesList.length > 3 && (
+                          <span className="px-2 py-0.5 bg-surface-100 text-surface-500 rounded text-[11px] font-medium">
+                            +{amenitiesList.length - 3} more
+                          </span>
+                        )}
                       </div>
-                    </div>
-
-                    <p className="text-xs text-surface-600 line-clamp-2 leading-relaxed">
-                      {hostel.description || 'Verified post-operative recuperation hotel equipped with 24/7 care support and medical dietary catering.'}
-                    </p>
-
-                    <div className="flex flex-wrap gap-1 pt-1">
-                      {amenitiesList.slice(0, 3).map((amenity) => (
-                        <span key={amenity} className="px-2 py-0.5 bg-surface-100 text-surface-700 rounded-md text-[11px] font-semibold border border-surface-200">
-                          {amenity}
-                        </span>
-                      ))}
-                      {amenitiesList.length > 3 && (
-                        <span className="px-2 py-0.5 bg-surface-100 text-surface-500 rounded-md text-[11px] font-semibold">
-                          +{amenitiesList.length - 3} more
-                        </span>
-                      )}
-                    </div>
+                    )}
                   </div>
                 </div>
 
-                {/* Card Footer */}
-                <div className="p-5 border-t border-surface-100 bg-surface-50/50 flex items-center justify-between">
+                <div className="px-5 py-4 border-t border-surface-200 bg-surface-50 flex items-center justify-between">
                   <div>
-                    <span className="text-[10px] text-surface-500 uppercase font-semibold block">Starting from</span>
-                    <span className="text-lg font-extrabold text-surface-900">₹{Number(hostel.pricingPerNight).toLocaleString()}</span>
-                    <span className="text-xs text-surface-500"> / night</span>
+                    <span className="text-[11px] text-surface-500 block">Per night</span>
+                    <span className="text-base font-bold text-surface-900">
+                      <PriceTag amountInINR={hostel.pricingPerNight} />
+                    </span>
                   </div>
 
-                  <div className="flex items-center gap-2">
-                    <Link href={`/patient/accommodations/${hostel.id}`}>
-                      <Button size="sm" variant="secondary" className="font-bold">
-                        View Details <ArrowRight className="w-3.5 h-3.5 ml-1" />
-                      </Button>
-                    </Link>
-                  </div>
+                  <Link href={`/patient/accommodations/${hostel.id}`}>
+                    <Button size="sm" variant="secondary">
+                      View Details <ArrowRight className="w-3.5 h-3.5" />
+                    </Button>
+                  </Link>
                 </div>
               </Card>
             );
@@ -435,84 +428,70 @@ export default function PatientAccommodationsPage() {
       </div>
 
       {/* Book Lodging Modal */}
-      {isModalOpen && (
-        <div className="fixed inset-0 bg-surface-900/40 backdrop-blur-xs flex items-center justify-center z-50 p-4">
-          <Card className="bg-white max-w-lg w-full p-6 space-y-5 border border-surface-200 shadow-xl rounded-3xl animate-scale-in">
-            <div className="flex justify-between items-center pb-3 border-b border-surface-100">
-              <div className="flex items-center gap-2">
-                <div className="w-8 h-8 rounded-xl bg-primary-50 text-primary-600 flex items-center justify-center font-bold">
-                  <Building2 className="w-4 h-4" />
-                </div>
-                <h3 className="font-bold text-surface-900 text-lg">Request Hotel Accommodation</h3>
-              </div>
-              <button
-                type="button"
-                onClick={() => setIsModalOpen(false)}
-                className="text-surface-400 hover:text-surface-600 font-semibold text-sm"
-              >
-                ✕
-              </button>
+      <Modal
+        open={isModalOpen}
+        onClose={() => setIsModalOpen(false)}
+        title="Request Accommodation"
+        subtitle="Select property, room type, and dates"
+        maxWidth="lg"
+      >
+        <form onSubmit={handleBookSubmit} className="space-y-4">
+          <Select
+            label="Property"
+            value={selectedHostelId}
+            onChange={setSelectedHostelId}
+            options={hostels.map((h) => ({
+              value: h.id,
+              label: `${h.name} (${h.city})`,
+            }))}
+            required
+          />
+
+          <Select
+            label="Room Type"
+            value={selectedRoomType}
+            onChange={(val) => setSelectedRoomType(val as RoomType)}
+            options={[
+              { value: RoomType.SINGLE, label: 'Single Private Room' },
+              { value: RoomType.DOUBLE, label: 'Double Family Room' },
+              { value: RoomType.SUITE, label: 'Executive Suite' },
+              { value: RoomType.DORMITORY, label: 'Shared Recovery Ward' },
+            ]}
+            required
+          />
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <DatePicker
+              label="Check-In Date"
+              value={checkInDate}
+              onChange={setCheckInDate}
+              placeholder="Select check-in"
+            />
+            <DatePicker
+              label="Check-Out Date"
+              value={checkOutDate}
+              onChange={setCheckOutDate}
+              placeholder="Select check-out"
+            />
+          </div>
+
+          {checkInDate && checkOutDate && new Date(checkOutDate) > new Date(checkInDate) && (
+            <div className="p-3 bg-primary-50 border border-primary-200 rounded-lg text-xs flex justify-between items-center text-primary-900 font-semibold">
+              <span>Length of Stay:</span>
+              <span className="font-bold text-sm">{calculateNights(checkInDate, checkOutDate)} nights</span>
             </div>
+          )}
 
-            <form onSubmit={handleBookSubmit} className="space-y-4">
-              <Select
-                label="Target Hotel Property"
-                value={selectedHostelId}
-                onChange={setSelectedHostelId}
-                options={hostels.map((h) => ({
-                  value: h.id,
-                  label: `${h.name} (${h.city}) — ₹${h.pricingPerNight}/night`,
-                }))}
-                required
-              />
-
-              <Select
-                label="Room Category Option"
-                value={selectedRoomType}
-                onChange={(val) => setSelectedRoomType(val as RoomType)}
-                options={[
-                  { value: RoomType.SINGLE, label: 'Single Private Room' },
-                  { value: RoomType.DOUBLE, label: 'Double Family Room' },
-                  { value: RoomType.SUITE, label: 'Full Executive Suite' },
-                  { value: RoomType.DORMITORY, label: 'Shared Recovery Ward' },
-                ]}
-                required
-              />
-
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                <DatePicker
-                  label="Check-In Date"
-                  value={checkInDate}
-                  onChange={setCheckInDate}
-                  placeholder="Select check-in"
-                />
-                <DatePicker
-                  label="Check-Out Date"
-                  value={checkOutDate}
-                  onChange={setCheckOutDate}
-                  placeholder="Select check-out"
-                />
-              </div>
-
-              {checkInDate && checkOutDate && new Date(checkOutDate) > new Date(checkInDate) && (
-                <div className="p-3 bg-primary-50 border border-primary-200/80 rounded-xl text-xs flex justify-between items-center text-primary-900 font-semibold">
-                  <span>Length of Stay:</span>
-                  <span className="font-extrabold text-sm">{calculateNights(checkInDate, checkOutDate)} Nights</span>
-                </div>
-              )}
-
-              <div className="pt-3 border-t border-surface-100 flex gap-3">
-                <Button type="button" variant="secondary" className="flex-1" onClick={() => setIsModalOpen(false)}>
-                  Cancel
-                </Button>
-                <Button type="submit" className="flex-1" isLoading={submitting}>
-                  Submit Stay Request
-                </Button>
-              </div>
-            </form>
-          </Card>
-        </div>
-      )}
+          <div className="pt-3 border-t border-surface-200 flex gap-3">
+            <Button type="button" variant="secondary" className="flex-1" onClick={() => setIsModalOpen(false)}>
+              Cancel
+            </Button>
+            <Button type="submit" className="flex-1" isLoading={submitting}>
+              Submit Request
+            </Button>
+          </div>
+        </form>
+      </Modal>
     </div>
   );
 }

@@ -10,6 +10,7 @@ import { Card } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { DatePicker } from '@/components/ui/DatePicker';
 import { Select } from '@/components/ui/Select';
+import { Modal } from '@/components/ui/Modal';
 
 enum AppointmentStatus {
   SCHEDULED = 'SCHEDULED',
@@ -289,20 +290,22 @@ export default function AppointmentsManager() {
       {/* Tabs navigation */}
       <div className="border-b border-surface-200 bg-white rounded-t-lg overflow-x-auto flex">
         <button
-          className={`px-5 py-4 text-xs font-bold uppercase tracking-wider border-b-2 transition-all ${
+          type="button"
+          className={`px-5 py-3.5 text-xs font-semibold uppercase tracking-wider border-b-2 transition-colors ${
             activeTab === 'UPCOMING'
-              ? 'border-primary-600 text-primary-700 bg-primary-50/20'
-              : 'border-transparent text-surface-500 hover:text-surface-800 hover:bg-surface-55'
+              ? 'border-primary-600 text-primary-700 bg-primary-50/40'
+              : 'border-transparent text-surface-500 hover:text-surface-800 hover:bg-surface-50'
           }`}
           onClick={() => setActiveTab('UPCOMING')}
         >
           Upcoming Appointments ({upcomingAppointments.length})
         </button>
         <button
-          className={`px-5 py-4 text-xs font-bold uppercase tracking-wider border-b-2 transition-all ${
+          type="button"
+          className={`px-5 py-3.5 text-xs font-semibold uppercase tracking-wider border-b-2 transition-colors ${
             activeTab === 'PAST'
-              ? 'border-primary-600 text-primary-700 bg-primary-50/20'
-              : 'border-transparent text-surface-500 hover:text-surface-800 hover:bg-surface-55'
+              ? 'border-primary-600 text-primary-700 bg-primary-50/40'
+              : 'border-transparent text-surface-500 hover:text-surface-800 hover:bg-surface-50'
           }`}
           onClick={() => setActiveTab('PAST')}
         >
@@ -399,173 +402,157 @@ export default function AppointmentsManager() {
       </Card>
 
       {/* Booking Modal */}
-      {isBookModalOpen && (
-        <div className="fixed inset-0 bg-surface-900/30 backdrop-blur-xs flex items-center justify-center z-50 p-4">
-          <Card className="bg-white max-w-md w-full p-6 space-y-4 border border-surface-200 shadow-lg animate-slide-up">
-            <div className="flex justify-between items-center pb-2.5 border-b border-surface-100">
-              <h3 className="font-bold text-surface-900 text-base">Schedule Clinic Appointment</h3>
-              <button onClick={() => setIsBookModalOpen(false)} className="text-surface-400 hover:text-surface-600 font-semibold text-sm">
-                Cancel
-              </button>
+      <Modal
+        open={isBookModalOpen}
+        onClose={() => setIsBookModalOpen(false)}
+        title="Schedule Clinic Appointment"
+        maxWidth="md"
+      >
+        <div className="space-y-4">
+          {formError && (
+            <div className="bg-danger-50 text-danger-700 p-2.5 rounded border border-danger-200 text-xs">
+              {formError}
             </div>
+          )}
 
-            {formError && (
-              <div className="bg-red-50 text-red-700 p-2.5 rounded border border-red-200">
-                {formError}
-              </div>
-            )}
+          <form onSubmit={handleCreateAppointment} className="space-y-4 font-semibold text-surface-700">
+            <Select
+              label="Patient Selection"
+              value={targetPatientId}
+              onChange={setTargetPatientId}
+              options={[
+                { value: '', label: '-- Choose patient --' },
+                ...patients.map((p) => ({
+                  value: p.id,
+                  label: `${p.user.fullName} ${p.cases.length === 0 ? '(No active cases)' : ''}`
+                }))
+              ]}
+              required
+            />
 
-            <form onSubmit={handleCreateAppointment} className="space-y-4 font-semibold text-surface-700">
-              <Select
-                label="Patient Selection"
-                value={targetPatientId}
-                onChange={setTargetPatientId}
-                options={[
-                  { value: '', label: '-- Choose patient --' },
-                  ...patients.map((p) => ({
-                    value: p.id,
-                    label: `${p.user.fullName} ${p.cases.length === 0 ? '(No active cases)' : ''}`
+            <Select
+              label="Partner Hospital"
+              value={targetHospitalId}
+              onChange={setTargetHospitalId}
+              options={[
+                { value: '', label: '-- Choose hospital --' },
+                ...hospitals.map((h) => ({
+                  value: h.id,
+                  label: `${h.name} (${h.city})`
+                }))
+              ]}
+              required
+            />
+
+            <Select
+              label="Assigned Doctor"
+              value={targetDoctorId}
+              onChange={setTargetDoctorId}
+              options={[
+                { value: '', label: '-- Choose doctor --' },
+                ...doctors
+                  .filter((d) => !targetHospitalId || (d as { hospitalId?: string }).hospitalId === targetHospitalId)
+                  .map((d) => ({
+                    value: d.id,
+                    label: `Dr. ${d.fullName} (${d.specialisation.name})`
                   }))
-                ]}
-                required
-              />
+              ]}
+              required
+            />
 
-              <Select
-                label="Partner Hospital"
-                value={targetHospitalId}
-                onChange={setTargetHospitalId}
-                options={[
-                  { value: '', label: '-- Choose hospital --' },
-                  ...hospitals.map((h) => ({
-                    value: h.id,
-                    label: `${h.name} (${h.city})`
-                  }))
-                ]}
-                required
-              />
+            <Select
+              label="Appointment Type"
+              value={targetApptType}
+              onChange={(val) => setTargetApptType(val as AppointmentType)}
+              options={[
+                { value: AppointmentType.CONSULTATION, label: 'Clinical Consultation' },
+                { value: AppointmentType.PRE_OP_ASSESSMENT, label: 'Pre-Op Assessment' },
+                { value: AppointmentType.SURGERY, label: 'Scheduled Surgery' },
+                { value: AppointmentType.POST_OP_REVIEW, label: 'Post-Op Review' }
+              ]}
+              required
+            />
 
-              <Select
-                label="Assigned Doctor"
-                value={targetDoctorId}
-                onChange={setTargetDoctorId}
-                options={[
-                  { value: '', label: '-- Choose doctor --' },
-                  ...doctors
-                    .filter((d) => !targetHospitalId || (d as { hospitalId?: string }).hospitalId === targetHospitalId)
-                    .map((d) => ({
-                      value: d.id,
-                      label: `Dr. ${d.fullName} (${d.specialisation.name})`
-                    }))
-                ]}
-                required
-              />
+            {/* Time */}
+            <DatePicker
+              label="Scheduled Date & Time"
+              value={scheduledAtStr}
+              onChange={setScheduledAtStr}
+              showTimePicker={true}
+              placeholder="Pick date & time"
+            />
 
-              <Select
-                label="Appointment Type"
-                value={targetApptType}
-                onChange={(val) => setTargetApptType(val as AppointmentType)}
-                options={[
-                  { value: AppointmentType.CONSULTATION, label: 'Clinical Consultation' },
-                  { value: AppointmentType.PRE_OP_ASSESSMENT, label: 'Pre-Op Assessment' },
-                  { value: AppointmentType.SURGERY, label: 'Scheduled Surgery' },
-                  { value: AppointmentType.POST_OP_REVIEW, label: 'Post-Op Review' }
-                ]}
-                required
-              />
-
-              {/* Time */}
-              <DatePicker
-                label="Scheduled Date & Time"
-                value={scheduledAtStr}
-                onChange={setScheduledAtStr}
-                showTimePicker={true}
-                placeholder="Pick date & time"
-              />
-
-              <div className="pt-3 border-t border-surface-100 flex gap-2">
-                <Button className="flex-1" type="submit" disabled={submitting}>
-                  {submitting ? 'Scheduling encounter...' : 'Book Appointment'}
-                </Button>
-                <Button className="flex-1" variant="secondary" type="button" onClick={() => setIsBookModalOpen(false)}>
-                  Cancel
-                </Button>
-              </div>
-            </form>
-          </Card>
+            <div className="pt-3 border-t border-surface-100 flex gap-2">
+              <Button className="flex-1" type="submit" disabled={submitting}>
+                {submitting ? 'Scheduling encounter...' : 'Book Appointment'}
+              </Button>
+              <Button className="flex-1" variant="secondary" type="button" onClick={() => setIsBookModalOpen(false)}>
+                Cancel
+              </Button>
+            </div>
+          </form>
         </div>
-      )}
+      </Modal>
 
       {/* Reschedule Modal */}
-      {reschedulingAppt && (
-        <div className="fixed inset-0 bg-surface-900/30 backdrop-blur-xs flex items-center justify-center z-50 p-4">
-          <Card className="bg-white max-w-sm w-full p-6 space-y-4 border border-surface-200 shadow-lg animate-slide-up">
-            <div className="flex justify-between items-center pb-2 border-b border-surface-100">
-              <h3 className="font-bold text-surface-900 text-sm">Reschedule Appointment</h3>
-              <button onClick={() => setReschedulingAppt(null)} className="text-surface-400 hover:text-surface-600 font-semibold text-sm">
-                Cancel
-              </button>
-            </div>
+      <Modal
+        open={!!reschedulingAppt}
+        onClose={() => setReschedulingAppt(null)}
+        title="Reschedule Appointment"
+        maxWidth="sm"
+      >
+        <form onSubmit={handleReschedule} className="space-y-4 font-semibold text-surface-700">
+          <DatePicker
+            label="New Date & Time"
+            value={rescheduleDateStr}
+            onChange={setRescheduleDateStr}
+            showTimePicker={true}
+            placeholder="Pick new date & time"
+            required
+          />
 
-            <form onSubmit={handleReschedule} className="space-y-4 font-semibold text-surface-700">
-              <DatePicker
-                label="New Date & Time"
-                value={rescheduleDateStr}
-                onChange={setRescheduleDateStr}
-                showTimePicker={true}
-                placeholder="Pick new date & time"
-                required
-              />
-
-              <div className="flex gap-2 pt-2">
-                <Button className="flex-1" type="submit" disabled={submitting}>
-                  {submitting ? 'Rescheduling...' : 'Confirm'}
-                </Button>
-                <Button className="flex-1" variant="secondary" type="button" onClick={() => setReschedulingAppt(null)}>
-                  Cancel
-                </Button>
-              </div>
-            </form>
-          </Card>
-        </div>
-      )}
+          <div className="flex gap-2 pt-2">
+            <Button className="flex-1" type="submit" disabled={submitting}>
+              {submitting ? 'Rescheduling...' : 'Confirm'}
+            </Button>
+            <Button className="flex-1" variant="secondary" type="button" onClick={() => setReschedulingAppt(null)}>
+              Cancel
+            </Button>
+          </div>
+        </form>
+      </Modal>
 
       {/* Cancel Modal */}
-      {cancellingAppt && (
-        <div className="fixed inset-0 bg-surface-900/30 backdrop-blur-xs flex items-center justify-center z-50 p-4">
-          <Card className="bg-white max-w-sm w-full p-6 space-y-4 border border-surface-200 shadow-lg animate-slide-up">
-            <div className="flex justify-between items-center pb-2 border-b border-surface-100">
-              <h3 className="font-bold text-surface-900 text-sm">Cancel Appointment</h3>
-              <button onClick={() => setCancellingAppt(null)} className="text-surface-400 hover:text-surface-600 font-semibold text-sm">
-                Cancel
-              </button>
-            </div>
+      <Modal
+        open={!!cancellingAppt}
+        onClose={() => setCancellingAppt(null)}
+        title="Cancel Appointment"
+        maxWidth="sm"
+      >
+        <form onSubmit={handleCancel} className="space-y-4 font-semibold text-surface-700">
+          <div className="space-y-1">
+            <label htmlFor="reason" className="block">Cancellation Reason</label>
+            <textarea
+              id="reason"
+              rows={3}
+              className="w-full p-2.5 rounded border border-surface-300 font-medium text-surface-800"
+              placeholder="Explain why consultation is being cancelled (e.g. visa delay, patient request)..."
+              value={cancellationReason}
+              onChange={(e) => setCancellationReason(e.target.value)}
+              required
+            />
+          </div>
 
-            <form onSubmit={handleCancel} className="space-y-4 font-semibold text-surface-700">
-              <div className="space-y-1">
-                <label htmlFor="reason" className="block">Cancellation Reason</label>
-                <textarea
-                  id="reason"
-                  rows={3}
-                  className="w-full p-2.5 rounded border border-surface-300 font-medium text-surface-800"
-                  placeholder="Explain why consultation is being cancelled (e.g. visa delay, patient request)..."
-                  value={cancellationReason}
-                  onChange={(e) => setCancellationReason(e.target.value)}
-                  required
-                />
-              </div>
-
-              <div className="flex gap-2 pt-2">
-                <Button className="flex-1" type="submit" disabled={submitting}>
-                  {submitting ? 'Cancelling...' : 'Confirm'}
-                </Button>
-                <Button className="flex-1" variant="secondary" type="button" onClick={() => setCancellingAppt(null)}>
-                  Cancel
-                </Button>
-              </div>
-            </form>
-          </Card>
-        </div>
-      )}
+          <div className="flex gap-2 pt-2">
+            <Button className="flex-1" type="submit" disabled={submitting}>
+              {submitting ? 'Cancelling...' : 'Confirm'}
+            </Button>
+            <Button className="flex-1" variant="secondary" type="button" onClick={() => setCancellingAppt(null)}>
+              Cancel
+            </Button>
+          </div>
+        </form>
+      </Modal>
     </div>
   );
 }

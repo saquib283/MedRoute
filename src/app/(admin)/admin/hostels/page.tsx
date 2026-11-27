@@ -2,7 +2,7 @@
 
 /**
  * MediRoute India — Admin Hotels & Accommodation Management
- * Agoda-style property management: CRUD for hotels, medical amenities, photo gallery links, proximity to hospitals, stay rules, and pricing.
+ * Property management for recovery accommodation partners, amenities, photo links, proximity to hospitals, stay rules, and pricing.
  */
 
 import { useState, useEffect, useCallback } from 'react';
@@ -10,8 +10,9 @@ import { Card } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { Badge } from '@/components/ui/Badge';
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
+import { Modal } from '@/components/ui/Modal';
 import { toast } from '@/components/ui/Toast';
-import { Building2, MapPin, Star, Plus, Image as ImageIcon } from 'lucide-react';
+import { MapPin, Star, Plus, Image as ImageIcon } from 'lucide-react';
 
 interface Hostel {
   id: string;
@@ -49,12 +50,12 @@ export default function AdminHostelsPage() {
     capacity: '',
     pricingPerNight: '',
     roomTypes: 'SINGLE, DOUBLE, SUITE',
-    amenities: '24/7 Nursing, Wheelchair Accessible, Hospital Shuttle, High-Speed Wi-Fi, Oxygen Cylinder Support',
-    images: 'https://images.unsplash.com/photo-1566073771259-6a8506099945?auto=format&fit=crop&w=1200&q=80, https://images.unsplash.com/photo-1590490360182-c33d57733427?auto=format&fit=crop&w=1200&q=80',
-    distanceToHospital: '0.3 km from Partner Hospital',
-    rating: '4.8',
-    contactPhone: '+91 11 4055 8899',
-    rules: 'Check-in: 12:00 PM | Check-out: 11:00 AM. Quiet hours from 10:00 PM.',
+    amenities: '',
+    images: '',
+    distanceToHospital: '',
+    rating: '',
+    contactPhone: '',
+    rules: '',
     isActive: true,
   });
   const [saving, setSaving] = useState(false);
@@ -102,15 +103,15 @@ export default function AdminHostelsPage() {
       city: '',
       address: '',
       description: '',
-      capacity: '50',
-      pricingPerNight: '2500',
+      capacity: '',
+      pricingPerNight: '',
       roomTypes: 'SINGLE, DOUBLE, SUITE',
-      amenities: '24/7 Nursing Support, Wheelchair Accessible, Hospital Shuttle, Oxygen Support, Custom Medical Meals, Free High-Speed Wi-Fi',
-      images: 'https://images.unsplash.com/photo-1566073771259-6a8506099945?auto=format&fit=crop&w=1200&q=80, https://images.unsplash.com/photo-1590490360182-c33d57733427?auto=format&fit=crop&w=1200&q=80',
-      distanceToHospital: '0.4 km from Partner Super Speciality Hospital',
-      rating: '4.8',
-      contactPhone: '+91 11 4055 8899',
-      rules: 'Check-in: 12:00 PM | Check-out: 11:00 AM. 1 attendant allowed.',
+      amenities: '',
+      images: '',
+      distanceToHospital: '',
+      rating: '',
+      contactPhone: '',
+      rules: '',
       isActive: true,
     });
     setShowModal(true);
@@ -129,7 +130,7 @@ export default function AdminHostelsPage() {
       amenities: Array.isArray(h.amenities) ? h.amenities.join(', ') : '',
       images: Array.isArray(h.images) ? h.images.join(', ') : '',
       distanceToHospital: h.distanceToHospital || '',
-      rating: h.rating ? h.rating.toString() : '4.8',
+      rating: h.rating ? h.rating.toString() : '',
       contactPhone: h.contactPhone || '',
       rules: h.rules || '',
       isActive: h.isActive,
@@ -212,7 +213,7 @@ export default function AdminHostelsPage() {
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
           <h1 className="text-2xl font-bold text-surface-900 tracking-tight">Hotels & Medical Accommodations</h1>
-          <p className="text-sm text-surface-600 mt-1">Manage Agoda-style hotel partner listings, photos, medical amenities, and pricing.</p>
+          <p className="text-sm text-surface-600 mt-1">Manage recovery accommodation listings, photos, medical amenities, and pricing.</p>
         </div>
         <Button onClick={openCreate} size="md">
           <Plus className="w-4 h-4 mr-1.5" /> Add Hotel Property
@@ -270,7 +271,7 @@ export default function AdminHostelsPage() {
                       {h.isActive ? 'Active' : 'Inactive'}
                     </Badge>
                   </div>
-                  <div className="absolute bottom-3 left-3 bg-surface-900/80 backdrop-blur-xs text-white px-2.5 py-1 rounded-full text-[11px] font-bold flex items-center gap-1">
+                  <div className="absolute bottom-3 left-3 bg-surface-900/85 text-white px-2.5 py-1 rounded-full text-[11px] font-bold flex items-center gap-1">
                     <Star className="w-3 h-3 text-amber-400 fill-amber-400" /> {h.rating || 4.8}
                   </div>
                 </div>
@@ -327,21 +328,14 @@ export default function AdminHostelsPage() {
         )}
       </div>
 
-      {/* Agoda-style Hotel Modal Form */}
-      {showModal && (
-        <div className="fixed inset-0 bg-surface-900/40 backdrop-blur-xs flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-3xl shadow-xl w-full max-w-2xl max-h-[90vh] overflow-hidden flex flex-col animate-scale-in border border-surface-200">
-            <div className="px-6 py-4 border-b border-surface-100 flex justify-between items-center bg-surface-50">
-              <h3 className="font-bold text-surface-900 text-base flex items-center gap-2">
-                <Building2 className="w-5 h-5 text-primary-600" />
-                {editing ? 'Edit Hotel Property Details' : 'Add New Medical Hotel Partner'}
-              </h3>
-              <button onClick={() => setShowModal(false)} className="text-surface-400 hover:text-surface-600 font-bold text-lg">
-                ×
-              </button>
-            </div>
-
-            <form onSubmit={handleSave} className="p-6 overflow-y-auto space-y-4 text-xs font-semibold text-surface-700">
+      {/* Hotel Partner Modal Form */}
+      <Modal
+        open={showModal}
+        onClose={() => setShowModal(false)}
+        title={editing ? 'Edit Accommodation Property' : 'Add Medical Accommodation Partner'}
+        maxWidth="2xl"
+      >
+        <form onSubmit={handleSave} className="space-y-4 text-xs font-semibold text-surface-700">
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-1">
                   <label className="block">Hotel Property Name *</label>
@@ -466,7 +460,7 @@ export default function AdminHostelsPage() {
                   value={form.images}
                   onChange={(e) => setForm({ ...form, images: e.target.value })}
                   className="w-full p-2.5 border border-surface-300 rounded-xl text-xs focus:ring-1 focus:ring-primary-500"
-                  placeholder="https://images.unsplash.com/photo-1566..., https://..."
+                  placeholder="Comma-separated HTTPS image URLs"
                 />
               </div>
 
@@ -504,10 +498,8 @@ export default function AdminHostelsPage() {
                   {editing ? 'Update Hotel Property' : 'Save Hotel Property'}
                 </Button>
               </div>
-            </form>
-          </div>
-        </div>
-      )}
+        </form>
+      </Modal>
 
       {/* Confirm Deactivation */}
       <ConfirmDialog

@@ -5,7 +5,6 @@ import Image from 'next/image';
 import Link from 'next/link';
 import logoImg from '../../../public/assets/logo.png';
 import {
-  Heart,
   Shield,
   Globe,
   Phone,
@@ -15,12 +14,9 @@ import {
   Stethoscope,
   Send,
   CheckCircle,
-  Star,
-  Award,
   Clock,
   ArrowRight,
   ChevronDown,
-  Sparkles,
   Building2,
   IndianRupee,
   MessageSquare,
@@ -42,15 +38,6 @@ const INDIAN_CITIES = [
   'Jaipur',
 ];
 
-const BUDGET_RANGES = [
-  'Under ₹2,00,000',
-  '₹2,00,000 – ₹5,00,000',
-  '₹5,00,000 – ₹10,00,000',
-  '₹10,00,000 – ₹25,00,000',
-  '₹25,00,000+',
-  'Need cost estimate',
-];
-
 const SOURCE_OPTIONS = [
   { value: 'google_ads', label: 'Google Search' },
   { value: 'facebook', label: 'Social Media (Facebook/Instagram)' },
@@ -61,38 +48,38 @@ const SOURCE_OPTIONS = [
   { value: 'other', label: 'Other' },
 ];
 
-const TRUST_STATS = [
-  { icon: Heart, value: '15,000+', label: 'Patients Treated' },
-  { icon: Building2, value: '50+', label: 'Partner Hospitals' },
-  { icon: Globe, value: '45+', label: 'Countries Served' },
-  { icon: Star, value: '4.9/5', label: 'Patient Rating' },
+const COORDINATION_PILLARS = [
+  { icon: Building2, value: 'JCI & NABH', label: 'Accredited Partner Hospitals' },
+  { icon: Clock, value: '24 Hours', label: 'Coordinator Response Target' },
+  { icon: Shield, value: 'HIPAA & DPDP', label: 'Encrypted Record Handling' },
+  { icon: Globe, value: 'Multi-Currency', label: 'Itemized Treatment Estimates' },
 ];
 
 const FEATURES = [
   {
     icon: Shield,
-    title: 'JCI & NABH Accredited',
-    desc: 'All partner hospitals meet international healthcare quality standards.',
+    title: 'Accredited Partner Hospitals',
+    desc: 'Referrals are routed only to participating JCI and NABH accredited Indian healthcare facilities.',
   },
   {
     icon: Clock,
-    title: 'Response within 24 Hours',
-    desc: 'Our medical coordinators will contact you within 24 hours of inquiry.',
+    title: '24-Hour Coordinator Review',
+    desc: 'Assigned medical coordinators contact you within 24 hours of receiving your inquiry.',
   },
   {
-    icon: Award,
-    title: 'End-to-End Care',
-    desc: 'From airport pickup to post-treatment follow-up — we manage everything.',
+    icon: Building2,
+    title: 'Visa & Logistics Support',
+    desc: 'Assistance with Hospital Visa Invitation Letters, airport transfers, and medical stays.',
   },
   {
     icon: IndianRupee,
-    title: 'Up to 70% Cost Savings',
-    desc: 'World-class treatment at a fraction of the cost compared to the US, UK & Europe.',
+    title: 'Transparent Estimates',
+    desc: 'Receive itemized pre-travel treatment estimates viewed in your local currency.',
   },
 ];
 
 export default function InquirePage() {
-  const { format, currentCurrency, setCurrency, setCountry } = useCurrency();
+  const { format, currentCurrency, setCountry } = useCurrency();
   const [formData, setFormData] = useState({
     fullName: '',
     email: '',
@@ -178,7 +165,7 @@ export default function InquirePage() {
   return (
     <div className="min-h-screen bg-surface-100 font-sans antialiased">
       {/* ── Sticky Navigation Bar ─────────────────────────────────────── */}
-      <nav className="sticky top-0 z-50 bg-white/80 backdrop-blur-xl border-b border-surface-200/60">
+      <nav className="sticky top-0 z-50 bg-white border-b border-surface-200">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
           <Link href="/" className="flex items-center gap-2">
             <Image src={logoImg} alt="MediRoute India" height={32} className="h-8 w-auto object-contain" priority />
@@ -194,7 +181,7 @@ export default function InquirePage() {
             </a>
             <Link
               href="/login"
-              className="px-4 py-2 text-sm font-bold text-primary-700 bg-primary-50 hover:bg-primary-100 rounded-xl border border-primary-200/50 transition-all"
+              className="px-4 py-2 text-sm font-semibold text-primary-700 bg-primary-50 hover:bg-primary-100 rounded-lg border border-primary-200 transition-colors"
             >
               Sign In
             </Link>
@@ -203,72 +190,55 @@ export default function InquirePage() {
       </nav>
 
       {/* ── Hero Section ──────────────────────────────────────────────── */}
-      <section className="relative overflow-hidden bg-gradient-to-br from-primary-950 via-primary-900 to-primary-800 text-white">
-        {/* Background effects */}
-        <div
-          className="absolute inset-0 opacity-[0.04] pointer-events-none"
-          style={{
-            backgroundImage: `radial-gradient(circle at 1px 1px, rgba(255,255,255,0.4) 1.5px, transparent 0)`,
-            backgroundSize: '24px 24px',
-          }}
-        />
-        <div className="absolute top-[-30%] right-[-15%] w-[60%] h-[80%] rounded-full bg-primary-500/10 blur-[150px] pointer-events-none" />
-        <div className="absolute bottom-[-20%] left-[-10%] w-[50%] h-[60%] rounded-full bg-emerald-500/8 blur-[120px] pointer-events-none" />
-
-        <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16 sm:py-20 lg:py-24">
+      <section className="bg-primary-950 text-white border-b border-primary-900">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-14 sm:py-18">
           <div className="max-w-3xl">
-            {/* Trust pill */}
-            <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-white/10 backdrop-blur-md border border-white/15 text-xs font-bold uppercase tracking-widest text-primary-200 mb-6">
-              <Sparkles className="w-3.5 h-3.5 text-amber-400" />
-              Trusted by 15,000+ International Patients
+            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-md bg-white/10 border border-white/15 text-xs font-semibold text-primary-100 mb-5">
+              <Shield className="w-3.5 h-3.5 text-primary-300" />
+              International Patient Facilitation Desk
             </div>
 
-            <h1 className="text-3xl sm:text-4xl lg:text-5xl xl:text-6xl font-extrabold tracking-tight leading-[1.1]">
-              World-Class Medical{' '}
-              <span className="bg-gradient-to-r from-primary-300 via-teal-200 to-emerald-400 bg-clip-text text-transparent">
-                Treatment in India
-              </span>
+            <h1 className="text-3xl sm:text-4xl lg:text-5xl font-bold tracking-tight leading-tight">
+              Medical Treatment Coordination in India
             </h1>
 
-            <p className="mt-5 text-base sm:text-lg text-primary-200/80 max-w-2xl leading-relaxed font-light">
-              Get a free personalised treatment plan from India&apos;s top JCI & NABH accredited
-              hospitals. Save up to 70% on medical costs with no compromise on quality.
+            <p className="mt-4 text-base sm:text-lg text-primary-100/85 max-w-2xl leading-relaxed">
+              Request a clinical review and itemized treatment estimate from participating JCI and NABH accredited Indian hospitals.
             </p>
 
-            {/* CTA arrow */}
-            <div className="mt-8 flex items-center gap-3">
+            <div className="mt-7 flex flex-wrap items-center gap-3">
               <a
                 href="#inquiry-form"
-                className="inline-flex items-center gap-2 px-6 py-3 bg-white text-primary-900 font-bold rounded-xl hover:bg-primary-50 transition-all shadow-lg text-sm sm:text-base"
+                className="inline-flex items-center gap-2 px-5 py-3 bg-white text-primary-950 font-semibold rounded-lg hover:bg-primary-50 transition-colors text-sm sm:text-base"
               >
-                Get Free Consultation
+                Request Treatment Estimate
                 <ArrowRight className="w-4 h-4" />
               </a>
               <a
                 href="tel:+911234567890"
-                className="inline-flex items-center gap-2 px-6 py-3 bg-white/10 backdrop-blur-md border border-white/20 text-white font-semibold rounded-xl hover:bg-white/15 transition-all text-sm sm:text-base"
+                className="inline-flex items-center gap-2 px-5 py-3 bg-primary-900 border border-white/20 text-white font-semibold rounded-lg hover:bg-primary-800 transition-colors text-sm sm:text-base"
               >
                 <Phone className="w-4 h-4" />
-                Call Now
+                Call Desk
               </a>
             </div>
           </div>
         </div>
 
-        {/* Trust Stats Bar */}
-        <div className="relative border-t border-white/10">
-          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+        {/* Coordination Summary Bar */}
+        <div className="border-t border-white/15 bg-primary-900/40">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-5">
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-6">
-              {TRUST_STATS.map((stat) => {
-                const Icon = stat.icon;
+              {COORDINATION_PILLARS.map((item) => {
+                const Icon = item.icon;
                 return (
-                  <div key={stat.label} className="flex items-center gap-3">
-                    <div className="w-10 h-10 rounded-xl bg-white/10 flex items-center justify-center shrink-0">
-                      <Icon className="w-5 h-5 text-primary-300" />
+                  <div key={item.label} className="flex items-center gap-3">
+                    <div className="w-9 h-9 rounded-lg bg-white/10 flex items-center justify-center shrink-0">
+                      <Icon className="w-4 h-4 text-primary-200" />
                     </div>
                     <div>
-                      <div className="text-lg font-extrabold text-white">{stat.value}</div>
-                      <div className="text-xs text-primary-300/70 font-medium">{stat.label}</div>
+                      <div className="text-sm font-bold text-white">{item.value}</div>
+                      <div className="text-xs text-primary-100/75">{item.label}</div>
                     </div>
                   </div>
                 );
@@ -278,30 +248,30 @@ export default function InquirePage() {
         </div>
       </section>
 
-      {/* ── Why MediRoute Features ────────────────────────────────────── */}
-      <section className="py-16 bg-white border-b border-surface-200">
+      {/* ── Care Process Highlights ───────────────────────────────────── */}
+      <section className="py-14 bg-white border-b border-surface-200">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="text-center mb-12">
-            <h2 className="text-2xl sm:text-3xl font-extrabold text-surface-900 tracking-tight">
-              Why Choose MediRoute India?
+          <div className="mb-10">
+            <h2 className="text-2xl font-bold text-surface-900 tracking-tight">
+              What MediRoute Coordinates
             </h2>
-            <p className="mt-2 text-sm text-surface-600 max-w-xl mx-auto">
-              We simplify your entire medical journey — from initial consultation to recovery.
+            <p className="mt-1.5 text-sm text-surface-600 max-w-xl">
+              Structured support from remote medical evaluation through hospital discharge and follow-up.
             </p>
           </div>
 
-          <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-6">
+          <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-5">
             {FEATURES.map((feat) => {
               const Icon = feat.icon;
               return (
                 <div
                   key={feat.title}
-                  className="group bg-surface-50 border border-surface-200 rounded-2xl p-6 hover:shadow-md hover:border-primary-200 transition-all"
+                  className="bg-surface-50 border border-surface-200 rounded-xl p-5"
                 >
-                  <div className="w-11 h-11 rounded-xl bg-primary-50 border border-primary-100 flex items-center justify-center mb-4 group-hover:bg-primary-100 transition-colors">
+                  <div className="w-10 h-10 rounded-lg bg-primary-50 border border-primary-100 flex items-center justify-center mb-3.5">
                     <Icon className="w-5 h-5 text-primary-700" />
                   </div>
-                  <h3 className="font-bold text-surface-900 text-sm">{feat.title}</h3>
+                  <h3 className="font-semibold text-surface-900 text-sm">{feat.title}</h3>
                   <p className="mt-1.5 text-xs text-surface-600 leading-relaxed">{feat.desc}</p>
                 </div>
               );
@@ -311,41 +281,38 @@ export default function InquirePage() {
       </section>
 
       {/* ── Inquiry Form Section ──────────────────────────────────────── */}
-      <section id="inquiry-form" className="py-16 sm:py-20 bg-surface-100">
+      <section id="inquiry-form" className="py-14 sm:py-16 bg-surface-100">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="grid lg:grid-cols-5 gap-10 lg:gap-14">
-            {/* Left column — pitch */}
+          <div className="grid lg:grid-cols-5 gap-10 lg:gap-12">
+            {/* Left column — summary */}
             <div className="lg:col-span-2 space-y-6">
               <div>
-                <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-primary-50 text-primary-700 text-[10px] font-extrabold uppercase tracking-widest border border-primary-100/50 mb-4">
-                  <MessageSquare className="w-3 h-3" />
-                  Free Consultation
+                <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-primary-50 text-primary-700 text-xs font-semibold border border-primary-200 mb-3">
+                  <MessageSquare className="w-3.5 h-3.5" />
+                  Initial Inquiry
                 </span>
-                <h2 className="text-2xl sm:text-3xl font-extrabold text-surface-900 tracking-tight">
-                  Tell Us About Your{' '}
-                  <span className="text-primary-700">Medical Needs</span>
+                <h2 className="text-2xl font-bold text-surface-900 tracking-tight">
+                  Share Your Treatment Requirements
                 </h2>
-                <p className="mt-3 text-sm text-surface-600 leading-relaxed">
-                  Fill out this form and our dedicated medical coordinator will contact you within
-                  24 hours with a personalised treatment plan, cost estimate, and hospital
-                  recommendations.
+                <p className="mt-2.5 text-sm text-surface-600 leading-relaxed">
+                  Complete this form and an assigned coordinator will contact you within 24 hours with hospital options, clinical review steps, and an itemized cost estimate.
                 </p>
               </div>
 
               {/* Process steps */}
               <div className="space-y-4">
                 {[
-                  { step: 1, title: 'Submit Your Inquiry', desc: 'Share your medical condition and preferences.' },
-                  { step: 2, title: 'Expert Review', desc: 'Our team reviews your case with partner hospitals.' },
-                  { step: 3, title: 'Personalised Plan', desc: 'Receive a detailed treatment plan and cost estimate.' },
-                  { step: 4, title: 'Begin Your Journey', desc: 'We handle visa, travel, accommodation & treatment.' },
+                  { step: 1, title: 'Submit Your Inquiry', desc: 'Share your clinical needs and preferred destination.' },
+                  { step: 2, title: 'Hospital Review', desc: 'Partner specialists review your uploaded reports.' },
+                  { step: 3, title: 'Treatment Estimate', desc: 'Receive a structured care plan and fee breakdown.' },
+                  { step: 4, title: 'Travel Coordination', desc: 'Visa letter, stay arrangements, and hospital scheduling.' },
                 ].map((item) => (
-                  <div key={item.step} className="flex items-start gap-3.5">
-                    <div className="w-8 h-8 rounded-full bg-primary-600 text-white flex items-center justify-center text-xs font-extrabold shrink-0 mt-0.5">
+                  <div key={item.step} className="flex items-start gap-3">
+                    <div className="w-7 h-7 rounded-full bg-primary-600 text-white flex items-center justify-center text-xs font-bold shrink-0 mt-0.5">
                       {item.step}
                     </div>
                     <div>
-                      <h4 className="text-sm font-bold text-surface-900">{item.title}</h4>
+                      <h3 className="text-sm font-semibold text-surface-900">{item.title}</h3>
                       <p className="text-xs text-surface-600 mt-0.5">{item.desc}</p>
                     </div>
                   </div>
@@ -516,14 +483,14 @@ export default function InquirePage() {
                     name="source"
                     value={formData.source}
                     onChange={handleChange}
-                    icon={<Sparkles className="w-4 h-4" />}
+                    icon={<Globe className="w-4 h-4" />}
                     options={SOURCE_OPTIONS}
                     placeholder="Select source"
                   />
 
                   {/* Additional message */}
                   <div>
-                    <label className="block text-xs font-bold text-surface-700 mb-1.5">
+                    <label className="block text-xs font-semibold text-surface-700 mb-1.5">
                       Additional Message <span className="text-surface-400">(optional)</span>
                     </label>
                     <textarea
@@ -532,7 +499,7 @@ export default function InquirePage() {
                       onChange={handleChange}
                       rows={2}
                       placeholder="Any additional details, questions, or preferred dates..."
-                      className="w-full px-4 py-2.5 bg-surface-50 border border-surface-300 rounded-xl text-sm text-surface-900 placeholder:text-surface-400 focus:outline-none focus:border-primary-600 focus:bg-white transition-all resize-none"
+                      className="w-full px-4 py-2.5 bg-surface-50 border border-surface-300 rounded-lg text-sm text-surface-900 placeholder:text-surface-400 focus:border-primary-600 focus:bg-white transition-colors resize-none"
                     />
                   </div>
 
@@ -540,7 +507,7 @@ export default function InquirePage() {
                   <button
                     type="submit"
                     disabled={submitting}
-                    className="w-full flex items-center justify-center gap-2 px-6 py-3.5 bg-primary-600 hover:bg-primary-700 disabled:opacity-60 disabled:cursor-not-allowed text-white font-bold rounded-xl transition-all text-sm shadow-sm"
+                    className="w-full flex items-center justify-center gap-2 px-6 py-3 bg-primary-600 hover:bg-primary-700 disabled:opacity-60 disabled:cursor-not-allowed text-white font-semibold rounded-lg transition-colors text-sm shadow-xs"
                   >
                     {submitting ? (
                       <>
@@ -626,7 +593,7 @@ function FormField({
 }) {
   return (
     <div>
-      <label className="block text-xs font-bold text-surface-700 mb-1.5">
+      <label className="block text-xs font-semibold text-surface-700 mb-1.5">
         {label} {required && <span className="text-danger-500">*</span>}
       </label>
       <div className="relative">
@@ -642,7 +609,7 @@ function FormField({
           onChange={onChange}
           required={required}
           placeholder={placeholder}
-          className={`w-full ${icon ? 'pl-10' : 'pl-4'} pr-4 py-2.5 bg-surface-50 border border-surface-300 rounded-xl text-sm text-surface-900 placeholder:text-surface-400 focus:outline-none focus:border-primary-600 focus:bg-white transition-all`}
+          className={`w-full ${icon ? 'pl-10' : 'pl-4'} pr-4 py-2.5 bg-surface-50 border border-surface-300 rounded-lg text-sm text-surface-900 placeholder:text-surface-400 focus:border-primary-600 focus:bg-white transition-colors`}
         />
       </div>
     </div>
@@ -668,7 +635,7 @@ function FormSelect({
 }) {
   return (
     <div>
-      <label className="block text-xs font-bold text-surface-700 mb-1.5">{label}</label>
+      <label className="block text-xs font-semibold text-surface-700 mb-1.5">{label}</label>
       <div className="relative">
         {icon && (
           <span className="absolute left-3 top-1/2 -translate-y-1/2 text-surface-400">
@@ -679,7 +646,7 @@ function FormSelect({
           name={name}
           value={value}
           onChange={onChange}
-          className={`w-full ${icon ? 'pl-10' : 'pl-4'} pr-10 py-2.5 bg-surface-50 border border-surface-300 rounded-xl text-sm text-surface-900 focus:outline-none focus:border-primary-600 focus:bg-white transition-all appearance-none`}
+          className={`w-full ${icon ? 'pl-10' : 'pl-4'} pr-10 py-2.5 bg-surface-50 border border-surface-300 rounded-lg text-sm text-surface-900 focus:border-primary-600 focus:bg-white transition-colors appearance-none`}
         >
           <option value="">{placeholder}</option>
           {options.map((opt) => (

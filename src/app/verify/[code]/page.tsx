@@ -14,10 +14,8 @@ import { Button } from '@/components/ui/Button';
 import {
   ShieldCheck,
   CheckCircle2,
-  Lock,
   Calendar,
   User,
-  FileText,
   Printer,
   Globe2,
   Building2,
@@ -129,30 +127,25 @@ export default function VerificationPage({
         ) : (
           <div className="space-y-6">
             {/* Verification Banner Card */}
-            <Card className="bg-white border-2 border-success-500 p-6 sm:p-8 rounded-2xl shadow-md space-y-6 relative overflow-hidden">
-              {/* Background watermark seal */}
-              <div className="absolute right-[-20px] bottom-[-20px] opacity-[0.04] pointer-events-none">
-                <ShieldCheck className="w-72 h-72 text-success-900" />
-              </div>
-
+            <Card className="bg-white border border-success-500 p-6 sm:p-8 rounded-xl shadow-sm space-y-6">
               {/* Certificate Header */}
-              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-6 border-b border-surface-200">
-                <div className="space-y-1">
-                  <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-success-50 text-success-700 text-xs font-bold border border-success-200">
-                    <CheckCircle2 className="w-4 h-4 text-success-600" />
-                    <span>VERIFIED AUTHENTIC & IMMUTABLE</span>
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-5 border-b border-surface-200">
+                <div className="space-y-1.5">
+                  <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-success-50 text-success-700 text-xs font-semibold border border-success-200">
+                    <CheckCircle2 className="w-3.5 h-3.5 text-success-600" />
+                    <span>Verified Record</span>
                   </div>
-                  <h1 className="text-2xl font-black text-surface-900 tracking-tight pt-1">
+                  <h1 className="text-2xl font-bold text-surface-900 tracking-tight">
                     Certificate of Digital Proof
                   </h1>
-                  <p className="text-xs text-surface-500 font-medium">
-                    Issued under the Information Technology Act (India, § 10A) & HIPAA Security Standards
+                  <p className="text-xs text-surface-500">
+                    Issued under the Information Technology Act (India, § 10A) &amp; HIPAA Security Standards
                   </p>
                 </div>
 
                 <div className="text-left sm:text-right shrink-0">
-                  <span className="text-[10px] font-bold uppercase tracking-wider text-surface-400 block">Verification Code</span>
-                  <span className="text-base font-mono font-extrabold text-primary-700">{data.verificationCode}</span>
+                  <span className="text-[11px] font-semibold uppercase tracking-wider text-surface-500 block">Verification Code</span>
+                  <span className="text-base font-mono font-bold text-primary-700">{data.verificationCode}</span>
                 </div>
               </div>
 

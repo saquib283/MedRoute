@@ -12,7 +12,10 @@ import { Button } from '@/components/ui/Button';
 import { Badge } from '@/components/ui/Badge';
 import { DatePicker } from '@/components/ui/DatePicker';
 import { Select } from '@/components/ui/Select';
+import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
+import { Modal } from '@/components/ui/Modal';
 import { toast } from '@/components/ui/Toast';
+import { AlertTriangle } from 'lucide-react';
 
 interface EmailTemplate {
   id: string;
@@ -66,8 +69,15 @@ export default function EmailCampaignsPage() {
 
   // Detail view
   const [viewingCampaign, setViewingCampaign] = useState<Campaign | null>(null);
+  const [cancelConfirm, setCancelConfirm] = useState<{ open: boolean; id: string; name: string }>({
+    open: false,
+    id: '',
+    name: '',
+  });
+  const [cancelling, setCancelling] = useState(false);
 
   const fetchCampaigns = useCallback(async (page = 1) => {
+    await Promise.resolve();
     setLoading(true);
     try {
       const params = new URLSearchParams({ page: String(page), limit: '15' });
@@ -86,8 +96,11 @@ export default function EmailCampaignsPage() {
     }
   }, [statusFilter]);
 
-  // eslint-disable-next-line react-hooks/set-state-in-effect
-  useEffect(() => { fetchCampaigns(); }, [fetchCampaigns]);
+  useEffect(() => {
+    queueMicrotask(() => {
+      void fetchCampaigns();
+    });
+  }, [fetchCampaigns]);
 
   const fetchTemplates = async () => {
     try {
@@ -150,19 +163,29 @@ export default function EmailCampaignsPage() {
     }
   };
 
-  const handleCancel = async (id: string, name: string) => {
-    if (!confirm(`Are you sure you want to cancel and delete the scheduled campaign "${name}"?`)) return;
+  const handleCancel = (id: string, name: string) => {
+    setCancelConfirm({ open: true, id, name });
+  };
+
+  const confirmCancelCampaign = async () => {
+    if (!cancelConfirm.id) return;
+    setCancelling(true);
     try {
-      const res = await fetch(`/api/v1/admin/email-campaigns?id=${id}`, { method: 'DELETE' });
+      const res = await fetch(`/api/v1/admin/email-campaigns?id=${cancelConfirm.id}`, {
+        method: 'DELETE',
+      });
       const data = await res.json();
       if (data.success) {
         toast.success('Campaign cancelled successfully');
+        setCancelConfirm({ open: false, id: '', name: '' });
         fetchCampaigns(pagination.page);
       } else {
         toast.error(data.error?.message || 'Cancellation failed');
       }
     } catch {
       toast.error('Failed to cancel campaign');
+    } finally {
+      setCancelling(false);
     }
   };
 
@@ -171,9 +194,8 @@ export default function EmailCampaignsPage() {
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <div className="flex items-center gap-3 mb-1">
+          <div className="mb-1">
             <h1 className="text-2xl font-bold text-surface-900 tracking-tight">Email Campaigns</h1>
-            <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider bg-primary-50 text-primary-700 border border-primary-200">Admin</span>
           </div>
           <p className="text-sm text-surface-500">Send targeted email campaigns to platform users using templates.</p>
         </div>
@@ -265,149 +287,157 @@ export default function EmailCampaignsPage() {
       </Card>
 
       {/* New Campaign Modal */}
-      {showModal && (
-        <div className="fixed inset-0 z-50 flex items-start justify-center p-4 pt-[5vh] bg-surface-900/40 backdrop-blur-xs overflow-y-auto">
-          <div className="bg-white rounded-lg shadow-xl w-full max-w-2xl animate-scale-up my-8">
-            <div className="px-6 py-4 border-b border-surface-100 flex items-center justify-between">
-              <h3 className="text-sm font-bold text-surface-900">New Email Campaign</h3>
-              <button onClick={() => setShowModal(false)} className="text-surface-400 hover:text-surface-600 font-bold text-lg">×</button>
-            </div>
-            <form onSubmit={handleSend} className="p-6 space-y-5">
-              <div className="space-y-1.5">
-                <label className="block text-xs font-semibold text-surface-700">Campaign Name *</label>
-                <input
-                  type="text"
-                  required
-                  value={form.name}
-                  onChange={(e) => setForm({ ...form, name: e.target.value })}
-                  className="w-full p-2.5 border border-surface-300 rounded text-sm focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500"
-                  placeholder="e.g., July Welcome Campaign"
-                />
-              </div>
-
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <Select
-                  label="Template *"
-                  value={form.templateId}
-                  onChange={handleTemplateSelect}
-                  options={[
-                    { value: '', label: 'Select a template...' },
-                    ...templates.map((t) => ({ value: t.id, label: `${t.name} (${t.category})` }))
-                  ]}
-                  required
-                  helperText={templates.length === 0 ? "No templates available. Create one first." : undefined}
-                />
-
-                <Select
-                  label="Target Audience *"
-                  value={form.targetRole}
-                  onChange={(val) => setForm({ ...form, targetRole: val })}
-                  options={AUDIENCE_OPTIONS}
-                  required
-                />
-              </div>
-
-              <DatePicker
-                label="Scheduled Send Time (Optional)"
-                value={form.scheduledAt}
-                onChange={(scheduledAt) => setForm({ ...form, scheduledAt })}
-                showTimePicker={true}
-                placeholder="Leave blank to send immediately"
-                helperText="Leave blank to send this campaign immediately."
-              />
-
-              {/* Template Preview */}
-              {selectedTemplate && (
-                <div className="border border-surface-200 rounded-lg overflow-hidden">
-                  <div className="px-4 py-2.5 bg-surface-50 border-b border-surface-200 flex items-center justify-between">
-                    <span className="text-xs font-bold text-surface-700">Template Preview</span>
-                    <Badge variant="primary" size="sm">{selectedTemplate.category}</Badge>
-                  </div>
-                  <div className="px-4 py-2 border-b border-surface-100 bg-white">
-                    <p className="text-xs text-surface-500">Subject: <span className="font-semibold text-surface-800">{selectedTemplate.subject}</span></p>
-                  </div>
-                  <div className="p-4 bg-white max-h-[200px] overflow-y-auto text-sm">
-                    <div dangerouslySetInnerHTML={{ __html: selectedTemplate.body }} />
-                  </div>
-                </div>
-              )}
-
-              <div className="bg-warning-50 border border-warning-200 rounded-lg px-4 py-3 flex items-start gap-2">
-                <svg className="w-5 h-5 text-warning-600 shrink-0 mt-0.5" fill="currentColor" viewBox="0 0 20 20">
-                  <path fillRule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
-                </svg>
-                <div>
-                  <p className="text-xs font-bold text-warning-800">
-                    {form.scheduledAt ? 'Campaign will be scheduled' : 'Campaign will be sent immediately'}
-                  </p>
-                  <p className="text-[11px] text-warning-600 mt-0.5">
-                    {form.scheduledAt 
-                      ? `This will queue the campaign to process automatically at ${new Date(form.scheduledAt).toLocaleString()}.` 
-                      : 'This will create email notifications for all active users matching the target audience. The campaign cannot be undone.'}
-                  </p>
-                </div>
-              </div>
-
-              <div className="flex gap-3 pt-2">
-                <Button type="button" variant="secondary" className="flex-1" onClick={() => setShowModal(false)}>Cancel</Button>
-                <Button type="submit" className="flex-1" isLoading={sending}>
-                  {form.scheduledAt ? 'Schedule Campaign' : 'Send Campaign'}
-                </Button>
-              </div>
-            </form>
+      <Modal
+        open={showModal}
+        onClose={() => setShowModal(false)}
+        title="New Email Campaign"
+        maxWidth="2xl"
+      >
+        <form onSubmit={handleSend} className="space-y-5">
+          <div className="space-y-1.5">
+            <label className="block text-xs font-semibold text-surface-700">Campaign Name *</label>
+            <input
+              type="text"
+              required
+              value={form.name}
+              onChange={(e) => setForm({ ...form, name: e.target.value })}
+              className="w-full p-2.5 border border-surface-300 rounded text-sm focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500"
+              placeholder="e.g., Patient Onboarding Follow-up"
+            />
           </div>
-        </div>
-      )}
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <Select
+              label="Template *"
+              value={form.templateId}
+              onChange={handleTemplateSelect}
+              options={[
+                { value: '', label: 'Select a template...' },
+                ...templates.map((t) => ({ value: t.id, label: `${t.name} (${t.category})` }))
+              ]}
+              required
+              helperText={templates.length === 0 ? "No templates available. Create one first." : undefined}
+            />
+
+            <Select
+              label="Target Audience *"
+              value={form.targetRole}
+              onChange={(val) => setForm({ ...form, targetRole: val })}
+              options={AUDIENCE_OPTIONS}
+              required
+            />
+          </div>
+
+          <DatePicker
+            label="Scheduled Send Time (Optional)"
+            value={form.scheduledAt}
+            onChange={(scheduledAt) => setForm({ ...form, scheduledAt })}
+            showTimePicker={true}
+            placeholder="Leave blank to send immediately"
+            helperText="Leave blank to send this campaign immediately."
+          />
+
+          {/* Template Preview */}
+          {selectedTemplate && (
+            <div className="border border-surface-200 rounded-lg overflow-hidden">
+              <div className="px-4 py-2.5 bg-surface-50 border-b border-surface-200 flex items-center justify-between">
+                <span className="text-xs font-bold text-surface-700">Template Preview</span>
+                <Badge variant="primary" size="sm">{selectedTemplate.category}</Badge>
+              </div>
+              <div className="px-4 py-2 border-b border-surface-100 bg-white">
+                <p className="text-xs text-surface-500">Subject: <span className="font-semibold text-surface-800">{selectedTemplate.subject}</span></p>
+              </div>
+              <div className="p-4 bg-white max-h-[200px] overflow-y-auto text-sm">
+                <div dangerouslySetInnerHTML={{ __html: selectedTemplate.body }} />
+              </div>
+            </div>
+          )}
+
+          <div className="bg-warning-50 border border-warning-200 rounded-lg px-4 py-3 flex items-start gap-2.5">
+            <AlertTriangle className="w-4 h-4 text-warning-600 shrink-0 mt-0.5" />
+            <div>
+              <p className="text-xs font-bold text-warning-800">
+                {form.scheduledAt ? 'Campaign will be scheduled' : 'Campaign will be sent immediately'}
+              </p>
+              <p className="text-[11px] text-warning-600 mt-0.5">
+                {form.scheduledAt
+                  ? `This will queue the campaign to process automatically at ${new Date(form.scheduledAt).toLocaleString()}.`
+                  : 'This will create email notifications for all active users matching the target audience. The campaign cannot be undone.'}
+              </p>
+            </div>
+          </div>
+
+          <div className="flex gap-3 pt-2">
+            <Button type="button" variant="secondary" className="flex-1" onClick={() => setShowModal(false)}>Cancel</Button>
+            <Button type="submit" className="flex-1" isLoading={sending}>
+              {form.scheduledAt ? 'Schedule Campaign' : 'Send Campaign'}
+            </Button>
+          </div>
+        </form>
+      </Modal>
 
       {/* Campaign Detail View */}
-      {viewingCampaign && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-surface-900/40 backdrop-blur-xs">
-          <div className="bg-white rounded-lg shadow-xl w-full max-w-md animate-scale-up">
-            <div className="px-6 py-4 border-b border-surface-100 flex items-center justify-between">
-              <h3 className="text-sm font-bold text-surface-900">Campaign Details</h3>
-              <button onClick={() => setViewingCampaign(null)} className="text-surface-400 hover:text-surface-600 font-bold text-lg">×</button>
-            </div>
-            <div className="p-6 space-y-4">
-              <div className="space-y-3">
+      <Modal
+        open={!!viewingCampaign}
+        onClose={() => setViewingCampaign(null)}
+        title="Campaign Details"
+        maxWidth="md"
+        footer={
+          <Button variant="secondary" fullWidth onClick={() => setViewingCampaign(null)}>
+            Close
+          </Button>
+        }
+      >
+        {viewingCampaign && (
+          <div className="space-y-4">
+            <div className="space-y-3">
+              <div>
+                <p className="text-[10px] font-bold text-surface-500 uppercase tracking-wider">Campaign Name</p>
+                <p className="text-sm font-semibold text-surface-900 mt-0.5">{viewingCampaign.name}</p>
+              </div>
+              <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <p className="text-[10px] font-bold text-surface-500 uppercase tracking-wider">Campaign Name</p>
-                  <p className="text-sm font-semibold text-surface-900 mt-0.5">{viewingCampaign.name}</p>
-                </div>
-                <div className="grid grid-cols-2 gap-3">
-                  <div>
-                    <p className="text-[10px] font-bold text-surface-500 uppercase tracking-wider">Template</p>
-                    <p className="text-sm text-surface-700 mt-0.5">{viewingCampaign.template.name}</p>
-                  </div>
-                  <div>
-                    <p className="text-[10px] font-bold text-surface-500 uppercase tracking-wider">Audience</p>
-                    <p className="text-sm text-surface-700 mt-0.5">{viewingCampaign.targetRole}</p>
-                  </div>
-                </div>
-                <div className="grid grid-cols-3 gap-3">
-                  <div className="p-3 bg-surface-50 rounded-lg text-center">
-                    <p className="text-lg font-bold text-surface-900">{viewingCampaign.sentCount}</p>
-                    <p className="text-[10px] text-surface-500 font-semibold">Sent</p>
-                  </div>
-                  <div className="p-3 bg-surface-50 rounded-lg text-center">
-                    <p className="text-lg font-bold text-surface-900">{viewingCampaign.failedCount}</p>
-                    <p className="text-[10px] text-surface-500 font-semibold">Failed</p>
-                  </div>
-                  <div className="p-3 bg-surface-50 rounded-lg text-center">
-                    <Badge variant={STATUS_VARIANTS[viewingCampaign.status] || 'default'} dot>{viewingCampaign.status}</Badge>
-                  </div>
+                  <p className="text-[10px] font-bold text-surface-500 uppercase tracking-wider">Template</p>
+                  <p className="text-sm text-surface-700 mt-0.5">{viewingCampaign.template.name}</p>
                 </div>
                 <div>
-                  <p className="text-[10px] font-bold text-surface-500 uppercase tracking-wider">Sent At</p>
-                  <p className="text-sm text-surface-700 mt-0.5">
-                    {viewingCampaign.sentAt ? new Date(viewingCampaign.sentAt).toLocaleString() : 'Not yet sent'}
-                  </p>
+                  <p className="text-[10px] font-bold text-surface-500 uppercase tracking-wider">Audience</p>
+                  <p className="text-sm text-surface-700 mt-0.5">{viewingCampaign.targetRole}</p>
                 </div>
               </div>
-              <Button variant="secondary" fullWidth onClick={() => setViewingCampaign(null)}>Close</Button>
+              <div className="grid grid-cols-3 gap-3">
+                <div className="p-3 bg-surface-50 rounded-lg text-center">
+                  <p className="text-lg font-bold text-surface-900">{viewingCampaign.sentCount}</p>
+                  <p className="text-[10px] text-surface-500 font-semibold">Sent</p>
+                </div>
+                <div className="p-3 bg-surface-50 rounded-lg text-center">
+                  <p className="text-lg font-bold text-surface-900">{viewingCampaign.failedCount}</p>
+                  <p className="text-[10px] text-surface-500 font-semibold">Failed</p>
+                </div>
+                <div className="p-3 bg-surface-50 rounded-lg text-center flex items-center justify-center">
+                  <Badge variant={STATUS_VARIANTS[viewingCampaign.status] || 'default'} dot>{viewingCampaign.status}</Badge>
+                </div>
+              </div>
+              <div>
+                <p className="text-[10px] font-bold text-surface-500 uppercase tracking-wider">Sent At</p>
+                <p className="text-sm text-surface-700 mt-0.5">
+                  {viewingCampaign.sentAt ? new Date(viewingCampaign.sentAt).toLocaleString() : 'Not yet sent'}
+                </p>
+              </div>
             </div>
           </div>
-        </div>
-      )}
+        )}
+      </Modal>
+      <ConfirmDialog
+        open={cancelConfirm.open}
+        title="Cancel Scheduled Campaign"
+        message={`Are you sure you want to cancel and delete "${cancelConfirm.name}"?`}
+        confirmLabel="Cancel Campaign"
+        variant="danger"
+        loading={cancelling}
+        onConfirm={confirmCancelCampaign}
+        onCancel={() => setCancelConfirm({ open: false, id: '', name: '' })}
+      />
     </div>
   );
 }

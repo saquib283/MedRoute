@@ -9,6 +9,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { Card } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { Badge } from '@/components/ui/Badge';
+import { Modal } from '@/components/ui/Modal';
 import { toast } from '@/components/ui/Toast';
 import {
   Inbox,
@@ -21,7 +22,6 @@ import {
   Search,
   ChevronLeft,
   ChevronRight,
-  X,
   UserPlus,
   MessageSquare,
   Eye,
@@ -534,35 +534,22 @@ export default function AdminLeadsPage() {
       </Card>
 
       {/* ── Lead Detail Modal ──────────────────────────────────────────── */}
-      {selectedLead && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-          <div
-            className="absolute inset-0 bg-surface-900/50 backdrop-blur-sm"
-            onClick={() => setSelectedLead(null)}
-          />
-          <div className="relative bg-white rounded-2xl shadow-xl w-full max-w-2xl max-h-[85vh] overflow-y-auto animate-scale-in">
-            {/* Header */}
-            <div className="sticky top-0 bg-white border-b border-surface-200 px-6 py-4 flex items-center justify-between rounded-t-2xl z-10">
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-full bg-primary-50 border border-primary-100 flex items-center justify-center">
-                  <Users className="w-5 h-5 text-primary-600" />
-                </div>
-                <div>
-                  <h3 className="font-bold text-surface-900">{selectedLead.fullName}</h3>
-                  <Badge variant={STATUS_CONFIG[selectedLead.status].variant} size="sm">
-                    {STATUS_CONFIG[selectedLead.status].label}
-                  </Badge>
-                </div>
+      <Modal
+        open={!!selectedLead}
+        onClose={() => setSelectedLead(null)}
+        title={selectedLead ? selectedLead.fullName : 'Lead Details'}
+        maxWidth="2xl"
+      >
+        {selectedLead && (
+          <div className="space-y-5">
+            <div className="flex items-center gap-3 pb-3 border-b border-surface-100">
+              <div className="w-9 h-9 rounded-lg bg-primary-50 border border-primary-100 flex items-center justify-center">
+                <Users className="w-4 h-4 text-primary-600" />
               </div>
-              <button
-                onClick={() => setSelectedLead(null)}
-                className="p-2 rounded-lg hover:bg-surface-100 text-surface-500"
-              >
-                <X className="w-5 h-5" />
-              </button>
+              <Badge variant={STATUS_CONFIG[selectedLead.status].variant} size="sm">
+                {STATUS_CONFIG[selectedLead.status].label}
+              </Badge>
             </div>
-
-            <div className="p-6 space-y-5">
               {/* Contact Info */}
               <div className="grid sm:grid-cols-2 gap-4">
                 <DetailField icon={<Mail className="w-4 h-4" />} label="Email" value={selectedLead.email} />
@@ -597,7 +584,7 @@ export default function AdminLeadsPage() {
               {/* Source & Message */}
               <div className="grid sm:grid-cols-2 gap-4">
                 <DetailField
-                  icon={<Sparkles className="w-4 h-4" />}
+                  icon={<Globe className="w-4 h-4" />}
                   label="Source"
                   value={SOURCE_LABELS[selectedLead.source] || selectedLead.source}
                 />
@@ -672,34 +659,19 @@ export default function AdminLeadsPage() {
                   </>
                 )}
               </div>
-            </div>
           </div>
-        </div>
-      )}
+        )}
+      </Modal>
 
       {/* ── Onboard Patient Modal ──────────────────────────────────────── */}
-      {onboardLead && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-          <div
-            className="absolute inset-0 bg-surface-900/50 backdrop-blur-sm"
-            onClick={() => !onboarding && setOnboardLead(null)}
-          />
-          <div className="relative bg-white rounded-2xl shadow-xl w-full max-w-lg max-h-[85vh] overflow-y-auto animate-scale-in">
-            {/* Header */}
-            <div className="sticky top-0 bg-white border-b border-surface-200 px-6 py-4 flex items-center justify-between rounded-t-2xl z-10">
-              <div className="flex items-center gap-2">
-                <UserPlus className="w-5 h-5 text-primary-600" />
-                <h3 className="font-bold text-surface-900">Onboard Patient</h3>
-              </div>
-              <button
-                onClick={() => !onboarding && setOnboardLead(null)}
-                className="p-2 rounded-lg hover:bg-surface-100 text-surface-500"
-              >
-                <X className="w-5 h-5" />
-              </button>
-            </div>
-
-            <div className="p-6">
+      <Modal
+        open={!!onboardLead}
+        onClose={() => { if (!onboarding) setOnboardLead(null); }}
+        title="Onboard Patient"
+        maxWidth="lg"
+      >
+        {onboardLead && (
+          <div>
               {onboardResult ? (
                 /* ── Success ─────────────────────────────────────────── */
                 <div className="text-center space-y-5 animate-fade-in">
@@ -861,10 +833,9 @@ export default function AdminLeadsPage() {
                   </Button>
                 </form>
               )}
-            </div>
           </div>
-        </div>
-      )}
+        )}
+      </Modal>
     </div>
   );
 }

@@ -7,6 +7,7 @@
 
 import { useEffect } from 'react';
 import { create } from 'zustand';
+import { AlertTriangle, CheckCircle2, Info, X, XCircle } from 'lucide-react';
 
 // ─── Types ──────────────────────────────────────────────────────────
 
@@ -59,30 +60,30 @@ export const toast = {
 
 // ─── Variant Styles ─────────────────────────────────────────────────
 
-const VARIANT_STYLES: Record<ToastVariant, { bg: string; border: string; text: string; icon: string }> = {
+const VARIANT_STYLES: Record<ToastVariant, { bg: string; border: string; text: string; icon: React.ReactNode }> = {
   success: {
     bg: 'bg-success-50',
     border: 'border-success-500',
     text: 'text-success-700',
-    icon: '✓',
+    icon: <CheckCircle2 className="w-4 h-4 shrink-0" />,
   },
   error: {
     bg: 'bg-danger-50',
     border: 'border-danger-500',
     text: 'text-danger-700',
-    icon: '✕',
+    icon: <XCircle className="w-4 h-4 shrink-0" />,
   },
   warning: {
     bg: 'bg-warning-50',
     border: 'border-warning-500',
     text: 'text-warning-700',
-    icon: '⚠',
+    icon: <AlertTriangle className="w-4 h-4 shrink-0" />,
   },
   info: {
     bg: 'bg-info-50',
     border: 'border-info-500',
     text: 'text-info-700',
-    icon: 'ℹ',
+    icon: <Info className="w-4 h-4 shrink-0" />,
   },
 };
 
@@ -102,16 +103,17 @@ function ToastItem({ t }: { t: Toast }) {
       className={`flex items-center gap-3 px-4 py-3 rounded-lg border ${style.bg} ${style.border} ${style.text} shadow-md animate-slide-up min-w-[300px] max-w-[420px]`}
       role="alert"
     >
-      <span className="text-base font-bold shrink-0 w-5 h-5 flex items-center justify-center">
+      <span className="shrink-0 flex items-center justify-center">
         {style.icon}
       </span>
       <p className="text-sm font-medium flex-1">{t.message}</p>
       <button
+        type="button"
         onClick={() => removeToast(t.id)}
-        className="shrink-0 opacity-60 hover:opacity-100 transition-opacity text-lg leading-none font-bold"
-        aria-label="Dismiss"
+        className="shrink-0 p-0.5 rounded opacity-60 hover:opacity-100 transition-opacity"
+        aria-label="Dismiss notification"
       >
-        ×
+        <X className="w-4 h-4" />
       </button>
     </div>
   );

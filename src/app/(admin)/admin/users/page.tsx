@@ -11,7 +11,9 @@ import { Button } from '@/components/ui/Button';
 import { Badge } from '@/components/ui/Badge';
 import { Select } from '@/components/ui/Select';
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
+import { Modal } from '@/components/ui/Modal';
 import { toast } from '@/components/ui/Toast';
+import { Check } from 'lucide-react';
 
 interface User {
   id: string;
@@ -200,8 +202,7 @@ export default function AdminUsersPage() {
   };
 
   const openEdit = (user: User) => {
-    // Non-super-admins can't edit admin-level users
-    if ((user.role === 'ADMIN' || user.role === 'ADMIN') && !isSuperAdmin) {
+    if (user.role === 'ADMIN' && !isSuperAdmin) {
       toast.error('Only Admin can edit admin-level users.');
       return;
     }
@@ -264,7 +265,7 @@ export default function AdminUsersPage() {
   };
 
   const handleResetPassword = async (user: User) => {
-    if ((user.role === 'ADMIN' || user.role === 'ADMIN') && !isSuperAdmin) {
+    if (user.role === 'ADMIN' && !isSuperAdmin) {
       toast.error('Only Admin can reset admin passwords.');
       return;
     }
@@ -283,19 +284,19 @@ export default function AdminUsersPage() {
   };
 
   const canEditUser = (user: User) => {
-    if (user.role === 'ADMIN' || user.role === 'ADMIN') return isSuperAdmin;
+    if (user.role === 'ADMIN') return isSuperAdmin;
     return true;
   };
 
   // Filter role options for non-super-admins
-  const availableRoles = isSuperAdmin ? ROLE_OPTIONS : ROLE_OPTIONS.filter(r => r !== 'ADMIN' && r !== 'ADMIN');
+  const availableRoles = isSuperAdmin ? ROLE_OPTIONS : ROLE_OPTIONS.filter(r => r !== 'ADMIN');
 
   return (
-    <div className="max-w-7xl mx-auto space-y-6 animate-fade-in">
+    <div className="space-y-6 animate-fade-in">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
           <h1 className="text-2xl font-bold text-surface-900 tracking-tight">User Management</h1>
-          <p className="text-sm text-surface-500 mt-1">Create, edit, and manage all platform user accounts.</p>
+          <p className="text-sm text-surface-500 mt-1">Create, edit, and manage platform user accounts.</p>
         </div>
         <div className="flex gap-2">
           {isSuperAdmin && (
@@ -306,7 +307,7 @@ export default function AdminUsersPage() {
                 toast.success('Export started — check your downloads.');
               }}
             >
-              ↓ Export CSV
+              Export CSV
             </Button>
           )}
           <Button onClick={openCreate}>+ Create User</Button>
@@ -552,56 +553,53 @@ export default function AdminUsersPage() {
       )}
 
       {/* Create/Edit Modal */}
-      {showModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-surface-900/40 backdrop-blur-xs">
-          <div className="bg-white rounded-lg shadow-xl w-full max-w-md animate-scale-up">
-            <div className="px-6 py-4 border-b border-surface-100 flex items-center justify-between">
-              <h3 className="text-sm font-bold text-surface-900">{editingUser ? 'Edit User' : 'Create New User'}</h3>
-              <button onClick={() => setShowModal(false)} className="text-surface-400 hover:text-surface-600 font-bold text-lg">×</button>
-            </div>
-            <form onSubmit={handleSave} className="p-6 space-y-4">
-              <div className="space-y-1.5">
-                <label className="block text-xs font-semibold text-surface-700">Full Name</label>
-                <input type="text" required value={formData.fullName} onChange={(e) => setFormData({ ...formData, fullName: e.target.value })} className="w-full p-2.5 border border-surface-300 rounded text-sm focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500" />
-              </div>
-              <div className="space-y-1.5">
-                <label className="block text-xs font-semibold text-surface-700">Email</label>
-                <input type="email" required value={formData.email} onChange={(e) => setFormData({ ...formData, email: e.target.value })} className="w-full p-2.5 border border-surface-300 rounded text-sm focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500" />
-              </div>
-              {!editingUser && (
-                <div className="space-y-1.5">
-                  <label className="block text-xs font-semibold text-surface-700">Password</label>
-                  <input type="password" required value={formData.password} onChange={(e) => setFormData({ ...formData, password: e.target.value })} className="w-full p-2.5 border border-surface-300 rounded text-sm focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500" placeholder="Min 8 characters" />
-                </div>
-              )}
-              <div className="grid grid-cols-2 gap-4">
-                <Select
-                  label="Role"
-                  value={formData.role}
-                  onChange={(val) => setFormData({ ...formData, role: val })}
-                  options={availableRoles.map((r) => ({ value: r, label: r }))}
-                  required
-                  className="col-span-1"
-                />
-                <div className="space-y-1.5">
-                  <label className="block text-xs font-semibold text-surface-700">Phone</label>
-                  <input type="text" value={formData.phone} onChange={(e) => setFormData({ ...formData, phone: e.target.value })} className="w-full p-2.5 border border-surface-300 rounded text-sm focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500" />
-                </div>
-              </div>
-              {editingUser && (
-                <div className="flex items-center gap-2">
-                  <input type="checkbox" id="isActive" checked={formData.isActive} onChange={(e) => setFormData({ ...formData, isActive: e.target.checked })} />
-                  <label htmlFor="isActive" className="text-sm font-medium text-surface-700">Account Active</label>
-                </div>
-              )}
-              <div className="flex gap-3 pt-2">
-                <Button type="button" variant="secondary" className="flex-1" onClick={() => setShowModal(false)}>Cancel</Button>
-                <Button type="submit" className="flex-1" isLoading={saving}>{editingUser ? 'Save Changes' : 'Create User'}</Button>
-              </div>
-            </form>
+      <Modal
+        open={showModal}
+        onClose={() => setShowModal(false)}
+        title={editingUser ? 'Edit User' : 'Create New User'}
+        maxWidth="md"
+      >
+        <form onSubmit={handleSave} className="space-y-4">
+          <div className="space-y-1.5">
+            <label className="block text-xs font-semibold text-surface-700">Full Name</label>
+            <input type="text" required value={formData.fullName} onChange={(e) => setFormData({ ...formData, fullName: e.target.value })} className="w-full p-2.5 border border-surface-300 rounded text-sm focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500" />
           </div>
-        </div>
-      )}
+          <div className="space-y-1.5">
+            <label className="block text-xs font-semibold text-surface-700">Email</label>
+            <input type="email" required value={formData.email} onChange={(e) => setFormData({ ...formData, email: e.target.value })} className="w-full p-2.5 border border-surface-300 rounded text-sm focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500" />
+          </div>
+          {!editingUser && (
+            <div className="space-y-1.5">
+              <label className="block text-xs font-semibold text-surface-700">Password</label>
+              <input type="password" required value={formData.password} onChange={(e) => setFormData({ ...formData, password: e.target.value })} className="w-full p-2.5 border border-surface-300 rounded text-sm focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500" placeholder="Min 8 characters" />
+            </div>
+          )}
+          <div className="grid grid-cols-2 gap-4">
+            <Select
+              label="Role"
+              value={formData.role}
+              onChange={(val) => setFormData({ ...formData, role: val })}
+              options={availableRoles.map((r) => ({ value: r, label: r }))}
+              required
+              className="col-span-1"
+            />
+            <div className="space-y-1.5">
+              <label className="block text-xs font-semibold text-surface-700">Phone</label>
+              <input type="text" value={formData.phone} onChange={(e) => setFormData({ ...formData, phone: e.target.value })} className="w-full p-2.5 border border-surface-300 rounded text-sm focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500" />
+            </div>
+          </div>
+          {editingUser && (
+            <div className="flex items-center gap-2">
+              <input type="checkbox" id="isActive" checked={formData.isActive} onChange={(e) => setFormData({ ...formData, isActive: e.target.checked })} />
+              <label htmlFor="isActive" className="text-sm font-medium text-surface-700">Account Active</label>
+            </div>
+          )}
+          <div className="flex gap-3 pt-2">
+            <Button type="button" variant="secondary" className="flex-1" onClick={() => setShowModal(false)}>Cancel</Button>
+            <Button type="submit" className="flex-1" isLoading={saving}>{editingUser ? 'Save Changes' : 'Create User'}</Button>
+          </div>
+        </form>
+      </Modal>
 
       {/* Deactivate Confirm */}
       <ConfirmDialog
@@ -616,26 +614,30 @@ export default function AdminUsersPage() {
       />
 
       {/* Password Reset Result */}
-      {resetResult.open && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-surface-900/40 backdrop-blur-xs">
-          <div className="bg-white rounded-lg shadow-xl w-full max-w-sm animate-scale-up p-6 space-y-4">
-            <div className="w-12 h-12 rounded-full bg-success-100 text-success-600 flex items-center justify-center mx-auto">
-              <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
-              </svg>
+      <Modal
+        open={resetResult.open}
+        onClose={() => setResetResult({ open: false, password: '', userName: '' })}
+        title="Password Reset"
+        maxWidth="sm"
+        footer={
+          <Button className="w-full" onClick={() => setResetResult({ open: false, password: '', userName: '' })}>
+            Done
+          </Button>
+        }
+      >
+        <div className="space-y-4 text-center">
+          <div className="w-11 h-11 rounded-full bg-success-100 text-success-600 flex items-center justify-center mx-auto">
+            <Check className="w-5 h-5" />
+          </div>
+          <div>
+            <p className="text-sm text-surface-600">Temporary password for <strong>{resetResult.userName}</strong>:</p>
+            <div className="mt-3 p-3 bg-surface-100 rounded-lg border border-surface-200">
+              <code className="text-lg font-mono font-bold text-primary-700 select-all">{resetResult.password}</code>
             </div>
-            <div className="text-center">
-              <h3 className="text-lg font-bold text-surface-900">Password Reset</h3>
-              <p className="text-sm text-surface-600 mt-1">Temporary password for <strong>{resetResult.userName}</strong>:</p>
-              <div className="mt-3 p-3 bg-surface-100 rounded-lg border border-surface-200">
-                <code className="text-lg font-mono font-bold text-primary-700 select-all">{resetResult.password}</code>
-              </div>
-              <p className="text-xs text-surface-400 mt-2">This password is shown only once. Share it securely with the user.</p>
-            </div>
-            <Button className="w-full" onClick={() => setResetResult({ open: false, password: '', userName: '' })}>Done</Button>
+            <p className="text-xs text-surface-500 mt-2">This password is shown only once. Share it securely with the user.</p>
           </div>
         </div>
-      )}
+      </Modal>
     </div>
   );
 }

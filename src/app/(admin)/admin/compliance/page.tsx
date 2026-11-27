@@ -11,21 +11,15 @@ import Link from 'next/link';
 import { Card } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { PageHeader } from '@/components/ui/PageHeader';
-import { StatCard } from '@/components/ui/StatCard';
 import { StatusBadge } from '@/components/ui/StatusBadge';
 import { Tabs, TabPanel } from '@/components/ui/Tabs';
+import { Modal } from '@/components/ui/Modal';
 import { toast } from '@/components/ui/Toast';
 import {
-  ShieldCheck,
-  ShieldAlert,
   Lock,
   FileCheck2,
   RefreshCw,
-  Search,
   ExternalLink,
-  Calendar,
-  User,
-  Hash,
   CheckCircle2,
   AlertTriangle,
   Building2,
@@ -33,9 +27,7 @@ import {
   Scale,
   Receipt,
   Clock,
-  Send,
   AlertCircle,
-  FileText,
 } from 'lucide-react';
 
 interface ConsentRecord {
@@ -219,20 +211,35 @@ export default function ComprehensiveComplianceHub() {
     }
   }, []);
 
+  const [resolveGrievanceModal, setResolveGrievanceModal] = useState<{ open: boolean; id: string; notes: string }>({
+    open: false,
+    id: '',
+    notes: '',
+  });
+  const [resolvingGrievance, setResolvingGrievance] = useState(false);
+  const [formCModal, setFormCModal] = useState<{ open: boolean; id: string; appNo: string }>({
+    open: false,
+    id: '',
+    appNo: '',
+  });
+  const [submittingFormC, setSubmittingFormC] = useState(false);
+
   useEffect(() => {
-    if (activeTab === 'audit') {
-      // ready
-    } else if (activeTab === 'consents') {
-      fetchConsents();
-    } else if (activeTab === 'form-c') {
-      fetchFormC();
-    } else if (activeTab === 'thota') {
-      fetchTransplants();
-    } else if (activeTab === 'grievances') {
-      fetchGrievances();
-    } else if (activeTab === 'fema') {
-      fetchFema();
-    }
+    queueMicrotask(() => {
+      if (activeTab === 'audit') {
+        // ready
+      } else if (activeTab === 'consents') {
+        void fetchConsents();
+      } else if (activeTab === 'form-c') {
+        void fetchFormC();
+      } else if (activeTab === 'thota') {
+        void fetchTransplants();
+      } else if (activeTab === 'grievances') {
+        void fetchGrievances();
+      } else if (activeTab === 'fema') {
+        void fetchFema();
+      }
+    });
   }, [activeTab, fetchConsents, fetchFormC, fetchTransplants, fetchGrievances, fetchFema]);
 
   const handleVerifyChain = async () => {
@@ -272,50 +279,76 @@ export default function ComprehensiveComplianceHub() {
     }
   };
 
-  const handleResolveGrievance = async (id: string) => {
-    const notes = prompt('Enter statutory resolution summary notes:');
-    if (!notes) return;
+  const handleResolveGrievance = (id: string) => {
+    setResolveGrievanceModal({ open: true, id, notes: '' });
+  };
 
+  const submitResolveGrievance = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!resolveGrievanceModal.notes.trim()) return;
+    setResolvingGrievance(true);
     try {
       const res = await fetch('/api/v1/compliance/grievances', {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ id, status: 'RESOLVED', resolutionNotes: notes }),
+        body: JSON.stringify({
+          id: resolveGrievanceModal.id,
+          status: 'RESOLVED',
+          resolutionNotes: resolveGrievanceModal.notes.trim(),
+        }),
       });
       const d = await res.json();
       if (d.success) {
         toast.success('Grievance marked RESOLVED under NABH SLA');
+        setResolveGrievanceModal({ open: false, id: '', notes: '' });
         fetchGrievances();
+      } else {
+        toast.error(d.error?.message || 'Failed to resolve grievance');
       }
     } catch {
       toast.error('Failed to resolve grievance');
+    } finally {
+      setResolvingGrievance(false);
     }
   };
 
-  const handleMarkFormCSubmitted = async (id: string) => {
-    const appNo = prompt('Enter official Bureau of Immigration (BoI) Form C Application Reference Number:');
-    if (!appNo) return;
+  const handleMarkFormCSubmitted = (id: string) => {
+    setFormCModal({ open: true, id, appNo: '' });
+  };
 
+  const submitFormC = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!formCModal.appNo.trim()) return;
+    setSubmittingFormC(true);
     try {
       const res = await fetch('/api/v1/compliance/form-c', {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ id, status: 'SUBMITTED_TO_BOI', formCApplicationNumber: appNo }),
+        body: JSON.stringify({
+          id: formCModal.id,
+          status: 'SUBMITTED_TO_BOI',
+          formCApplicationNumber: formCModal.appNo.trim(),
+        }),
       });
       const d = await res.json();
       if (d.success) {
         toast.success('Form C statutory submission recorded successfully');
+        setFormCModal({ open: false, id: '', appNo: '' });
         fetchFormC();
+      } else {
+        toast.error(d.error?.message || 'Failed to update Form C');
       }
     } catch {
       toast.error('Failed to update Form C');
+    } finally {
+      setSubmittingFormC(false);
     }
   };
 
   return (
     <div className="space-y-6 animate-fade-in max-w-7xl mx-auto pb-12">
       <PageHeader
-        title="Global & Indian Statutory Compliance Hub"
+        title="Statutory Compliance Oversight"
         subtitle="Unified compliance management for NABH MVTF, e-FRRO Form 'C', THOTA Transplants, DPDP/HIPAA Cryptographic Chains, and FEMA Remittances"
         breadcrumbs={[
           { label: 'Admin', href: '/admin/dashboard' },
@@ -325,27 +358,27 @@ export default function ComprehensiveComplianceHub() {
 
       {/* High-Level Statutory Metric Row */}
       <div className="grid grid-cols-2 lg:grid-cols-6 gap-3">
-        <div className="p-3.5 bg-white border border-surface-200 rounded-xl shadow-2xs">
+        <div className="p-3.5 bg-white border border-surface-200 rounded-xl shadow-xs">
           <span className="text-[10px] font-bold uppercase tracking-wider text-surface-400 block">Audit Security</span>
           <span className="text-sm font-extrabold text-primary-700 block mt-0.5">SHA-256 Chained</span>
         </div>
-        <div className="p-3.5 bg-white border border-surface-200 rounded-xl shadow-2xs">
+        <div className="p-3.5 bg-white border border-surface-200 rounded-xl shadow-xs">
           <span className="text-[10px] font-bold uppercase tracking-wider text-surface-400 block">Immigration BoI</span>
           <span className="text-sm font-extrabold text-success-700 block mt-0.5">Form &apos;C&apos; 24h SLA</span>
         </div>
-        <div className="p-3.5 bg-white border border-surface-200 rounded-xl shadow-2xs">
+        <div className="p-3.5 bg-white border border-surface-200 rounded-xl shadow-xs">
           <span className="text-[10px] font-bold uppercase tracking-wider text-surface-400 block">Clinical Ethics</span>
           <span className="text-sm font-extrabold text-primary-700 block mt-0.5">NMC Anti-Fee Split</span>
         </div>
-        <div className="p-3.5 bg-white border border-surface-200 rounded-xl shadow-2xs">
+        <div className="p-3.5 bg-white border border-surface-200 rounded-xl shadow-xs">
           <span className="text-[10px] font-bold uppercase tracking-wider text-surface-400 block">Organ Transplants</span>
           <span className="text-sm font-extrabold text-warning-700 block mt-0.5">THOTA Form 21</span>
         </div>
-        <div className="p-3.5 bg-white border border-surface-200 rounded-xl shadow-2xs">
+        <div className="p-3.5 bg-white border border-surface-200 rounded-xl shadow-xs">
           <span className="text-[10px] font-bold uppercase tracking-wider text-surface-400 block">Quality Standard</span>
           <span className="text-sm font-extrabold text-success-700 block mt-0.5">NABH MVTF 2nd Ed.</span>
         </div>
-        <div className="p-3.5 bg-white border border-surface-200 rounded-xl shadow-2xs">
+        <div className="p-3.5 bg-white border border-surface-200 rounded-xl shadow-xs">
           <span className="text-[10px] font-bold uppercase tracking-wider text-surface-400 block">Tax & Forex</span>
           <span className="text-sm font-extrabold text-primary-700 block mt-0.5">FEMA & GST LUT</span>
         </div>
@@ -602,7 +635,7 @@ export default function ComprehensiveComplianceHub() {
                     {transplants.map((t) => (
                       <tr key={t.id} className="hover:bg-surface-50">
                         <td className="py-3 px-3 font-bold text-primary-700">{t.organType}</td>
-                        <td className="py-3 px-3 font-medium text-surface-900">{t.case?.patient?.user?.fullName || 'Amara Okafor'}</td>
+                        <td className="py-3 px-3 font-medium text-surface-900">{t.case?.patient?.user?.fullName || 'Patient'}</td>
                         <td className="py-3 px-3">
                           <span className="font-bold text-surface-800">{t.donorFullName}</span>
                           <span className="block text-[10px] text-surface-500 font-mono">Relation: {t.donorRelation} ({t.donorNationality})</span>
@@ -773,6 +806,80 @@ export default function ComprehensiveComplianceHub() {
           </Card>
         </TabPanel>
       )}
+
+      <Modal
+        open={resolveGrievanceModal.open}
+        onClose={() => setResolveGrievanceModal({ open: false, id: '', notes: '' })}
+        title="Resolve Statutory Grievance"
+        subtitle="Record resolution notes per NABH SLA requirements"
+        maxWidth="md"
+      >
+        <form onSubmit={submitResolveGrievance} className="space-y-4">
+          <div className="space-y-1.5">
+            <label className="block text-xs font-semibold text-surface-700">
+              Statutory Resolution Summary *
+            </label>
+            <textarea
+              rows={4}
+              required
+              value={resolveGrievanceModal.notes}
+              onChange={(e) =>
+                setResolveGrievanceModal((prev) => ({ ...prev, notes: e.target.value }))
+              }
+              placeholder="Enter resolution summary and corrective actions taken..."
+              className="w-full p-2.5 border border-surface-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500"
+            />
+          </div>
+          <div className="flex justify-end gap-2 pt-2">
+            <Button
+              type="button"
+              variant="secondary"
+              onClick={() => setResolveGrievanceModal({ open: false, id: '', notes: '' })}
+            >
+              Cancel
+            </Button>
+            <Button type="submit" isLoading={resolvingGrievance}>
+              Mark Resolved
+            </Button>
+          </div>
+        </form>
+      </Modal>
+
+      <Modal
+        open={formCModal.open}
+        onClose={() => setFormCModal({ open: false, id: '', appNo: '' })}
+        title="Record e-FRRO Form C Submission"
+        subtitle="Enter the Bureau of Immigration reference number"
+        maxWidth="md"
+      >
+        <form onSubmit={submitFormC} className="space-y-4">
+          <div className="space-y-1.5">
+            <label className="block text-xs font-semibold text-surface-700">
+              BoI Form C Application Reference Number *
+            </label>
+            <input
+              type="text"
+              required
+              value={formCModal.appNo}
+              onChange={(e) => setFormCModal((prev) => ({ ...prev, appNo: e.target.value }))}
+              placeholder="e.g. DL/BOI/2026/001234"
+              className="w-full px-3 py-2 border border-surface-300 rounded-lg text-sm font-mono focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500"
+            />
+          </div>
+          <div className="flex justify-end gap-2 pt-2">
+            <Button
+              type="button"
+              variant="secondary"
+              onClick={() => setFormCModal({ open: false, id: '', appNo: '' })}
+            >
+              Cancel
+            </Button>
+            <Button type="submit" isLoading={submittingFormC}>
+              Confirm Submission
+            </Button>
+          </div>
+        </form>
+      </Modal>
     </div>
   );
 }

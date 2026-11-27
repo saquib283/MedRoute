@@ -49,11 +49,14 @@ export default function RevenueDashboardPage() {
   const [caseStats, setCaseStats] = useState<{ total: number; active: number }>({ total: 0, active: 0 });
 
   useEffect(() => {
-    setLoading(true);
+    let cancelled = false;
+    queueMicrotask(() => {
+      if (!cancelled) setLoading(true);
+    });
     fetch(`/api/v1/admin/revenue?period=${period}`)
       .then(r => r.json())
       .then(d => {
-        if (d.success) {
+        if (!cancelled && d.success) {
           setSummary(d.data.summary);
           setRevenueByHospital(d.data.revenueByHospital);
           setInvoiceStats(d.data.invoiceStatusDistribution);
@@ -61,7 +64,12 @@ export default function RevenueDashboardPage() {
         }
       })
       .catch(err => console.error('Revenue fetch failed:', err))
-      .finally(() => setLoading(false));
+      .finally(() => {
+        if (!cancelled) setLoading(false);
+      });
+    return () => {
+      cancelled = true;
+    };
   }, [period]);
 
   const periodTabs = [
@@ -76,7 +84,7 @@ export default function RevenueDashboardPage() {
         title="Revenue Dashboard"
         subtitle="Track commission earnings, billing, and financial performance"
         breadcrumbs={[
-          { label: 'Admin', href: '/admin' },
+          { label: 'Admin', href: '/admin/dashboard' },
           { label: 'Revenue' },
         ]}
       />

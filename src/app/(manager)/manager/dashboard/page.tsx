@@ -6,9 +6,21 @@
  */
 
 import { useState, useEffect } from 'react';
+import Link from 'next/link';
+import {
+  Users,
+  Briefcase,
+  Building2,
+  Calendar,
+  Plus,
+  Home,
+  MessageSquare,
+  Info,
+} from 'lucide-react';
 import { Card } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
-import Link from 'next/link';
+import { PageHeader } from '@/components/ui/PageHeader';
+import { StatCard } from '@/components/ui/StatCard';
 
 interface DashboardMetrics {
   totalPatients: number;
@@ -50,117 +62,86 @@ export default function ManagerDashboard() {
   }
 
   return (
-    <div className="space-y-8 animate-fade-in">
-      <div>
-        <h1 className="text-2xl font-bold text-surface-900">Operations Overview</h1>
-        <p className="text-sm text-surface-600 mt-1">Real-time status of your assigned medical travelers and treatment pipelines.</p>
-      </div>
+    <div className="space-y-6 animate-fade-in">
+      <PageHeader
+        title="Operations Overview"
+        subtitle="Status of your assigned patients, active cases, and upcoming schedule"
+      />
 
       {/* KPI Cards Grid */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
-        <Card className="p-5 flex items-center justify-between border-l-4 border-l-primary-600 bg-white">
-          <div>
-            <p className="text-xs font-bold text-surface-600 uppercase tracking-wider">Assigned Cohort</p>
-            <p className="text-3xl font-bold text-surface-900 mt-2">{metrics?.totalPatients ?? 0}</p>
-          </div>
-          <div className="p-3 bg-primary-50 rounded-lg text-primary-600 shrink-0">
-            <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-              <path strokeLinecap="round" strokeLinejoin="round" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z" />
-            </svg>
-          </div>
-        </Card>
-
-        <Card className="p-5 flex items-center justify-between border-l-4 border-l-teal-600 bg-white">
-          <div>
-            <p className="text-xs font-bold text-surface-600 uppercase tracking-wider">Active Inquiries</p>
-            <p className="text-3xl font-bold text-surface-900 mt-2">{metrics?.activeCases ?? 0}</p>
-          </div>
-          <div className="p-3 bg-teal-50 rounded-lg text-teal-600 shrink-0">
-            <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-              <path strokeLinecap="round" strokeLinejoin="round" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01" />
-            </svg>
-          </div>
-        </Card>
-
-        <Card className="p-5 flex items-center justify-between border-l-4 border-l-amber-500 bg-white">
-          <div>
-            <p className="text-xs font-bold text-surface-600 uppercase tracking-wider">Pending Hostel Bookings</p>
-            <p className="text-3xl font-bold text-surface-900 mt-2">{metrics?.pendingAccommodations ?? 0}</p>
-          </div>
-          <div className="p-3 bg-amber-50 rounded-lg text-amber-600 shrink-0">
-            <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-              <path strokeLinecap="round" strokeLinejoin="round" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
-            </svg>
-          </div>
-        </Card>
-
-        <Card className="p-5 flex items-center justify-between border-l-4 border-l-blue-600 bg-white">
-          <div>
-            <p className="text-xs font-bold text-surface-600 uppercase tracking-wider">Upcoming Appointments</p>
-            <p className="text-3xl font-bold text-surface-900 mt-2">{metrics?.upcomingAppointments ?? 0}</p>
-          </div>
-          <div className="p-3 bg-blue-50 rounded-lg text-blue-600 shrink-0">
-            <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-              <path strokeLinecap="round" strokeLinejoin="round" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
-            </svg>
-          </div>
-        </Card>
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        <StatCard
+          title="Assigned Cohort"
+          value={metrics?.totalPatients ?? 0}
+          variant="primary"
+          icon={<Users className="w-5 h-5" />}
+        />
+        <StatCard
+          title="Active Cases"
+          value={metrics?.activeCases ?? 0}
+          variant="default"
+          icon={<Briefcase className="w-5 h-5" />}
+        />
+        <StatCard
+          title="Pending Stay Bookings"
+          value={metrics?.pendingAccommodations ?? 0}
+          variant="warning"
+          icon={<Building2 className="w-5 h-5" />}
+        />
+        <StatCard
+          title="Upcoming Appointments"
+          value={metrics?.upcomingAppointments ?? 0}
+          variant="primary"
+          icon={<Calendar className="w-5 h-5" />}
+        />
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Core Actions Card */}
-        <Card className="p-6 bg-white flex flex-col justify-between">
-          <div className="space-y-4">
-            <h3 className="text-base font-bold text-surface-900">Coordinator Quick Actions</h3>
-            <p className="text-sm text-surface-500">Accelerate treatment logistics by directly booking clinical encounters, hostels, and messages.</p>
+        <Card className="flex flex-col justify-between">
+          <div className="space-y-2">
+            <h2 className="text-base font-semibold text-surface-900">Quick Actions</h2>
+            <p className="text-sm text-surface-500">Schedule appointments, coordinate recovery stays, or message patients.</p>
           </div>
-          <div className="space-y-3 mt-6">
+          <div className="space-y-2.5 mt-5">
             <Link href="/manager/appointments" className="block">
-              <Button className="w-full justify-start gap-3" variant="secondary">
-                <svg className="w-4 h-4 text-primary-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" />
-                </svg>
-                Schedule Clinic Appointment
+              <Button className="w-full justify-start gap-2.5" variant="secondary">
+                <Plus className="w-4 h-4 text-primary-700" />
+                Schedule Appointment
               </Button>
             </Link>
             <Link href="/manager/accommodations" className="block">
-              <Button className="w-full justify-start gap-3" variant="secondary">
-                <svg className="w-4 h-4 text-teal-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />
-                </svg>
-                Book Hostel Accommodation
+              <Button className="w-full justify-start gap-2.5" variant="secondary">
+                <Home className="w-4 h-4 text-primary-700" />
+                Book Accommodation
               </Button>
             </Link>
             <Link href="/manager/chat" className="block">
-              <Button className="w-full justify-start gap-3" variant="secondary">
-                <svg className="w-4 h-4 text-amber-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
-                </svg>
-                Open Communication Chat
+              <Button className="w-full justify-start gap-2.5" variant="secondary">
+                <MessageSquare className="w-4 h-4 text-primary-700" />
+                Open Messages
               </Button>
             </Link>
           </div>
         </Card>
 
         {/* Operational Overview description */}
-        <Card className="lg:col-span-2 p-6 bg-white">
-          <h3 className="text-base font-bold text-surface-900 mb-4">Workspace Guidelines</h3>
-          <div className="space-y-4 text-sm text-surface-600">
+        <Card className="lg:col-span-2 space-y-4">
+          <h2 className="text-base font-semibold text-surface-900">Coordinator Workflow</h2>
+          <div className="space-y-3 text-sm text-surface-600">
             <p>
-              As a <strong>MediRoute Case Manager</strong>, you are responsible for overseeing the logistics of international patient care journeys in India.
+              Oversee case progression from intake through post-treatment follow-up for assigned international patients.
             </p>
-            <ul className="list-disc pl-5 space-y-2 text-surface-500">
-              <li>Review incoming medical records and update the patient&apos;s case pipeline status.</li>
-              <li>Schedule JCI accredited hospital consultations, assessments, and surgeries.</li>
-              <li>Coordinate verified local hostel accommodations based on recovery duration.</li>
-              <li>Use the secure coordination chat to maintain continuous messaging with patients.</li>
+            <ul className="list-disc pl-5 space-y-1.5 text-surface-600">
+              <li>Review uploaded clinical reports and update case pipeline statuses.</li>
+              <li>Coordinate consultations, diagnostics, and procedures with partner hospitals.</li>
+              <li>Arrange hospital-adjacent recovery accommodations and local transfers.</li>
+              <li>Track patient questions and treatment plan approvals in messages.</li>
             </ul>
-            <div className="p-3 bg-surface-50 rounded-md border border-surface-200/50 flex items-start gap-3 mt-4">
-              <svg className="w-5 h-5 text-primary-600 shrink-0 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                <path strokeLinecap="round" strokeLinejoin="round" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-              </svg>
-              <p className="text-xs text-surface-500">
-                To maintain patient records accuracy, ensure patient medical history profiles are updated regularly with clinical consultation reports.
+            <div className="p-3 bg-surface-50 rounded-lg border border-surface-200 flex items-start gap-2.5">
+              <Info className="w-4 h-4 text-primary-700 shrink-0 mt-0.5" />
+              <p className="text-xs text-surface-600">
+                Keep medical history profiles and case notes current after each specialist consultation.
               </p>
             </div>
           </div>

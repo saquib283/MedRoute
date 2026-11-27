@@ -570,7 +570,7 @@ export default function PatientProfilePage() {
               </Button>
             </div>
 
-            <div className="border border-surface-200 rounded-xl overflow-hidden text-xs bg-white">
+            <div className="border border-surface-200 rounded-xl overflow-x-auto text-xs bg-white">
               <table className="w-full text-left border-collapse">
                 <thead>
                   <tr className="bg-surface-50 border-b border-surface-200 text-surface-600 font-semibold uppercase tracking-wider">
@@ -621,7 +621,7 @@ export default function PatientProfilePage() {
               </Button>
             </div>
 
-            <div className="border border-surface-200 rounded-xl overflow-hidden text-xs bg-white">
+            <div className="border border-surface-200 rounded-xl overflow-x-auto text-xs bg-white">
               <table className="w-full text-left border-collapse">
                 <thead>
                   <tr className="bg-surface-50 border-b border-surface-200 text-surface-600 font-semibold uppercase tracking-wider">
@@ -680,7 +680,7 @@ export default function PatientProfilePage() {
                   className={`
                     flex items-center gap-3 p-3 rounded-xl border text-xs font-semibold transition-all text-left ${
                       isChecked
-                        ? 'border-primary-500 bg-primary-50/40 text-primary-800 shadow-2xs'
+                        ? 'border-primary-500 bg-primary-50/40 text-primary-800 shadow-xs'
                         : 'border-surface-200 bg-white text-surface-700 hover:border-surface-300 hover:bg-surface-50'
                     }
                   `}
@@ -695,7 +695,7 @@ export default function PatientProfilePage() {
       )}
 
       {/* Floating Submit Bar */}
-      <div className="sticky bottom-4 z-40 bg-white/95 backdrop-blur-md p-4 rounded-2xl border border-surface-200 shadow-md flex items-center justify-between gap-4">
+      <div className="sticky bottom-4 z-40 bg-white p-4 rounded-2xl border border-surface-200 shadow-md flex items-center justify-between gap-4">
         <div className="flex items-center gap-2 text-xs text-surface-600 font-medium">
           <Lock className="w-4 h-4 text-success-600 shrink-0" />
           <span>All changes encrypted before database write</span>

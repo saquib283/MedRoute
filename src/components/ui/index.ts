@@ -15,4 +15,5 @@ export { PageHeader } from './PageHeader';
 export { EmptyState } from './EmptyState';
 export { CurrencySelector } from './CurrencySelector';
 export { PriceTag } from './PriceTag';
+export { Modal } from './Modal';
 export { useCurrency } from '@/lib/currency/CurrencyContext';

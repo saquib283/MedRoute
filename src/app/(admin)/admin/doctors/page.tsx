@@ -11,6 +11,7 @@ import { Button } from '@/components/ui/Button';
 import { Badge } from '@/components/ui/Badge';
 import { Select } from '@/components/ui/Select';
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
+import { Modal } from '@/components/ui/Modal';
 import { toast } from '@/components/ui/Toast';
 import { DAYS_OF_WEEK } from '@/lib/constants';
 
@@ -329,110 +330,105 @@ export default function AdminDoctorsPage() {
         )}
       </Card>
 
-      {showModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-surface-900/40 backdrop-blur-xs">
-          <div className="bg-white rounded-lg shadow-xl w-full max-w-lg animate-scale-up max-h-[90vh] overflow-y-auto">
-            <div className="px-6 py-4 border-b border-surface-100 flex items-center justify-between sticky top-0 bg-white z-10">
-              <h3 className="text-sm font-bold text-surface-900">{editing ? 'Edit Doctor' : 'Add Doctor'}</h3>
-              <button onClick={() => setShowModal(false)} className="text-surface-400 hover:text-surface-600 font-bold text-lg">
-                ×
-              </button>
-            </div>
-            <form onSubmit={handleSave} className="p-6 space-y-4">
-              <div className="space-y-1.5">
-                <label className="block text-xs font-semibold text-surface-700">Full Name</label>
-                <input
-                  type="text"
-                  required
-                  value={form.fullName}
-                  onChange={(e) => setForm({ ...form, fullName: e.target.value })}
-                  className="w-full p-2.5 border border-surface-300 rounded text-sm focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500"
-                />
-              </div>
-              {!editing && (
-                <div className="grid grid-cols-2 gap-4">
-                  <Select
-                    label="Hospital"
-                    value={form.hospitalId}
-                    onChange={(val) => setForm({ ...form, hospitalId: val })}
-                    options={hospitals.map((h) => ({ value: h.id, label: `${h.name} (${h.city})` }))}
-                    required
-                    className="col-span-1"
-                  />
-                  <Select
-                    label="Specialisation"
-                    value={form.specialisationId}
-                    onChange={(val) => setForm({ ...form, specialisationId: val })}
-                    options={specs.map((s) => ({ value: s.id, label: s.name }))}
-                    required
-                    className="col-span-1"
-                  />
-                </div>
-              )}
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-1.5">
-                  <label className="block text-xs font-semibold text-surface-700">Qualification</label>
-                  <input
-                    type="text"
-                    value={form.qualification}
-                    onChange={(e) => setForm({ ...form, qualification: e.target.value })}
-                    className="w-full p-2.5 border border-surface-300 rounded text-sm focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500"
-                  />
-                </div>
-                <div className="space-y-1.5">
-                  <label className="block text-xs font-semibold text-surface-700">Consultation Fee (₹)</label>
-                  <input
-                    type="number"
-                    value={form.consultationFee}
-                    onChange={(e) => setForm({ ...form, consultationFee: e.target.value })}
-                    className="w-full p-2.5 border border-surface-300 rounded text-sm focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500"
-                  />
-                </div>
-              </div>
-              <div className="space-y-1.5">
-                <label className="block text-xs font-semibold text-surface-700">Available Days</label>
-                <div className="flex flex-wrap gap-2">
-                  {DAYS_OF_WEEK.map((day) => (
-                    <button
-                      key={day}
-                      type="button"
-                      onClick={() => toggleDay(day)}
-                      className={`px-3 py-1.5 rounded-md text-xs font-bold transition-colors ${
-                        form.availableDays.includes(day)
-                          ? 'bg-primary-600 text-white'
-                          : 'bg-surface-100 text-surface-600 hover:bg-surface-200'
-                      }`}
-                    >
-                      {day}
-                    </button>
-                  ))}
-                </div>
-              </div>
-              {editing && (
-                <div className="flex items-center gap-2">
-                  <input
-                    type="checkbox"
-                    id="docActive"
-                    checked={form.isActive}
-                    onChange={(e) => setForm({ ...form, isActive: e.target.checked })}
-                  />
-                  <label htmlFor="docActive" className="text-sm font-medium text-surface-700">
-                    Active
-                  </label>
-                </div>
-              )}
-              <div className="flex gap-3 pt-2">
-                <Button type="button" variant="secondary" className="flex-1" onClick={() => setShowModal(false)}>
-                  Cancel
-                </Button>
-                <Button type="submit" className="flex-1" isLoading={saving}>
-                  {editing ? 'Save' : 'Create'}
-                </Button>
-              </div>
-            </form>
+      <Modal
+        open={showModal}
+        onClose={() => setShowModal(false)}
+        title={editing ? 'Edit Doctor' : 'Add Doctor'}
+        maxWidth="lg"
+      >
+        <form onSubmit={handleSave} className="space-y-4">
+          <div className="space-y-1.5">
+            <label className="block text-xs font-semibold text-surface-700">Full Name</label>
+            <input
+              type="text"
+              required
+              value={form.fullName}
+              onChange={(e) => setForm({ ...form, fullName: e.target.value })}
+              className="w-full p-2.5 border border-surface-300 rounded text-sm focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500"
+            />
           </div>
-        </div>
-      )}
+          {!editing && (
+            <div className="grid grid-cols-2 gap-4">
+              <Select
+                label="Hospital"
+                value={form.hospitalId}
+                onChange={(val) => setForm({ ...form, hospitalId: val })}
+                options={hospitals.map((h) => ({ value: h.id, label: `${h.name} (${h.city})` }))}
+                required
+                className="col-span-1"
+              />
+              <Select
+                label="Specialisation"
+                value={form.specialisationId}
+                onChange={(val) => setForm({ ...form, specialisationId: val })}
+                options={specs.map((s) => ({ value: s.id, label: s.name }))}
+                required
+                className="col-span-1"
+              />
+            </div>
+          )}
+          <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-1.5">
+              <label className="block text-xs font-semibold text-surface-700">Qualification</label>
+              <input
+                type="text"
+                value={form.qualification}
+                onChange={(e) => setForm({ ...form, qualification: e.target.value })}
+                className="w-full p-2.5 border border-surface-300 rounded text-sm focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500"
+              />
+            </div>
+            <div className="space-y-1.5">
+              <label className="block text-xs font-semibold text-surface-700">Consultation Fee (₹)</label>
+              <input
+                type="number"
+                value={form.consultationFee}
+                onChange={(e) => setForm({ ...form, consultationFee: e.target.value })}
+                className="w-full p-2.5 border border-surface-300 rounded text-sm focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500"
+              />
+            </div>
+          </div>
+          <div className="space-y-1.5">
+            <label className="block text-xs font-semibold text-surface-700">Available Days</label>
+            <div className="flex flex-wrap gap-2">
+              {DAYS_OF_WEEK.map((day) => (
+                <button
+                  key={day}
+                  type="button"
+                  onClick={() => toggleDay(day)}
+                  className={`px-3 py-1.5 rounded-md text-xs font-bold transition-colors ${
+                    form.availableDays.includes(day)
+                      ? 'bg-primary-600 text-white'
+                      : 'bg-surface-100 text-surface-600 hover:bg-surface-200'
+                  }`}
+                >
+                  {day}
+                </button>
+              ))}
+            </div>
+          </div>
+          {editing && (
+            <div className="flex items-center gap-2">
+              <input
+                type="checkbox"
+                id="docActive"
+                checked={form.isActive}
+                onChange={(e) => setForm({ ...form, isActive: e.target.checked })}
+              />
+              <label htmlFor="docActive" className="text-sm font-medium text-surface-700">
+                Active
+              </label>
+            </div>
+          )}
+          <div className="flex gap-3 pt-2">
+            <Button type="button" variant="secondary" className="flex-1" onClick={() => setShowModal(false)}>
+              Cancel
+            </Button>
+            <Button type="submit" className="flex-1" isLoading={saving}>
+              {editing ? 'Save' : 'Create'}
+            </Button>
+          </div>
+        </form>
+      </Modal>
 
       {/* Confirm Deactivation */}
       <ConfirmDialog

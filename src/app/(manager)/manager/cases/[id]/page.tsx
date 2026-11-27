@@ -11,7 +11,6 @@ import Link from 'next/link';
 import { Card } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { Tabs, TabPanel } from '@/components/ui/Tabs';
-import { Timeline } from '@/components/ui/Timeline';
 import { StatusBadge } from '@/components/ui/StatusBadge';
 import { PageHeader } from '@/components/ui/PageHeader';
 import { StatCard } from '@/components/ui/StatCard';
@@ -22,8 +21,8 @@ import { PriceTag } from '@/components/ui/PriceTag';
 import { useCurrency } from '@/lib/currency/CurrencyContext';
 import { CASE_STATUS_LABELS, TRANSFER_TYPE_LABELS, FOLLOW_UP_TYPE_LABELS } from '@/lib/constants';
 import {
-  FileText, Calendar, Plane, Hotel, Receipt, MessageSquare, FolderLock,
-  Stethoscope, ClipboardList, ArrowRight, Clock, MapPin, User, Phone,
+  FileText, Calendar, Plane, Hotel, Receipt, MessageSquare,
+  Stethoscope, ClipboardList, ArrowRight, MapPin, User, Phone,
   CheckCircle2, AlertCircle, DollarSign, Send, Plus
 } from 'lucide-react';
 
@@ -130,7 +129,7 @@ export default function CaseWorkspacePage({ params }: { params: Promise<{ id: st
     }
   }, [caseId]);
 
-  useEffect(() => { fetchCase(); }, [fetchCase]);
+  useEffect(() => { queueMicrotask(() => fetchCase()); }, [fetchCase]);
 
   // Fetch journey-related data
   const [treatmentPlans, setTreatmentPlans] = useState<TreatmentPlan[]>([]);
@@ -229,8 +228,8 @@ export default function CaseWorkspacePage({ params }: { params: Promise<{ id: st
           <div className="flex items-center gap-3">
             <StatusBadge status={caseData.status} size="md" />
             {caseData.isUrgent && (
-              <span className="px-2 py-1 bg-danger-50 text-danger-700 text-xs font-bold rounded-lg border border-danger-200">
-                ⚡ URGENT
+              <span className="px-2.5 py-0.5 bg-danger-50 text-danger-700 text-xs font-semibold rounded-full border border-danger-200 uppercase">
+                Urgent
               </span>
             )}
           </div>
@@ -373,7 +372,7 @@ export default function CaseWorkspacePage({ params }: { params: Promise<{ id: st
                         )}
                       </div>
                     </div>
-                    <div className="border-t border-surface-100 pt-3">
+                    <div className="border-t border-surface-100 pt-3 overflow-x-auto">
                       <table className="w-full text-sm">
                         <thead>
                           <tr className="text-xs text-surface-500 uppercase">

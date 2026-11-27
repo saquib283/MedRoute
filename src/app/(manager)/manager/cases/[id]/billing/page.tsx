@@ -174,6 +174,7 @@ export default function BillingPage({ params }: { params: Promise<{ id: string }
           </Button>
         </div>
 
+        <div className="overflow-x-auto">
         <table className="w-full text-sm">
           <thead>
             <tr className="text-xs text-surface-500 uppercase border-b border-surface-200">
@@ -193,7 +194,7 @@ export default function BillingPage({ params }: { params: Promise<{ id: string }
                     type="text"
                     value={item.description}
                     onChange={e => updateItem(idx, 'description', e.target.value)}
-                    className="w-full rounded border border-surface-200 px-2 py-1.5 text-sm focus:ring-1 focus:ring-primary-300 outline-none"
+                    className="w-full rounded border border-surface-300 px-2 py-1.5 text-sm focus:border-primary-600"
                     placeholder="Item description"
                   />
                 </td>
@@ -202,7 +203,7 @@ export default function BillingPage({ params }: { params: Promise<{ id: string }
                     type="text"
                     value={item.category}
                     onChange={e => updateItem(idx, 'category', e.target.value)}
-                    className="w-full rounded border border-surface-200 px-2 py-1.5 text-sm focus:ring-1 focus:ring-primary-300 outline-none"
+                    className="w-full rounded border border-surface-300 px-2 py-1.5 text-sm focus:border-primary-600"
                     placeholder="Category"
                   />
                 </td>
@@ -212,7 +213,7 @@ export default function BillingPage({ params }: { params: Promise<{ id: string }
                     min={1}
                     value={item.quantity}
                     onChange={e => updateItem(idx, 'quantity', parseInt(e.target.value) || 1)}
-                    className="w-full rounded border border-surface-200 px-2 py-1.5 text-sm text-right focus:ring-1 focus:ring-primary-300 outline-none"
+                    className="w-full rounded border border-surface-300 px-2 py-1.5 text-sm text-right focus:border-primary-600"
                   />
                 </td>
                 <td className="py-2 pr-2">
@@ -221,7 +222,7 @@ export default function BillingPage({ params }: { params: Promise<{ id: string }
                     min={0}
                     value={item.unitPrice}
                     onChange={e => updateItem(idx, 'unitPrice', parseFloat(e.target.value) || 0)}
-                    className="w-full rounded border border-surface-200 px-2 py-1.5 text-sm text-right focus:ring-1 focus:ring-primary-300 outline-none"
+                    className="w-full rounded border border-surface-300 px-2 py-1.5 text-sm text-right focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-600"
                   />
                 </td>
                 <td className="py-2 text-right font-bold text-surface-900">{formatCurrency(item.unitPrice * item.quantity)}</td>
@@ -236,6 +237,7 @@ export default function BillingPage({ params }: { params: Promise<{ id: string }
             ))}
           </tbody>
         </table>
+        </div>
 
         <div className="flex justify-end">
           <div className="w-64 space-y-2 pt-3 border-t border-surface-200">

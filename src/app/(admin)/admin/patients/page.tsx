@@ -10,6 +10,7 @@ import { Card } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { Badge } from '@/components/ui/Badge';
 import { Select } from '@/components/ui/Select';
+import { Modal } from '@/components/ui/Modal';
 import { toast } from '@/components/ui/Toast';
 import { URGENCY_LEVEL_LABELS } from '@/lib/constants';
 
@@ -20,7 +21,7 @@ interface Patient {
   primaryLanguage: string | null;
   createdAt: string;
   user: { fullName: string; email: string; phone: string | null; isActive: boolean; createdAt: string };
-  assignedManager: { fullName: string } | null;
+  assignedManager: { id?: string; fullName: string } | null;
   _count: { cases: number; documents: number; appointments: number };
 }
 
@@ -164,7 +165,7 @@ export default function AdminPatientsPage() {
                       <td className="px-5 py-3.5 text-surface-600">{p._count.cases}</td>
                       <td className="px-5 py-3.5 text-xs text-surface-500">{new Date(p.user.createdAt).toLocaleDateString()}</td>
                       <td className="px-5 py-3.5 text-right">
-                        <Button variant="ghost" size="sm" onClick={() => { setSelectedPatient(p); setReassignManagerId(p.assignedManager ? '' : ''); }}>View</Button>
+                        <Button variant="ghost" size="sm" onClick={() => { setSelectedPatient(p); setReassignManagerId(p.assignedManager?.id || ''); }}>View</Button>
                       </td>
                     </tr>
                   ))
@@ -184,48 +185,47 @@ export default function AdminPatientsPage() {
         )}
       </Card>
 
-      {/* Patient Detail Drawer */}
-      {selectedPatient && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-surface-900/40 backdrop-blur-xs">
-          <div className="bg-white rounded-lg shadow-xl w-full max-w-lg animate-scale-up max-h-[90vh] overflow-y-auto">
-            <div className="px-6 py-4 border-b border-surface-100 flex items-center justify-between sticky top-0 bg-white z-10">
-              <h3 className="text-sm font-bold text-surface-900">Patient Details</h3>
-              <button onClick={() => setSelectedPatient(null)} className="text-surface-400 hover:text-surface-600 font-bold text-lg">×</button>
+      {/* Patient Detail Modal */}
+      <Modal
+        open={Boolean(selectedPatient)}
+        onClose={() => setSelectedPatient(null)}
+        title="Patient Details"
+        subtitle={selectedPatient?.user.fullName}
+        maxWidth="lg"
+      >
+        {selectedPatient && (
+          <div className="space-y-5">
+            <div className="grid grid-cols-2 gap-4">
+              <div><p className="text-[11px] font-semibold text-surface-500 uppercase">Name</p><p className="text-sm font-semibold text-surface-900 mt-0.5">{selectedPatient.user.fullName}</p></div>
+              <div><p className="text-[11px] font-semibold text-surface-500 uppercase">Email</p><p className="text-sm text-surface-600 mt-0.5">{selectedPatient.user.email}</p></div>
+              <div><p className="text-[11px] font-semibold text-surface-500 uppercase">Nationality</p><p className="text-sm text-surface-600 mt-0.5">{selectedPatient.nationality}</p></div>
+              <div><p className="text-[11px] font-semibold text-surface-500 uppercase">Language</p><p className="text-sm text-surface-600 mt-0.5">{selectedPatient.primaryLanguage || '—'}</p></div>
+              <div><p className="text-[11px] font-semibold text-surface-500 uppercase">Urgency</p><p className="mt-0.5"><Badge variant={URGENCY_BADGE[selectedPatient.urgencyLevel] || 'default'}>{URGENCY_LEVEL_LABELS[selectedPatient.urgencyLevel]}</Badge></p></div>
+              <div><p className="text-[11px] font-semibold text-surface-500 uppercase">Status</p><p className="mt-0.5"><Badge variant={selectedPatient.user.isActive ? 'success' : 'danger'} dot>{selectedPatient.user.isActive ? 'Active' : 'Inactive'}</Badge></p></div>
             </div>
-            <div className="p-6 space-y-5">
-              <div className="grid grid-cols-2 gap-4">
-                <div><p className="text-[10px] font-bold text-surface-400 uppercase">Name</p><p className="text-sm font-semibold text-surface-900 mt-0.5">{selectedPatient.user.fullName}</p></div>
-                <div><p className="text-[10px] font-bold text-surface-400 uppercase">Email</p><p className="text-sm text-surface-600 mt-0.5">{selectedPatient.user.email}</p></div>
-                <div><p className="text-[10px] font-bold text-surface-400 uppercase">Nationality</p><p className="text-sm text-surface-600 mt-0.5">{selectedPatient.nationality}</p></div>
-                <div><p className="text-[10px] font-bold text-surface-400 uppercase">Language</p><p className="text-sm text-surface-600 mt-0.5">{selectedPatient.primaryLanguage || '—'}</p></div>
-                <div><p className="text-[10px] font-bold text-surface-400 uppercase">Urgency</p><p className="mt-0.5"><Badge variant={URGENCY_BADGE[selectedPatient.urgencyLevel] || 'default'}>{URGENCY_LEVEL_LABELS[selectedPatient.urgencyLevel]}</Badge></p></div>
-                <div><p className="text-[10px] font-bold text-surface-400 uppercase">Status</p><p className="mt-0.5"><Badge variant={selectedPatient.user.isActive ? 'success' : 'danger'} dot>{selectedPatient.user.isActive ? 'Active' : 'Inactive'}</Badge></p></div>
-              </div>
-              <div className="grid grid-cols-3 gap-4 p-3 bg-surface-50 rounded-lg border border-surface-200">
-                <div className="text-center"><p className="text-lg font-bold text-surface-900">{selectedPatient._count.cases}</p><p className="text-[10px] text-surface-500 font-semibold uppercase">Cases</p></div>
-                <div className="text-center"><p className="text-lg font-bold text-surface-900">{selectedPatient._count.appointments}</p><p className="text-[10px] text-surface-500 font-semibold uppercase">Appts</p></div>
-                <div className="text-center"><p className="text-lg font-bold text-surface-900">{selectedPatient._count.documents}</p><p className="text-[10px] text-surface-500 font-semibold uppercase">Docs</p></div>
-              </div>
+            <div className="grid grid-cols-3 gap-4 p-3 bg-surface-50 rounded-lg border border-surface-200">
+              <div className="text-center"><p className="text-lg font-bold text-surface-900">{selectedPatient._count.cases}</p><p className="text-[11px] text-surface-500 font-semibold uppercase">Cases</p></div>
+              <div className="text-center"><p className="text-lg font-bold text-surface-900">{selectedPatient._count.appointments}</p><p className="text-[11px] text-surface-500 font-semibold uppercase">Appts</p></div>
+              <div className="text-center"><p className="text-lg font-bold text-surface-900">{selectedPatient._count.documents}</p><p className="text-[11px] text-surface-500 font-semibold uppercase">Docs</p></div>
+            </div>
 
-              {/* Reassign Manager */}
-              <div className="space-y-2 pt-2 border-t border-surface-100">
-                <p className="text-xs font-bold text-surface-700">Assigned Manager</p>
-                <p className="text-sm text-surface-600">{selectedPatient.assignedManager?.fullName || 'No manager assigned'}</p>
-                <Select
-                  value={reassignManagerId}
-                  onChange={setReassignManagerId}
-                  options={[
-                    { value: '', label: '— No Manager —' },
-                    ...managers.map((m) => ({ value: m.id, label: m.fullName }))
-                  ]}
-                  placeholder="Select Manager"
-                />
-                <Button size="sm" className="w-full" onClick={handleReassign} isLoading={reassigning}>Reassign Manager</Button>
-              </div>
+            <div className="space-y-2 pt-2 border-t border-surface-200">
+              <p className="text-xs font-semibold text-surface-700">Assigned Coordinator</p>
+              <p className="text-sm text-surface-600">{selectedPatient.assignedManager?.fullName || 'Unassigned'}</p>
+              <Select
+                value={reassignManagerId}
+                onChange={setReassignManagerId}
+                options={[
+                  { value: '', label: 'Unassigned' },
+                  ...managers.map((m) => ({ value: m.id, label: m.fullName }))
+                ]}
+                placeholder="Select Coordinator"
+              />
+              <Button size="sm" className="w-full" onClick={handleReassign} isLoading={reassigning}>Reassign Coordinator</Button>
             </div>
           </div>
-        </div>
-      )}
+        )}
+      </Modal>
     </div>
   );
 }

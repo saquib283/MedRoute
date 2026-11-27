@@ -11,6 +11,7 @@ import { Button } from '@/components/ui/Button';
 import { Badge } from '@/components/ui/Badge';
 import { DatePicker } from '@/components/ui/DatePicker';
 import { Select } from '@/components/ui/Select';
+import { Modal } from '@/components/ui/Modal';
 import { toast } from '@/components/ui/Toast';
 import { APPOINTMENT_TYPE_LABELS, APPOINTMENT_STATUS_LABELS } from '@/lib/constants';
 
@@ -317,152 +318,149 @@ export default function AdminAppointmentsPage() {
       </Card>
 
       {/* Appointment Detail Drawer */}
-      {selectedAppt && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-surface-900/40 backdrop-blur-xs">
-          <div className="bg-white rounded-lg shadow-xl w-full max-w-md animate-scale-up max-h-[90vh] overflow-y-auto">
-            <div className="px-6 py-4 border-b border-surface-100 flex items-center justify-between sticky top-0 bg-white z-10">
-              <h3 className="text-sm font-bold text-surface-900">Appointment Details</h3>
-              <button onClick={() => setSelectedAppt(null)} className="text-surface-400 hover:text-surface-600 font-bold text-lg">
-                ×
-              </button>
-            </div>
-            <div className="p-6 space-y-5">
-              <div className="space-y-3">
-                <div>
-                  <p className="text-[10px] font-bold text-surface-400 uppercase">Patient</p>
-                  <p className="text-sm font-semibold text-surface-900">{selectedAppt.patient.user.fullName}</p>
-                </div>
-                <div>
-                  <p className="text-[10px] font-bold text-surface-400 uppercase">Doctor</p>
-                  <p className="text-sm font-semibold text-surface-900">{selectedAppt.doctor.fullName}</p>
-                </div>
-                <div>
-                  <p className="text-[10px] font-bold text-surface-400 uppercase">Hospital</p>
-                  <p className="text-sm text-surface-600">
-                    {selectedAppt.hospital.name} ({selectedAppt.hospital.city})
-                  </p>
-                </div>
-                <div>
-                  <p className="text-[10px] font-bold text-surface-400 uppercase">Scheduled Time</p>
-                  <p className="text-sm text-surface-600">{new Date(selectedAppt.scheduledAt).toLocaleString()}</p>
-                </div>
-                <div>
-                  <p className="text-[10px] font-bold text-surface-400 uppercase">Type & Status</p>
-                  <div className="flex items-center gap-2 mt-1">
-                    <Badge variant="default">{APPOINTMENT_TYPE_LABELS[selectedAppt.appointmentType] || selectedAppt.appointmentType}</Badge>
-                    <Badge variant={STATUS_BADGE[selectedAppt.status] || 'default'}>
-                      {APPOINTMENT_STATUS_LABELS[selectedAppt.status] || selectedAppt.status}
-                    </Badge>
-                  </div>
-                </div>
-                {selectedAppt.notes && (
-                  <div>
-                    <p className="text-[10px] font-bold text-surface-400 uppercase">Notes</p>
-                    <p className="text-sm text-surface-600 bg-surface-50 p-2.5 rounded border border-surface-200">{selectedAppt.notes}</p>
-                  </div>
-                )}
-                {selectedAppt.cancellationReason && (
-                  <div>
-                    <p className="text-[10px] font-bold text-danger-500 uppercase">Cancellation Reason</p>
-                    <p className="text-sm text-danger-700 bg-danger-50 p-2.5 rounded border border-danger-200">{selectedAppt.cancellationReason}</p>
-                  </div>
-                )}
+      <Modal
+        open={!!selectedAppt}
+        onClose={() => setSelectedAppt(null)}
+        title="Appointment Details"
+        maxWidth="md"
+      >
+        {selectedAppt && (
+          <div className="space-y-5">
+            <div className="space-y-3">
+              <div>
+                <p className="text-[10px] font-bold text-surface-400 uppercase">Patient</p>
+                <p className="text-sm font-semibold text-surface-900">{selectedAppt.patient.user.fullName}</p>
               </div>
-
-              {selectedAppt.status !== 'CANCELLED' && selectedAppt.status !== 'COMPLETED' && (
-                <div className="pt-4 border-t border-surface-100 flex gap-3">
-                  <Button
-                    variant="secondary"
-                    className="flex-1 text-danger-600 hover:bg-danger-50 border-danger-200"
-                    onClick={() => setCancelModal({ open: true, id: selectedAppt.id, reason: '' })}
-                  >
-                    Cancel Appointment
-                  </Button>
-                  <Button
-                    variant="primary"
-                    className="flex-1"
-                    onClick={() =>
-                      setRescheduleModal({
-                        open: true,
-                        id: selectedAppt.id,
-                        dateStr: new Date(selectedAppt.scheduledAt).toISOString().slice(0, 16),
-                      })
-                    }
-                  >
-                    Reschedule
-                  </Button>
+              <div>
+                <p className="text-[10px] font-bold text-surface-400 uppercase">Doctor</p>
+                <p className="text-sm font-semibold text-surface-900">{selectedAppt.doctor.fullName}</p>
+              </div>
+              <div>
+                <p className="text-[10px] font-bold text-surface-400 uppercase">Hospital</p>
+                <p className="text-sm text-surface-600">
+                  {selectedAppt.hospital.name} ({selectedAppt.hospital.city})
+                </p>
+              </div>
+              <div>
+                <p className="text-[10px] font-bold text-surface-400 uppercase">Scheduled Time</p>
+                <p className="text-sm text-surface-600">{new Date(selectedAppt.scheduledAt).toLocaleString()}</p>
+              </div>
+              <div>
+                <p className="text-[10px] font-bold text-surface-400 uppercase">Type & Status</p>
+                <div className="flex items-center gap-2 mt-1">
+                  <Badge variant="default">{APPOINTMENT_TYPE_LABELS[selectedAppt.appointmentType] || selectedAppt.appointmentType}</Badge>
+                  <Badge variant={STATUS_BADGE[selectedAppt.status] || 'default'}>
+                    {APPOINTMENT_STATUS_LABELS[selectedAppt.status] || selectedAppt.status}
+                  </Badge>
+                </div>
+              </div>
+              {selectedAppt.notes && (
+                <div>
+                  <p className="text-[10px] font-bold text-surface-400 uppercase">Notes</p>
+                  <p className="text-sm text-surface-600 bg-surface-50 p-2.5 rounded border border-surface-200">{selectedAppt.notes}</p>
+                </div>
+              )}
+              {selectedAppt.cancellationReason && (
+                <div>
+                  <p className="text-[10px] font-bold text-danger-500 uppercase">Cancellation Reason</p>
+                  <p className="text-sm text-danger-700 bg-danger-50 p-2.5 rounded border border-danger-200">{selectedAppt.cancellationReason}</p>
                 </div>
               )}
             </div>
-          </div>
-        </div>
-      )}
 
-      {/* Cancel Dialog */}
-      {cancelModal.open && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-surface-900/40 backdrop-blur-xs">
-          <div className="bg-white rounded-lg shadow-xl w-full max-w-sm animate-scale-up p-6">
-            <h3 className="text-lg font-bold text-surface-900 mb-2">Cancel Appointment</h3>
-            <p className="text-sm text-surface-500 mb-4">Please provide a reason for cancelling this appointment.</p>
-            <form onSubmit={handleCancel} className="space-y-4">
-              <textarea
-                value={cancelModal.reason}
-                onChange={(e) => setCancelModal({ ...cancelModal, reason: e.target.value })}
-                required
-                rows={3}
-                placeholder="Reason for cancellation..."
-                className="w-full p-2.5 border border-surface-300 rounded text-sm focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500"
-              />
-              <div className="flex gap-3">
+            {selectedAppt.status !== 'CANCELLED' && selectedAppt.status !== 'COMPLETED' && (
+              <div className="pt-4 border-t border-surface-100 flex gap-3">
                 <Button
-                  type="button"
                   variant="secondary"
-                  className="flex-1"
-                  onClick={() => setCancelModal({ open: false, id: '', reason: '' })}
+                  className="flex-1 text-danger-600 hover:bg-danger-50 border-danger-200"
+                  onClick={() => setCancelModal({ open: true, id: selectedAppt.id, reason: '' })}
                 >
-                  Go Back
+                  Cancel Appointment
                 </Button>
-                <Button type="submit" className="flex-1" variant="primary" isLoading={actionLoading}>
-                  Confirm Cancel
-                </Button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
-
-      {/* Reschedule Dialog */}
-      {rescheduleModal.open && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-surface-900/40 backdrop-blur-xs">
-          <div className="bg-white rounded-lg shadow-xl w-full max-w-sm animate-scale-up p-6">
-            <h3 className="text-lg font-bold text-surface-900 mb-2">Reschedule Appointment</h3>
-            <p className="text-sm text-surface-500 mb-4">Select the new date and time for this appointment.</p>
-            <form onSubmit={handleReschedule} className="space-y-4">
-              <DatePicker
-                label="New Date & Time"
-                value={rescheduleModal.dateStr}
-                onChange={(dateStr) => setRescheduleModal({ ...rescheduleModal, dateStr })}
-                showTimePicker={true}
-                placeholder="Select date & time"
-                required
-              />
-              <div className="flex gap-3">
                 <Button
-                  type="button"
-                  variant="secondary"
+                  variant="primary"
                   className="flex-1"
-                  onClick={() => setRescheduleModal({ open: false, id: '', dateStr: '' })}
+                  onClick={() =>
+                    setRescheduleModal({
+                      open: true,
+                      id: selectedAppt.id,
+                      dateStr: new Date(selectedAppt.scheduledAt).toISOString().slice(0, 16),
+                    })
+                  }
                 >
-                  Cancel
-                </Button>
-                <Button type="submit" className="flex-1" variant="primary" isLoading={actionLoading}>
                   Reschedule
                 </Button>
               </div>
-            </form>
+            )}
           </div>
-        </div>
-      )}
+        )}
+      </Modal>
+
+      {/* Cancel Dialog */}
+      <Modal
+        open={cancelModal.open}
+        onClose={() => setCancelModal({ open: false, id: '', reason: '' })}
+        title="Cancel Appointment"
+        subtitle="Please provide a reason for cancelling this appointment."
+        maxWidth="sm"
+      >
+        <form onSubmit={handleCancel} className="space-y-4">
+          <textarea
+            value={cancelModal.reason}
+            onChange={(e) => setCancelModal({ ...cancelModal, reason: e.target.value })}
+            required
+            rows={3}
+            placeholder="Reason for cancellation..."
+            className="w-full p-2.5 border border-surface-300 rounded text-sm focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500"
+          />
+          <div className="flex gap-3">
+            <Button
+              type="button"
+              variant="secondary"
+              className="flex-1"
+              onClick={() => setCancelModal({ open: false, id: '', reason: '' })}
+            >
+              Go Back
+            </Button>
+            <Button type="submit" className="flex-1" variant="primary" isLoading={actionLoading}>
+              Confirm Cancel
+            </Button>
+          </div>
+        </form>
+      </Modal>
+
+      {/* Reschedule Dialog */}
+      <Modal
+        open={rescheduleModal.open}
+        onClose={() => setRescheduleModal({ open: false, id: '', dateStr: '' })}
+        title="Reschedule Appointment"
+        subtitle="Select the new date and time for this appointment."
+        maxWidth="sm"
+      >
+        <form onSubmit={handleReschedule} className="space-y-4">
+          <DatePicker
+            label="New Date & Time"
+            value={rescheduleModal.dateStr}
+            onChange={(dateStr) => setRescheduleModal({ ...rescheduleModal, dateStr })}
+            showTimePicker={true}
+            placeholder="Select date & time"
+            required
+          />
+          <div className="flex gap-3">
+            <Button
+              type="button"
+              variant="secondary"
+              className="flex-1"
+              onClick={() => setRescheduleModal({ open: false, id: '', dateStr: '' })}
+            >
+              Cancel
+            </Button>
+            <Button type="submit" className="flex-1" variant="primary" isLoading={actionLoading}>
+              Reschedule
+            </Button>
+          </div>
+        </form>
+      </Modal>
     </div>
   );
 }

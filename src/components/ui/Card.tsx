@@ -9,10 +9,11 @@ interface CardProps {
   children: React.ReactNode;
   className?: string;
   hover?: boolean;
-  padding?: 'sm' | 'md' | 'lg';
+  padding?: 'none' | 'sm' | 'md' | 'lg';
 }
 
 const paddingStyles: Record<string, string> = {
+  none: '',
   sm: 'p-4',
   md: 'p-6',
   lg: 'p-8',
@@ -27,10 +28,10 @@ export function Card({
   return (
     <div
       className={`
-        bg-white border border-surface-300 rounded-lg shadow-xs
+        bg-white border border-surface-200 rounded-xl shadow-xs
         ${paddingStyles[padding]}
         ${hover
-          ? 'transition-shadow duration-200 hover:shadow-md hover:border-surface-400'
+          ? 'transition-colors transition-shadow duration-150 hover:shadow-sm hover:border-surface-300'
           : ''
         }
         ${className}

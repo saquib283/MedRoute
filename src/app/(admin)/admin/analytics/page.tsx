@@ -8,6 +8,18 @@
 
 import { useState, useEffect } from 'react';
 import { Card } from '@/components/ui/Card';
+import { PageHeader } from '@/components/ui/PageHeader';
+import {
+  Users,
+  User,
+  Building2,
+  Stethoscope,
+  Calendar,
+  Briefcase,
+  Mail,
+  FileText,
+  Lock,
+} from 'lucide-react';
 
 interface AnalyticsData {
   platformTotals: {
@@ -78,13 +90,11 @@ export default function AnalyticsPage() {
   if (accessDenied) {
     return (
       <div className="max-w-md mx-auto text-center py-16 animate-fade-in">
-        <div className="w-16 h-16 rounded-full bg-danger-100 text-danger-600 flex items-center justify-center mx-auto mb-4">
-          <svg className="w-8 h-8" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-            <path strokeLinecap="round" strokeLinejoin="round" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
-          </svg>
+        <div className="w-14 h-14 rounded-full bg-danger-100 text-danger-600 flex items-center justify-center mx-auto mb-4">
+          <Lock className="w-6 h-6" />
         </div>
         <h2 className="text-xl font-bold text-surface-900">Access Denied</h2>
-        <p className="text-sm text-surface-500 mt-2">Only Administrators can access advanced analytics.</p>
+        <p className="text-sm text-surface-500 mt-2">Only Administrators can access platform analytics.</p>
       </div>
     );
   }
@@ -99,36 +109,36 @@ export default function AnalyticsPage() {
   const maxDocAppt = data.doctorLeaderboard[0]?.appointments || 1;
 
   return (
-    <div className="max-w-7xl mx-auto space-y-8 animate-fade-in">
-      {/* Header */}
-      <div>
-        <div className="flex items-center gap-3 mb-1">
-          <h1 className="text-2xl font-bold text-surface-900 tracking-tight">Advanced Analytics</h1>
-          <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider bg-primary-50 text-primary-700 border border-primary-200">Admin</span>
-        </div>
-        <p className="text-sm text-surface-500">Deep platform insights, trends, and operational intelligence.</p>
-      </div>
+    <div className="max-w-7xl mx-auto space-y-6 animate-fade-in">
+      <PageHeader
+        title="Platform Analytics"
+        subtitle="Registration trends, nationality breakdown, hospital utilization, and case lifecycle metrics"
+        breadcrumbs={[
+          { label: 'Admin', href: '/admin/dashboard' },
+          { label: 'Analytics' },
+        ]}
+      />
 
       {/* Platform Totals - Compact Grid */}
       <div className="grid grid-cols-2 sm:grid-cols-4 xl:grid-cols-8 gap-3">
         {[
-          { label: 'Users', value: p.totalUsers, icon: UsersIcon, color: 'bg-primary-50 text-primary-600' },
-          { label: 'Patients', value: p.totalPatients, icon: PatientIcon, color: 'bg-blue-50 text-blue-600' },
-          { label: 'Hospitals', value: p.totalHospitals, icon: HospitalIcon, color: 'bg-emerald-50 text-emerald-600' },
-          { label: 'Doctors', value: p.totalDoctors, icon: DoctorIcon, color: 'bg-violet-50 text-violet-600' },
-          { label: 'Appointments', value: p.totalAppointments, icon: CalendarIcon, color: 'bg-cyan-50 text-cyan-600' },
-          { label: 'Cases', value: p.totalCases, icon: CasesIcon, color: 'bg-amber-50 text-amber-600' },
-          { label: 'Campaigns', value: p.totalCampaigns, icon: CampaignIcon, color: 'bg-rose-50 text-rose-600' },
-          { label: 'Templates', value: p.totalTemplates, icon: TemplateIcon, color: 'bg-indigo-50 text-indigo-600' },
+          { label: 'Users', value: p.totalUsers, icon: Users },
+          { label: 'Patients', value: p.totalPatients, icon: User },
+          { label: 'Hospitals', value: p.totalHospitals, icon: Building2 },
+          { label: 'Doctors', value: p.totalDoctors, icon: Stethoscope },
+          { label: 'Appointments', value: p.totalAppointments, icon: Calendar },
+          { label: 'Cases', value: p.totalCases, icon: Briefcase },
+          { label: 'Campaigns', value: p.totalCampaigns, icon: Mail },
+          { label: 'Templates', value: p.totalTemplates, icon: FileText },
         ].map((kpi) => {
           const Icon = kpi.icon;
           return (
             <Card key={kpi.label} className="p-4 bg-white border border-surface-200 text-center flex flex-col items-center justify-between">
-              <div className={`w-9 h-9 rounded-lg flex items-center justify-center mb-2 text-sm ${kpi.color}`}>
-                <Icon className="w-5 h-5" />
+              <div className="w-8 h-8 rounded-lg flex items-center justify-center mb-2 bg-primary-50 text-primary-700 border border-primary-100">
+                <Icon className="w-4 h-4" />
               </div>
               <div>
-                <p className="text-xl font-bold text-surface-900">{kpi.value}</p>
+                <p className="text-xl font-bold text-surface-900 tabular-nums">{kpi.value}</p>
                 <p className="text-[10px] font-semibold text-surface-500 uppercase tracking-wider mt-0.5">{kpi.label}</p>
               </div>
             </Card>
@@ -150,7 +160,7 @@ export default function AnalyticsPage() {
                 <div key={m.month} className="flex-1 flex flex-col items-center gap-1 group" title={`${m.month}: ${m.total} registrations (${m.patients}P / ${m.managers}M / ${m.doctors}D)`}>
                   <span className="text-[9px] font-bold text-surface-500 opacity-0 group-hover:opacity-100 transition-opacity">{m.total}</span>
                   <div
-                    className="w-full rounded-t-md bg-gradient-to-t from-primary-600 to-primary-400 transition-all duration-500 hover:from-primary-700 hover:to-primary-500 cursor-pointer"
+                    className="w-full rounded-t-md bg-primary-500 hover:bg-primary-600 transition-colors cursor-pointer"
                     style={{ height: `${pct}%`, minHeight: '4px' }}
                   />
                   <span className="text-[9px] font-semibold text-surface-400">{label}</span>
@@ -207,7 +217,7 @@ export default function AnalyticsPage() {
                     </div>
                     <div className="h-2 bg-surface-100 rounded-full overflow-hidden">
                       <div
-                        className="h-full rounded-full bg-gradient-to-r from-primary-500 to-emerald-400 transition-all duration-700"
+                        className="h-full rounded-full bg-primary-500 transition-all duration-700"
                         style={{ width: `${pct}%` }}
                       />
                     </div>
@@ -319,7 +329,7 @@ export default function AnalyticsPage() {
                     <span className="text-sm font-bold text-surface-700">{d.appointments}</span>
                   </div>
                   <div className="h-1.5 bg-surface-100 rounded-full overflow-hidden ml-8">
-                    <div className="h-full rounded-full bg-gradient-to-r from-violet-500 to-purple-400 transition-all duration-500" style={{ width: `${pct}%` }} />
+                    <div className="h-full rounded-full bg-primary-500 transition-all duration-500" style={{ width: `${pct}%` }} />
                   </div>
                 </div>
               );
@@ -332,31 +342,5 @@ export default function AnalyticsPage() {
       </div>
     </div>
   );
-}
-
-// ─── Local SVG Icons ──────────────────────────────────────────────────
-function UsersIcon(p: React.SVGProps<SVGSVGElement>) {
-  return <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2} {...p}><path strokeLinecap="round" strokeLinejoin="round" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" /></svg>;
-}
-function PatientIcon(p: React.SVGProps<SVGSVGElement>) {
-  return <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2} {...p}><path strokeLinecap="round" strokeLinejoin="round" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" /></svg>;
-}
-function HospitalIcon(p: React.SVGProps<SVGSVGElement>) {
-  return <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2} {...p}><path strokeLinecap="round" strokeLinejoin="round" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" /></svg>;
-}
-function DoctorIcon(p: React.SVGProps<SVGSVGElement>) {
-  return <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2} {...p}><path strokeLinecap="round" strokeLinejoin="round" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" /></svg>;
-}
-function CalendarIcon(p: React.SVGProps<SVGSVGElement>) {
-  return <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2} {...p}><path strokeLinecap="round" strokeLinejoin="round" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg>;
-}
-function CasesIcon(p: React.SVGProps<SVGSVGElement>) {
-  return <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2} {...p}><path strokeLinecap="round" strokeLinejoin="round" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" /></svg>;
-}
-function CampaignIcon(p: React.SVGProps<SVGSVGElement>) {
-  return <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2} {...p}><path strokeLinecap="round" strokeLinejoin="round" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" /></svg>;
-}
-function TemplateIcon(p: React.SVGProps<SVGSVGElement>) {
-  return <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2} {...p}><path strokeLinecap="round" strokeLinejoin="round" d="M4 5a1 1 0 011-1h14a1 1 0 011 1v2a1 1 0 01-1 1H5a1 1 0 01-1-1V5zM4 13a1 1 0 011-1h6a1 1 0 011 1v6a1 1 0 01-1 1H5a1 1 0 01-1-1v-6zM16 13a1 1 0 011-1h2a1 1 0 011 1v6a1 1 0 01-1 1h-2a1 1 0 01-1-1v-6z" /></svg>;
 }
 

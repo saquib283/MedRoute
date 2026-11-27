@@ -1,8 +1,8 @@
 'use client';
 
 /**
- * MediRoute India — Dedicated Agoda-Style Hotel Detail & Booking Page
- * Complete hotel property view with photo gallery, medical amenities breakdown, room options, stay rules, and sticky reservation widget.
+ * MediRoute India — Accommodation Detail & Reservation Page
+ * Property view with photo gallery, amenities breakdown, room options, stay rules, and reservation form.
  */
 
 import { useState, useEffect, use } from 'react';
@@ -12,6 +12,7 @@ import { Button } from '@/components/ui/Button';
 import { Badge } from '@/components/ui/Badge';
 import { DatePicker } from '@/components/ui/DatePicker';
 import { Select } from '@/components/ui/Select';
+import { PriceTag } from '@/components/ui/PriceTag';
 import { toast } from '@/components/ui/Toast';
 import {
   ArrowLeft,
@@ -23,7 +24,6 @@ import {
   ShieldCheck,
   Phone,
   Clock,
-  Sparkles,
   HeartHandshake,
   Car,
 } from 'lucide-react';
@@ -180,201 +180,209 @@ export default function HotelDetailPage({ params }: { params: Promise<{ id: stri
     );
   }
 
-  const images = Array.isArray(hotel.images) && hotel.images.length > 0
-    ? hotel.images
-    : ['https://images.unsplash.com/photo-1566073771259-6a8506099945?auto=format&fit=crop&w=1200&q=80'];
+  const images = Array.isArray(hotel.images) ? hotel.images : [];
 
-  const amenities = Array.isArray(hotel.amenities) && hotel.amenities.length > 0
-    ? hotel.amenities
-    : ['24/7 On-Call Nursing', 'Wheelchair Accessible', 'Hospital Shuttle Service', 'Custom Medical Diets', 'Free High-Speed Wi-Fi', 'Air Conditioned'];
+  const amenities = Array.isArray(hotel.amenities) ? hotel.amenities : [];
 
   const nights = calculateNights(checkInDate, checkOutDate);
   const baseRate = Number(hotel.pricingPerNight || 0);
   const totalCost = nights * baseRate;
 
   return (
-    <div className="max-w-7xl mx-auto space-y-8 px-4 sm:px-6 lg:px-8 py-4 animate-fade-in text-xs">
+    <div className="space-y-6 animate-fade-in text-xs">
       {/* Top Header Navigation */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-surface-200/80 pb-4">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-surface-200 pb-4">
         <div className="space-y-1">
-          <Link href="/patient/accommodations" className="inline-flex items-center gap-1.5 text-xs font-semibold text-primary-600 hover:text-primary-700 mb-1">
-            <ArrowLeft className="w-4 h-4" /> Back to Medical Hotels Directory
+          <Link href="/patient/accommodations" className="inline-flex items-center gap-1.5 text-xs font-semibold text-primary-700 hover:underline mb-1">
+            <ArrowLeft className="w-4 h-4" /> Back to Accommodations
           </Link>
-          <div className="flex items-center gap-3">
-            <h1 className="text-2xl font-extrabold text-surface-900 tracking-tight">{hotel.name}</h1>
-            <span className="px-3 py-1 bg-amber-50 text-amber-800 border border-amber-200 rounded-full text-xs font-bold flex items-center gap-1">
-              <Star className="w-3.5 h-3.5 fill-amber-400 text-amber-400" /> {hotel.rating || 4.8} / 5.0
-            </span>
+          <div className="flex flex-wrap items-center gap-3">
+            <h1 className="text-2xl font-bold text-surface-900 tracking-tight">{hotel.name}</h1>
+            {hotel.rating != null && (
+              <span className="px-2.5 py-0.5 bg-amber-50 text-amber-800 border border-amber-200 rounded-md text-xs font-semibold flex items-center gap-1">
+                <Star className="w-3.5 h-3.5 fill-amber-400 text-amber-400" /> {hotel.rating} / 5.0
+              </span>
+            )}
           </div>
           <p className="text-xs text-surface-600 flex items-center gap-1">
-            <MapPin className="w-3.5 h-3.5 text-primary-600 shrink-0" /> {hotel.address}, {hotel.city} —{' '}
-            <span className="font-bold text-primary-700">{hotel.distanceToHospital || 'Proximity to Partner Hospital'}</span>
+            <MapPin className="w-3.5 h-3.5 text-primary-600 shrink-0" /> {hotel.address}, {hotel.city}
+            {hotel.distanceToHospital && (
+              <>
+                {' · '}
+                <span className="font-semibold text-primary-700">{hotel.distanceToHospital}</span>
+              </>
+            )}
           </p>
         </div>
 
         <div className="flex items-center gap-3">
           {hotel.contactPhone && (
-            <a href={`tel:${hotel.contactPhone}`} className="px-3.5 py-2 bg-surface-100 hover:bg-surface-200 text-surface-800 rounded-xl text-xs font-bold flex items-center gap-1.5 border border-surface-200">
-              <Phone className="w-3.5 h-3.5 text-primary-600" /> {hotel.contactPhone}
+            <a href={`tel:${hotel.contactPhone}`} className="px-3.5 py-2 bg-white hover:bg-surface-50 text-surface-800 rounded-lg text-xs font-semibold flex items-center gap-1.5 border border-surface-200">
+              <Phone className="w-3.5 h-3.5 text-primary-700" /> {hotel.contactPhone}
             </a>
           )}
         </div>
       </div>
 
-      {/* Agoda-style Hero Photo Gallery */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 rounded-3xl overflow-hidden shadow-sm border border-surface-200 bg-surface-900">
-        <div className="lg:col-span-2 h-[340px] sm:h-[420px] relative">
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img
-            src={images[activeImageIndex] || images[0]}
-            alt={hotel.name}
-            className="w-full h-full object-cover transition-all duration-300"
-          />
-          <div className="absolute top-4 left-4 bg-surface-900/80 backdrop-blur-xs text-white px-3 py-1 rounded-full text-xs font-bold flex items-center gap-1.5">
-            <ShieldCheck className="w-4 h-4 text-emerald-400" /> Verified Partner Medical Hotel
+      {/* Property Gallery */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 rounded-xl overflow-hidden border border-surface-200 bg-surface-100">
+        <div className="lg:col-span-2 h-[320px] sm:h-[380px] relative flex items-center justify-center bg-surface-200">
+          {images.length > 0 ? (
+            <>
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                src={images[activeImageIndex] || images[0]}
+                alt={hotel.name}
+                className="w-full h-full object-cover"
+              />
+            </>
+          ) : (
+            <div className="flex flex-col items-center gap-2 text-surface-400">
+              <Building2 className="w-12 h-12" />
+              <span className="text-xs">No property photos provided</span>
+            </div>
+          )}
+          <div className="absolute top-3 left-3 bg-surface-950/80 text-white px-2.5 py-1 rounded-md text-xs font-semibold flex items-center gap-1.5">
+            <ShieldCheck className="w-3.5 h-3.5 text-success-400" /> Verified Partner Property
           </div>
         </div>
 
-        {/* Thumbnail Stack */}
-        <div className="grid grid-cols-2 lg:grid-cols-1 gap-2 p-2 bg-surface-900/90 overflow-y-auto max-h-[420px]">
-          {images.map((imgUrl, idx) => (
-            <button
-              key={idx}
-              type="button"
-              onClick={() => setActiveImageIndex(idx)}
-              className={`h-24 sm:h-28 rounded-xl overflow-hidden relative border-2 transition-all ${
-                activeImageIndex === idx ? 'border-primary-500 ring-2 ring-primary-500/40' : 'border-transparent opacity-70 hover:opacity-100'
-              }`}
-            >
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img src={imgUrl} alt={`Thumbnail ${idx + 1}`} className="w-full h-full object-cover" />
-            </button>
-          ))}
-        </div>
+        {images.length > 1 && (
+          <div className="grid grid-cols-2 lg:grid-cols-1 gap-2 p-2 bg-white overflow-y-auto max-h-[380px]">
+            {images.map((imgUrl, idx) => (
+              <button
+                key={idx}
+                type="button"
+                onClick={() => setActiveImageIndex(idx)}
+                className={`h-24 sm:h-28 rounded-lg overflow-hidden relative border-2 transition-colors ${
+                  activeImageIndex === idx ? 'border-primary-600' : 'border-transparent opacity-75 hover:opacity-100'
+                }`}
+              >
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img src={imgUrl} alt={`Thumbnail ${idx + 1}`} className="w-full h-full object-cover" />
+              </button>
+            ))}
+          </div>
+        )}
       </div>
 
-      {/* Main Grid: Details (Left) + Sticky Booking Card (Right) */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 items-start">
-        {/* Left Column: Details & Amenities */}
-        <div className="lg:col-span-2 space-y-8">
-          {/* About Property */}
-          <Card className="p-6 rounded-2xl border border-surface-200 shadow-xs space-y-4">
-            <div className="border-b border-surface-100 pb-3">
-              <h2 className="text-base font-bold text-surface-900 tracking-tight flex items-center gap-2">
-                <Building2 className="w-4 h-4 text-primary-600" /> Property Overview & Medical Care Environment
+      {/* Main Grid: Details (Left) + Booking Card (Right) */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 items-start">
+        <div className="lg:col-span-2 space-y-6">
+          <Card className="space-y-4">
+            <div className="border-b border-surface-200 pb-3">
+              <h2 className="text-base font-semibold text-surface-900 flex items-center gap-2">
+                <Building2 className="w-4 h-4 text-primary-700" /> Property Overview
               </h2>
             </div>
-            <p className="text-xs text-surface-700 leading-relaxed font-medium">
-              {hotel.description ||
-                'This medical hotel partner offers sterile, calm, and hospital-adjacent accommodations designed specifically for international medical tourists undergoing surgical procedures, post-op recovery, or long-term therapy.'}
+            <p className="text-xs text-surface-700 leading-relaxed">
+              {hotel.description || 'Hospital-adjacent partner property supporting patient and attendant accommodation during treatment.'}
             </p>
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-2">
-              <div className="p-3.5 bg-primary-50/70 border border-primary-100 rounded-xl flex items-start gap-2.5">
-                <HeartHandshake className="w-5 h-5 text-primary-600 shrink-0 mt-0.5" />
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
+              <div className="p-3.5 bg-surface-50 border border-surface-200 rounded-lg flex items-start gap-2.5">
+                <HeartHandshake className="w-4 h-4 text-primary-700 shrink-0 mt-0.5" />
                 <div>
-                  <h4 className="font-bold text-primary-900 text-xs">Medical Concierge Assist</h4>
-                  <p className="text-[11px] text-primary-800 mt-0.5 leading-tight">24/7 nursing dispatch and prescription medicine delivery service.</p>
+                  <h3 className="font-semibold text-surface-900 text-xs">Recovery Support</h3>
+                  <p className="text-[11px] text-surface-600 mt-0.5">Designed for pre-op and post-discharge stays with attendant seating.</p>
                 </div>
               </div>
 
-              <div className="p-3.5 bg-teal-50/70 border border-teal-100 rounded-xl flex items-start gap-2.5">
-                <Car className="w-5 h-5 text-teal-600 shrink-0 mt-0.5" />
+              <div className="p-3.5 bg-surface-50 border border-surface-200 rounded-lg flex items-start gap-2.5">
+                <Car className="w-4 h-4 text-primary-700 shrink-0 mt-0.5" />
                 <div>
-                  <h4 className="font-bold text-teal-900 text-xs">Direct Hospital Transfers</h4>
-                  <p className="text-[11px] text-teal-800 mt-0.5 leading-tight">Scheduled shuttle rides directly to partner hospital appointments.</p>
+                  <h3 className="font-semibold text-surface-900 text-xs">Hospital Access</h3>
+                  <p className="text-[11px] text-surface-600 mt-0.5">Coordinate hospital transfers directly with your case manager.</p>
                 </div>
               </div>
             </div>
           </Card>
 
-          {/* Medical & Hotel Amenities */}
-          <Card className="p-6 rounded-2xl border border-surface-200 shadow-xs space-y-4">
-            <div className="border-b border-surface-100 pb-3">
-              <h2 className="text-base font-bold text-surface-900 tracking-tight flex items-center gap-2">
-                <Sparkles className="w-4 h-4 text-primary-600" /> Medical Support & Hotel Amenities
-              </h2>
-            </div>
+          {amenities.length > 0 && (
+            <Card className="space-y-4">
+              <div className="border-b border-surface-200 pb-3">
+                <h2 className="text-base font-semibold text-surface-900 flex items-center gap-2">
+                  <ShieldCheck className="w-4 h-4 text-primary-700" /> Amenities &amp; Care Features
+                </h2>
+              </div>
 
-            <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-              {amenities.map((amenity) => (
-                <div key={amenity} className="p-3 bg-surface-50 border border-surface-200/80 rounded-xl flex items-center gap-2 font-semibold text-surface-800 text-xs">
-                  <CheckCircle2 className="w-4 h-4 text-success-500 shrink-0" />
-                  <span>{amenity}</span>
-                </div>
-              ))}
-            </div>
-          </Card>
+              <div className="grid grid-cols-2 sm:grid-cols-3 gap-2.5">
+                {amenities.map((amenity) => (
+                  <div key={amenity} className="p-2.5 bg-surface-50 border border-surface-200 rounded-lg flex items-center gap-2 font-medium text-surface-800 text-xs">
+                    <CheckCircle2 className="w-4 h-4 text-success-600 shrink-0" />
+                    <span>{amenity}</span>
+                  </div>
+                ))}
+              </div>
+            </Card>
+          )}
 
           {/* Room Categories */}
-          <Card className="p-6 rounded-2xl border border-surface-200 shadow-xs space-y-4">
-            <div className="border-b border-surface-100 pb-3">
-              <h2 className="text-base font-bold text-surface-900 tracking-tight flex items-center gap-2">
-                <BedDouble className="w-4 h-4 text-primary-600" /> Available Room Layouts & Rates
+          <Card className="space-y-4">
+            <div className="border-b border-surface-200 pb-3">
+              <h2 className="text-base font-semibold text-surface-900 flex items-center gap-2">
+                <BedDouble className="w-4 h-4 text-primary-700" /> Room Options &amp; Base Rates
               </h2>
             </div>
 
             <div className="space-y-3">
-              <div className="p-4 border border-surface-200 rounded-xl bg-white flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+              <div className="p-4 border border-surface-200 rounded-lg bg-white flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                 <div>
-                  <div className="flex items-center gap-2">
-                    <h3 className="font-bold text-surface-900 text-sm">Single Private Recovery Room</h3>
-                    <span className="px-2 py-0.5 bg-primary-50 text-primary-700 text-[10px] font-bold rounded">Popular</span>
-                  </div>
-                  <p className="text-xs text-surface-600 mt-1">Adjustable medical bed, attached bathroom with safety rails, attendant couch, AC, Wi-Fi.</p>
+                  <h3 className="font-semibold text-surface-900 text-sm">Single Private Room</h3>
+                  <p className="text-xs text-surface-600 mt-0.5">Private patient room with attendant sofa, Wi-Fi, and bathroom access.</p>
                 </div>
-                <div className="text-right shrink-0">
-                  <p className="text-base font-extrabold text-surface-900">₹{baseRate.toLocaleString()}</p>
-                  <p className="text-[10px] text-surface-500">per night / incl. taxes</p>
+                <div className="sm:text-right shrink-0">
+                  <p className="text-base font-bold text-surface-900"><PriceTag amountInINR={baseRate} /></p>
+                  <p className="text-[11px] text-surface-500">per night</p>
                 </div>
               </div>
 
-              <div className="p-4 border border-surface-200 rounded-xl bg-white flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+              <div className="p-4 border border-surface-200 rounded-lg bg-white flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                 <div>
-                  <h3 className="font-bold text-surface-900 text-sm">Double Family Suite</h3>
-                  <p className="text-xs text-surface-600 mt-1">2 plush beds for patient & companion, mini kitchenette, dining counter, smart TV.</p>
+                  <h3 className="font-semibold text-surface-900 text-sm">Double Family Suite</h3>
+                  <p className="text-xs text-surface-600 mt-0.5">Two-bed configuration suited for patient and accompanying caregiver.</p>
                 </div>
-                <div className="text-right shrink-0">
-                  <p className="text-base font-extrabold text-surface-900">₹{(baseRate * 1.35).toLocaleString()}</p>
-                  <p className="text-[10px] text-surface-500">per night / incl. taxes</p>
+                <div className="sm:text-right shrink-0">
+                  <p className="text-base font-bold text-surface-900"><PriceTag amountInINR={Math.round(baseRate * 1.35)} /></p>
+                  <p className="text-[11px] text-surface-500">per night</p>
                 </div>
               </div>
 
-              <div className="p-4 border border-surface-200 rounded-xl bg-white flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+              <div className="p-4 border border-surface-200 rounded-lg bg-white flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                 <div>
-                  <h3 className="font-bold text-surface-900 text-sm">Full Care Executive Suite</h3>
-                  <p className="text-xs text-surface-600 mt-1">Spacious 2-room layout with private nursing console, living room, and balcony.</p>
+                  <h3 className="font-semibold text-surface-900 text-sm">Executive Suite</h3>
+                  <p className="text-xs text-surface-600 mt-0.5">Separate living area and expanded space for extended recovery stays.</p>
                 </div>
-                <div className="text-right shrink-0">
-                  <p className="text-base font-extrabold text-surface-900">₹{(baseRate * 1.8).toLocaleString()}</p>
-                  <p className="text-[10px] text-surface-500">per night / incl. taxes</p>
+                <div className="sm:text-right shrink-0">
+                  <p className="text-base font-bold text-surface-900"><PriceTag amountInINR={Math.round(baseRate * 1.8)} /></p>
+                  <p className="text-[11px] text-surface-500">per night</p>
                 </div>
               </div>
             </div>
           </Card>
 
-          {/* Hotel Policies & Rules */}
-          <Card className="p-6 rounded-2xl border border-surface-200 shadow-xs space-y-3">
-            <div className="border-b border-surface-100 pb-3">
-              <h2 className="text-base font-bold text-surface-900 tracking-tight flex items-center gap-2">
-                <Clock className="w-4 h-4 text-primary-600" /> Stay Policies & House Rules
+          {/* Stay Policies */}
+          <Card className="space-y-3">
+            <div className="border-b border-surface-200 pb-3">
+              <h2 className="text-base font-semibold text-surface-900 flex items-center gap-2">
+                <Clock className="w-4 h-4 text-primary-700" /> Stay Policies &amp; House Rules
               </h2>
             </div>
-            <p className="text-xs text-surface-700 leading-relaxed font-medium">
-              {hotel.rules || 'Check-in: 12:00 PM | Check-out: 11:00 AM. 24/7 reception desk available. 1 attendant stay permitted per patient room.'}
+            <p className="text-xs text-surface-700 leading-relaxed">
+              {hotel.rules || 'Check-in: 12:00 PM | Check-out: 11:00 AM. One attendant permitted per patient room.'}
             </p>
           </Card>
         </div>
 
-        {/* Right Column: Sticky Agoda-style Booking Card */}
+        {/* Right Column: Booking Summary */}
         <div className="lg:col-span-1 lg:sticky lg:top-20 space-y-4">
-          <Card className="p-6 rounded-3xl border border-primary-200 shadow-lg bg-white space-y-5">
-            <div className="flex justify-between items-baseline border-b border-surface-100 pb-4">
+          <Card className="p-6 border-primary-200 shadow-sm bg-white space-y-5">
+            <div className="flex justify-between items-baseline border-b border-surface-200 pb-4">
               <div>
-                <span className="text-[10px] uppercase font-bold text-surface-500 tracking-wider">Starting Rate</span>
+                <span className="text-[11px] uppercase font-semibold text-surface-500 tracking-wider">Base Rate</span>
                 <div className="flex items-baseline gap-1 mt-0.5">
-                  <span className="text-2xl font-extrabold text-surface-900">₹{baseRate.toLocaleString()}</span>
-                  <span className="text-xs text-surface-500 font-semibold">/ night</span>
+                  <span className="text-2xl font-bold text-surface-900"><PriceTag amountInINR={baseRate} /></span>
+                  <span className="text-xs text-surface-500 font-medium">/ night</span>
                 </div>
               </div>
               <Badge variant="success" dot>Available</Badge>
@@ -382,24 +390,24 @@ export default function HotelDetailPage({ params }: { params: Promise<{ id: stri
 
             <form onSubmit={handleBookingSubmit} className="space-y-4">
               <Select
-                label="Target Care Case"
+                label="Case Reference"
                 value={selectedCaseId}
                 onChange={setSelectedCaseId}
                 options={cases.map((c) => ({
                   value: c.id,
-                  label: `Active Case ID: ${c.id.slice(-8)} (${c.status})`,
+                  label: `Case ${c.id.slice(-8)} (${c.status})`,
                 }))}
                 required
               />
 
               <Select
-                label="Room Layout Option"
+                label="Room Type"
                 value={selectedRoomType}
                 onChange={(val) => setSelectedRoomType(val as RoomType)}
                 options={[
                   { value: RoomType.SINGLE, label: 'Single Private Room' },
                   { value: RoomType.DOUBLE, label: 'Double Family Room' },
-                  { value: RoomType.SUITE, label: 'Full Executive Suite' },
+                  { value: RoomType.SUITE, label: 'Executive Suite' },
                   { value: RoomType.DORMITORY, label: 'Shared Recovery Ward' },
                 ]}
                 required
@@ -420,26 +428,21 @@ export default function HotelDetailPage({ params }: { params: Promise<{ id: stri
                 />
               </div>
 
-              {/* Real-time price calculator */}
               {nights > 0 && (
-                <div className="p-4 bg-primary-50/80 border border-primary-200/80 rounded-2xl space-y-2 text-xs">
+                <div className="p-4 bg-primary-50 border border-primary-200 rounded-xl space-y-2 text-xs">
                   <div className="flex justify-between text-surface-700 font-medium">
-                    <span>₹{baseRate.toLocaleString()} x {nights} Nights</span>
-                    <span>₹{totalCost.toLocaleString()}</span>
+                    <span><PriceTag amountInINR={baseRate} /> × {nights} nights</span>
+                    <span><PriceTag amountInINR={totalCost} /></span>
                   </div>
-                  <div className="flex justify-between text-surface-700 font-medium">
-                    <span>Medical Assist & Shuttle Fee</span>
-                    <span className="text-emerald-700 font-bold">FREE</span>
-                  </div>
-                  <div className="border-t border-primary-200/60 pt-2 flex justify-between font-extrabold text-primary-950 text-sm">
-                    <span>Total Est. Stay Cost</span>
-                    <span>₹{totalCost.toLocaleString()}</span>
+                  <div className="border-t border-primary-200 pt-2 flex justify-between font-bold text-primary-950 text-sm">
+                    <span>Estimated Total</span>
+                    <span><PriceTag amountInINR={totalCost} /></span>
                   </div>
                 </div>
               )}
 
-              <Button type="submit" fullWidth size="lg" isLoading={submitting} className="font-bold">
-                Book Stay Now
+              <Button type="submit" fullWidth size="md" isLoading={submitting}>
+                Request Stay Booking
               </Button>
             </form>
 
