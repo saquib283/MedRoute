@@ -1,11 +1,11 @@
-/**
- * MediRoute India — POST /api/v1/auth/2fa/validate
+﻿/**
+ * Afzal Healthcare — POST /api/v1/auth/2fa/validate
  * Validates TOTP code during login flow and issues tokens.
  */
 
 import { NextRequest } from 'next/server';
 import prisma from '@/lib/prisma';
-import { verifyTOTP, decrypt } from '@/lib/auth';
+import { verifyTOTP, decrypt, DecryptionTamperError } from '@/lib/auth';
 import { signAccessToken, signRefreshToken } from '@/lib/auth/jwt';
 import { totpVerifySchema } from '@/lib/validation/schemas';
 import { apiSuccess, apiError, validationError } from '@/lib/api/response';
@@ -27,10 +27,10 @@ export async function POST(request: NextRequest) {
       return validationError(result.error.flatten().fieldErrors);
     }
 
-    // Find the temporary 2FA session
+    // Find the temporary 2FA session (supports both regular 2FA and first-time 2FA setup)
     const tempSession = await prisma.refreshToken.findFirst({
       where: {
-        token: `2fa_${tempSessionId}`,
+        token: { in: [`2fa_${tempSessionId}`, `2fa_setup_${tempSessionId}`] },
         revokedAt: null,
         expiresAt: { gt: new Date() },
       },
@@ -46,31 +46,41 @@ export async function POST(request: NextRequest) {
       return apiError(ERROR_CODES.TOTP_INVALID, '2FA is not configured', 400);
     }
 
-    const isValid = verifyTOTP(result.data.code, decrypt(tempSession.user.totpSecret));
+    let decryptedSecret: string;
+    try {
+      decryptedSecret = decrypt(tempSession.user.totpSecret);
+    } catch (err) {
+      if (err instanceof DecryptionTamperError) {
+        console.error('[2FA Validate Error] Tampered TOTP secret detected for user', tempSession.userId);
+        return apiError(ERROR_CODES.INTERNAL_ERROR, '2FA configuration integrity check failed', 500);
+      }
+      throw err;
+    }
+
+    const isValid = verifyTOTP(result.data.code, decryptedSecret);
     if (!isValid) {
       return apiError(ERROR_CODES.TOTP_INVALID, 'Invalid authentication code', 401);
     }
 
-    // Revoke the temp session and ensure totpEnabled is true
-    await Promise.all([
-      prisma.refreshToken.update({
+    // Atomically revoke the temp session, enable 2FA, and issue a 7-day refresh token
+    const refreshTokenRecord = await prisma.$transaction(async (tx) => {
+      await tx.refreshToken.update({
         where: { id: tempSession.id },
         data: { revokedAt: new Date() },
-      }),
-      prisma.user.update({
+      });
+
+      await tx.user.update({
         where: { id: tempSession.userId },
         data: { totpEnabled: true },
-      }),
-    ]);
+      });
 
-
-    // Issue real tokens
-    const refreshTokenRecord = await prisma.refreshToken.create({
-      data: {
-        userId: tempSession.userId,
-        token: crypto.randomUUID(),
-        expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
-      },
+      return tx.refreshToken.create({
+        data: {
+          userId: tempSession.userId,
+          token: crypto.randomUUID(),
+          expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
+        },
+      });
     });
 
     const [accessToken, refreshToken] = await Promise.all([

@@ -1,7 +1,7 @@
 'use client';
 
 /**
- * MediRoute India — Premium Custom Phone Input Component
+ * Afzal Healthcare — Premium Custom Phone Input Component
  * Features a complete global database of 240+ country calling codes, search filtering, flag emojis, and custom styling.
  */
 
@@ -12,6 +12,225 @@ export interface CountryCode {
   code: string;
   country: string;
   flag: string;
+}
+
+const ISO_MAP: Record<string, string> = {
+  "India": "IN",
+  "United Arab Emirates": "AE",
+  "Saudi Arabia": "SA",
+  "Oman": "OM",
+  "Qatar": "QA",
+  "Kuwait": "KW",
+  "Bahrain": "BH",
+  "United States": "US",
+  "United Kingdom": "GB",
+  "Bangladesh": "BD",
+  "Sri Lanka": "LK",
+  "Nepal": "NP",
+  "Maldives": "MV",
+  "Kenya": "KE",
+  "Nigeria": "NG",
+  "Tanzania": "TZ",
+  "Uganda": "UG",
+  "Ethiopia": "ET",
+  "Rwanda": "RW",
+  "South Africa": "ZA",
+  "Australia": "AU",
+  "Canada": "CA",
+  "Afghanistan": "AF",
+  "Albania": "AL",
+  "Algeria": "DZ",
+  "Andorra": "AD",
+  "Angola": "AO",
+  "Anguilla": "AI",
+  "Antigua and Barbuda": "AG",
+  "Argentina": "AR",
+  "Armenia": "AM",
+  "Aruba": "AW",
+  "Austria": "AT",
+  "Azerbaijan": "AZ",
+  "Bahamas": "BS",
+  "Barbados": "BB",
+  "Belarus": "BY",
+  "Belgium": "BE",
+  "Belize": "BZ",
+  "Benin": "BJ",
+  "Bermuda": "BM",
+  "Bhutan": "BT",
+  "Bolivia": "BO",
+  "Bosnia and Herzegovina": "BA",
+  "Botswana": "BW",
+  "Brazil": "BR",
+  "Brunei": "BN",
+  "Bulgaria": "BG",
+  "Burkina Faso": "BF",
+  "Burundi": "BI",
+  "Cambodia": "KH",
+  "Cameroon": "CM",
+  "Cape Verde": "CV",
+  "Cayman Islands": "KY",
+  "Central African Republic": "CF",
+  "Chad": "TD",
+  "Chile": "CL",
+  "China": "CN",
+  "Colombia": "CO",
+  "Comoros": "KM",
+  "Congo": "CG",
+  "DR Congo": "CD",
+  "Costa Rica": "CR",
+  "Croatia": "HR",
+  "Cuba": "CU",
+  "Cyprus": "CY",
+  "Czech Republic": "CZ",
+  "Denmark": "DK",
+  "Djibouti": "DJ",
+  "Dominica": "DM",
+  "Dominican Republic": "DO",
+  "Ecuador": "EC",
+  "Egypt": "EG",
+  "El Salvador": "SV",
+  "Equatorial Guinea": "GQ",
+  "Eritrea": "ER",
+  "Estonia": "EE",
+  "Eswatini": "SZ",
+  "Fiji": "FJ",
+  "Finland": "FI",
+  "France": "FR",
+  "French Guiana": "GF",
+  "Gabon": "GA",
+  "Gambia": "GM",
+  "Georgia": "GE",
+  "Germany": "DE",
+  "Ghana": "GH",
+  "Gibraltar": "GI",
+  "Greece": "GR",
+  "Greenland": "GL",
+  "Grenada": "GD",
+  "Guadeloupe": "GP",
+  "Guam": "GU",
+  "Guatemala": "GT",
+  "Guinea": "GN",
+  "Guinea-Bissau": "GW",
+  "Guyana": "GY",
+  "Haiti": "HT",
+  "Honduras": "HN",
+  "Hong Kong": "HK",
+  "Hungary": "HU",
+  "Iceland": "IS",
+  "Indonesia": "ID",
+  "Iran": "IR",
+  "Iraq": "IQ",
+  "Ireland": "IE",
+  "Israel": "IL",
+  "Italy": "IT",
+  "Ivory Coast": "CI",
+  "Jamaica": "JM",
+  "Japan": "JP",
+  "Jordan": "JO",
+  "Kazakhstan": "KZ",
+  "Kiribati": "KI",
+  "North Korea": "KP",
+  "South Korea": "KR",
+  "Kyrgyzstan": "KG",
+  "Laos": "LA",
+  "Latvia": "LV",
+  "Lebanon": "LB",
+  "Lesotho": "LS",
+  "Liberia": "LR",
+  "Libya": "LY",
+  "Liechtenstein": "LI",
+  "Lithuania": "LT",
+  "Luxembourg": "LU",
+  "Macau": "MO",
+  "North Macedonia": "MK",
+  "Madagascar": "MG",
+  "Malawi": "MW",
+  "Malaysia": "MY",
+  "Mali": "ML",
+  "Malta": "MT",
+  "Martinique": "MQ",
+  "Mauritania": "MR",
+  "Mauritius": "MU",
+  "Mexico": "MX",
+  "Moldova": "MD",
+  "Monaco": "MC",
+  "Mongolia": "MN",
+  "Montenegro": "ME",
+  "Montserrat": "MS",
+  "Morocco": "MA",
+  "Mozambique": "MZ",
+  "Myanmar": "MM",
+  "Namibia": "NA",
+  "Netherlands": "NL",
+  "New Caledonia": "NC",
+  "New Zealand": "NZ",
+  "Nicaragua": "NI",
+  "Niger": "NE",
+  "Norway": "NO",
+  "Pakistan": "PK",
+  "Palau": "PW",
+  "Palestine": "PS",
+  "Panama": "PA",
+  "Papua New Guinea": "PG",
+  "Paraguay": "PY",
+  "Peru": "PE",
+  "Philippines": "PH",
+  "Poland": "PL",
+  "Portugal": "PT",
+  "Puerto Rico": "PR",
+  "Romania": "RO",
+  "Russia": "RU",
+  "Saint Helena": "SH",
+  "Saint Kitts and Nevis": "KN",
+  "Saint Lucia": "LC",
+  "Saint Pierre and Miquelon": "PM",
+  "Saint Vincent and Grenadines": "VC",
+  "Samoa": "WS",
+  "San Marino": "SM",
+  "Sao Tome and Principe": "ST",
+  "Senegal": "SN",
+  "Serbia": "RS",
+  "Seychelles": "SC",
+  "Sierra Leone": "SL",
+  "Singapore": "SG",
+  "Slovakia": "SK",
+  "Slovenia": "SI",
+  "Solomon Islands": "SB",
+  "Somalia": "SO",
+  "South Sudan": "SS",
+  "Spain": "ES",
+  "Suriname": "SR",
+  "Sweden": "SE",
+  "Switzerland": "CH",
+  "Syria": "SY",
+  "Taiwan": "TW",
+  "Tajikistan": "TJ",
+  "Thailand": "TH",
+  "Timor-Leste": "TL",
+  "Togo": "TG",
+  "Tonga": "TO",
+  "Trinidad and Tobago": "TT",
+  "Tunisia": "TN",
+  "Turkey": "TR",
+  "Turkmenistan": "TM",
+  "Turks and Caicos Islands": "TC",
+  "Tuvalu": "TV",
+  "Ukraine": "UA",
+  "Uruguay": "UY",
+  "Uzbekistan": "UZ",
+  "Vanuatu": "VU",
+  "Vatican City": "VA",
+  "Venezuela": "VE",
+  "Vietnam": "VN",
+  "Yemen": "YE",
+  "Zambia": "ZM",
+  "Zimbabwe": "ZW"
+};
+
+export function getCountryFlag(countryName: string): string {
+  const iso = ISO_MAP[countryName];
+  if (!iso || iso.length !== 2) return '🌐';
+  return String.fromCodePoint(127397 + iso.charCodeAt(0), 127397 + iso.charCodeAt(1));
 }
 
 export const COUNTRY_CODES: CountryCode[] = [
@@ -288,12 +507,12 @@ export function PhoneInput({
   return (
     <div className={`space-y-1.5 ${className}`} ref={containerRef}>
       {label && (
-        <label className="block text-xs font-bold text-surface-700">
+        <label className="block text-xs font-medium text-surface-700">
           {label} {required && <span className="text-danger-500">*</span>}
         </label>
       )}
 
-      <div className="relative flex rounded-xl shadow-xs">
+      <div className="relative flex rounded-md">
         {/* Custom Country Code Dropdown Trigger */}
         <div className="relative shrink-0">
           <button
@@ -301,32 +520,32 @@ export function PhoneInput({
             onClick={() => !disabled && setIsOpen(!isOpen)}
             disabled={disabled}
             className={`
-              h-[46px] px-3.5 bg-surface-50 border border-r-0 border-surface-300 rounded-l-xl text-xs font-bold text-surface-900
-              flex items-center gap-2 transition-all hover:bg-surface-100 disabled:bg-surface-100 disabled:cursor-not-allowed
+              min-h-[44px] px-3 bg-surface-50 border border-r-0 border-surface-300 rounded-l-md text-xs font-medium text-surface-800
+              flex items-center gap-1.5 transition-colors hover:bg-surface-100 disabled:bg-surface-100 disabled:cursor-not-allowed
               ${isOpen ? 'bg-white border-primary-600 z-10' : ''}
             `}
           >
-            <span className="text-base leading-none">{selectedCountry.flag}</span>
-            <span className="font-semibold">{selectedCountry.code}</span>
+            <span className="text-sm leading-none">{selectedCountry.flag}</span>
+            <span className="tabular-nums">{selectedCountry.code}</span>
             <ChevronDown
-              className={`w-3.5 h-3.5 text-surface-400 transition-transform duration-200 ${
-                isOpen ? 'rotate-180 text-primary-600' : ''
+              className={`w-3.5 h-3.5 text-surface-400 transition-transform duration-150 ${
+                isOpen ? 'rotate-180 text-surface-700' : ''
               }`}
             />
           </button>
 
           {/* Custom Popover Panel */}
           {isOpen && (
-            <div className="absolute left-0 top-full mt-1.5 z-50 w-76 max-h-80 bg-white border border-surface-200 rounded-2xl shadow-xl p-2 animate-scale-in flex flex-col">
+            <div className="absolute left-0 top-full mt-1 z-50 w-76 max-h-80 bg-white border border-surface-200 rounded-lg shadow-md p-2 animate-scale-in flex flex-col">
               {/* Search Filter Box */}
               <div className="relative p-1 mb-1">
                 <Search className="w-3.5 h-3.5 text-surface-400 absolute left-3 top-3.5" />
                 <input
                   type="text"
-                  placeholder="Search 240+ countries or codes..."
+                  placeholder="Search country or code..."
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
-                  className="w-full pl-8 pr-3 py-1.5 bg-surface-50 border border-surface-200 rounded-xl text-xs text-surface-900 placeholder:text-surface-400 focus:outline-none focus:border-primary-600"
+                  className="w-full pl-8 pr-3 py-1.5 bg-surface-50 border border-surface-300 rounded-md text-xs text-surface-900 placeholder:text-surface-400 focus:outline-none focus:border-primary-600"
                   autoFocus
                 />
               </div>
@@ -342,21 +561,21 @@ export function PhoneInput({
                         type="button"
                         onClick={() => handleSelectCountry(item.code)}
                         className={`
-                          w-full px-3 py-2.5 rounded-xl text-xs font-medium text-left flex items-center justify-between gap-2 transition-colors
+                          w-full px-3 py-2 rounded-md text-xs text-left flex items-center justify-between gap-2 transition-colors
                           ${
                             isSelected
-                              ? 'bg-primary-50 text-primary-800 font-bold'
+                              ? 'bg-primary-50 text-primary-800 font-medium'
                               : 'text-surface-700 hover:bg-surface-100 hover:text-surface-900'
                           }
                         `}
                       >
                         <div className="flex items-center gap-2.5 min-w-0">
-                          <span className="text-lg leading-none shrink-0">{item.flag}</span>
+                          <span className="text-base leading-none shrink-0">{item.flag}</span>
                           <span className="truncate">{item.country}</span>
                         </div>
 
                         <div className="flex items-center gap-1.5 shrink-0">
-                          <span className="font-mono text-[11px] px-1.5 py-0.5 rounded bg-surface-100 text-surface-600 font-bold">
+                          <span className="font-mono text-[11px] px-1.5 py-0.5 rounded bg-surface-100 text-surface-600">
                             {item.code}
                           </span>
                           {isSelected && <Check className="w-3.5 h-3.5 text-primary-600 shrink-0" />}
@@ -365,8 +584,8 @@ export function PhoneInput({
                     );
                   })
                 ) : (
-                  <div className="p-4 text-center text-xs text-surface-400 italic">
-                    No country matches &quot;{searchTerm}&quot;
+                  <div className="p-4 text-center text-xs text-surface-500">
+                    No country matches &ldquo;{searchTerm}&rdquo;
                   </div>
                 )}
               </div>
@@ -388,10 +607,10 @@ export function PhoneInput({
             disabled={disabled}
             required={required}
             className={`
-              w-full h-[46px] pl-9 pr-3 bg-white border border-surface-300 rounded-r-xl text-xs text-surface-900 font-medium
-              focus:outline-none focus:border-primary-600 transition-all
+              w-full min-h-[44px] pl-9 pr-3 bg-white border border-surface-300 rounded-r-md text-sm text-surface-900
+              focus:outline-none focus:border-primary-600 transition-colors
               ${disabled ? 'bg-surface-100 cursor-not-allowed text-surface-400' : ''}
-              ${error ? 'border-danger-300 focus:border-danger-500' : ''}
+              ${error ? 'border-danger-400 focus:border-danger-500' : ''}
             `}
           />
         </div>

@@ -1,83 +1,150 @@
 @import "tailwindcss";
 
-/* ─── Clinical Design System — Tailwind v4 CSS-first Config ──────── */
-@theme {
-  /* ── Primary (restrained teal — clinical, trustworthy) ─────────── */
-  --color-primary-50: #f0fdfa;
-  --color-primary-100: #ccfbf1;
-  --color-primary-200: #99f6e4;
-  --color-primary-300: #5eead4;
-  --color-primary-400: #2dd4bf;
-  --color-primary-500: #0d9488;
-  --color-primary-600: #0f766e;
-  --color-primary-700: #115e59;
-  --color-primary-800: #134e4a;
-  --color-primary-900: #042f2e;
-  --color-primary-950: #021c1b;
+/* ─── Scroll-Driven Edge-Fade Custom Properties ─────────────────── */
+@property --fade-start {
+  syntax: "<length>";
+  inherits: false;
+  initial-value: 0px;
+}
 
-  /* ── Surface (white → slate scale for light-mode canvas) ────────── */
+@property --fade-end {
+  syntax: "<length>";
+  inherits: false;
+  initial-value: 0px;
+}
+
+/* ─── Clinical Design System — Restrained Institutional Palette ──── */
+@theme inline {
+  --font-sans: var(--font-plus-jakarta), var(--font-jakarta), "Plus Jakarta Sans", ui-sans-serif, system-ui, sans-serif;
+}
+
+@theme {
+  /* ── Primary (restrained deep clinical teal — 10% accent rule) ─── */
+  --color-primary-50: #f2fbf9;
+  --color-primary-100: #d9f2ee;
+  --color-primary-200: #b6e4dd;
+  --color-primary-300: #84cfc5;
+  --color-primary-400: #4eb3a6;
+  --color-primary-500: #1f8a7e;
+  --color-primary-600: #146c62;
+  --color-primary-700: #115750;
+  --color-primary-800: #104641;
+  --color-primary-850: #0c3733;
+  --color-primary-900: #0b2e2b;
+  --color-primary-950: #061c1a;
+
+  /* ── Surface (clean cool-slate neutral hierarchy — 90% canvas) ─── */
   --color-surface-50: #ffffff;
   --color-surface-100: #f8fafc;
-  --color-surface-200: #f1f5f9;
-  --color-surface-300: #e2e8f0;
-  --color-surface-400: #cbd5e1;
-  --color-surface-500: #94a3b8;
-  --color-surface-600: #64748b;
-  --color-surface-700: #475569;
-  --color-surface-800: #334155;
-  --color-surface-900: #1e293b;
-  --color-surface-950: #0f172a;
+  --color-surface-150: #f3f6f9;
+  --color-surface-200: #e2e8f0;
+  --color-surface-300: #cbd5e1;
+  --color-surface-400: #94a3b8;
+  --color-surface-500: #64748b;
+  --color-surface-600: #475569;
+  --color-surface-700: #334155;
+  --color-surface-800: #1e293b;
+  --color-surface-900: #0f172a;
+  --color-surface-950: #020617;
 
-  /* ── Semantic — Danger ─────────────────────────────────────────── */
+  /* ── Semantic — Danger (muted clinical crimson) ────────────────── */
   --color-danger-50: #fef2f2;
   --color-danger-100: #fee2e2;
   --color-danger-200: #fecaca;
-  --color-danger-500: #ef4444;
-  --color-danger-600: #dc2626;
-  --color-danger-700: #b91c1c;
+  --color-danger-300: #fca5a5;
+  --color-danger-400: #f87171;
+  --color-danger-500: #dc2626;
+  --color-danger-600: #b91c1c;
+  --color-danger-700: #991b1b;
+  --color-danger-800: #7f1d1d;
+  --color-danger-900: #651717;
 
-  /* ── Semantic — Success ────────────────────────────────────────── */
+  /* ── Semantic — Success (muted clinical forest green) ──────────── */
   --color-success-50: #f0fdf4;
   --color-success-100: #dcfce7;
-  --color-success-500: #22c55e;
-  --color-success-600: #16a34a;
-  --color-success-700: #15803d;
+  --color-success-200: #bbf7d0;
+  --color-success-300: #86efac;
+  --color-success-400: #4ade80;
+  --color-success-500: #16a34a;
+  --color-success-600: #15803d;
+  --color-success-700: #166534;
+  --color-success-800: #14532d;
+  --color-success-900: #0f3f22;
 
-  /* ── Semantic — Warning ────────────────────────────────────────── */
+  /* ── Semantic — Warning (muted clinical ochre) ─────────────────── */
   --color-warning-50: #fffbeb;
   --color-warning-100: #fef3c7;
-  --color-warning-500: #f59e0b;
-  --color-warning-600: #d97706;
-  --color-warning-700: #b45309;
+  --color-warning-200: #fde68a;
+  --color-warning-300: #fcd34d;
+  --color-warning-400: #fbbf24;
+  --color-warning-500: #d97706;
+  --color-warning-600: #b45309;
+  --color-warning-700: #92400e;
+  --color-warning-800: #78350f;
+  --color-warning-900: #632c0d;
 
-  /* ── Semantic — Info ───────────────────────────────────────────── */
+  /* ── Semantic — Info (muted clinical slate-blue) ───────────────── */
   --color-info-50: #eff6ff;
   --color-info-100: #dbeafe;
-  --color-info-500: #3b82f6;
-  --color-info-600: #2563eb;
-  --color-info-700: #1d4ed8;
+  --color-info-200: #bfdbfe;
+  --color-info-300: #93c5fd;
+  --color-info-400: #60a5fa;
+  --color-info-500: #2563eb;
+  --color-info-600: #1d4ed8;
+  --color-info-700: #1e40af;
+  --color-info-800: #1e3a8a;
+  --color-info-900: #172e6e;
 
-  --font-sans: var(--font-plus-jakarta), ui-sans-serif, system-ui, sans-serif;
+  /* ── Shadows — Subtle, low-glare elevation ─────────────────────── */
+  --shadow-2xs: 0 1px 1px rgba(15, 23, 42, 0.03);
+  --shadow-xs: 0 1px 2px rgba(15, 23, 42, 0.04);
+  --shadow-sm: 0 1px 3px rgba(15, 23, 42, 0.06), 0 1px 2px rgba(15, 23, 42, 0.03);
+  --shadow-md: 0 4px 12px rgba(15, 23, 42, 0.07), 0 1px 3px rgba(15, 23, 42, 0.04);
 
-  /* ── Shadows — 3-level elevation system ────────────────────────── */
-  --shadow-xs: 0 1px 2px rgba(0, 0, 0, 0.05);
-  --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.08), 0 1px 2px rgba(0, 0, 0, 0.04);
-  --shadow-md: 0 4px 6px rgba(0, 0, 0, 0.06), 0 2px 4px rgba(0, 0, 0, 0.04);
+  /* ── Understated Functional Transitions (ease-out-quart) ───────── */
+  --animate-fade-in: fade-in 0.16s cubic-bezier(0.25, 1, 0.5, 1);
+  --animate-slide-up: slide-up 0.18s cubic-bezier(0.25, 1, 0.5, 1);
+  --animate-slide-down: slide-down 0.16s cubic-bezier(0.25, 1, 0.5, 1);
+  --animate-slide-left: slide-left 0.18s cubic-bezier(0.25, 1, 0.5, 1);
+  --animate-scale-in: scale-in 0.15s cubic-bezier(0.25, 1, 0.5, 1);
+}
 
-  /* ── Animation ─────────────────────────────────────────────────── */
-  --animate-fade-in: fade-in 0.25s ease-out;
-  --animate-slide-up: slide-up 0.25s ease-out;
-  --animate-slide-down: slide-down 0.2s ease-out;
-  --animate-slide-left: slide-left 0.2s ease-out;
-  --animate-scale-in: scale-in 0.18s ease-out;
+/* ─── Base Border & Browser-Generated UI Defaults ───────────────── */
+@layer base {
+  *,
+  ::after,
+  ::before,
+  ::backdrop {
+    border-color: var(--color-surface-200);
+  }
+}
+
+:root {
+  color-scheme: light;
+  accent-color: var(--color-primary-600);
+  caret-color: var(--color-primary-600);
+  scrollbar-color: var(--color-surface-300) var(--color-surface-100);
+}
+
+::selection {
+  background-color: var(--color-primary-100);
+  color: var(--color-primary-900);
 }
 
 /* ─── Keyframes ─────────────────────────────────────────────────── */
+@keyframes shrink-progress {
+  from {
+    width: 100%;
+  }
+  to {
+    width: 0%;
+  }
+}
+
 @keyframes fade-in {
   from {
     opacity: 0;
   }
-
   to {
     opacity: 1;
   }
@@ -86,9 +153,8 @@
 @keyframes slide-up {
   from {
     opacity: 0;
-    transform: translateY(10px);
+    transform: translateY(4px);
   }
-
   to {
     opacity: 1;
     transform: translateY(0);
@@ -98,9 +164,8 @@
 @keyframes slide-down {
   from {
     opacity: 0;
-    transform: translateY(-6px);
+    transform: translateY(-4px);
   }
-
   to {
     opacity: 1;
     transform: translateY(0);
@@ -122,18 +187,33 @@
 @keyframes scale-in {
   from {
     opacity: 0;
-    transform: scale(0.97);
+    transform: scale(0.99);
   }
-
   to {
     opacity: 1;
     transform: scale(1);
   }
 }
 
-/* ─── Base Styles ───────────────────────────────────────────────── */
+@keyframes reveal-fade-start {
+  to {
+    --fade-start: var(--fade-size);
+  }
+}
+
+@keyframes hide-fade-end {
+  from {
+    --fade-end: var(--fade-size);
+  }
+}
+
+/* ─── Base Typography & Layout Hygiene ──────────────────────────── */
 html {
   scroll-behavior: smooth;
+  scroll-padding-top: 4.5rem;
+  scroll-padding-bottom: calc(5.5rem + env(safe-area-inset-bottom, 0px));
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
 }
 
 body,
@@ -148,14 +228,47 @@ body {
   background-color: var(--color-surface-100);
   color: var(--color-surface-900);
   min-height: 100vh;
-  font-size: 15px;
-  line-height: 1.6;
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
+  overflow-wrap: break-word;
   text-rendering: optimizeLegibility;
 }
 
-/* ─── Focus Ring Normalization ──────────────────────────────────── */
+h1,
+h2,
+h3 {
+  text-wrap: balance;
+}
+
+p,
+li {
+  text-wrap: pretty;
+}
+
+a {
+  text-underline-offset: 3px;
+}
+
+textarea {
+  resize: vertical;
+}
+
+input:not([type="range"]):user-invalid,
+select:user-invalid,
+textarea:user-invalid {
+  border-color: var(--color-danger-500);
+}
+
+/* ─── Native Modal Dialog Scroll & Backdrop Containment ─────────── */
+dialog:modal {
+  overscroll-behavior: contain;
+}
+
+dialog::backdrop {
+  overflow: hidden;
+  overscroll-behavior: contain;
+  background-color: rgba(15, 23, 42, 0.4);
+}
+
+/* ─── Focus Ring & Input Normalization ──────────────────────────── */
 *:focus-visible {
   outline: 2px solid var(--color-primary-600);
   outline-offset: 2px;
@@ -168,10 +281,136 @@ button:focus:not(:focus-visible) {
   outline: none;
 }
 
-/* ─── Touch Target (44x44 per WCAG / PRD) ───────────────────────── */
+input:focus-visible,
+select:focus-visible,
+textarea:focus-visible {
+  outline: 2px solid var(--color-primary-600);
+  outline-offset: 0px;
+}
+
+/* ─── Touch Target (44x44 per WCAG 2.5.5) ───────────────────────── */
 .touch-target {
   min-height: 44px;
   min-width: 44px;
+}
+
+/* ─── Accessible Horizontal Scroller with Edge-Fade Affordance ──── */
+.edge-fade-scroller {
+  overflow-x: auto;
+  scrollbar-width: none;
+  scroll-snap-type: inline proximity;
+  --fade-size: 2rem;
+  --fade-dir: right;
+  --fade-start-pos: 0;
+  --fade-end-pos: 100%;
+  scroll-padding-inline: var(--fade-size);
+  mask:
+    linear-gradient(black, black) no-clip subtract,
+    linear-gradient(to var(--fade-dir), black, transparent) var(--fade-start-pos) 0 / var(--fade-start) 100% no-repeat no-clip,
+    linear-gradient(to var(--fade-dir), transparent, black) var(--fade-end-pos) 0 / var(--fade-end) 100% no-repeat no-clip;
+  animation: reveal-fade-start linear both, hide-fade-end linear both;
+  animation-timeline: scroll(self inline);
+  animation-range: 0 var(--fade-size), calc(100% - var(--fade-size)) 100%;
+  transition: --fade-start 0.16s ease-out, --fade-end 0.16s ease-out;
+}
+
+.edge-fade-scroller::-webkit-scrollbar {
+  display: none;
+}
+
+.edge-fade-scroller.more-start {
+  --fade-start: var(--fade-size);
+}
+
+.edge-fade-scroller.more-end {
+  --fade-end: var(--fade-size);
+}
+
+/* ─── Forced-Colors-Safe Accessible Underline Tab ───────────────── */
+.clinical-tab {
+  position: relative;
+}
+
+.clinical-tab[aria-selected="true"] {
+  color: var(--color-surface-900);
+  background-color: var(--color-surface-50);
+  border-color: var(--color-surface-300);
+}
+
+.clinical-tab[aria-selected="true"]::after {
+  content: "";
+  position: absolute;
+  inset: auto 0.5rem 0;
+  border-block-end: 2px solid var(--color-primary-600);
+}
+
+/* ─── Container-Adaptive Responsive Invoice Breakdown Table ─────── */
+.invoice-table-region {
+  overflow-x: auto;
+  max-inline-size: 100%;
+  container-type: inline-size;
+}
+
+@container (width < 580px) {
+  .invoice-table-region table,
+  .invoice-table-region tbody,
+  .invoice-table-region tfoot,
+  .invoice-table-region tr,
+  .invoice-table-region th,
+  .invoice-table-region td {
+    display: block;
+    width: 100%;
+  }
+
+  .invoice-table-region thead {
+    display: none;
+  }
+
+  .invoice-table-region tbody tr {
+    padding: 0.75rem 1rem;
+    border-bottom: 1px solid var(--color-surface-200);
+  }
+
+  .invoice-table-region tbody tr:last-child {
+    border-bottom: none;
+  }
+
+  .invoice-table-region tbody th[scope="row"] {
+    padding: 0 0 0.5rem 0;
+    text-align: left;
+    border-bottom: 1px solid var(--color-surface-150);
+    margin-bottom: 0.5rem;
+  }
+
+  .invoice-table-region tbody td {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.75rem;
+    padding: 0.25rem 0;
+    text-align: right;
+  }
+
+  .invoice-table-region tbody td::before {
+    content: attr(data-label);
+    font-weight: 500;
+    font-size: 0.6875rem;
+    color: var(--color-surface-500);
+    text-align: left;
+  }
+
+  .invoice-table-region tfoot tr {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.75rem;
+    padding: 0.75rem 1rem;
+  }
+
+  .invoice-table-region tfoot td {
+    width: auto;
+    padding: 0;
+  }
 }
 
 /* ─── Status Colors ─────────────────────────────────────────────── */
@@ -199,7 +438,7 @@ button:focus:not(:focus-visible) {
   color: var(--color-surface-500);
 }
 
-/* ─── Responsive Grid ──────────────────────────────────────────── */
+/* ─── Responsive Grid ───────────────────────────────────────────── */
 .dashboard-grid {
   display: grid;
   grid-template-columns: 1fr;
@@ -214,6 +453,17 @@ button:focus:not(:focus-visible) {
 
 @media (min-width: 1024px) {
   .dashboard-grid {
-    grid-template-columns: repeat(4, 1fr);
+    grid-template-columns: repeat(3, 1fr);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
   }
 }

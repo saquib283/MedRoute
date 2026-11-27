@@ -1,5 +1,5 @@
 /**
- * MediRoute India — /api/v1/admin/email-templates
+ * Afzal Healthcare — /api/v1/admin/email-templates
  * Full CRUD for email templates. Admin only.
  */
 
@@ -9,6 +9,7 @@ import { requireAuth, getClientIP } from '@/lib/api/auth-helper';
 import { apiSuccess, apiError } from '@/lib/api/response';
 import { ERROR_CODES } from '@/lib/api/errors';
 import { createAuditLog, AUDIT_ACTIONS } from '@/lib/api/audit-logger';
+import { sanitizeEmailHtml } from '@/lib/validation/email-sanitizer';
 import { z } from 'zod';
 
 const createTemplateSchema = z.object({
@@ -98,7 +99,7 @@ export async function POST(request: NextRequest) {
       data: {
         name: result.data.name,
         subject: result.data.subject,
-        body: result.data.body,
+        body: sanitizeEmailHtml(result.data.body),
         category: result.data.category,
         placeholders: result.data.placeholders || [],
         createdBy: authUser!.userId,
@@ -135,7 +136,13 @@ export async function PUT(request: NextRequest) {
       return apiError(ERROR_CODES.BAD_REQUEST, result.error.issues[0].message, 400);
     }
 
-    const { id, ...updateData } = result.data;
+    const { id, ...rawUpdateData } = result.data;
+    const updateData = {
+      ...rawUpdateData,
+      ...(rawUpdateData.body !== undefined
+        ? { body: sanitizeEmailHtml(rawUpdateData.body) }
+        : {}),
+    };
 
     const existing = await prisma.emailTemplate.findUnique({ where: { id } });
     if (!existing) {

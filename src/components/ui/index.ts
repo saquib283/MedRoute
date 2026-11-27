@@ -5,7 +5,7 @@ export { Input } from './Input';
 export { Select } from './Select';
 export { DatePicker } from './DatePicker';
 export { PhoneInput } from './PhoneInput';
-export { ToastContainer, toast, useToastStore } from './Toast';
+export { ToastContainer, toast, useToastStore, sanitizeErrorMessage } from './Toast';
 export { ConfirmDialog } from './ConfirmDialog';
 export { Tabs, TabPanel } from './Tabs';
 export { Timeline } from './Timeline';

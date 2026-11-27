@@ -1,12 +1,20 @@
 'use client';
 
 /**
- * MediRoute India — Premium Date & Time Picker Component
+ * Afzal Healthcare — Premium Date & Time Picker Component
  * Interactive calendar modal popover with Lucide icons, month navigation, and time selection.
  */
 
 import React, { useState, useRef, useEffect } from 'react';
 import { Calendar as CalendarIcon, Clock, ChevronLeft, ChevronRight, X } from 'lucide-react';
+
+export function parseLocalCalendarDate(value: string): Date {
+  if (/^\d{4}-\d{2}-\d{2}$/.test(value)) {
+    const [y, m, d] = value.split('-').map(Number);
+    return new Date(y, m - 1, d);
+  }
+  return new Date(value);
+}
 
 interface DatePickerProps {
   label?: string;
@@ -40,9 +48,10 @@ export function DatePicker({
   const containerRef = useRef<HTMLDivElement>(null);
 
   // Selected date object parsing
-  const parsedDate = value ? new Date(value) : new Date();
-  const [viewYear, setViewYear] = useState(parsedDate.getFullYear());
-  const [viewMonth, setViewMonth] = useState(parsedDate.getMonth()); // 0-indexed
+  const parsedDate = value ? parseLocalCalendarDate(value) : new Date();
+  const initialDate = !isNaN(parsedDate.getTime()) ? parsedDate : new Date();
+  const [viewYear, setViewYear] = useState(initialDate.getFullYear());
+  const [viewMonth, setViewMonth] = useState(initialDate.getMonth()); // 0-indexed
   const [selectedTime, setSelectedTime] = useState(
     value && value.includes('T') ? value.split('T')[1].slice(0, 5) : '10:00'
   );
@@ -59,15 +68,24 @@ export function DatePicker({
     }
   }, [value]);
 
-  // Close popover on click outside
+  // Close popover on click outside or escape
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       if (containerRef.current && !containerRef.current.contains(event.target as Node)) {
         setIsOpen(false);
       }
     };
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        setIsOpen(false);
+      }
+    };
     document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
+    document.addEventListener('keydown', handleKeyDown);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+      document.removeEventListener('keydown', handleKeyDown);
+    };
   }, []);
 
   const MONTH_NAMES = [
@@ -80,6 +98,18 @@ export function DatePicker({
   // Days calculations
   const daysInMonth = new Date(viewYear, viewMonth + 1, 0).getDate();
   const firstDayOfWeek = new Date(viewYear, viewMonth, 1).getDay();
+
+  const handleToggleOpen = () => {
+    if (disabled) return;
+    if (!isOpen && value) {
+      const d = parseLocalCalendarDate(value);
+      if (!isNaN(d.getTime())) {
+        setViewYear(d.getFullYear());
+        setViewMonth(d.getMonth());
+      }
+    }
+    setIsOpen(!isOpen);
+  };
 
   const handlePrevMonth = () => {
     if (viewMonth === 0) {
@@ -104,12 +134,12 @@ export function DatePicker({
     const d = String(day).padStart(2, '0');
     const dateStr = `${viewYear}-${m}-${d}`;
 
-    if (includeTime) {
+    if (hasTimePicker) {
       onChange(`${dateStr}T${selectedTime}`);
     } else {
       onChange(dateStr);
     }
-    if (!includeTime) {
+    if (!hasTimePicker) {
       setIsOpen(false);
     }
   };
@@ -124,9 +154,9 @@ export function DatePicker({
 
   const formatDisplay = () => {
     if (!value) return '';
-    const d = new Date(value);
+    const d = parseLocalCalendarDate(value);
     if (isNaN(d.getTime())) return value;
-    if (includeTime) {
+    if (hasTimePicker) {
       return d.toLocaleString(undefined, {
         month: 'short',
         day: 'numeric',
@@ -145,7 +175,7 @@ export function DatePicker({
   return (
     <div className={`space-y-1.5 ${className}`} ref={containerRef}>
       {label && (
-        <label className="block text-xs font-bold text-surface-700">
+        <label className="block text-xs font-medium text-surface-700">
           {label} {required && <span className="text-danger-500">*</span>}
         </label>
       )}
@@ -154,46 +184,50 @@ export function DatePicker({
         {/* Trigger input button */}
         <button
           type="button"
-          onClick={() => !disabled && setIsOpen(!isOpen)}
+          onClick={handleToggleOpen}
           disabled={disabled}
+          aria-haspopup="dialog"
+          aria-expanded={isOpen}
           className={`
-            w-full min-h-[46px] px-3.5 py-2.5 rounded-xl border text-xs font-medium text-left flex items-center justify-between gap-2 transition-all
+            w-full min-h-[44px] px-3 py-2 ${value && !disabled ? 'pr-9' : ''} rounded-md border text-sm text-left flex items-center justify-between gap-2 transition-colors
             ${
               disabled
                 ? 'bg-surface-100 border-surface-200 text-surface-400 cursor-not-allowed'
                 : isOpen
-                ? 'bg-white border-primary-600 text-surface-900 shadow-xs'
+                ? 'bg-white border-primary-600 text-surface-900'
                 : error
-                ? 'bg-white border-danger-300 text-surface-900 hover:border-danger-400'
+                ? 'bg-white border-danger-400 text-surface-900 hover:border-danger-500'
                 : 'bg-white border-surface-300 text-surface-900 hover:border-surface-400'
             }
           `}
         >
-          <div className="flex items-center gap-2.5 min-w-0">
-            <CalendarIcon className="w-4 h-4 text-primary-600 shrink-0" />
-            <span className={`truncate ${!value ? 'text-surface-400 font-normal' : 'font-semibold text-surface-900'}`}>
+          <div className="flex items-center gap-2 min-w-0">
+            <CalendarIcon className="w-4 h-4 text-surface-400 shrink-0" />
+            <span className={`truncate ${!value ? 'text-surface-400 font-normal' : 'font-normal text-surface-900'}`}>
               {formatDisplay() || placeholder}
             </span>
           </div>
 
-          {value ? (
-            <span
-              onClick={(e) => {
-                e.stopPropagation();
-                onChange('');
-              }}
-              className="p-1 text-surface-400 hover:text-surface-600 rounded-full"
-            >
-              <X className="w-3.5 h-3.5" />
-            </span>
-          ) : (
-            <Clock className="w-3.5 h-3.5 text-surface-400 shrink-0" />
-          )}
+          {!value && <Clock className="w-3.5 h-3.5 text-surface-400 shrink-0" />}
         </button>
+
+        {value && !disabled && (
+          <button
+            type="button"
+            aria-label="Clear date"
+            onClick={(e) => {
+              e.stopPropagation();
+              onChange('');
+            }}
+            className="absolute right-2.5 top-1/2 -translate-y-1/2 p-1 text-surface-400 hover:text-surface-600 rounded-md"
+          >
+            <X className="w-3.5 h-3.5" />
+          </button>
+        )}
 
         {/* Calendar Popover */}
         {isOpen && (
-          <div className="absolute z-50 left-0 mt-1 bg-white border border-surface-200 rounded-2xl shadow-xl p-4 w-72 space-y-3 animate-scale-in">
+          <div className="absolute z-50 left-0 mt-1 bg-white border border-surface-200 rounded-lg shadow-md p-3.5 w-72 space-y-3 animate-scale-in">
             {/* Header: Month & Year Navigator */}
             <div className="flex items-center justify-between pb-2 border-b border-surface-100">
               <button
@@ -220,7 +254,7 @@ export function DatePicker({
             {/* Days of Week Header */}
             <div className="grid grid-cols-7 gap-1 text-center">
               {DAYS_OF_WEEK.map((d) => (
-                <span key={d} className="text-[10px] font-bold text-surface-400 uppercase">
+                <span key={d} className="text-xs font-bold text-surface-500 uppercase">
                   {d}
                 </span>
               ))}
@@ -250,12 +284,13 @@ export function DatePicker({
                   <button
                     key={day}
                     type="button"
+                    aria-label={`${MONTH_NAMES[viewMonth]} ${day}, ${viewYear}`}
                     onClick={() => handleDaySelect(day)}
                     className={`
-                      w-8 h-8 rounded-xl text-xs font-semibold flex items-center justify-center transition-all
+                      w-8 h-8 rounded-md text-xs font-medium flex items-center justify-center transition-colors relative after:absolute after:-inset-1.5 after:content-['']
                       ${
                         isSelected
-                          ? 'bg-primary-600 text-white font-bold shadow-xs'
+                          ? 'bg-primary-600 text-white font-semibold'
                           : isToday
                           ? 'border border-primary-500 text-primary-700 bg-primary-50'
                           : 'text-surface-700 hover:bg-surface-100'

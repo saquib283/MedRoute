@@ -1,5 +1,5 @@
-/**
- * MediRoute India — GET /api/v1/admin/dashboard
+﻿/**
+ * Afzal Healthcare — GET /api/v1/admin/dashboard
  * Platform-wide KPI aggregation with date-range, trends, and distribution data.
  */
 
@@ -38,6 +38,9 @@ export async function GET(request: NextRequest) {
     const { current: periodStart, previous: prevStart } = getPeriodDates(period);
 
     // ─── Core Metrics ──────────────────────────────────────────────
+    const now = new Date();
+    const canQueryLeads = typeof prisma?.lead?.count === 'function';
+
     const [
       totalUsers,
       totalPatients,
@@ -50,6 +53,8 @@ export async function GET(request: NextRequest) {
       casesThisPeriod,
       casesPrevPeriod,
       recentAuditLogs,
+      openLeads,
+      slaBreachedLeads,
     ] = await Promise.all([
       prisma.user.count({ where: { isActive: true } }),
       prisma.user.count({ where: { role: 'PATIENT', isActive: true } }),
@@ -58,7 +63,12 @@ export async function GET(request: NextRequest) {
       prisma.case.count({ where: { status: { notIn: ['CLOSED'] } } }),
       prisma.appointment.count({ where: { scheduledAt: { gte: periodStart } } }),
       prisma.appointment.count({ where: { scheduledAt: { gte: prevStart, lt: periodStart } } }),
-      prisma.case.count({ where: { escalationNote: { not: null }, status: { notIn: ['CLOSED'] } } }),
+      prisma.case.count({
+        where: {
+          AND: [{ escalationNote: { not: null } }, { escalationNote: { not: '' } }],
+          status: { notIn: ['CLOSED'] },
+        },
+      }),
       prisma.case.count({ where: { createdAt: { gte: periodStart } } }),
       prisma.case.count({ where: { createdAt: { gte: prevStart, lt: periodStart } } }),
       prisma.auditLog.findMany({
@@ -66,6 +76,20 @@ export async function GET(request: NextRequest) {
         orderBy: { createdAt: 'desc' },
         include: { actor: { select: { fullName: true, role: true } } },
       }),
+      canQueryLeads
+        ? prisma.lead.count({
+            where: { status: { notIn: ['CONVERTED', 'LOST'] } },
+          })
+        : Promise.resolve(0),
+      canQueryLeads
+        ? prisma.lead.count({
+            where: {
+              status: { notIn: ['CONVERTED', 'LOST'] },
+              firstRespondedAt: null,
+              firstResponseDueAt: { lt: now },
+            },
+          })
+        : Promise.resolve(0),
     ]);
 
     // ─── Case Status Distribution ──────────────────────────────────
@@ -133,6 +157,8 @@ export async function GET(request: NextRequest) {
         activeCases,
         appointmentsThisPeriod,
         pendingEscalations,
+        openLeads,
+        slaBreachedLeads,
       },
       trends: {
         appointments: calcTrend(appointmentsThisPeriod, appointmentsPrevPeriod),

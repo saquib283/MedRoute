@@ -1,5 +1,5 @@
-/**
- * MediRoute India — POST /api/v1/admin/users/reset-password
+﻿/**
+ * Afzal Healthcare — POST /api/v1/admin/users/reset-password
  * Reset a user's password (generates temporary password).
  */
 

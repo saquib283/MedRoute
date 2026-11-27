@@ -1,7 +1,7 @@
-'use client';
+﻿'use client';
 
 /**
- * MediRoute India — Escalation Queue
+ * Afzal Healthcare — Escalation Queue
  * Cases with escalation notes that need admin attention.
  */
 
@@ -32,7 +32,6 @@ export default function AdminEscalationsPage() {
   const [resolving, setResolving] = useState(false);
 
   const fetchEscalations = useCallback(async (page = 1) => {
-    await Promise.resolve();
     setLoading(true);
     try {
       const res = await fetch(`/api/v1/admin/escalations?page=${page}&limit=15`);
@@ -41,7 +40,12 @@ export default function AdminEscalationsPage() {
     } catch (err) { console.error(err); } finally { setLoading(false); }
   }, []);
 
-  useEffect(() => { queueMicrotask(() => fetchEscalations()); }, [fetchEscalations]);
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      void fetchEscalations();
+    }, 0);
+    return () => clearTimeout(timer);
+  }, [fetchEscalations]);
 
   const handleResolve = async () => {
     setResolving(true);
@@ -60,38 +64,40 @@ export default function AdminEscalationsPage() {
   };
 
   return (
-    <div className="max-w-7xl mx-auto space-y-6 animate-fade-in">
-      <div>
-        <h1 className="text-2xl font-bold text-surface-900 tracking-tight">Escalation Queue</h1>
-        <p className="text-sm text-surface-500 mt-1">Cases escalated by managers that require admin intervention.</p>
+    <div className="space-y-6 animate-fade-in">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-5 border-b border-surface-200">
+        <div>
+          <h1 className="text-xl font-semibold tracking-tight text-surface-900">Escalation Queue</h1>
+          <p className="text-xs sm:text-sm text-surface-500 mt-1">Cases escalated by managers that require administrative intervention.</p>
+        </div>
       </div>
 
-      <Card className="bg-white border border-surface-200 overflow-hidden">
+      <Card className="p-0! overflow-hidden">
         {loading ? (
-          <div className="flex items-center justify-center py-16"><div className="w-8 h-8 border-4 border-primary-600 border-t-transparent rounded-full animate-spin" /></div>
+          <div className="flex items-center justify-center py-16"><div className="w-7 h-7 border-2 border-primary-600 border-t-transparent rounded-full animate-spin" /></div>
         ) : escalations.length === 0 ? (
-          <div className="px-6 py-16 text-center">
-            <div className="w-16 h-16 rounded-full bg-success-50 flex items-center justify-center mx-auto mb-4">
-              <svg className="w-8 h-8 text-success-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" /></svg>
+          <div className="px-6 py-16 text-center max-w-md mx-auto">
+            <div className="w-10 h-10 rounded-md bg-success-50 border border-success-200 flex items-center justify-center mx-auto mb-3">
+              <svg className="w-5 h-5 text-success-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" /></svg>
             </div>
-            <p className="text-sm font-semibold text-surface-700">No pending escalations</p>
+            <p className="text-sm font-semibold text-surface-900">No pending escalations</p>
             <p className="text-xs text-surface-500 mt-1">All escalated cases have been resolved.</p>
           </div>
         ) : (
-          <div className="divide-y divide-surface-100">
+          <div className="divide-y divide-surface-200">
             {escalations.map((e) => (
-              <div key={e.id} className="px-6 py-4 hover:bg-surface-50 transition-colors">
+              <div key={e.id} className="px-5 py-4 hover:bg-surface-100/60 transition-colors">
                 <div className="flex items-start justify-between gap-4">
                   <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2 mb-1">
-                      <p className="text-sm font-bold text-surface-900">{e.patient.user.fullName}</p>
+                    <div className="flex flex-wrap items-center gap-2 mb-1">
+                      <p className="text-sm font-semibold text-surface-900">{e.patient.user.fullName}</p>
                       {e.isUrgent && <Badge variant="danger" dot>Urgent</Badge>}
                       <Badge variant="default">{CASE_STATUS_LABELS[e.status] || e.status}</Badge>
                     </div>
-                    <p className="text-xs text-surface-500">Manager: {e.manager?.fullName || 'Unassigned'} • {new Date(e.createdAt).toLocaleDateString()}</p>
+                    <p className="text-xs text-surface-500 tabular-nums">Manager: {e.manager?.fullName || 'Unassigned'} • {new Date(e.createdAt).toLocaleDateString()}</p>
                     {e.escalationNote && (
-                      <div className="mt-2 p-3 bg-warning-50 border border-warning-200 rounded-lg">
-                        <p className="text-xs font-bold text-warning-700 uppercase mb-0.5">Escalation Note</p>
+                      <div className="mt-2.5 p-3 bg-warning-50 border border-warning-200 rounded-md">
+                        <p className="text-xs font-medium text-warning-700 mb-0.5">Escalation note</p>
                         <p className="text-sm text-warning-800">{e.escalationNote}</p>
                       </div>
                     )}
@@ -110,8 +116,8 @@ export default function AdminEscalationsPage() {
           </div>
         )}
         {pagination.totalPages > 1 && (
-          <div className="px-5 py-3 border-t border-surface-100 flex items-center justify-between text-sm">
-            <span className="text-surface-500">Page {pagination.page} of {pagination.totalPages}</span>
+          <div className="px-5 py-3 border-t border-surface-200 flex items-center justify-between text-sm">
+            <span className="text-surface-500 tabular-nums">Page {pagination.page} of {pagination.totalPages}</span>
             <div className="flex gap-2">
               <Button variant="secondary" size="sm" disabled={pagination.page <= 1} onClick={() => fetchEscalations(pagination.page - 1)}>Previous</Button>
               <Button variant="secondary" size="sm" disabled={pagination.page >= pagination.totalPages} onClick={() => fetchEscalations(pagination.page + 1)}>Next</Button>

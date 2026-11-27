@@ -1,5 +1,5 @@
-/**
- * MediRoute India — /api/v1/admin/escalations
+﻿/**
+ * Afzal Healthcare — /api/v1/admin/escalations
  * Escalated cases queue with resolve capability.
  */
 
@@ -9,6 +9,7 @@ import { requireAuth, getClientIP } from '@/lib/api/auth-helper';
 import { apiSuccess, apiError } from '@/lib/api/response';
 import { ERROR_CODES } from '@/lib/api/errors';
 import { createAuditLog, AUDIT_ACTIONS } from '@/lib/api/audit-logger';
+import { assignPatientCoordinator } from '@/lib/services/case-assignment.service';
 import { z } from 'zod';
 
 import { CaseStatus } from '@prisma/client';
@@ -32,7 +33,7 @@ export async function GET(request: NextRequest) {
     const limit = parseInt(searchParams.get('limit') || '20', 10);
 
     const where = {
-      escalationNote: { not: null },
+      AND: [{ escalationNote: { not: null } }, { escalationNote: { not: '' } }],
       status: { notIn: ['CLOSED'] as CaseStatus[] },
     };
 
@@ -78,11 +79,23 @@ export async function PUT(request: NextRequest) {
       return apiError(ERROR_CODES.CASE_NOT_FOUND, 'Case not found', 404);
     }
 
-    const updateData: Record<string, unknown> = {};
-    if (clearEscalation) updateData.escalationNote = null;
-    if (managerId !== undefined) updateData.managerId = managerId;
+    if (managerId !== undefined) {
+      const assignRes = await assignPatientCoordinator({
+        caseIds: [id],
+        managerId,
+        actorId: authUser!.userId,
+        ipAddress: getClientIP(request),
+      });
+      if (!assignRes.ok) {
+        return apiError(assignRes.code, assignRes.message, assignRes.status);
+      }
+    }
 
-    const updated = await prisma.case.update({ where: { id }, data: updateData });
+    if (clearEscalation) {
+      await prisma.case.update({ where: { id }, data: { escalationNote: null } });
+    }
+
+    const updated = await prisma.case.findUnique({ where: { id } });
 
     await createAuditLog({
       actorId: authUser!.userId,
@@ -90,7 +103,10 @@ export async function PUT(request: NextRequest) {
       entityType: 'Case',
       entityId: id,
       oldValue: { escalationNote: existing.escalationNote, managerId: existing.managerId },
-      newValue: updateData,
+      newValue: {
+        ...(clearEscalation ? { escalationNote: null } : {}),
+        ...(managerId !== undefined ? { managerId } : {}),
+      },
       ipAddress: getClientIP(request),
     });
 

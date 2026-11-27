@@ -1,32 +1,51 @@
 /**
- * MediRoute India — GET / PUT /api/v1/doctor/appointments
+ * Afzal Healthcare — GET / PUT /api/v1/doctor/appointments
  * Fetch and update appointments specifically assigned to the doctor.
  */
 
 import { NextRequest } from 'next/server';
 import prisma from '@/lib/prisma';
-import { requireAuth } from '@/lib/api/auth-helper';
+import { getClientIP, requireAuth } from '@/lib/api/auth-helper';
 import { apiSuccess, apiError } from '@/lib/api/response';
 import { ERROR_CODES } from '@/lib/api/errors';
+import { AUDIT_ACTIONS, createAuditLog } from '@/lib/api/audit-logger';
 import { z } from 'zod';
 
 const updateAppointmentSchema = z.object({
-  status: z.enum(['SCHEDULED', 'CONFIRMED', 'IN_PROGRESS', 'COMPLETED', 'CANCELLED']),
+  status: z.enum(['SCHEDULED', 'CONFIRMED', 'IN_PROGRESS', 'COMPLETED', 'CANCELLED', 'RESCHEDULED']),
   clinicalNotes: z.string().max(10000).optional(),
 });
 
+async function requireActiveDoctor(request: NextRequest) {
+  const { user: authUser, error } = requireAuth(request);
+  if (error) return { authUser: null, doctorProfile: null, error };
+  if (authUser!.role !== 'DOCTOR') {
+    return {
+      authUser: null,
+      doctorProfile: null,
+      error: apiError(ERROR_CODES.FORBIDDEN, 'Doctor access required', 403),
+    };
+  }
+
+  const doctorProfile = await prisma.doctor.findUnique({
+    where: { userId: authUser!.userId },
+  });
+
+  if (!doctorProfile || !doctorProfile.isActive) {
+    return {
+      authUser: null,
+      doctorProfile: null,
+      error: apiError(ERROR_CODES.USER_NOT_FOUND, 'Active doctor profile not found', 404),
+    };
+  }
+
+  return { authUser, doctorProfile, error: null };
+}
+
 export async function GET(request: NextRequest) {
   try {
-    const { user: authUser, error } = requireAuth(request);
+    const { doctorProfile, error } = await requireActiveDoctor(request);
     if (error) return error;
-
-    const doctorProfile = await prisma.doctor.findUnique({
-      where: { userId: authUser!.userId },
-    });
-
-    if (!doctorProfile) {
-      return apiError(ERROR_CODES.USER_NOT_FOUND, 'Doctor profile not found', 404);
-    }
 
     const { searchParams } = new URL(request.url);
     const filter = searchParams.get('filter') || 'all'; // all, upcoming, past
@@ -48,10 +67,13 @@ export async function GET(request: NextRequest) {
           select: {
             user: { select: { fullName: true } },
             nationality: true,
-          }
+          },
         },
         case: {
           select: { id: true, isUrgent: true, status: true },
+        },
+        hospital: {
+          select: { name: true, city: true },
         },
       },
       orderBy: { scheduledAt: filter === 'past' ? 'desc' : 'asc' },
@@ -66,16 +88,8 @@ export async function GET(request: NextRequest) {
 
 export async function PUT(request: NextRequest) {
   try {
-    const { user: authUser, error } = requireAuth(request);
+    const { authUser, doctorProfile, error } = await requireActiveDoctor(request);
     if (error) return error;
-
-    const doctorProfile = await prisma.doctor.findUnique({
-      where: { userId: authUser!.userId },
-    });
-
-    if (!doctorProfile) {
-      return apiError(ERROR_CODES.USER_NOT_FOUND, 'Doctor profile not found', 404);
-    }
 
     const { searchParams } = new URL(request.url);
     const appointmentId = searchParams.get('id');
@@ -83,7 +97,11 @@ export async function PUT(request: NextRequest) {
       return apiError(ERROR_CODES.BAD_REQUEST, 'Appointment ID is required', 400);
     }
 
-    const body = await request.json();
+    const body = await request.json().catch(() => null);
+    if (!body || typeof body !== 'object') {
+      return apiError(ERROR_CODES.BAD_REQUEST, 'Invalid request body', 400);
+    }
+
     const result = updateAppointmentSchema.safeParse(body);
     if (!result.success) {
       return apiError(ERROR_CODES.BAD_REQUEST, result.error.issues[0].message, 400);
@@ -102,8 +120,30 @@ export async function PUT(request: NextRequest) {
       where: { id: appointmentId },
       data: {
         status: result.data.status,
-        clinicalNotes: result.data.clinicalNotes,
+        clinicalNotes:
+          result.data.clinicalNotes !== undefined
+            ? result.data.clinicalNotes
+            : existing.clinicalNotes,
       },
+    });
+
+    await createAuditLog({
+      actorId: authUser!.userId,
+      action:
+        result.data.status !== existing.status
+          ? AUDIT_ACTIONS.STATUS_CHANGE
+          : AUDIT_ACTIONS.UPDATE,
+      entityType: 'Appointment',
+      entityId: appointmentId,
+      oldValue: {
+        status: existing.status,
+        clinicalNotes: existing.clinicalNotes,
+      },
+      newValue: {
+        status: updated.status,
+        clinicalNotes: updated.clinicalNotes,
+      },
+      ipAddress: getClientIP(request),
     });
 
     return apiSuccess({ appointment: updated });

@@ -1,3 +1,4 @@
+/** @type {import('jest').Config} */
 module.exports = {
   preset: 'ts-jest',
   testEnvironment: 'node',
@@ -5,6 +6,17 @@ module.exports = {
     '^@/(.*)$': '<rootDir>/src/$1',
   },
   transform: {
-    '^.+\\.tsx?$': ['ts-jest', { tsconfig: 'tsconfig.json' }],
+    '^.+\\.tsx?$': [
+      'ts-jest',
+      {
+        tsconfig: {
+          module: 'commonjs',
+          moduleResolution: 'node',
+          esModuleInterop: true,
+          jsx: 'react-jsx',
+        },
+      },
+    ],
   },
+  transformIgnorePatterns: ['/node_modules/(?!(jose)/)'],
 };

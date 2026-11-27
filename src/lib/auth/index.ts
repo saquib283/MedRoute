@@ -1,5 +1,5 @@
-/**
- * MediRoute India — Auth Module Barrel Export
+﻿/**
+ * Afzal Healthcare — Auth Module Barrel Export
  */
 
 export { hashPassword, verifyPassword } from './password';
@@ -23,5 +23,5 @@ export {
   type Permission,
 } from './rbac';
 export { generateTOTPSecret, verifyTOTP } from './totp';
-export { encrypt, decrypt } from './crypto';
+export { encrypt, decrypt, DecryptionTamperError } from './crypto';
 

@@ -1,5 +1,5 @@
 /**
- * MediRoute India — GET /api/v1/doctor/dashboard
+ * Afzal Healthcare — GET /api/v1/doctor/dashboard
  * Aggregates summary counters for the doctor dashboard.
  */
 
@@ -8,19 +8,30 @@ import prisma from '@/lib/prisma';
 import { requireAuth } from '@/lib/api/auth-helper';
 import { apiSuccess, apiError } from '@/lib/api/response';
 import { ERROR_CODES } from '@/lib/api/errors';
+import {
+  formatPatientForViewer,
+  formatTravelLogisticsForViewer,
+} from '@/lib/services/phi.service';
 
 export async function GET(request: NextRequest) {
   try {
     const { user: authUser, error } = requireAuth(request);
     if (error) return error;
+    if (authUser!.role !== 'DOCTOR') {
+      return apiError(ERROR_CODES.FORBIDDEN, 'Doctor access required', 403);
+    }
 
     // Resolve the doctor profile tied to this user
     const doctorProfile = await prisma.doctor.findUnique({
       where: { userId: authUser!.userId },
+      include: {
+        hospital: { select: { name: true, city: true } },
+        specialisation: { select: { name: true } },
+      },
     });
 
-    if (!doctorProfile) {
-      return apiError(ERROR_CODES.USER_NOT_FOUND, 'Doctor profile not found for this account', 404);
+    if (!doctorProfile || !doctorProfile.isActive) {
+      return apiError(ERROR_CODES.USER_NOT_FOUND, 'Active doctor profile not found', 404);
     }
 
     const todayStart = new Date();
@@ -59,12 +70,82 @@ export async function GET(request: NextRequest) {
       },
     });
 
+    // 4. Top 6 upcoming appointments from today onward
+    const upcomingSchedule = await prisma.appointment.findMany({
+      where: {
+        doctorId: doctorProfile.id,
+        scheduledAt: { gte: todayStart },
+        status: { not: 'CANCELLED' },
+      },
+      take: 6,
+      orderBy: { scheduledAt: 'asc' },
+      include: {
+        patient: {
+          select: {
+            user: { select: { fullName: true } },
+            nationality: true,
+          },
+        },
+        case: {
+          select: { id: true, status: true, isUrgent: true },
+        },
+      },
+    });
+
+    // 5. Active clinical cases assigned via Case.primaryDoctorId or non-cancelled appointments
+    const rawPendingClinicalCases = await prisma.case.findMany({
+      where: {
+        status: { not: 'CLOSED' },
+        OR: [
+          { primaryDoctorId: doctorProfile.id },
+          {
+            appointments: {
+              some: {
+                doctorId: doctorProfile.id,
+                status: { not: 'CANCELLED' },
+              },
+            },
+          },
+        ],
+      },
+      include: {
+        patient: {
+          select: {
+            nationality: true,
+            user: { select: { fullName: true } },
+          },
+        },
+        clinicalSteps: {
+          where: { status: { not: 'COMPLETED' } },
+          orderBy: [{ stageOrder: 'asc' }, { stepOrder: 'asc' }],
+        },
+        fitToFlyClearance: true,
+      },
+      orderBy: [{ isUrgent: 'desc' }, { lastUpdatedAt: 'desc' }],
+    });
+
+    const pendingClinicalCases = rawPendingClinicalCases.map((c) => ({
+      ...c,
+      ...('travelLogistics' in c && c.travelLogistics !== undefined
+        ? {
+            travelLogistics: formatTravelLogisticsForViewer(c.travelLogistics, {
+              maskPassport: true,
+            }),
+          }
+        : {}),
+      patient: formatPatientForViewer(c.patient, { maskPassport: true }),
+    }));
+
     return apiSuccess({
+      doctorProfile,
       metrics: {
         todayAppointments: todayAppointmentsCount,
         pendingAssessments: pendingAssessmentsCount,
         upcomingSurgeries: totalSurgeriesCount,
+        activeCases: pendingClinicalCases.length,
       },
+      upcomingSchedule,
+      pendingClinicalCases,
     });
   } catch (err) {
     console.error('[Doctor Dashboard GET Error]', err);

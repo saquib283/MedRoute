@@ -1,7 +1,6 @@
 /**
- * MediRoute India — Input Component
- * Accessible form input with label, error state, and icons.
- * Clinical design system — light-mode, white background, subtle borders.
+ * Afzal Healthcare — Input Component
+ * Clean institutional form input with 6px radius, medium label weight, and 44px height.
  */
 
 import React from 'react';
@@ -16,13 +15,13 @@ interface InputProps extends React.InputHTMLAttributes<HTMLInputElement> {
 
 export const Input = React.forwardRef<HTMLInputElement, InputProps>(
   ({ label, error, icon, helperText, className = '', id, ...props }, ref) => {
-    const inputId = id || label.toLowerCase().replace(/\s+/g, '-');
+    const inputId = id || label.toLowerCase().replace(/[^a-z0-9]+/g, '-');
 
     return (
       <div className="space-y-1.5">
         <label
           htmlFor={inputId}
-          className="block text-sm font-medium text-surface-800"
+          className="block text-xs font-medium text-surface-700"
         >
           {label}
           {props.required && (
@@ -32,7 +31,7 @@ export const Input = React.forwardRef<HTMLInputElement, InputProps>(
 
         <div className="relative">
           {icon && (
-            <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-surface-500">
+            <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-surface-400">
               {icon}
             </div>
           )}
@@ -41,15 +40,17 @@ export const Input = React.forwardRef<HTMLInputElement, InputProps>(
             ref={ref}
             id={inputId}
             className={`
-              w-full min-h-[44px] px-4 py-2.5
-              ${icon ? 'pl-11' : ''}
-              bg-white border rounded-lg
+              w-full min-h-[44px] px-3 py-2 text-sm
+              ${icon ? 'pl-9' : ''}
+              bg-white border rounded-md
               text-surface-900 placeholder:text-surface-400
+              disabled:bg-surface-100 disabled:text-surface-500
               transition-colors duration-150
-              focus:border-primary-600
-              ${error
-                ? 'border-danger-500 focus:border-danger-600'
-                : 'border-surface-300 hover:border-surface-400'
+              focus:outline-none focus:border-primary-600
+              ${
+                error
+                  ? 'border-danger-500 focus:border-danger-600'
+                  : 'border-surface-300 hover:border-surface-400 focus:border-primary-600'
               }
               ${className}
             `}
@@ -68,10 +69,10 @@ export const Input = React.forwardRef<HTMLInputElement, InputProps>(
         {error && (
           <p
             id={`${inputId}-error`}
-            className="text-sm text-danger-600 flex items-center gap-1.5"
+            className="text-xs text-danger-600 flex items-center gap-1"
             role="alert"
           >
-            <AlertCircle className="w-4 h-4 shrink-0" />
+            <AlertCircle className="w-3.5 h-3.5 shrink-0" aria-hidden="true" />
             {error}
           </p>
         )}

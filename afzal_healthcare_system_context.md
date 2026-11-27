@@ -1,18 +1,18 @@
-# System Context & Architecture Guide — MediRoute India
+# System Context & Architecture Guide — Afzal Healthcare
 
-> **Prompt for AI Assistant:** Use this document as the single source of truth for the codebase architecture, data models, workflows, security rules, and project layout of **MediRoute India**.
+> **Prompt for AI Assistant:** Use this document as the single source of truth for the codebase architecture, data models, workflows, security rules, and project layout of **Afzal Healthcare**.
 
 ---
 
 ## 1. Project Overview & Business Domain
 
-**MediRoute India** (`mediroute-india`) is a full-stack, enterprise-grade medical tourism platform connecting international patients traveling to India with healthcare providers, specialist doctors, medical hostels/accommodations, and dedicated case managers.
+**Afzal Healthcare** (`afzal-healthcare`) is a full-stack, enterprise-grade medical tourism platform connecting international patients traveling to India with healthcare providers, specialist doctors, and dedicated case managers.
 
 ### Core Portals & User Roles
-1. **Patient Portal** (`PATIENT`): International patients submitting medical inquiries, uploading medical records/passports, tracking treatment cases, booking appointments, managing accommodation, and communicating with assigned managers.
+1. **Patient Portal** (`PATIENT`): International patients submitting medical inquiries, uploading medical records/passports, tracking treatment cases, booking appointments, and communicating with assigned managers.
 2. **Doctor Portal** (`DOCTOR`): Specialist physicians viewing assigned patients, managing consultation schedules, and recording clinical notes.
-3. **Manager Portal** (`MANAGER`): Case coordinators managing patient pipelines, arranging hospital slots, booking accommodation, and handling live chat support.
-4. **Admin & Super Admin Portals** (`ADMIN`, `SUPER_ADMIN`): Platform administrators managing partner hospitals, doctors, hostels, specialisations, user management, audit logs, system configurations, email campaigns, and analytics.
+3. **Manager Portal** (`MANAGER`): Case coordinators managing patient pipelines, arranging hospital slots, and handling live chat support.
+4. **Admin & Super Admin Portals** (`ADMIN`, `SUPER_ADMIN`): Platform administrators managing partner hospitals, doctors, specialisations, user management, audit logs, system configurations, email campaigns, and analytics.
 
 ---
 
@@ -79,9 +79,7 @@ enum DocumentCategory {
 - **`Case`**: Tracks patient medical journey. Belongs to `Patient`, assigned to `User` (Manager). Fields: `status`, `notes` (encrypted), `isUrgent`, `escalationNote`.
 - **`Hospital`**: `name`, `city`, `address`, `accreditation`, `commissionRate`, `departments` (JSON array).
 - **`Doctor`**: Belongs to `Hospital` and `Specialisation`. Mapped optional 1:1 with `User`. Fields: `qualification`, `languages`, `consultationFee`, `availableDays`.
-- **`Hostel`**: Medical accommodation. `name`, `city`, `address`, `capacity`, `pricingPerNight`, `roomTypes`.
 - **`Appointment`**: Connects `Case`, `Patient`, `Hospital`, `Doctor`, and creator `User`. `scheduledAt`, `status`, `clinicalNotes` (encrypted).
-- **`AccommodationBooking`**: Connects `Case` and `Hostel`.
 - **`Document`**: Files uploaded by patients/managers. `fileUrl` (authenticated download API path), `category`, `fileName`, `fileSize`, `mimeType`.
 - **`Message`**: Real-time chat messages between patients and managers.
 - **`AuditLog`**: Records system mutations (`CREATE`, `UPDATE`, `DELETE`) and ePHI reads (`VIEW_PATIENT`, `DOWNLOAD_DOCUMENT`, `EXPORT`).
@@ -91,48 +89,48 @@ enum DocumentCategory {
 ## 4. Directory Structure & Key Files
 
 ```
-MedRoute/
-├── prisma/
-│   ├── schema.prisma              # Database schema definition (MySQL)
-│   └── seed.ts                    # Database seed script for test accounts
-├── storage/
-│   └── uploads/                   # Private, non-public directory for ePHI files
-├── src/
-│   ├── app/
-│   │   ├── (auth)/                # Public auth pages: /login, /register, /forgot-password
-│   │   ├── (patient)/             # Patient portal: /patient/dashboard, /appointments, /documents, /profile, /messages
-│   │   ├── (doctor)/              # Doctor portal: /doctor/dashboard, /appointments, /patients
-│   │   ├── (manager)/             # Manager portal: /manager/dashboard, /cases, /appointments, /accommodations, /chat
-│   │   ├── (admin)/               # Admin portal: /admin/dashboard, /hospitals, /doctors, /users, /audit-logs, /settings
-│   │   ├── api/v1/                # Modular REST API endpoints
-│   │   │   ├── auth/              # login, register, logout, me, 2fa/setup, 2fa/validate
-│   │   │   ├── patient/           # documents, profile, appointments, cases, messages, documents/download
-│   │   │   ├── doctor/            # dashboard, appointments, patients
-│   │   │   ├── manager/           # dashboard, cases, appointments, accommodations, chat
-│   │   │   └── admin/             # users, hospitals, doctors, hostels, audit-logs, settings, export/
-│   │   ├── globals.css            # Tailwind & CSS custom properties
-│   │   └── layout.tsx             # Root layout with SessionTimeoutProvider
-│   ├── components/
-│   │   ├── ui/                    # Reusable Button, Input, Card, Badge, Toast, ConfirmDialog
-│   │   ├── GlobalProviders.tsx    # ToastContainer & SessionTimeoutProvider wrapper
-│   │   └── SessionTimeoutProvider.tsx # HIPAA 15-minute idle auto-logoff component
-│   ├── lib/
-│   │   ├── api/
-│   │   │   ├── auth-helper.ts     # Cookie setters, getAuthUser, requireAuth, requirePermission
-│   │   │   ├── audit-logger.ts    # Audit trail creator and action constants
-│   │   │   ├── phi-encryption.ts  # Field-level ePHI encryption/decryption helpers
-│   │   │   └── response.ts        # Uniform JSON response envelopes { success, data, error }
-│   │   ├── auth/
-│   │   │   ├── crypto.ts          # AES-256-GCM encryption primitives
-│   │   │   ├── jwt.ts             # Sign and verify access/refresh tokens via `jose`
-│   │   │   ├── rbac.ts            # PERMISSIONS & ROUTE_ROLES definitions
-│   │   │   ├── totp.ts            # 2FA secret generation and code verification
-│   │   │   └── password.ts        # bcrypt password hashing (12 rounds)
-│   │   ├── constants.ts           # Enums, labels, status order, MIME types, system limits
-│   │   └── prisma.ts              # Singleton PrismaClient instance
-│   └── proxy.ts                   # Next.js middleware for route protection & JWT verification
-├── next.config.ts                 # Next.js config with Security Headers (HSTS, CSP, X-Frame-Options)
-└── .env                           # DATABASE_URL, JWT_ACCESS_SECRET, JWT_REFRESH_SECRET, ENCRYPTION_KEY
+Afzal Healthcare/
+œ── prisma/
+‚   œ── schema.prisma              # Database schema definition (MySQL)
+‚   ”── seed.ts                    # Database seed script for test accounts
+œ── storage/
+‚   ”── uploads/                   # Private, non-public directory for ePHI files
+œ── src/
+‚   œ── app/
+‚   ‚   œ── (auth)/                # Public auth pages: /login, /register, /forgot-password
+‚   ‚   œ── (patient)/             # Patient portal: /patient/dashboard, /appointments, /documents, /profile, /messages
+‚   ‚   œ── (doctor)/              # Doctor portal: /doctor/dashboard, /appointments, /patients
+‚   ‚   œ── (manager)/             # Manager portal: /manager/dashboard, /cases, /appointments, /accommodations, /chat
+‚   ‚   œ── (admin)/               # Admin portal: /admin/dashboard, /hospitals, /doctors, /users, /audit-logs, /settings
+‚   ‚   œ── api/v1/                # Modular REST API endpoints
+‚   ‚   ‚   œ── auth/              # login, register, logout, me, 2fa/setup, 2fa/validate
+‚   ‚   ‚   œ── patient/           # documents, profile, appointments, cases, messages, documents/download
+‚   ‚   ‚   œ── doctor/            # dashboard, appointments, patients
+‚   ‚   ‚   œ── manager/           # dashboard, cases, appointments, accommodations, chat
+‚   ‚   ‚   ”── admin/             # users, hospitals, doctors, hostels, audit-logs, settings, export/
+‚   ‚   œ── globals.css            # Tailwind & CSS custom properties
+‚   ‚   ”── layout.tsx             # Root layout with SessionTimeoutProvider
+‚   œ── components/
+‚   ‚   œ── ui/                    # Reusable Button, Input, Card, Badge, Toast, ConfirmDialog
+‚   ‚   œ── GlobalProviders.tsx    # ToastContainer & SessionTimeoutProvider wrapper
+‚   ‚   ”── SessionTimeoutProvider.tsx # HIPAA 15-minute idle auto-logoff component
+‚   œ── lib/
+‚   ‚   œ── api/
+‚   ‚   ‚   œ── auth-helper.ts     # Cookie setters, getAuthUser, requireAuth, requirePermission
+‚   ‚   ‚   œ── audit-logger.ts    # Audit trail creator and action constants
+‚   ‚   ‚   œ── phi-encryption.ts  # Field-level ePHI encryption/decryption helpers
+‚   ‚   ‚   ”── response.ts        # Uniform JSON response envelopes { success, data, error }
+‚   ‚   œ── auth/
+‚   ‚   ‚   œ── crypto.ts          # AES-256-GCM encryption primitives
+‚   ‚   ‚   œ── jwt.ts             # Sign and verify access/refresh tokens via `jose`
+‚   ‚   ‚   œ── rbac.ts            # PERMISSIONS & ROUTE_ROLES definitions
+‚   ‚   ‚   œ── totp.ts            # 2FA secret generation and code verification
+‚   ‚   ‚   ”── password.ts        # bcrypt password hashing (12 rounds)
+‚   ‚   œ── constants.ts           # Enums, labels, status order, MIME types, system limits
+‚   ‚   ”── prisma.ts              # Singleton PrismaClient instance
+‚   ”── proxy.ts                   # Next.js middleware for route protection & JWT verification
+œ── next.config.ts                 # Next.js config with Security Headers (HSTS, CSP, X-Frame-Options)
+”── .env                           # DATABASE_URL, JWT_ACCESS_SECRET, JWT_REFRESH_SECRET, ENCRYPTION_KEY
 ```
 
 ---
@@ -160,11 +158,11 @@ MedRoute/
 
 | Role | Email | Password | 2FA Required |
 | :--- | :--- | :--- | :---: |
-| **Super Admin** | `admin@mediroute.in` | `Admin@123` | Yes |
-| **Regular Admin** | `admin_regular@mediroute.in` | `Admin@123` | Yes |
-| **Manager** | `manager@mediroute.in` | `Manager@123` | Yes |
-| **Doctor** | `doctor@mediroute.in` | `Doctor@123` | No |
-| **Patient** | `patient@mediroute.in` | `Patient@123` | No |
+| **Super Admin** | `admin@afzalhealthcare.in` | `Admin@123` | Yes |
+| **Regular Admin** | `admin_regular@afzalhealthcare.in` | `Admin@123` | Yes |
+| **Manager** | `manager@afzalhealthcare.in` | `Manager@123` | Yes |
+| **Doctor** | `doctor@afzalhealthcare.in` | `Doctor@123` | No |
+| **Patient** | `patient@afzalhealthcare.in` | `Patient@123` | No |
 
 ---
 

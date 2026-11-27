@@ -1,5 +1,5 @@
-/**
- * MediRoute India — API Route Helper
+﻿/**
+ * Afzal Healthcare — API Route Helper
  * Extracts authenticated user info from middleware-injected headers.
  */
 
@@ -94,4 +94,19 @@ export async function clearAuthCookies() {
   const cookieStore = await cookies();
   cookieStore.delete('access_token');
   cookieStore.delete('refresh_token');
+}
+
+/**
+ * Extract refresh token from HttpOnly cookie first, falling back to JSON body.
+ * Returns null cleanly when both cookie and body are absent or unparseable.
+ */
+export async function extractRefreshTokenFromRequest(request: NextRequest): Promise<string | null> {
+  const cookieToken = request.cookies.get('refresh_token')?.value;
+  if (cookieToken) return cookieToken;
+  try {
+    const body = await request.json();
+    return typeof body?.refreshToken === 'string' ? body.refreshToken : null;
+  } catch {
+    return null;
+  }
 }

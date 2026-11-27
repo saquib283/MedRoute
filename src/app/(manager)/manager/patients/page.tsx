@@ -1,7 +1,7 @@
 'use client';
 
 /**
- * MediRoute India — Manager Patient Cohort Dashboard
+ * Afzal Healthcare — Manager Patient Cohort Dashboard
  * Cohort roster list and full medical dossier details viewer.
  */
 
@@ -25,19 +25,31 @@ interface Case {
   createdAt: string;
 }
 
-interface MedicalProfile {
-  id: string;
-  allergies: string[] | string | null;
-  medications: unknown[] | string | null;
-  surgeries: unknown[] | string | null;
-  chronicConditions: string[] | string | null;
-  specialisationsRequired: string[] | string | null;
+interface MedicationEntry {
+  name?: string;
+  dosage?: string;
+  frequency?: string;
+}
+
+interface SurgeryEntry {
+  name?: string;
+  date?: string;
+  notes?: string;
 }
 
 interface EmergencyContact {
   name?: string;
   relation?: string;
   phone?: string;
+}
+
+interface MedicalProfile {
+  id: string;
+  allergies: string[] | string | null;
+  medications: MedicationEntry[] | string | null;
+  surgeries: SurgeryEntry[] | string | null;
+  chronicConditions: string[] | string | null;
+  specialisationsRequired: string[] | string | null;
 }
 
 interface Patient {
@@ -84,11 +96,11 @@ export default function PatientsRoster() {
 
   const formatJSONList = (field: unknown): string[] => {
     if (!field) return [];
-    if (Array.isArray(field)) return field as string[];
+    if (Array.isArray(field)) return field.map(String);
     try {
       if (typeof field === 'string') {
-        const parsed = JSON.parse(field);
-        return Array.isArray(parsed) ? parsed : [];
+        const parsed: unknown = JSON.parse(field);
+        return Array.isArray(parsed) ? parsed.map(String) : [];
       }
     } catch {
       // ignore
@@ -96,16 +108,13 @@ export default function PatientsRoster() {
     return [];
   };
 
-  const formatJSONMedications = (
-    field: unknown
-  ): { name: string; dosage?: string; frequency?: string }[] => {
+  const formatJSONMedications = (field: unknown): MedicationEntry[] => {
     if (!field) return [];
-    if (Array.isArray(field))
-      return field as { name: string; dosage?: string; frequency?: string }[];
+    if (Array.isArray(field)) return field as MedicationEntry[];
     try {
       if (typeof field === 'string') {
-        const parsed = JSON.parse(field);
-        return Array.isArray(parsed) ? parsed : [];
+        const parsed: unknown = JSON.parse(field);
+        return Array.isArray(parsed) ? (parsed as MedicationEntry[]) : [];
       }
     } catch {
       // ignore
@@ -117,39 +126,43 @@ export default function PatientsRoster() {
     return (
       <div className="flex items-center justify-center py-20">
         <div className="flex flex-col items-center gap-3">
-          <div className="w-8 h-8 border-4 border-primary-600 border-t-transparent rounded-full animate-spin" />
-          <span className="text-sm font-medium text-surface-500">Loading patient roster...</span>
+          <div className="w-7 h-7 border-2 border-primary-600 border-t-transparent rounded-full animate-spin" />
+          <span className="text-xs font-medium text-surface-500">Loading patient roster...</span>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="space-y-6 animate-fade-in relative min-h-[500px]">
-      <div>
-        <h1 className="text-2xl font-bold text-surface-900">Patient Cohort</h1>
-        <p className="text-sm text-surface-500 mt-1">Roster of medical travelers assigned to your operational care portfolio.</p>
+    <div className="space-y-6">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-5 border-b border-surface-200">
+        <div>
+          <h1 className="text-xl font-semibold tracking-tight text-surface-900">Patient Cohort</h1>
+          <p className="text-xs sm:text-sm text-surface-500 mt-1">
+            Roster of medical travelers assigned to your operational care portfolio.
+          </p>
+        </div>
       </div>
 
       <div className="grid grid-cols-1 xl:grid-cols-3 gap-6 items-start">
         {/* Patients Table List */}
         <div className="xl:col-span-2">
-          <Card className="bg-white overflow-hidden border border-surface-200/80">
+          <Card className="!p-0 overflow-hidden">
             <div className="overflow-x-auto">
-              <table className="w-full text-left border-collapse text-sm">
+              <table className="w-full text-left border-collapse text-xs">
                 <thead>
-                  <tr className="bg-surface-50 border-b border-surface-200/60">
-                    <th className="px-6 py-4 font-semibold text-surface-700">Patient Name</th>
-                    <th className="px-6 py-4 font-semibold text-surface-700">Nationality</th>
-                    <th className="px-6 py-4 font-semibold text-surface-700">Language</th>
-                    <th className="px-6 py-4 font-semibold text-surface-700">Urgency</th>
-                    <th className="px-6 py-4 font-semibold text-surface-700 text-center">Actions</th>
+                  <tr className="bg-surface-50 border-b border-surface-200">
+                    <th className="px-5 py-3 text-[11px] font-medium uppercase tracking-wide text-surface-500">Patient Name</th>
+                    <th className="px-5 py-3 text-[11px] font-medium uppercase tracking-wide text-surface-500">Nationality</th>
+                    <th className="px-5 py-3 text-[11px] font-medium uppercase tracking-wide text-surface-500">Language</th>
+                    <th className="px-5 py-3 text-[11px] font-medium uppercase tracking-wide text-surface-500">Urgency</th>
+                    <th className="px-5 py-3 text-[11px] font-medium uppercase tracking-wide text-surface-500 text-center">Actions</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-surface-200/50">
+                <tbody className="divide-y divide-surface-200">
                   {patients.length === 0 ? (
                     <tr>
-                      <td colSpan={5} className="px-6 py-8 text-center text-surface-400">
+                      <td colSpan={5} className="px-5 py-10 text-center text-xs text-surface-500">
                         No assigned patients in your care roster.
                       </td>
                     </tr>
@@ -157,33 +170,33 @@ export default function PatientsRoster() {
                     patients.map((patient) => (
                       <tr
                         key={patient.id}
-                        className={`hover:bg-surface-50/50 cursor-pointer transition-colors ${
-                          selectedPatient?.id === patient.id ? 'bg-primary-50/20' : ''
+                        className={`hover:bg-surface-50 cursor-pointer transition-colors ${
+                          selectedPatient?.id === patient.id ? 'bg-primary-50/40' : ''
                         }`}
                         onClick={() => setSelectedPatient(patient)}
                       >
-                        <td className="px-6 py-4">
-                          <p className="font-semibold text-surface-900">{patient.user.fullName}</p>
+                        <td className="px-5 py-3.5">
+                          <p className="text-sm font-semibold text-surface-900">{patient.user.fullName}</p>
                           <p className="text-xs text-surface-500">{patient.user.email}</p>
                         </td>
-                        <td className="px-6 py-4 text-surface-600 font-medium">{patient.nationality}</td>
-                        <td className="px-6 py-4 text-surface-600">{patient.primaryLanguage || '—'}</td>
-                        <td className="px-6 py-4">
+                        <td className="px-5 py-3.5 text-surface-700 font-medium">{patient.nationality}</td>
+                        <td className="px-5 py-3.5 text-surface-600">{patient.primaryLanguage || '—'}</td>
+                        <td className="px-5 py-3.5">
                           <span
-                            className={`px-2 py-0.5 text-xs font-bold rounded-full ${
+                            className={`inline-flex items-center px-2 py-0.5 text-[11px] font-medium rounded border ${
                               patient.urgencyLevel === 'URGENT'
-                                ? 'bg-red-50 text-red-700 border border-red-200'
+                                ? 'bg-red-50 text-red-700 border-red-200'
                                 : patient.urgencyLevel === 'SEMI_URGENT'
-                                ? 'bg-amber-50 text-amber-700 border border-amber-200'
-                                : 'bg-primary-50 text-primary-700 border border-primary-200'
+                                ? 'bg-amber-50 text-amber-700 border-amber-200'
+                                : 'bg-primary-50 text-primary-700 border-primary-200'
                             }`}
                           >
                             {patient.urgencyLevel}
                           </span>
                         </td>
-                        <td className="px-6 py-4 text-center">
+                        <td className="px-5 py-3.5 text-center">
                           <Button size="sm" variant="ghost" onClick={() => setSelectedPatient(patient)}>
-                            View Files & Medicals
+                            View Files &amp; Medicals
                           </Button>
                         </td>
                       </tr>
@@ -198,28 +211,30 @@ export default function PatientsRoster() {
         {/* Patient Detail Profile Panel */}
         <div className="xl:col-span-1">
           {selectedPatient ? (
-            <Card className="bg-white border border-surface-200/80 p-6 space-y-6 animate-slide-up sticky top-6">
+            <Card className="p-5 space-y-5 sticky top-6">
               {/* Profile Header */}
-              <div className="flex items-center gap-3 pb-4 border-b border-surface-100">
-                <div className="w-12 h-12 rounded-full bg-primary-100 text-primary-700 flex items-center justify-center font-bold text-lg">
+              <div className="flex items-center gap-3 pb-4 border-b border-surface-200">
+                <div className="w-10 h-10 rounded-full bg-surface-100 text-surface-700 border border-surface-200 flex items-center justify-center font-semibold text-sm shrink-0">
                   {selectedPatient.user.fullName.charAt(0)}
                 </div>
-                <div>
-                  <h3 className="font-bold text-surface-900 text-base leading-tight">
+                <div className="min-w-0">
+                  <h2 className="font-semibold text-surface-900 text-sm sm:text-base leading-tight truncate">
                     {selectedPatient.user.fullName}
-                  </h3>
-                  <p className="text-xs text-surface-500">{selectedPatient.user.email}</p>
-                  {selectedPatient.user.phone && <p className="text-xs text-surface-500">{selectedPatient.user.phone}</p>}
+                  </h2>
+                  <p className="text-xs text-surface-500 truncate">{selectedPatient.user.email}</p>
+                  {selectedPatient.user.phone && (
+                    <p className="text-xs text-surface-500 tabular-nums">{selectedPatient.user.phone}</p>
+                  )}
                 </div>
               </div>
 
               {/* Personal details */}
-              <div className="space-y-3">
-                <h4 className="text-xs font-bold text-surface-400 uppercase tracking-widest">Travel & Vital Data</h4>
+              <div className="space-y-2.5">
+                <h3 className="text-xs font-semibold text-surface-900">Travel &amp; Vital Data</h3>
                 <div className="grid grid-cols-2 gap-3 text-xs">
-                  <div className="bg-surface-50 p-2.5 rounded border border-surface-200/30">
-                    <p className="text-surface-400 font-medium">DOB</p>
-                    <p className="font-semibold text-surface-900 mt-0.5">
+                  <div className="bg-surface-50 p-3 rounded-md border border-surface-200">
+                    <p className="text-surface-500 font-medium">DOB</p>
+                    <p className="font-semibold text-surface-900 mt-0.5 tabular-nums">
                       {new Date(selectedPatient.dob).toLocaleDateString(undefined, {
                         year: 'numeric',
                         month: 'short',
@@ -227,8 +242,8 @@ export default function PatientsRoster() {
                       })}
                     </p>
                   </div>
-                  <div className="bg-surface-50 p-2.5 rounded border border-surface-200/30">
-                    <p className="text-surface-400 font-medium">Blood Group</p>
+                  <div className="bg-surface-50 p-3 rounded-md border border-surface-200">
+                    <p className="text-surface-500 font-medium">Blood Group</p>
                     <p className="font-semibold text-surface-900 mt-0.5">{selectedPatient.bloodGroup || '—'}</p>
                   </div>
                 </div>
@@ -236,37 +251,37 @@ export default function PatientsRoster() {
 
               {/* Emergency Contact */}
               <div className="space-y-2">
-                <h4 className="text-xs font-bold text-surface-400 uppercase tracking-widest">Emergency Contact</h4>
+                <h3 className="text-xs font-semibold text-surface-900">Emergency Contact</h3>
                 {selectedPatient.emergencyContact ? (
-                  <div className="p-3 bg-surface-50 rounded border border-surface-200/40 text-xs space-y-1">
+                  <div className="p-3 bg-surface-50 rounded-md border border-surface-200 text-xs space-y-1">
                     <p className="font-semibold text-surface-900">
                       {selectedPatient.emergencyContact.name || '—'}
                     </p>
                     <p className="text-surface-600">
                       Relation: {selectedPatient.emergencyContact.relation || '—'}
                     </p>
-                    <p className="text-surface-600 font-mono">
+                    <p className="text-surface-600 font-mono tabular-nums">
                       Phone: {selectedPatient.emergencyContact.phone || '—'}
                     </p>
                   </div>
                 ) : (
-                  <p className="text-xs text-surface-400">No emergency contact registered.</p>
+                  <p className="text-xs text-surface-500">No emergency contact registered.</p>
                 )}
               </div>
 
               {/* Medical Profile Chips */}
-              <div className="space-y-4 pt-2 border-t border-surface-100">
-                <h4 className="text-xs font-bold text-surface-400 uppercase tracking-widest">Medical History Dossier</h4>
-                
+              <div className="space-y-3.5 pt-4 border-t border-surface-200">
+                <h3 className="text-xs font-semibold text-surface-900">Medical History Dossier</h3>
+
                 {/* Allergies */}
                 <div className="space-y-1">
-                  <p className="text-xs font-semibold text-surface-700">Allergies</p>
-                  <div className="flex flex-wrap gap-1">
+                  <p className="text-xs font-medium text-surface-600">Allergies</p>
+                  <div className="flex flex-wrap gap-1.5">
                     {formatJSONList(selectedPatient.medicalProfile?.allergies).length === 0 ? (
-                      <span className="text-xs text-surface-400">None declared</span>
+                      <span className="text-xs text-surface-500">None declared</span>
                     ) : (
                       formatJSONList(selectedPatient.medicalProfile?.allergies).map((item) => (
-                        <span key={item} className="bg-red-50 text-red-700 border border-red-100 text-[10px] px-2 py-0.5 rounded font-semibold">
+                        <span key={item} className="bg-red-50 text-red-700 border border-red-200 text-[11px] px-2 py-0.5 rounded font-medium">
                           {item}
                         </span>
                       ))
@@ -276,13 +291,13 @@ export default function PatientsRoster() {
 
                 {/* Chronic conditions */}
                 <div className="space-y-1">
-                  <p className="text-xs font-semibold text-surface-700">Chronic Conditions</p>
-                  <div className="flex flex-wrap gap-1">
+                  <p className="text-xs font-medium text-surface-600">Chronic Conditions</p>
+                  <div className="flex flex-wrap gap-1.5">
                     {formatJSONList(selectedPatient.medicalProfile?.chronicConditions).length === 0 ? (
-                      <span className="text-xs text-surface-400">None declared</span>
+                      <span className="text-xs text-surface-500">None declared</span>
                     ) : (
                       formatJSONList(selectedPatient.medicalProfile?.chronicConditions).map((item) => (
-                        <span key={item} className="bg-amber-50 text-amber-700 border border-amber-100 text-[10px] px-2 py-0.5 rounded font-semibold">
+                        <span key={item} className="bg-amber-50 text-amber-700 border border-amber-200 text-[11px] px-2 py-0.5 rounded font-medium">
                           {item}
                         </span>
                       ))
@@ -292,14 +307,14 @@ export default function PatientsRoster() {
 
                 {/* Active medications */}
                 <div className="space-y-1.5">
-                  <p className="text-xs font-semibold text-surface-700">Current Medications</p>
+                  <p className="text-xs font-medium text-surface-600">Current Medications</p>
                   {formatJSONMedications(selectedPatient.medicalProfile?.medications).length === 0 ? (
-                    <p className="text-xs text-surface-400">None listed</p>
+                    <p className="text-xs text-surface-500">None listed</p>
                   ) : (
-                    <div className="space-y-1">
+                    <div className="space-y-1.5">
                       {formatJSONMedications(selectedPatient.medicalProfile?.medications).map((med, idx) => (
-                        <div key={idx} className="bg-surface-50 p-2 rounded border border-surface-200/20 text-xs flex justify-between">
-                          <span className="font-semibold text-surface-800">{med.name}</span>
+                        <div key={idx} className="bg-surface-50 p-2.5 rounded-md border border-surface-200 text-xs flex justify-between gap-2">
+                          <span className="font-medium text-surface-800">{med.name}</span>
                           <span className="text-surface-500">{med.dosage} ({med.frequency})</span>
                         </div>
                       ))}
@@ -309,24 +324,24 @@ export default function PatientsRoster() {
               </div>
 
               {/* Document vault */}
-              <div className="space-y-2 pt-4 border-t border-surface-100">
-                <h4 className="text-xs font-bold text-surface-400 uppercase tracking-widest">Document Vault</h4>
+              <div className="space-y-2 pt-4 border-t border-surface-200">
+                <h3 className="text-xs font-semibold text-surface-900">Document Vault</h3>
                 {selectedPatient.documents.length === 0 ? (
-                  <p className="text-xs text-surface-400">No medical reports uploaded.</p>
+                  <p className="text-xs text-surface-500">No medical reports uploaded.</p>
                 ) : (
                   <div className="space-y-1.5">
                     {selectedPatient.documents.map((doc) => (
-                      <div key={doc.id} className="flex items-center justify-between p-2.5 bg-surface-50 border border-surface-200/40 rounded text-xs">
+                      <div key={doc.id} className="flex items-center justify-between p-2.5 bg-surface-50 border border-surface-200 rounded-md text-xs">
                         <div className="min-w-0 flex-1 mr-2">
-                          <p className="font-semibold text-surface-800 truncate">{doc.fileName}</p>
-                          <p className="text-[10px] text-surface-400 uppercase">{doc.category}</p>
+                          <p className="font-medium text-surface-800 truncate">{doc.fileName}</p>
+                          <p className="text-[11px] text-surface-500">{doc.category.replace(/_/g, ' ')}</p>
                         </div>
                         <a
                           href={doc.fileUrl}
                           download
                           target="_blank"
                           rel="noopener noreferrer"
-                          className="text-primary-600 hover:text-primary-800 font-semibold"
+                          className="text-primary-700 hover:text-primary-800 font-medium shrink-0"
                         >
                           Download
                         </a>
@@ -337,12 +352,12 @@ export default function PatientsRoster() {
               </div>
             </Card>
           ) : (
-            <Card className="bg-surface-50/50 border border-dashed border-surface-300 text-center py-20 px-6 rounded-lg sticky top-6">
-              <svg className="w-10 h-10 text-surface-300 mx-auto mb-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+            <Card className="bg-surface-50 border border-dashed border-surface-300 text-center py-16 px-6 shadow-none sticky top-6">
+              <svg className="w-9 h-9 text-surface-400 mx-auto mb-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
                 <path strokeLinecap="round" strokeLinejoin="round" d="M15 9h3.75M15 12h3.75M15 15h3.75M4.5 19.5h15a2.25 2.25 0 002.25-2.25V6.75A2.25 2.25 0 0019.5 4.5h-15a2.25 2.25 0 00-2.25 2.25v10.5A2.25 2.25 0 004.5 19.5zm6-10.125a1.875 1.875 0 11-3.75 0 1.875 1.875 0 013.75 0zm1.294 6.336a6.721 6.721 0 01-3.17.789 6.721 6.721 0 01-3.168-.789 3.376 3.376 0 016.338 0z" />
               </svg>
-              <h3 className="text-sm font-semibold text-surface-700 mb-1">No Patient Selected</h3>
-              <p className="text-xs text-surface-400 max-w-xs mx-auto">
+              <h2 className="text-sm font-semibold text-surface-700 mb-1">No Patient Selected</h2>
+              <p className="text-xs text-surface-500 max-w-xs mx-auto">
                 Select a patient record from the cohort list to review their emergency details, medical profiles, and vault uploads.
               </p>
             </Card>

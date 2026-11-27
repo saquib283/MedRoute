@@ -1,8 +1,8 @@
 'use client';
 
 /**
- * MediRoute India — Admin Doctors Management
- * CRUD for doctors with search, filters, deactivation, and toast notifications.
+ * Afzal Healthcare — Admin Doctors Management
+ * CRUD for doctors with portal login provisioning/linking, search, filters, deactivation, and toast notifications.
  */
 
 import { useState, useEffect, useCallback } from 'react';
@@ -11,21 +11,30 @@ import { Button } from '@/components/ui/Button';
 import { Badge } from '@/components/ui/Badge';
 import { Select } from '@/components/ui/Select';
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
-import { Modal } from '@/components/ui/Modal';
 import { toast } from '@/components/ui/Toast';
 import { DAYS_OF_WEEK } from '@/lib/constants';
+import { formatDoctorDisplayName } from '@/lib/validation/booking-helpers';
+
+interface DoctorUser {
+  id: string;
+  email: string;
+  fullName?: string;
+}
 
 interface Doctor {
   id: string;
+  hospitalId: string;
+  specialisationId: string;
+  userId: string | null;
   fullName: string;
   qualification: string | null;
   consultationFee: number | null;
   availableDays: string[];
   languages: string[];
   isActive: boolean;
-  hospital: { name: string; city: string };
-  specialisation: { name: string };
-  user: { email: string } | null;
+  hospital: { id?: string; name: string; city: string };
+  specialisation: { id?: string; name: string };
+  user: DoctorUser | null;
   _count: { appointments: number };
 }
 
@@ -40,8 +49,11 @@ interface SpecOption {
   name: string;
 }
 
+type AccountMode = 'none' | 'link' | 'create';
+
 export default function AdminDoctorsPage() {
   const [doctors, setDoctors] = useState<Doctor[]>([]);
+  const [unlinkedDoctorUsers, setUnlinkedDoctorUsers] = useState<DoctorUser[]>([]);
   const [hospitals, setHospitals] = useState<HospitalOption[]>([]);
   const [specs, setSpecs] = useState<SpecOption[]>([]);
   const [loading, setLoading] = useState(true);
@@ -60,6 +72,10 @@ export default function AdminDoctorsPage() {
     consultationFee: '',
     availableDays: [] as string[],
     isActive: true,
+    accountMode: 'none' as AccountMode,
+    userId: '',
+    email: '',
+    password: '',
   });
   const [saving, setSaving] = useState(false);
 
@@ -72,13 +88,13 @@ export default function AdminDoctorsPage() {
   const [deactivating, setDeactivating] = useState(false);
 
   const fetchDoctors = useCallback(async () => {
-    await Promise.resolve();
     setLoading(true);
     try {
-      const res = await fetch('/api/v1/admin/doctors');
+      const res = await fetch('/api/v1/admin/doctors?meta=true');
       const data = await res.json();
       if (data.success) {
-        let list: Doctor[] = data.data.doctors;
+        let list: Doctor[] = data.data.doctors || [];
+        setUnlinkedDoctorUsers(data.data.unlinkedDoctorUsers || []);
         if (search) {
           list = list.filter((d) => d.fullName.toLowerCase().includes(search.toLowerCase()));
         }
@@ -110,10 +126,11 @@ export default function AdminDoctorsPage() {
   };
 
   useEffect(() => {
-    queueMicrotask(() => {
-      fetchDoctors();
-      fetchMeta();
-    });
+    const timer = setTimeout(() => {
+      void fetchDoctors();
+      void fetchMeta();
+    }, 0);
+    return () => clearTimeout(timer);
   }, [fetchDoctors]);
 
   const openCreate = () => {
@@ -126,6 +143,10 @@ export default function AdminDoctorsPage() {
       consultationFee: '',
       availableDays: [],
       isActive: true,
+      accountMode: 'none',
+      userId: '',
+      email: '',
+      password: '',
     });
     setShowModal(true);
   };
@@ -134,12 +155,16 @@ export default function AdminDoctorsPage() {
     setEditing(d);
     setForm({
       fullName: d.fullName,
-      hospitalId: '',
-      specialisationId: '',
+      hospitalId: d.hospitalId || d.hospital?.id || '',
+      specialisationId: d.specialisationId || d.specialisation?.id || '',
       qualification: d.qualification || '',
       consultationFee: d.consultationFee?.toString() || '',
       availableDays: Array.isArray(d.availableDays) ? d.availableDays : [],
       isActive: d.isActive,
+      accountMode: d.userId ? 'link' : 'none',
+      userId: d.userId || '',
+      email: '',
+      password: '',
     });
     setShowModal(true);
   };
@@ -159,16 +184,24 @@ export default function AdminDoctorsPage() {
     try {
       const payload: Record<string, unknown> = {
         fullName: form.fullName,
+        hospitalId: form.hospitalId,
+        specialisationId: form.specialisationId,
         qualification: form.qualification || undefined,
         consultationFee: form.consultationFee ? parseFloat(form.consultationFee) : undefined,
         availableDays: form.availableDays,
         isActive: form.isActive,
       };
-      if (!editing) {
-        payload.hospitalId = form.hospitalId;
-        payload.specialisationId = form.specialisationId;
-      }
       if (editing) payload.id = editing.id;
+
+      if (form.accountMode === 'create') {
+        payload.createAccount = true;
+        payload.email = form.email;
+        payload.password = form.password;
+      } else if (form.accountMode === 'link') {
+        payload.userId = form.userId || null;
+      } else if (editing && editing.userId) {
+        payload.userId = null;
+      }
 
       const res = await fetch('/api/v1/admin/doctors', {
         method: editing ? 'PUT' : 'POST',
@@ -212,24 +245,34 @@ export default function AdminDoctorsPage() {
     }
   };
 
+  const linkableUserOptions = [
+    ...(editing?.user ? [{ value: editing.user.id, label: `${editing.user.email} (Current)` }] : []),
+    ...unlinkedDoctorUsers
+      .filter((u) => u.id !== editing?.user?.id)
+      .map((u) => ({
+        value: u.id,
+        label: u.fullName ? `${u.fullName} (${u.email})` : u.email,
+      })),
+  ];
+
   return (
-    <div className="max-w-7xl mx-auto space-y-6 animate-fade-in">
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+    <div className="space-y-6 animate-fade-in">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-5 border-b border-surface-200">
         <div>
-          <h1 className="text-2xl font-bold text-surface-900 tracking-tight">Doctors</h1>
-          <p className="text-sm text-surface-500 mt-1">Manage doctors, qualifications, fees, and weekly schedule availability.</p>
+          <h1 className="text-xl font-semibold tracking-tight text-surface-900">Doctors</h1>
+          <p className="text-xs sm:text-sm text-surface-500 mt-1">Manage doctors, portal logins, qualifications, fees, and weekly schedule availability.</p>
         </div>
         <Button onClick={openCreate}>+ Add Doctor</Button>
       </div>
 
       {/* Filters */}
-      <Card className="p-4 bg-white border border-surface-200 flex flex-col sm:flex-row gap-3">
+      <Card padding="sm" className="flex flex-col sm:flex-row gap-3">
         <input
           type="text"
           placeholder="Search by doctor name..."
           value={search}
           onChange={(e) => setSearch(e.target.value)}
-          className="flex-1 px-3 py-2 border border-surface-300 rounded-lg text-sm focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500"
+          className="flex-1 px-3 py-2 border border-surface-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-600"
         />
         <Select
           value={hospitalFilter}
@@ -256,38 +299,46 @@ export default function AdminDoctorsPage() {
         </Button>
       </Card>
 
-      <Card className="bg-white border border-surface-200 overflow-hidden">
+      <Card className="p-0! overflow-hidden">
         {loading ? (
           <div className="flex items-center justify-center py-16">
-            <div className="w-8 h-8 border-4 border-primary-600 border-t-transparent rounded-full animate-spin" />
+            <div className="w-7 h-7 border-2 border-primary-600 border-t-transparent rounded-full animate-spin" />
           </div>
         ) : (
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
               <thead>
-                <tr className="border-b border-surface-100 bg-surface-50">
-                  <th className="px-5 py-3 text-left text-xs font-bold text-surface-500 uppercase tracking-wider">Name</th>
-                  <th className="px-5 py-3 text-left text-xs font-bold text-surface-500 uppercase tracking-wider">Hospital</th>
-                  <th className="px-5 py-3 text-left text-xs font-bold text-surface-500 uppercase tracking-wider">Specialisation</th>
-                  <th className="px-5 py-3 text-left text-xs font-bold text-surface-500 uppercase tracking-wider">Fee</th>
-                  <th className="px-5 py-3 text-left text-xs font-bold text-surface-500 uppercase tracking-wider">Appts</th>
-                  <th className="px-5 py-3 text-left text-xs font-bold text-surface-500 uppercase tracking-wider">Status</th>
-                  <th className="px-5 py-3 text-right text-xs font-bold text-surface-500 uppercase tracking-wider">Actions</th>
+                <tr className="border-b border-surface-200 bg-surface-100">
+                  <th className="px-5 py-3 text-left text-[11px] font-medium uppercase tracking-wide text-surface-500">Name</th>
+                  <th className="px-5 py-3 text-left text-[11px] font-medium uppercase tracking-wide text-surface-500">Portal Login</th>
+                  <th className="px-5 py-3 text-left text-[11px] font-medium uppercase tracking-wide text-surface-500">Hospital</th>
+                  <th className="px-5 py-3 text-left text-[11px] font-medium uppercase tracking-wide text-surface-500">Specialisation</th>
+                  <th className="px-5 py-3 text-left text-[11px] font-medium uppercase tracking-wide text-surface-500">Fee</th>
+                  <th className="px-5 py-3 text-left text-[11px] font-medium uppercase tracking-wide text-surface-500">Appts</th>
+                  <th className="px-5 py-3 text-left text-[11px] font-medium uppercase tracking-wide text-surface-500">Status</th>
+                  <th className="px-5 py-3 text-right text-[11px] font-medium uppercase tracking-wide text-surface-500">Actions</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-surface-100">
+              <tbody className="divide-y divide-surface-200">
                 {doctors.length === 0 ? (
                   <tr>
-                    <td colSpan={7} className="px-5 py-12 text-center text-surface-500">
+                    <td colSpan={8} className="px-5 py-12 text-center text-surface-500">
                       No doctors found.
                     </td>
                   </tr>
                 ) : (
                   doctors.map((d) => (
-                    <tr key={d.id} className="hover:bg-surface-50 transition-colors">
+                    <tr key={d.id} className="hover:bg-surface-100/60 transition-colors">
                       <td className="px-5 py-3.5">
-                        <p className="font-semibold text-surface-900">{d.fullName}</p>
-                        <p className="text-xs text-surface-400">{d.qualification || '—'}</p>
+                        <p className="font-medium text-surface-900">{formatDoctorDisplayName(d.fullName)}</p>
+                        <p className="text-xs text-surface-500">{d.qualification || '—'}</p>
+                      </td>
+                      <td className="px-5 py-3.5">
+                        {d.user?.email ? (
+                          <Badge variant="primary">{d.user.email}</Badge>
+                        ) : (
+                          <span className="text-xs text-surface-400">Not linked</span>
+                        )}
                       </td>
                       <td className="px-5 py-3.5 text-surface-600">
                         {d.hospital.name}, {d.hospital.city}
@@ -295,10 +346,10 @@ export default function AdminDoctorsPage() {
                       <td className="px-5 py-3.5">
                         <Badge variant="default">{d.specialisation.name}</Badge>
                       </td>
-                      <td className="px-5 py-3.5 text-surface-600">
+                      <td className="px-5 py-3.5 text-surface-600 tabular-nums">
                         {d.consultationFee ? `₹${Number(d.consultationFee).toLocaleString()}` : '—'}
                       </td>
-                      <td className="px-5 py-3.5 text-surface-600">{d._count.appointments}</td>
+                      <td className="px-5 py-3.5 text-surface-600 tabular-nums">{d._count.appointments}</td>
                       <td className="px-5 py-3.5">
                         <Badge variant={d.isActive ? 'success' : 'danger'} dot>
                           {d.isActive ? 'Active' : 'Inactive'}
@@ -330,105 +381,188 @@ export default function AdminDoctorsPage() {
         )}
       </Card>
 
-      <Modal
-        open={showModal}
-        onClose={() => setShowModal(false)}
-        title={editing ? 'Edit Doctor' : 'Add Doctor'}
-        maxWidth="lg"
-      >
-        <form onSubmit={handleSave} className="space-y-4">
-          <div className="space-y-1.5">
-            <label className="block text-xs font-semibold text-surface-700">Full Name</label>
-            <input
-              type="text"
-              required
-              value={form.fullName}
-              onChange={(e) => setForm({ ...form, fullName: e.target.value })}
-              className="w-full p-2.5 border border-surface-300 rounded text-sm focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500"
-            />
+      {showModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-surface-900/40">
+          <div className="bg-white rounded-lg shadow-md border border-surface-200 w-full max-w-lg animate-scale-in max-h-[90vh] overflow-y-auto">
+            <div className="px-6 py-4 border-b border-surface-200 flex items-center justify-between sticky top-0 bg-white z-10">
+              <h3 className="text-sm sm:text-base font-semibold text-surface-900">{editing ? 'Edit doctor' : 'Add doctor'}</h3>
+              <button
+                onClick={() => setShowModal(false)}
+                aria-label="Close"
+                className="text-surface-400 hover:text-surface-600 p-1 rounded-md hover:bg-surface-100 transition-colors"
+              >
+                <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2} aria-hidden="true">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
+            <form onSubmit={handleSave} className="p-6 space-y-4">
+              <div className="space-y-1.5">
+                <label className="block text-xs font-medium text-surface-700">Full Name</label>
+                <input
+                  type="text"
+                  required
+                  value={form.fullName}
+                  onChange={(e) => setForm({ ...form, fullName: e.target.value })}
+                  className="w-full p-2.5 border border-surface-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-600"
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <Select
+                  label="Hospital"
+                  value={form.hospitalId}
+                  onChange={(val) => setForm({ ...form, hospitalId: val })}
+                  options={hospitals.map((h) => ({ value: h.id, label: `${h.name} (${h.city})` }))}
+                  required
+                  className="col-span-1"
+                />
+                <Select
+                  label="Specialisation"
+                  value={form.specialisationId}
+                  onChange={(val) => setForm({ ...form, specialisationId: val })}
+                  options={specs.map((s) => ({ value: s.id, label: s.name }))}
+                  required
+                  className="col-span-1"
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-1.5">
+                  <label className="block text-xs font-medium text-surface-700">Qualification</label>
+                  <input
+                    type="text"
+                    value={form.qualification}
+                    onChange={(e) => setForm({ ...form, qualification: e.target.value })}
+                    className="w-full p-2.5 border border-surface-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-600"
+                  />
+                </div>
+                <div className="space-y-1.5">
+                  <label className="block text-xs font-medium text-surface-700">Consultation Fee (₹)</label>
+                  <input
+                    type="number"
+                    value={form.consultationFee}
+                    onChange={(e) => setForm({ ...form, consultationFee: e.target.value })}
+                    className="w-full p-2.5 border border-surface-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-600"
+                  />
+                </div>
+              </div>
+
+              <div className="space-y-1.5">
+                <label className="block text-xs font-medium text-surface-700">Available Days</label>
+                <div className="flex flex-wrap gap-2">
+                  {DAYS_OF_WEEK.map((day) => (
+                    <button
+                      key={day}
+                      type="button"
+                      onClick={() => toggleDay(day)}
+                      className={`px-3 py-1.5 rounded-md text-xs font-medium transition-colors border ${
+                        form.availableDays.includes(day)
+                          ? 'bg-primary-600 text-white border-primary-600'
+                          : 'bg-surface-100 text-surface-600 border-surface-200 hover:bg-surface-200'
+                      }`}
+                    >
+                      {day}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Portal Login Account */}
+              <div className="space-y-3 p-3.5 bg-surface-100 border border-surface-200 rounded-md">
+                <label className="block text-xs font-medium text-surface-700">Portal Login Account</label>
+                <div className="grid grid-cols-3 gap-2">
+                  {(
+                    [
+                      { id: 'none', label: 'No Login' },
+                      { id: 'link', label: 'Link Existing' },
+                      { id: 'create', label: 'Create New' },
+                    ] as const
+                  ).map((mode) => (
+                    <button
+                      key={mode.id}
+                      type="button"
+                      onClick={() => setForm({ ...form, accountMode: mode.id })}
+                      className={`px-2.5 py-1.5 rounded-md text-xs font-medium border transition-colors ${
+                        form.accountMode === mode.id
+                          ? 'bg-primary-600 text-white border-primary-600'
+                          : 'bg-white text-surface-700 border-surface-200 hover:bg-surface-100'
+                      }`}
+                    >
+                      {mode.label}
+                    </button>
+                  ))}
+                </div>
+
+                {form.accountMode === 'link' && (
+                  <Select
+                    label="Select Doctor User Account"
+                    value={form.userId}
+                    onChange={(val) => setForm({ ...form, userId: val })}
+                    options={[
+                      { value: '', label: '-- Choose DOCTOR user --' },
+                      ...linkableUserOptions,
+                    ]}
+                    placeholder="Choose DOCTOR user..."
+                  />
+                )}
+
+                {form.accountMode === 'create' && (
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <div className="space-y-1">
+                      <label className="block text-xs font-medium text-surface-700">Login Email</label>
+                      <input
+                        type="email"
+                        required
+                        value={form.email}
+                        onChange={(e) => setForm({ ...form, email: e.target.value })}
+                        placeholder="doctor@hospital.com"
+                        className="w-full p-2 border border-surface-300 bg-white rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-600"
+                      />
+                    </div>
+                    <div className="space-y-1">
+                      <label className="block text-xs font-medium text-surface-700">Temporary Password</label>
+                      <input
+                        type="password"
+                        required
+                        minLength={8}
+                        value={form.password}
+                        onChange={(e) => setForm({ ...form, password: e.target.value })}
+                        placeholder="Min 8 characters"
+                        className="w-full p-2 border border-surface-300 bg-white rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-600"
+                      />
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {editing && (
+                <div className="flex items-center gap-2">
+                  <input
+                    type="checkbox"
+                    id="docActive"
+                    checked={form.isActive}
+                    onChange={(e) => setForm({ ...form, isActive: e.target.checked })}
+                    className="rounded accent-primary-600"
+                  />
+                  <label htmlFor="docActive" className="text-sm font-medium text-surface-700">
+                    Active
+                  </label>
+                </div>
+              )}
+
+              <div className="flex gap-3 pt-2">
+                <Button type="button" variant="secondary" className="flex-1" onClick={() => setShowModal(false)}>
+                  Cancel
+                </Button>
+                <Button type="submit" className="flex-1" isLoading={saving}>
+                  {editing ? 'Save' : 'Create'}
+                </Button>
+              </div>
+            </form>
           </div>
-          {!editing && (
-            <div className="grid grid-cols-2 gap-4">
-              <Select
-                label="Hospital"
-                value={form.hospitalId}
-                onChange={(val) => setForm({ ...form, hospitalId: val })}
-                options={hospitals.map((h) => ({ value: h.id, label: `${h.name} (${h.city})` }))}
-                required
-                className="col-span-1"
-              />
-              <Select
-                label="Specialisation"
-                value={form.specialisationId}
-                onChange={(val) => setForm({ ...form, specialisationId: val })}
-                options={specs.map((s) => ({ value: s.id, label: s.name }))}
-                required
-                className="col-span-1"
-              />
-            </div>
-          )}
-          <div className="grid grid-cols-2 gap-4">
-            <div className="space-y-1.5">
-              <label className="block text-xs font-semibold text-surface-700">Qualification</label>
-              <input
-                type="text"
-                value={form.qualification}
-                onChange={(e) => setForm({ ...form, qualification: e.target.value })}
-                className="w-full p-2.5 border border-surface-300 rounded text-sm focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500"
-              />
-            </div>
-            <div className="space-y-1.5">
-              <label className="block text-xs font-semibold text-surface-700">Consultation Fee (₹)</label>
-              <input
-                type="number"
-                value={form.consultationFee}
-                onChange={(e) => setForm({ ...form, consultationFee: e.target.value })}
-                className="w-full p-2.5 border border-surface-300 rounded text-sm focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500"
-              />
-            </div>
-          </div>
-          <div className="space-y-1.5">
-            <label className="block text-xs font-semibold text-surface-700">Available Days</label>
-            <div className="flex flex-wrap gap-2">
-              {DAYS_OF_WEEK.map((day) => (
-                <button
-                  key={day}
-                  type="button"
-                  onClick={() => toggleDay(day)}
-                  className={`px-3 py-1.5 rounded-md text-xs font-bold transition-colors ${
-                    form.availableDays.includes(day)
-                      ? 'bg-primary-600 text-white'
-                      : 'bg-surface-100 text-surface-600 hover:bg-surface-200'
-                  }`}
-                >
-                  {day}
-                </button>
-              ))}
-            </div>
-          </div>
-          {editing && (
-            <div className="flex items-center gap-2">
-              <input
-                type="checkbox"
-                id="docActive"
-                checked={form.isActive}
-                onChange={(e) => setForm({ ...form, isActive: e.target.checked })}
-              />
-              <label htmlFor="docActive" className="text-sm font-medium text-surface-700">
-                Active
-              </label>
-            </div>
-          )}
-          <div className="flex gap-3 pt-2">
-            <Button type="button" variant="secondary" className="flex-1" onClick={() => setShowModal(false)}>
-              Cancel
-            </Button>
-            <Button type="submit" className="flex-1" isLoading={saving}>
-              {editing ? 'Save' : 'Create'}
-            </Button>
-          </div>
-        </form>
-      </Modal>
+        </div>
+      )}
 
       {/* Confirm Deactivation */}
       <ConfirmDialog

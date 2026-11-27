@@ -1,4 +1,10 @@
-import { NextResponse, NextRequest } from 'next/server';
+/**
+ * MediRoute India — Patient Billing API Endpoint
+ * GET  /api/v1/patient/billing — Retrieve invoices, summary, and itemized medical bills
+ * POST /api/v1/patient/billing — Record international wire payment against an invoice
+ */
+
+import { NextRequest } from 'next/server';
 import prisma from '@/lib/prisma';
 import { requireAuth } from '@/lib/api/auth-helper';
 import { apiError, apiSuccess } from '@/lib/api/response';
@@ -26,6 +32,13 @@ export async function GET(request: NextRequest) {
             },
           },
         },
+        medicalBills: {
+          include: {
+            hospital: { select: { id: true, name: true, city: true } },
+            items: true,
+          },
+          orderBy: { createdAt: 'desc' },
+        },
       },
     });
 
@@ -43,6 +56,7 @@ export async function GET(request: NextRequest) {
 
     return apiSuccess({
       invoices: allInvoices,
+      bills: patient.medicalBills,
       summary: {
         totalBilled,
         totalPaid,

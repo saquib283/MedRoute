@@ -1,50 +1,107 @@
 /**
- * MediRoute India — GET /api/v1/doctor/patients
+ * Afzal Healthcare — GET /api/v1/doctor/patients
  * Fetch patients that have appointments with the authenticated doctor.
  */
 
 import { NextRequest } from 'next/server';
 import prisma from '@/lib/prisma';
-import { requireAuth } from '@/lib/api/auth-helper';
+import { requireAuth, getClientIP } from '@/lib/api/auth-helper';
 import { apiSuccess, apiError } from '@/lib/api/response';
 import { ERROR_CODES } from '@/lib/api/errors';
+import { createAuditLog, AUDIT_ACTIONS } from '@/lib/api/audit-logger';
+import {
+  formatPatientForViewer,
+  formatTravelLogisticsForViewer,
+} from '@/lib/services/phi.service';
 
 export async function GET(request: NextRequest) {
   try {
     const { user: authUser, error } = requireAuth(request);
     if (error) return error;
+    if (authUser!.role !== 'DOCTOR') {
+      return apiError(ERROR_CODES.FORBIDDEN, 'Doctor access required', 403);
+    }
 
     const doctorProfile = await prisma.doctor.findUnique({
       where: { userId: authUser!.userId },
     });
 
-    if (!doctorProfile) {
-      return apiError(ERROR_CODES.USER_NOT_FOUND, 'Doctor profile not found', 404);
+    if (!doctorProfile || !doctorProfile.isActive) {
+      return apiError(ERROR_CODES.USER_NOT_FOUND, 'Active doctor profile not found', 404);
     }
 
-    // Get unique patient IDs who have an appointment with this doctor
-    const distinctAppointments = await prisma.appointment.findMany({
-      where: { doctorId: doctorProfile.id },
-      select: { patientId: true },
-      distinct: ['patientId'],
-    });
-
-    const patientIds = distinctAppointments.map((a) => a.patientId);
-
-    if (patientIds.length === 0) {
-      return apiSuccess({ patients: [] });
-    }
-
-    // Fetch full patient data for these patients
+    // Fetch full patient data for patients assigned via primaryDoctorId or active appointments
     const patients = await prisma.patient.findMany({
-      where: { id: { in: patientIds } },
+      where: {
+        OR: [
+          {
+            cases: {
+              some: {
+                primaryDoctorId: doctorProfile.id,
+              },
+            },
+          },
+          {
+            appointments: {
+              some: {
+                doctorId: doctorProfile.id,
+                status: { not: 'CANCELLED' },
+              },
+            },
+          },
+        ],
+      },
       include: {
         user: { select: { fullName: true, email: true, phone: true } },
         medicalProfile: true,
+        cases: {
+          where: { status: { not: 'CLOSED' } },
+          select: {
+            id: true,
+            status: true,
+            isUrgent: true,
+            fitToFlyClearance: true,
+          },
+          orderBy: { createdAt: 'desc' },
+        },
       },
     });
 
-    return apiSuccess({ patients });
+    if (patients.length === 0) {
+      return apiSuccess({ patients: [] });
+    }
+
+    const formattedPatients = patients.map((p) => {
+      const formatted = formatPatientForViewer(p, { maskPassport: true });
+      if (Array.isArray(formatted.cases)) {
+        return {
+          ...formatted,
+          cases: formatted.cases.map((c) =>
+            // Defensive guard if travelLogistics is ever added to cases.select
+            'travelLogistics' in c && c.travelLogistics !== undefined
+              ? {
+                  ...c,
+                  travelLogistics: formatTravelLogisticsForViewer(c.travelLogistics, {
+                    maskPassport: true,
+                  }),
+                }
+              : c
+          ),
+        };
+      }
+      return formatted;
+    });
+
+    void createAuditLog({
+      actorId: authUser!.userId,
+      action: AUDIT_ACTIONS.VIEW_PATIENT,
+      entityType: 'Patient',
+      entityId: 'doctor-cohort',
+      newValue: { count: formattedPatients.length },
+      ipAddress: getClientIP(request),
+    });
+
+    return apiSuccess({ patients: formattedPatients });
   } catch (err) {
     console.error('[Doctor Patients GET Error]', err);
     return apiError(ERROR_CODES.INTERNAL_ERROR, 'Failed to fetch patients', 500);

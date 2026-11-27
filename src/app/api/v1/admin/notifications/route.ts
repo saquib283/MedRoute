@@ -1,5 +1,5 @@
-/**
- * MediRoute India — /api/v1/admin/notifications
+﻿/**
+ * Afzal Healthcare — /api/v1/admin/notifications
  * Global notifications management and broadcast channel.
  */
 

@@ -1,7 +1,7 @@
-'use client';
+﻿'use client';
 
 /**
- * MediRoute India — Global Client Providers
+ * Afzal Healthcare — Global Client Providers
  * Renders client-side providers (ToastContainer) that need 'use client'.
  */
 

@@ -1,6 +1,6 @@
-/**
- * MediRoute India — /api/v1/admin/patients
- * Paginated patient list with search and filters for admin oversight.
+﻿/**
+ * Afzal Healthcare — /api/v1/admin/patients
+ * Paginated patient list, admin patient onboarding, and atomic coordinator reassignment.
  */
 
 import { NextRequest } from 'next/server';
@@ -9,7 +9,27 @@ import { requireAuth, getClientIP } from '@/lib/api/auth-helper';
 import { apiSuccess, apiError } from '@/lib/api/response';
 import { ERROR_CODES } from '@/lib/api/errors';
 import { createAuditLog, AUDIT_ACTIONS } from '@/lib/api/audit-logger';
+import { formatPatientForViewer } from '@/lib/services/phi.service';
+import { onboardPatient } from '@/lib/services/onboarding.service';
+import { assignPatientCoordinator } from '@/lib/services/case-assignment.service';
 import { z } from 'zod';
+
+const onboardPatientAdminSchema = z.object({
+  email: z.string().email('Invalid email address'),
+  password: z.string().min(8, 'Password must be at least 8 characters'),
+  fullName: z.string().min(2, 'Full name is required').max(100),
+  phone: z.string().optional(),
+  nationality: z.string().min(2, 'Nationality is required'),
+  passportNo: z.string().min(5, 'Passport number is required'),
+  dob: z.string().refine((val) => !isNaN(Date.parse(val)), {
+    message: 'Invalid date of birth',
+  }),
+  primaryLanguage: z.string().optional(),
+  medicalCondition: z.string().max(2000).optional(),
+  urgencyLevel: z.enum(['ROUTINE', 'SEMI_URGENT', 'URGENT']).optional(),
+  assignedManagerId: z.string().nullable().optional(),
+  initialCaseNotes: z.string().max(5000).optional(),
+});
 
 const updatePatientSchema = z.object({
   id: z.string().min(1),
@@ -57,7 +77,7 @@ export async function GET(request: NextRequest) {
         where,
         include: {
           user: { select: { fullName: true, email: true, phone: true, isActive: true, createdAt: true } },
-          assignedManager: { select: { fullName: true } },
+          assignedManager: { select: { id: true, fullName: true, email: true } },
           _count: { select: { cases: true, documents: true, appointments: true } },
         },
         orderBy: { createdAt: 'desc' },
@@ -67,10 +87,61 @@ export async function GET(request: NextRequest) {
       prisma.patient.count({ where }),
     ]);
 
-    return apiSuccess({ patients, pagination: { page, limit, total, totalPages: Math.ceil(total / limit) } });
+    const formattedPatients = patients.map((p) =>
+      formatPatientForViewer(p, { maskPassport: true })
+    );
+
+    void createAuditLog({
+      actorId: authUser!.userId,
+      action: AUDIT_ACTIONS.VIEW_PATIENT,
+      entityType: 'Patient',
+      entityId: 'admin-cohort',
+      newValue: { count: formattedPatients.length, page, limit },
+      ipAddress: getClientIP(request),
+    });
+
+    return apiSuccess({ patients: formattedPatients, pagination: { page, limit, total, totalPages: Math.ceil(total / limit) } });
   } catch (err) {
     console.error('[Admin Patients GET Error]', err);
     return apiError(ERROR_CODES.INTERNAL_ERROR, 'Failed to fetch patients', 500);
+  }
+}
+
+export async function POST(request: NextRequest) {
+  try {
+    const { user: authUser, error } = requireAuth(request);
+    if (error) return error;
+    if (authUser!.role !== 'ADMIN') {
+      return apiError(ERROR_CODES.FORBIDDEN, 'Admin access required', 403);
+    }
+
+    const body = await request.json();
+    const result = onboardPatientAdminSchema.safeParse(body);
+    if (!result.success) {
+      return apiError(ERROR_CODES.BAD_REQUEST, result.error.issues[0].message, 400);
+    }
+
+    const onboardRes = await onboardPatient(result.data, {
+      actorId: authUser!.userId,
+      ipAddress: getClientIP(request),
+    });
+
+    if (!onboardRes.ok) {
+      return apiError(onboardRes.code, onboardRes.message, onboardRes.status);
+    }
+
+    return apiSuccess(
+      {
+        user: onboardRes.user,
+        patient: formatPatientForViewer(onboardRes.patient, { maskPassport: true }),
+        initialCase: onboardRes.initialCase,
+      },
+      undefined,
+      201
+    );
+  } catch (err) {
+    console.error('[Admin Patients POST Error]', err);
+    return apiError(ERROR_CODES.INTERNAL_ERROR, 'Failed to onboard patient', 500);
   }
 }
 
@@ -88,7 +159,7 @@ export async function PUT(request: NextRequest) {
       return apiError(ERROR_CODES.BAD_REQUEST, result.error.issues[0].message, 400);
     }
 
-    const { id, ...updateData } = result.data;
+    const { id, assignedManagerId, urgencyLevel } = result.data;
 
     const existing = await prisma.patient.findUnique({
       where: { id },
@@ -98,23 +169,46 @@ export async function PUT(request: NextRequest) {
       return apiError(ERROR_CODES.PATIENT_NOT_FOUND, 'Patient not found', 404);
     }
 
-    const patient = await prisma.patient.update({
+    if (assignedManagerId !== undefined) {
+      const assignRes = await assignPatientCoordinator({
+        patientId: id,
+        managerId: assignedManagerId,
+        actorId: authUser!.userId,
+        ipAddress: getClientIP(request),
+      });
+      if (!assignRes.ok) {
+        return apiError(assignRes.code, assignRes.message, assignRes.status);
+      }
+    }
+
+    if (urgencyLevel !== undefined) {
+      await prisma.patient.update({
+        where: { id },
+        data: { urgencyLevel },
+      });
+
+      await createAuditLog({
+        actorId: authUser!.userId,
+        action: AUDIT_ACTIONS.UPDATE,
+        entityType: 'Patient',
+        entityId: id,
+        oldValue: { urgencyLevel: existing.urgencyLevel },
+        newValue: { urgencyLevel },
+        ipAddress: getClientIP(request),
+      });
+    }
+
+    const patient = await prisma.patient.findUnique({
       where: { id },
-      data: updateData,
-      include: { user: { select: { fullName: true } } },
+      include: {
+        user: { select: { fullName: true } },
+        assignedManager: { select: { id: true, fullName: true, email: true } },
+      },
     });
 
-    await createAuditLog({
-      actorId: authUser!.userId,
-      action: AUDIT_ACTIONS.UPDATE,
-      entityType: 'Patient',
-      entityId: id,
-      oldValue: existing,
-      newValue: updateData,
-      ipAddress: getClientIP(request),
+    return apiSuccess({
+      patient: patient ? formatPatientForViewer(patient, { maskPassport: true }) : null,
     });
-
-    return apiSuccess({ patient });
   } catch (err) {
     console.error('[Admin Patients PUT Error]', err);
     return apiError(ERROR_CODES.INTERNAL_ERROR, 'Failed to update patient', 500);

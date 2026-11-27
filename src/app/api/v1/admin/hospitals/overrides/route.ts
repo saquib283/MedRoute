@@ -1,6 +1,6 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
+﻿/* eslint-disable @typescript-eslint/no-explicit-any */
 /**
- * MediRoute India — /api/v1/admin/hospitals/overrides
+ * Afzal Healthcare — /api/v1/admin/hospitals/overrides
  * CRUD for managing specific date-bound commission overrides.
  */
 
@@ -136,6 +136,7 @@ export async function DELETE(request: NextRequest) {
     if (!existing) {
       return apiError(ERROR_CODES.NOT_FOUND, 'Override not found', 404);
     }
+    
 
     await prisma.commissionOverride.delete({ where: { id } });
 

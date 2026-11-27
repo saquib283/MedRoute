@@ -1,4 +1,4 @@
-import { encrypt, decrypt } from '../crypto';
+﻿import { encrypt, decrypt, DecryptionTamperError } from '../crypto';
 
 describe('Crypto Module AES-256-GCM', () => {
   const originalEnv = process.env.ENCRYPTION_KEY;
@@ -12,7 +12,7 @@ describe('Crypto Module AES-256-GCM', () => {
   });
 
   it('should encrypt and decrypt a message correctly', () => {
-    const plainText = 'Hello, MediRoute India!';
+    const plainText = 'Hello, Afzal Healthcare!';
     const encrypted = encrypt(plainText);
 
     // Verify it is encrypted and formatted correctly (iv:authTag:ciphertext)
@@ -55,5 +55,55 @@ describe('Crypto Module AES-256-GCM', () => {
     // Passing non-string directly to decrypt returns stringified version or raw value
     expect(decrypt(mockArray)).toBe(String(mockArray));
     expect(decrypt(mockObject)).toBe(String(mockObject));
+  });
+
+  describe('AES-256-GCM Tamper & Empty Array Safety', () => {
+    it('throws DecryptionTamperError instead of returning raw ciphertext when authTag is tampered', () => {
+      const ct = encrypt('Penicillin Allergy');
+      const [iv, tag, body] = ct.split(':');
+      const flippedTag = (tag[0] === 'a' ? 'b' : 'a') + tag.slice(1);
+      expect(() => decrypt(`${iv}:${flippedTag}:${body}`)).toThrow(DecryptionTamperError);
+    });
+
+    it('encrypts and decrypts empty JSON arrays cleanly', () => {
+      const ct = encrypt([]);
+      expect(ct.split(':')).toHaveLength(3);
+      expect(decrypt(ct)).toBe('[]');
+    });
+
+    it('throws configuration Error (not DecryptionTamperError) in production when ENCRYPTION_KEY is missing or malformed', () => {
+      const ct = encrypt('Sensitive Passport');
+      const prevNodeEnv = process.env.NODE_ENV;
+      const prevKey = process.env.ENCRYPTION_KEY;
+
+      try {
+        Object.assign(process.env, { NODE_ENV: 'production' });
+        delete process.env.ENCRYPTION_KEY;
+
+        expect(() => decrypt(ct)).toThrow(/ENCRYPTION_KEY/);
+        try {
+          decrypt(ct);
+        } catch (err) {
+          expect(err).toBeInstanceOf(Error);
+          expect(err).not.toBeInstanceOf(DecryptionTamperError);
+        }
+
+        process.env.ENCRYPTION_KEY = 'short';
+        expect(() => decrypt(ct)).toThrow(/ENCRYPTION_KEY/);
+        try {
+          decrypt(ct);
+        } catch (err) {
+          expect(err).toBeInstanceOf(Error);
+          expect(err).not.toBeInstanceOf(DecryptionTamperError);
+        }
+      } finally {
+        Object.assign(process.env, { NODE_ENV: prevNodeEnv });
+        if (prevKey === undefined) {
+          delete process.env.ENCRYPTION_KEY;
+        } else {
+          process.env.ENCRYPTION_KEY = prevKey;
+        }
+      }
+    });
   });
 });

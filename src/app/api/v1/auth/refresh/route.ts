@@ -1,5 +1,5 @@
-/**
- * MediRoute India — POST /api/v1/auth/refresh
+﻿/**
+ * Afzal Healthcare — POST /api/v1/auth/refresh
  * JWT refresh token rotation per PRD FR-AUTH-01.
  * Old refresh token is revoked, new pair (access + refresh) is issued.
  */
@@ -9,12 +9,11 @@ import prisma from '@/lib/prisma';
 import { verifyRefreshToken, signAccessToken, signRefreshToken } from '@/lib/auth/jwt';
 import { apiSuccess, apiError } from '@/lib/api/response';
 import { ERROR_CODES } from '@/lib/api/errors';
-import { setAuthCookies } from '@/lib/api/auth-helper';
+import { setAuthCookies, extractRefreshTokenFromRequest } from '@/lib/api/auth-helper';
 
 export async function POST(request: NextRequest) {
   try {
-    const body = await request.json();
-    const { refreshToken: incomingToken } = body;
+    const incomingToken = await extractRefreshTokenFromRequest(request);
 
     if (!incomingToken) {
       return apiError(ERROR_CODES.BAD_REQUEST, 'Refresh token is required', 400);

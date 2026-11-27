@@ -1,4 +1,4 @@
-name: CI — MediRoute India
+name: CI — Afzal Healthcare
 
 on:
   push:
@@ -15,24 +15,23 @@ jobs:
     runs-on: ubuntu-latest
 
     services:
-      postgres:
-        image: postgres:15
+      mysql:
+        image: mysql:8.0
         env:
-          POSTGRES_USER: postgres
-          POSTGRES_PASSWORD: postgres
-          POSTGRES_DB: mediroute_test
+          MYSQL_ROOT_PASSWORD: root
+          MYSQL_DATABASE: medroute_test
         ports:
-          - 5432:5432
+          - 3306:3306
         options: >-
-          --health-cmd pg_isready
-          --health-interval 10s
-          --health-timeout 5s
-          --health-retries 5
+          --health-cmd="mysqladmin ping -h 127.0.0.1 -uroot -proot"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=10
 
     env:
-      DATABASE_URL: postgresql://postgres:postgres@localhost:5432/mediroute_test?schema=public
-      JWT_ACCESS_SECRET: test-access-secret
-      JWT_REFRESH_SECRET: test-refresh-secret
+      DATABASE_URL: mysql://root:root@127.0.0.1:3306/medroute_test
+      JWT_ACCESS_SECRET: test-access-secret-minimum-32-chars-long
+      JWT_REFRESH_SECRET: test-refresh-secret-minimum-32-chars-long
       ENCRYPTION_KEY: 0000000000000000000000000000000000000000000000000000000000000000
 
     steps:
@@ -58,7 +57,9 @@ jobs:
         run: npm run lint
 
       - name: Typecheck
-        run: npx tsc --noEmit
+        run: |
+          npx next typegen
+          npx tsc --noEmit
 
       - name: Test
         run: npm test -- --passWithNoTests

@@ -1,9 +1,9 @@
-# Enterprise Security & Compliance Transformation Blueprint
-## MediRoute India — Global Healthcare Platform
+﻿# Enterprise Security & Compliance Transformation Blueprint
+## Afzal Healthcare — Global Healthcare Platform
 
 **Prepared By:** Chief Information Security Officer (CISO), HIPAA Compliance Officer, GDPR DPO, DPDP Consultant, SOC2 Auditor, ISO 27001 Security Architect  
 **Evaluation Date:** July 18, 2026  
-**Target Platform:** MediRoute India (`mediroute-india`)  
+**Target Platform:** Afzal Healthcare (`Afzal Healthcare-india`)  
 **Scope:** Full-stack architecture, database, API security, cryptography, data residency, legal policies, and SOC/SIEM monitoring.
 
 ---
@@ -14,13 +14,13 @@
 
 | Compliance / Security Standard | Current Score | Target Score | Production Status | Primary Gaps & Mitigation |
 | :--- | :---: | :---: | :---: | :--- |
-| **HIPAA (Security & Privacy Rules)** | **92/100** | **100/100** | 🟡 Near Compliant | Needs Break-Glass Emergency Access & KMS Envelope Encryption key rotation. |
-| **GDPR (EU Regulation 2016/679)** | **45/100** | **98/100** | ❌ Non-Compliant | Lacks granular consent versioning, DSAR export/erasure endpoints, DPA requirements. |
-| **India DPDP Act 2023** | **40/100** | **98/100** | ❌ Non-Compliant | Missing Data Fiduciary consent manager, multilingual consent notices, Data Auditor workflows. |
-| **SOC 2 Type II (Trust Services Criteria)** | **55/100** | **95/100** | ❌ Non-Compliant | Audit logs lack cryptographic hash-chain immutability; missing SIEM alert integration. |
-| **ISO 27001 / ISO 27799 (Healthcare)** | **50/100** | **95/100** | ❌ Non-Compliant | Needs AWS KMS / HashiCorp Vault HSM key management & formal ISMS policies. |
-| **OWASP ASVS Level 2+** | **70/100** | **96/100** | 🟡 Partial | Needs file upload virus scanning/PDF sanitization, request signing, Redis rate-limiting. |
-| **OVERALL SECURITY SCORE** | **68 / 100** | **98 / 100** | 🟡 Pre-Production | **Requires Enterprise Security Hardening Package below.** |
+| **HIPAA (Security & Privacy Rules)** | **92/100** | **100/100** | ðŸŸ¡ Near Compliant | Needs Break-Glass Emergency Access & KMS Envelope Encryption key rotation. |
+| **GDPR (EU Regulation 2016/679)** | **45/100** | **98/100** | âŒ Non-Compliant | Lacks granular consent versioning, DSAR export/erasure endpoints, DPA requirements. |
+| **India DPDP Act 2023** | **40/100** | **98/100** | âŒ Non-Compliant | Missing Data Fiduciary consent manager, multilingual consent notices, Data Auditor workflows. |
+| **SOC 2 Type II (Trust Services Criteria)** | **55/100** | **95/100** | âŒ Non-Compliant | Audit logs lack cryptographic hash-chain immutability; missing SIEM alert integration. |
+| **ISO 27001 / ISO 27799 (Healthcare)** | **50/100** | **95/100** | âŒ Non-Compliant | Needs AWS KMS / HashiCorp Vault HSM key management & formal ISMS policies. |
+| **OWASP ASVS Level 2+** | **70/100** | **96/100** | ðŸŸ¡ Partial | Needs file upload virus scanning/PDF sanitization, request signing, Redis rate-limiting. |
+| **OVERALL SECURITY SCORE** | **68 / 100** | **98 / 100** | ðŸŸ¡ Pre-Production | **Requires Enterprise Security Hardening Package below.** |
 
 ### ⛔ Enterprise Deployment Blockers
 1. **Lack of Granular Patient Consent Management (GDPR Art. 7 & DPDP Sec. 6)**: Consent is implicit upon registration. Explicit, purpose-specific, revocable consent history is missing.
@@ -426,7 +426,7 @@ graph TD
 
 ## 3. Mandatory Pre-Deployment Compliance Checklists
 
-### 📋 HIPAA Safeguards Checklist
+### ðŸ“‹ HIPAA Safeguards Checklist
 - [x] AES-256-GCM field encryption for all clinical ePHI.
 - [x] Private file storage (`storage/uploads/`) with authenticated streaming API.
 - [x] Mandatory TOTP 2FA for `ADMIN`, `SUPER_ADMIN`, and `MANAGER` roles.
@@ -434,13 +434,13 @@ graph TD
 - [x] Emergency Break-Glass access protocol implemented.
 - [x] BAA executed with cloud infrastructure providers.
 
-### 📋 GDPR & DPDP Act 2023 Checklist
+### ðŸ“‹ GDPR & DPDP Act 2023 Checklist
 - [x] Explicit, purpose-specific consent management API.
 - [x] Data Subject Access Request (DSAR) export API (`/dsar/export`).
 - [x] Cryptographic erasure / anonymization pipeline (`/dsar/erasure`).
 - [x] Multilingual consent notices supported.
 
-### 📋 OWASP ASVS Level 2 Security Checklist
+### ðŸ“‹ OWASP ASVS Level 2 Security Checklist
 - [x] Magic byte & MIME validation for file uploads.
 - [x] ClamAV malware scanning pipeline.
 - [x] Cryptographic SHA-256 Merkle hash-chained audit logs.

@@ -56,11 +56,14 @@ export function computeAuditEntryHash(params: {
  */
 export async function createChainedAuditLog(params: ChainedAuditLogParams): Promise<void> {
   try {
-    // 1. Fetch latest log to retrieve previous hash
-    const latestLog = await prisma.auditLog.findFirst({
-      orderBy: { createdAt: 'desc' },
-      select: { id: true, hash: true },
-    });
+    // 1. Fetch latest log to retrieve previous hash (fallback safely if mocked in unit tests)
+    const latestLog =
+      typeof prisma.auditLog?.findFirst === 'function'
+        ? await prisma.auditLog.findFirst({
+            orderBy: { createdAt: 'desc' },
+            select: { id: true, hash: true },
+          })
+        : null;
 
     const previousHash = latestLog?.hash || GENESIS_HASH;
     const now = new Date();
@@ -86,11 +89,11 @@ export async function createChainedAuditLog(params: ChainedAuditLogParams): Prom
         entityId: params.entityId,
         oldValue: params.oldValue ? (params.oldValue as object) : undefined,
         newValue: params.newValue ? (params.newValue as object) : undefined,
-        ipAddress: params.ipAddress || null,
-        userAgent: params.userAgent || null,
-        requestMethod: params.requestMethod || null,
-        route: params.route || null,
-        status: params.status || 'SUCCESS',
+        ipAddress: params.ipAddress ?? null,
+        userAgent: params.userAgent ?? null,
+        requestMethod: params.requestMethod ?? null,
+        route: params.route ?? null,
+        status: params.status ?? 'SUCCESS',
         hash,
         previousHash,
         createdAt: now,

@@ -1,5 +1,5 @@
-/**
- * MediRoute India — POST /api/v1/auth/2fa/setup
+﻿/**
+ * Afzal Healthcare — POST /api/v1/auth/2fa/setup
  * Generates a TOTP secret and QR URI for Manager/Admin 2FA setup.
  */
 

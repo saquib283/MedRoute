@@ -1,497 +1,655 @@
 'use client';
 
 /**
- * MediRoute India — Patient Accommodations Portal
- * Hotel booking portal for international patients: search, city filter, amenity tags, property cards, and stay reservations.
+ * Afzal Healthcare — Recovery Stays & Partner Hotels
+ * Architectural 8px/6px cards, restrained typography, front-desk contact, and ConfirmDialog cancellation.
  */
 
-import { useState, useEffect, useCallback, useMemo } from 'react';
-import Link from 'next/link';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { Card } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { Badge } from '@/components/ui/Badge';
-import { DatePicker } from '@/components/ui/DatePicker';
-import { Select } from '@/components/ui/Select';
-import { PriceTag } from '@/components/ui/PriceTag';
 import { Modal } from '@/components/ui/Modal';
+import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
+import { Select, SelectOption } from '@/components/ui/Select';
 import { toast } from '@/components/ui/Toast';
 import {
+  getDefaultStayDates,
+  previewHotelStayCost,
+} from '@/lib/validation/booking-helpers';
+import {
   Building2,
-  Calendar,
-  MapPin,
-  PlusCircle,
   Star,
-  Search,
-  ArrowRight,
+  MapPin,
+  ShieldCheck,
+  ChevronRight,
+  Phone,
+  AlertCircle,
+  RefreshCw,
 } from 'lucide-react';
 
-enum RoomType {
-  SINGLE = 'SINGLE',
-  DOUBLE = 'DOUBLE',
-  SUITE = 'SUITE',
-  DORMITORY = 'DORMITORY',
-}
-
-interface Hostel {
+interface Hotel {
   id: string;
   name: string;
   city: string;
   address: string;
-  description?: string | null;
-  capacity: number;
-  pricingPerNight: number;
-  roomTypes: string[];
-  amenities?: string[] | null;
-  images?: string[] | null;
-  distanceToHospital?: string | null;
-  rating?: number | null;
-  contactPhone?: string | null;
-  rules?: string | null;
-  isActive: boolean;
+  distanceKm: number;
+  starRating: number;
+  nightlyRateUsd: number | string;
+  amenities: string[];
+  images: string[];
+  description: string;
+  contactPhone: string;
+  contactEmail: string;
+  nearHospital?: {
+    name: string;
+    city: string;
+  };
 }
 
 interface Booking {
   id: string;
-  caseId: string;
-  hostelId: string;
-  checkIn: string;
-  checkOut: string;
-  roomType: RoomType;
-  status: 'PENDING' | 'CONFIRMED' | 'CHECKED_IN' | 'CHECKED_OUT' | 'CANCELLED';
-  hostel: Hostel;
+  bookingNo: string;
+  checkInDate: string;
+  checkOutDate: string;
+  roomType: string;
+  numNights: number;
+  totalAmountUsd: number | string;
+  status: string;
+  specialRequests?: string;
+  hotel: {
+    name: string;
+    city: string;
+    address: string;
+  };
+}
+
+const DEFAULT_IMAGE_URL =
+  'https://images.unsplash.com/photo-1566073771259-6a8506099945?auto=format&fit=crop&w=1200&q=80';
+
+const ROOM_TYPE_OPTIONS: SelectOption[] = [
+  {
+    value: 'Deluxe Medical Suite with Recliner',
+    label: 'Deluxe Medical Suite with Recliner',
+    description: 'Step-free bath, motorized recliner & nurse call bell',
+  },
+  {
+    value: 'Executive Attendant Family Suite',
+    label: 'Executive Attendant Family Suite',
+    description: 'Separate companion bedroom & kitchenette',
+  },
+  {
+    value: 'Standard Recovery Room',
+    label: 'Standard Recovery Room',
+    description: 'Quiet floor with elevator access near hospital',
+  },
+];
+
+const BOOKING_STATUS_LABELS: Record<string, string> = {
+  CONFIRMED: 'Confirmed',
+  PENDING: 'Pending Confirmation',
+  CHECKED_IN: 'Checked In',
+  COMPLETED: 'Completed',
+  CANCELLED: 'Cancelled',
+};
+
+function getSafeImageUrl(url: string | undefined): string | null {
+  if (!url) return null;
+  const trimmed = url.trim();
+  if (/^https?:\/\//i.test(trimmed) || trimmed.startsWith('/')) {
+    return trimmed.replace(/["'()\\]/g, '');
+  }
+  return null;
 }
 
 export default function PatientAccommodationsPage() {
-  const [bookings, setBookings] = useState<Booking[]>([]);
-  const [hostels, setHostels] = useState<Hostel[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [hotels, setHotels] = useState<Hotel[]>([]);
+  const [myBookings, setMyBookings] = useState<Booking[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [loadError, setLoadError] = useState<string | null>(null);
+  const [selectedHotel, setSelectedHotel] = useState<Hotel | null>(null);
+  const [isBookingModalOpen, setIsBookingModalOpen] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
-  // Search & Filter state
-  const [searchQuery, setSearchQuery] = useState('');
-  const [cityFilter, setCityFilter] = useState('ALL');
-  const [amenityFilter, setAmenityFilter] = useState('ALL');
+  const [cancelTargetBooking, setCancelTargetBooking] = useState<Booking | null>(null);
+  const [isCancelling, setIsCancelling] = useState(false);
 
-  // Modal State
-  const [isModalOpen, setIsModalOpen] = useState(false);
-  const [selectedHostelId, setSelectedHostelId] = useState('');
-  const [selectedCaseId, setSelectedCaseId] = useState('');
-  const [selectedRoomType, setSelectedRoomType] = useState<RoomType>(RoomType.SINGLE);
-  const [checkInDate, setCheckInDate] = useState('');
-  const [checkOutDate, setCheckOutDate] = useState('');
-  const [submitting, setSubmitting] = useState(false);
+  const [defaultDates] = useState(() => getDefaultStayDates());
+  const [checkInDate, setCheckInDate] = useState(defaultDates.checkInDate);
+  const [checkOutDate, setCheckOutDate] = useState(defaultDates.checkOutDate);
+  const [roomType, setRoomType] = useState('Deluxe Medical Suite with Recliner');
+  const [numGuests, setNumGuests] = useState('2');
+  const [specialRequests, setSpecialRequests] = useState('');
 
-  const fetchAccommodations = useCallback(async () => {
-    await Promise.resolve();
+  const fetchData = useCallback(async () => {
+    setIsLoading(true);
+    setLoadError(null);
     try {
-      const res = await fetch('/api/v1/patient/accommodations');
-      const data = await res.json();
+      const [hotelsRes, bookingsRes] = await Promise.all([
+        fetch('/api/v1/accommodations'),
+        fetch('/api/v1/accommodations/bookings'),
+      ]);
 
-      if (data.success) {
-        setBookings(data.data.bookings || []);
-        setHostels(data.data.hostels || []);
-
-        if (data.data.cases?.length > 0) {
-          setSelectedCaseId(data.data.cases[0].id);
-        }
-      } else {
-        toast.error(data.error?.message || 'Failed to load hotel options');
+      if (!hotelsRes.ok && !bookingsRes.ok) {
+        throw new Error('Unable to load accommodations right now.');
       }
+
+      const [hotelsData, bookingsData] = await Promise.all([
+        hotelsRes.json(),
+        bookingsRes.json(),
+      ]);
+
+      if (hotelsData.success) setHotels(hotelsData.data.hotels || []);
+      if (bookingsData.success) setMyBookings(bookingsData.data.bookings || []);
     } catch (err) {
-      console.error('Failed to load patient accommodations:', err);
-      toast.error('Network error loading hotels');
+      console.error('Failed to load accommodations marketplace', err);
+      setLoadError(
+        'Could not load recovery stays and reservations. Please check your connection and try again.'
+      );
+      toast.apiError(err, 'Failed to load hotels', 'Marketplace Error');
     } finally {
-      setLoading(false);
+      setIsLoading(false);
     }
   }, []);
 
   useEffect(() => {
-    queueMicrotask(() => {
-      fetchAccommodations();
+    const timer = setTimeout(() => {
+      void fetchData();
+    }, 0);
+    return () => clearTimeout(timer);
+  }, [fetchData]);
+
+  const hotelContactByName = useMemo(() => {
+    const map = new Map<string, string>();
+    hotels.forEach((h) => {
+      if (h.name && h.contactPhone) {
+        map.set(h.name, h.contactPhone);
+      }
     });
-  }, [fetchAccommodations]);
+    return map;
+  }, [hotels]);
 
-  const uniqueCities = useMemo(() => {
-    const set = new Set<string>();
-    hostels.forEach((h) => set.add(h.city));
-    return Array.from(set);
-  }, [hostels]);
-
-  const filteredHostels = useMemo(() => {
-    return hostels.filter((h) => {
-      const matchesSearch =
-        h.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        h.city.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        h.address.toLowerCase().includes(searchQuery.toLowerCase());
-
-      const matchesCity = cityFilter === 'ALL' || h.city.toLowerCase() === cityFilter.toLowerCase();
-
-      const matchesAmenity =
-        amenityFilter === 'ALL' ||
-        (Array.isArray(h.amenities) && h.amenities.some((a) => a.toLowerCase().includes(amenityFilter.toLowerCase())));
-
-      return matchesSearch && matchesCity && matchesAmenity;
-    });
-  }, [hostels, searchQuery, cityFilter, amenityFilter]);
-
-  const handleOpenBookModal = (hostelId?: string) => {
-    if (hostelId) {
-      setSelectedHostelId(hostelId);
-    } else if (hostels.length > 0) {
-      setSelectedHostelId(hostels[0].id);
-    }
-    setIsModalOpen(true);
+  const handleOpenBookingModal = (hotel: Hotel) => {
+    setSelectedHotel(hotel);
+    setIsBookingModalOpen(true);
   };
 
-  const handleBookSubmit = async (e: React.FormEvent) => {
+  const stayPreview = selectedHotel
+    ? previewHotelStayCost(checkInDate, checkOutDate, Number(selectedHotel.nightlyRateUsd))
+    : { valid: false, numNights: 0, totalUsd: 0 };
+
+  const handleBookHotel = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!selectedHotel || !stayPreview.valid) return;
 
-    if (!selectedCaseId) {
-      toast.error('You must have an active care case to book accommodation.');
-      return;
-    }
-
-    if (!selectedHostelId || !checkInDate || !checkOutDate) {
-      toast.error('Please select check-in date, check-out date, and hotel property.');
-      return;
-    }
-
-    if (new Date(checkOutDate) <= new Date(checkInDate)) {
-      toast.error('Check-out date must be after check-in date.');
-      return;
-    }
-
-    setSubmitting(true);
+    setIsSubmitting(true);
     try {
-      const res = await fetch('/api/v1/patient/accommodations', {
+      const res = await fetch('/api/v1/accommodations/bookings', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          caseId: selectedCaseId,
-          hostelId: selectedHostelId,
-          checkIn: checkInDate,
-          checkOut: checkOutDate,
-          roomType: selectedRoomType,
+          hotelId: selectedHotel.id,
+          checkInDate,
+          checkOutDate,
+          roomType,
+          numGuests,
+          ...(specialRequests.trim() ? { specialRequests: specialRequests.trim() } : {}),
         }),
       });
 
       const data = await res.json();
-
       if (data.success) {
-        toast.success('Hotel stay request submitted! Your case coordinator will confirm your room.');
-        setIsModalOpen(false);
-        setCheckInDate('');
-        setCheckOutDate('');
-        fetchAccommodations();
+        toast.success(
+          `Voucher ${data.data.booking.bookingNo} confirmed at ${selectedHotel.name}.`,
+          'Recovery Stay Reserved'
+        );
+        setIsBookingModalOpen(false);
+        setSpecialRequests('');
+        void fetchData();
       } else {
-        toast.error(data.error?.message || 'Failed to submit stay request');
+        toast.apiError(data, 'Failed to reserve hotel stay', 'Booking Error');
       }
     } catch (err) {
-      console.error('Submit booking failed:', err);
-      toast.error('Failed to register stay request');
+      toast.apiError(err, 'Network error completing booking', 'Connection Error');
     } finally {
-      setSubmitting(false);
+      setIsSubmitting(false);
     }
   };
 
-  const calculateNights = (inDate: string, outDate: string) => {
-    if (!inDate || !outDate) return 0;
-    const diff = new Date(outDate).getTime() - new Date(inDate).getTime();
-    const nights = Math.ceil(diff / (1000 * 3600 * 24));
-    return nights > 0 ? nights : 0;
-  };
+  const handleConfirmCancelBooking = async () => {
+    if (!cancelTargetBooking) return;
+    setIsCancelling(true);
+    try {
+      const res = await fetch('/api/v1/accommodations/bookings', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ bookingId: cancelTargetBooking.id, status: 'CANCELLED' }),
+      });
 
-  const getStatusBadgeVariant = (status: string) => {
-    switch (status) {
-      case 'CONFIRMED':
-        return 'success';
-      case 'CHECKED_IN':
-        return 'primary';
-      case 'CHECKED_OUT':
-        return 'default';
-      case 'CANCELLED':
-        return 'danger';
-      case 'PENDING':
-      default:
-        return 'warning';
+      const data = await res.json();
+      if (data.success) {
+        toast.success('Your hotel reservation has been cancelled.', 'Reservation Cancelled');
+        setCancelTargetBooking(null);
+        void fetchData();
+      } else {
+        toast.apiError(data, 'Failed to cancel reservation', 'Cancellation Error');
+      }
+    } catch (err) {
+      toast.apiError(err, 'Network error cancelling reservation', 'Connection Error');
+    } finally {
+      setIsCancelling(false);
     }
   };
 
-  if (loading) {
+  if (isLoading) {
     return (
-      <div className="flex flex-col items-center justify-center min-h-[400px] gap-3">
-        <div className="w-10 h-10 border-4 border-primary-600 border-t-transparent rounded-full animate-spin" />
-        <p className="text-sm font-medium text-surface-700">Loading verified medical hotels...</p>
+      <div className="space-y-6">
+        <div className="h-14 w-80 rounded-lg bg-surface-200/70 animate-pulse" />
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
+          {[0, 1, 2].map((idx) => (
+            <div
+              key={idx}
+              className="h-80 rounded-lg bg-white border border-surface-200 animate-pulse"
+            />
+          ))}
+        </div>
       </div>
     );
   }
 
   return (
-    <div className="space-y-6 animate-fade-in text-xs">
-      {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+    <div className="space-y-6 pb-10 animate-fade-in">
+      {/* Flat Aligned Header */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-5 border-b border-surface-200">
         <div>
-          <h1 className="text-2xl font-bold text-surface-900 tracking-tight">Recovery Accommodations</h1>
-          <p className="text-sm text-surface-500 mt-0.5">
-            Hospital-adjacent guest houses and recovery stays tailored for patient and attendant lodging
+          <h1 className="text-xl sm:text-2xl font-semibold text-surface-900 tracking-tight">
+            Recovery Stays &amp; Partner Hotels
+          </h1>
+          <p className="text-xs sm:text-sm text-surface-500 mt-1 max-w-2xl">
+            Step-free recovery suites and serviced apartments inspected for post-procedure comfort near your treating hospital.
           </p>
         </div>
-        <Button size="sm" onClick={() => handleOpenBookModal()}>
-          <PlusCircle className="w-4 h-4" /> Request Stay
-        </Button>
+
+        {myBookings.length > 0 && (
+          <div className="inline-flex items-center gap-2 bg-white px-3.5 py-2 rounded-md border border-surface-200 self-start sm:self-auto shadow-2xs">
+            <ShieldCheck className="w-4 h-4 text-primary-600 shrink-0" aria-hidden="true" />
+            <span className="text-xs font-medium text-surface-800 tabular-nums">
+              {myBookings.length} Active Voucher{myBookings.length === 1 ? '' : 's'}
+            </span>
+          </div>
+        )}
       </div>
 
-      {/* Filter & Search Bar */}
-      <Card className="p-4 space-y-3">
-        <div className="flex flex-col md:flex-row gap-3">
-          <div className="relative flex-1">
-            <Search className="w-4 h-4 text-surface-400 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" />
-            <input
-              type="text"
-              placeholder="Search by property name, city, or nearby hospital..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full pl-9 pr-4 py-2 bg-white border border-surface-300 rounded-lg text-xs text-surface-900 focus:border-primary-600"
-            />
+      {/* Error Recovery Banner */}
+      {loadError && (
+        <div
+          role="alert"
+          className="p-4 rounded-lg bg-danger-50 border border-danger-200 text-danger-900 flex flex-col sm:flex-row sm:items-center justify-between gap-4"
+        >
+          <div className="flex items-start gap-3">
+            <AlertCircle className="w-4 h-4 text-danger-600 shrink-0 mt-0.5" aria-hidden="true" />
+            <div>
+              <h2 className="text-sm font-semibold">Unable to load recovery stays</h2>
+              <p className="text-xs text-danger-800 mt-0.5">{loadError}</p>
+            </div>
           </div>
-
-          <div className="flex flex-wrap gap-2">
-            <select
-              value={cityFilter}
-              onChange={(e) => setCityFilter(e.target.value)}
-              className="px-3 py-2 bg-white border border-surface-300 rounded-lg text-xs font-medium text-surface-800 focus:border-primary-600"
-            >
-              <option value="ALL">All Cities</option>
-              {uniqueCities.map((city) => (
-                <option key={city} value={city}>
-                  {city}
-                </option>
-              ))}
-            </select>
-
-            <select
-              value={amenityFilter}
-              onChange={(e) => setAmenityFilter(e.target.value)}
-              className="px-3 py-2 bg-white border border-surface-300 rounded-lg text-xs font-medium text-surface-800 focus:border-primary-600"
-            >
-              <option value="ALL">All Features</option>
-              <option value="Nursing">24/7 Nursing</option>
-              <option value="Wheelchair">Wheelchair Access</option>
-              <option value="Shuttle">Hospital Shuttle</option>
-              <option value="Oxygen">Oxygen Support</option>
-            </select>
-          </div>
+          <Button type="button" variant="secondary" size="sm" onClick={() => void fetchData()}>
+            <RefreshCw className="w-3.5 h-3.5" aria-hidden="true" />
+            <span>Retry</span>
+          </Button>
         </div>
-      </Card>
-
-      {/* My Accommodation Bookings */}
-      {bookings.length > 0 && (
-        <Card className="space-y-4">
-          <div className="border-b border-surface-200 pb-3 flex items-center justify-between">
-            <h2 className="text-base font-semibold text-surface-900 flex items-center gap-2">
-              <Calendar className="w-4 h-4 text-primary-700" /> Reserved Stays
-            </h2>
-            <Badge variant="primary" dot>Bookings</Badge>
-          </div>
-
-          <div className="overflow-x-auto">
-            <table className="w-full text-left border-collapse text-sm">
-              <thead>
-                <tr className="bg-surface-50 border-b border-surface-200">
-                  <th className="px-4 py-2.5 text-xs font-semibold text-surface-600 uppercase">Property</th>
-                  <th className="px-4 py-2.5 text-xs font-semibold text-surface-600 uppercase">City</th>
-                  <th className="px-4 py-2.5 text-xs font-semibold text-surface-600 uppercase">Room</th>
-                  <th className="px-4 py-2.5 text-xs font-semibold text-surface-600 uppercase">Dates</th>
-                  <th className="px-4 py-2.5 text-xs font-semibold text-surface-600 uppercase">Status</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-surface-200">
-                {bookings.map((booking) => {
-                  const nights = calculateNights(booking.checkIn, booking.checkOut);
-                  return (
-                    <tr key={booking.id} className="hover:bg-surface-50">
-                      <td className="px-4 py-3">
-                        <Link href={`/patient/accommodations/${booking.hostelId}`} className="font-semibold text-primary-700 hover:underline">
-                          {booking.hostel.name}
-                        </Link>
-                      </td>
-                      <td className="px-4 py-3 text-xs text-surface-600">{booking.hostel.city}</td>
-                      <td className="px-4 py-3 text-xs font-medium text-surface-800">{booking.roomType}</td>
-                      <td className="px-4 py-3 text-xs text-surface-600">
-                        {new Date(booking.checkIn).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })} –{' '}
-                        {new Date(booking.checkOut).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })} ({nights} nights)
-                      </td>
-                      <td className="px-4 py-3">
-                        <Badge variant={getStatusBadgeVariant(booking.status)} dot>
-                          {booking.status === 'PENDING' ? 'Pending Review' : booking.status}
-                        </Badge>
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-          </div>
-        </Card>
       )}
 
-      {/* Property Directory */}
-      <div className="space-y-4">
-        <div className="flex justify-between items-center">
-          <div>
-            <h2 className="text-base font-semibold text-surface-900">Verified Properties</h2>
-            <p className="text-xs text-surface-500">Accommodations near partner hospitals with clinical support features</p>
-          </div>
-          <span className="text-xs font-semibold text-surface-500">{filteredHostels.length} available</span>
-        </div>
+      {/* Reserved Stay Vouchers */}
+      {myBookings.length > 0 && (
+        <section aria-labelledby="reserved-vouchers-heading" className="space-y-3">
+          <h2 id="reserved-vouchers-heading" className="text-sm font-semibold text-surface-900">
+            Your Stay Vouchers
+          </h2>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
-          {filteredHostels.map((hostel) => {
-            const firstImg = Array.isArray(hostel.images) && hostel.images.length > 0 ? hostel.images[0] : null;
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {myBookings.map((b) => {
+              const canCancel = b.status === 'PENDING' || b.status === 'CONFIRMED';
+              const isCancelled = b.status === 'CANCELLED';
+              const frontDeskPhone = b.hotel?.name ? hotelContactByName.get(b.hotel.name) : undefined;
 
-            const amenitiesList = Array.isArray(hostel.amenities) ? hostel.amenities : [];
-
-            return (
-              <Card
-                key={hostel.id}
-                padding="none"
-                className="overflow-hidden flex flex-col justify-between"
-              >
-                <div>
-                  <div className="h-44 bg-surface-100 relative overflow-hidden border-b border-surface-200 flex items-center justify-center">
-                    {firstImg ? (
-                      <>
-                        {/* eslint-disable-next-line @next/next/no-img-element */}
-                        <img src={firstImg} alt={hostel.name} className="w-full h-full object-cover" />
-                      </>
-                    ) : (
-                      <Building2 className="w-10 h-10 text-surface-300" />
-                    )}
-                    {hostel.rating != null && (
-                      <div className="absolute top-3 right-3 bg-surface-950/80 text-white px-2 py-0.5 rounded-md text-[11px] font-semibold flex items-center gap-1">
-                        <Star className="w-3 h-3 text-amber-400 fill-amber-400" /> {hostel.rating}
-                      </div>
-                    )}
-                    <div className="absolute bottom-3 left-3 bg-white/95 text-surface-900 px-2.5 py-0.5 rounded-md text-[11px] font-semibold border border-surface-200">
-                      {hostel.city}
-                    </div>
-                  </div>
-
-                  <div className="p-5 space-y-2.5">
-                    <div>
-                      <h3 className="font-semibold text-surface-900 text-base line-clamp-1">{hostel.name}</h3>
-                      <p className="text-xs font-medium text-primary-700 flex items-center gap-1 mt-0.5">
-                        <MapPin className="w-3.5 h-3.5 shrink-0" /> {hostel.distanceToHospital || hostel.city}
-                      </p>
-                    </div>
-
-                    {hostel.description && (
-                      <p className="text-xs text-surface-600 line-clamp-2 leading-relaxed">
-                        {hostel.description}
-                      </p>
-                    )}
-
-                    {amenitiesList.length > 0 && (
-                      <div className="flex flex-wrap gap-1 pt-1">
-                        {amenitiesList.slice(0, 3).map((amenity) => (
-                          <span key={amenity} className="px-2 py-0.5 bg-surface-100 text-surface-700 rounded text-[11px] font-medium border border-surface-200">
-                            {amenity}
-                          </span>
-                        ))}
-                        {amenitiesList.length > 3 && (
-                          <span className="px-2 py-0.5 bg-surface-100 text-surface-500 rounded text-[11px] font-medium">
-                            +{amenitiesList.length - 3} more
-                          </span>
-                        )}
-                      </div>
-                    )}
-                  </div>
-                </div>
-
-                <div className="px-5 py-4 border-t border-surface-200 bg-surface-50 flex items-center justify-between">
-                  <div>
-                    <span className="text-[11px] text-surface-500 block">Per night</span>
-                    <span className="text-base font-bold text-surface-900">
-                      <PriceTag amountInINR={hostel.pricingPerNight} />
+              return (
+                <Card
+                  key={b.id}
+                  className={`p-5 space-y-4 ${isCancelled ? 'bg-surface-50/70 opacity-80' : 'bg-white'}`}
+                >
+                  <div className="flex items-center justify-between gap-2 flex-wrap">
+                    <span className="font-mono px-2 py-0.5 bg-surface-100 text-surface-700 border border-surface-200 rounded text-xs font-medium tabular-nums">
+                      {b.bookingNo}
                     </span>
+                    <Badge variant={isCancelled ? 'danger' : 'success'} dot>
+                      {BOOKING_STATUS_LABELS[b.status] || b.status}
+                    </Badge>
                   </div>
 
-                  <Link href={`/patient/accommodations/${hostel.id}`}>
-                    <Button size="sm" variant="secondary">
-                      View Details <ArrowRight className="w-3.5 h-3.5" />
-                    </Button>
-                  </Link>
-                </div>
-              </Card>
-            );
-          })}
-        </div>
-      </div>
+                  <div className="space-y-1">
+                    <h3 className="text-base font-semibold text-surface-900">{b.hotel?.name}</h3>
+                    <p className="text-xs text-surface-500 flex items-center gap-1.5">
+                      <MapPin className="w-3.5 h-3.5 text-surface-400 shrink-0" aria-hidden="true" />
+                      <span>{b.hotel?.address}</span>
+                    </p>
+                    <p className="text-xs text-surface-600">{b.roomType}</p>
+                  </div>
 
-      {/* Book Lodging Modal */}
-      <Modal
-        open={isModalOpen}
-        onClose={() => setIsModalOpen(false)}
-        title="Request Accommodation"
-        subtitle="Select property, room type, and dates"
-        maxWidth="lg"
-      >
-        <form onSubmit={handleBookSubmit} className="space-y-4">
-          <Select
-            label="Property"
-            value={selectedHostelId}
-            onChange={setSelectedHostelId}
-            options={hostels.map((h) => ({
-              value: h.id,
-              label: `${h.name} (${h.city})`,
-            }))}
-            required
-          />
+                  <div className="grid grid-cols-2 gap-3 text-xs pt-3 border-t border-surface-100">
+                    <div>
+                      <span className="text-surface-500 block">Check-In &amp; Check-Out</span>
+                      <span className="font-medium text-surface-900 tabular-nums mt-0.5 block">
+                        {new Date(b.checkInDate).toLocaleDateString('en-US', {
+                          month: 'short',
+                          day: 'numeric',
+                        })}{' '}
+                        –{' '}
+                        {new Date(b.checkOutDate).toLocaleDateString('en-US', {
+                          month: 'short',
+                          day: 'numeric',
+                          year: 'numeric',
+                        })}
+                      </span>
+                    </div>
+                    <div>
+                      <span className="text-surface-500 block">
+                        Total ({b.numNights} {b.numNights === 1 ? 'night' : 'nights'})
+                      </span>
+                      <span className="font-semibold text-surface-900 tabular-nums mt-0.5 block">
+                        ${Number(b.totalAmountUsd).toFixed(2)} USD
+                      </span>
+                    </div>
+                  </div>
 
-          <Select
-            label="Room Type"
-            value={selectedRoomType}
-            onChange={(val) => setSelectedRoomType(val as RoomType)}
-            options={[
-              { value: RoomType.SINGLE, label: 'Single Private Room' },
-              { value: RoomType.DOUBLE, label: 'Double Family Room' },
-              { value: RoomType.SUITE, label: 'Executive Suite' },
-              { value: RoomType.DORMITORY, label: 'Shared Recovery Ward' },
-            ]}
-            required
-          />
+                  {(frontDeskPhone || canCancel) && (
+                    <div className="pt-3 border-t border-surface-100 flex items-center justify-between gap-3 flex-wrap">
+                      {frontDeskPhone ? (
+                        <a
+                          href={`tel:${frontDeskPhone}`}
+                          className="inline-flex items-center gap-1.5 min-h-11 px-3 rounded-md bg-surface-50 hover:bg-surface-100 border border-surface-200 text-xs font-medium text-surface-700 transition-colors tabular-nums"
+                        >
+                          <Phone className="w-3.5 h-3.5 text-surface-500" aria-hidden="true" />
+                          <span>Front Desk: {frontDeskPhone}</span>
+                        </a>
+                      ) : (
+                        <span />
+                      )}
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-            <DatePicker
-              label="Check-In Date"
-              value={checkInDate}
-              onChange={setCheckInDate}
-              placeholder="Select check-in"
-            />
-            <DatePicker
-              label="Check-Out Date"
-              value={checkOutDate}
-              onChange={setCheckOutDate}
-              placeholder="Select check-out"
-            />
+                      {canCancel && (
+                        <Button
+                          type="button"
+                          variant="secondary"
+                          size="sm"
+                          onClick={() => setCancelTargetBooking(b)}
+                          className="text-danger-700 hover:bg-danger-50 border-danger-200"
+                        >
+                          Cancel Reservation
+                        </Button>
+                      )}
+                    </div>
+                  )}
+                </Card>
+              );
+            })}
           </div>
+        </section>
+      )}
 
-          {checkInDate && checkOutDate && new Date(checkOutDate) > new Date(checkInDate) && (
-            <div className="p-3 bg-primary-50 border border-primary-200 rounded-lg text-xs flex justify-between items-center text-primary-900 font-semibold">
-              <span>Length of Stay:</span>
-              <span className="font-bold text-sm">{calculateNights(checkInDate, checkOutDate)} nights</span>
+      {/* Partner Hotels Grid */}
+      {!loadError && (
+        <section aria-labelledby="partner-hotels-heading" className="space-y-3.5">
+          <h2 id="partner-hotels-heading" className="text-sm font-semibold text-surface-900">
+            Nearby Partner Hotels ({hotels.length})
+          </h2>
+
+          {hotels.length === 0 ? (
+            <Card className="p-10 text-center space-y-2">
+              <h3 className="text-sm font-semibold text-surface-900">No partner hotels listed yet</h3>
+              <p className="text-xs text-surface-500 max-w-sm mx-auto">
+                Message your care coordinator for curated hospital guest-house recommendations.
+              </p>
+            </Card>
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+              {hotels.map((hotel) => {
+                const imageList = Array.isArray(hotel.images) ? hotel.images : [];
+                const amenityList = Array.isArray(hotel.amenities) ? hotel.amenities : [];
+                const safeImg = getSafeImageUrl(imageList[0] || DEFAULT_IMAGE_URL);
+
+                return (
+                  <Card
+                    key={hotel.id}
+                    padding="sm"
+                    hover
+                    className="p-0 overflow-hidden flex flex-col justify-between"
+                  >
+                    <div>
+                      <div
+                        role="img"
+                        aria-label={hotel.name}
+                        className="relative h-44 w-full bg-surface-100 bg-cover bg-center overflow-hidden border-b border-surface-200"
+                        style={safeImg ? { backgroundImage: `url("${safeImg}")` } : undefined}
+                      >
+                        <div className="absolute top-2.5 right-2.5 bg-surface-900/85 text-white px-2 py-0.5 rounded text-xs font-medium tabular-nums flex items-center gap-1">
+                          <Star className="w-3 h-3 fill-warning-400 text-warning-400" aria-hidden="true" />
+                          <span>{hotel.starRating}.0</span>
+                        </div>
+                        <div className="absolute bottom-2.5 left-2.5 bg-white/95 text-surface-800 px-2 py-0.5 rounded text-xs font-medium tabular-nums flex items-center gap-1 border border-surface-200">
+                          <MapPin className="w-3 h-3 text-primary-600" aria-hidden="true" />
+                          <span>{hotel.distanceKm} km from hospital</span>
+                        </div>
+                      </div>
+
+                      <div className="p-4 space-y-2.5">
+                        <div>
+                          <h3 className="text-sm font-semibold text-surface-900 leading-snug">
+                            {hotel.name}
+                          </h3>
+                          <p className="text-xs text-surface-500 mt-0.5">{hotel.address}</p>
+                        </div>
+
+                        <p className="text-xs text-surface-600 leading-relaxed line-clamp-2">
+                          {hotel.description}
+                        </p>
+
+                        {hotel.contactPhone && (
+                          <a
+                            href={`tel:${hotel.contactPhone}`}
+                            className="inline-flex items-center gap-1.5 text-xs font-medium text-primary-700 hover:text-primary-800 min-h-11 tabular-nums"
+                          >
+                            <Phone className="w-3.5 h-3.5" aria-hidden="true" />
+                            <span>{hotel.contactPhone}</span>
+                          </a>
+                        )}
+
+                        <div className="flex items-center gap-1.5 flex-wrap pt-0.5">
+                          {amenityList.map((amenity, idx) => (
+                            <span
+                              key={idx}
+                              className="px-2 py-0.5 bg-surface-100 text-surface-700 rounded text-[11px] font-normal border border-surface-200"
+                            >
+                              {amenity}
+                            </span>
+                          ))}
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="px-4 py-3.5 border-t border-surface-100 flex items-center justify-between gap-3 bg-surface-50/40">
+                      <div>
+                        <span className="text-[11px] text-surface-500 block">Nightly rate</span>
+                        <span className="text-base font-semibold text-surface-900 tabular-nums">
+                          ${Number(hotel.nightlyRateUsd)}{' '}
+                          <span className="text-xs text-surface-500 font-normal">/ night</span>
+                        </span>
+                      </div>
+
+                      <Button type="button" size="sm" onClick={() => handleOpenBookingModal(hotel)}>
+                        <span>Reserve Stay</span>
+                        <ChevronRight className="w-3.5 h-3.5" aria-hidden="true" />
+                      </Button>
+                    </div>
+                  </Card>
+                );
+              })}
             </div>
           )}
+        </section>
+      )}
 
-          <div className="pt-3 border-t border-surface-200 flex gap-3">
-            <Button type="button" variant="secondary" className="flex-1" onClick={() => setIsModalOpen(false)}>
-              Cancel
-            </Button>
-            <Button type="submit" className="flex-1" isLoading={submitting}>
-              Submit Request
-            </Button>
-          </div>
-        </form>
+      {/* Reserve Hotel Stay Modal */}
+      <Modal
+        open={isBookingModalOpen && Boolean(selectedHotel)}
+        onClose={() => setIsBookingModalOpen(false)}
+        preventClose={isSubmitting}
+        title={selectedHotel ? `Reserve ${selectedHotel.name}` : 'Reserve Recovery Stay'}
+        subtitle={
+          selectedHotel
+            ? `${selectedHotel.address} • ${selectedHotel.distanceKm} km from hospital`
+            : undefined
+        }
+        icon={<Building2 className="w-4 h-4" />}
+        maxWidthClass="max-w-xl"
+      >
+        {selectedHotel && (
+          <form onSubmit={handleBookHotel} className="space-y-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div className="space-y-1.5">
+                <label htmlFor="hotel-checkin-date" className="text-xs font-medium text-surface-700 block">
+                  Check-In Date
+                </label>
+                <input
+                  id="hotel-checkin-date"
+                  type="date"
+                  value={checkInDate}
+                  onChange={(e) => setCheckInDate(e.target.value)}
+                  className="w-full min-h-11 px-3 bg-white border border-surface-300 rounded-md text-sm text-surface-900 tabular-nums focus:outline-none focus:border-primary-600"
+                  required
+                />
+              </div>
+
+              <div className="space-y-1.5">
+                <label htmlFor="hotel-checkout-date" className="text-xs font-medium text-surface-700 block">
+                  Check-Out Date
+                </label>
+                <input
+                  id="hotel-checkout-date"
+                  type="date"
+                  value={checkOutDate}
+                  onChange={(e) => setCheckOutDate(e.target.value)}
+                  className="w-full min-h-11 px-3 bg-white border border-surface-300 rounded-md text-sm text-surface-900 tabular-nums focus:outline-none focus:border-primary-600"
+                  required
+                />
+              </div>
+            </div>
+
+            {!stayPreview.valid && (
+              <p
+                role="alert"
+                className="text-xs font-medium text-danger-800 bg-danger-50 border border-danger-200 rounded-md px-3 py-2"
+              >
+                {stayPreview.error || 'Check-out date must be after check-in date.'}
+              </p>
+            )}
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <Select
+                label="Suite Type"
+                options={ROOM_TYPE_OPTIONS}
+                value={roomType}
+                onChange={setRoomType}
+                required
+              />
+
+              <div className="space-y-1.5">
+                <label htmlFor="hotel-num-guests" className="text-xs font-medium text-surface-700 block">
+                  Guests (Patient + Companions)
+                </label>
+                <input
+                  id="hotel-num-guests"
+                  type="number"
+                  min="1"
+                  max="10"
+                  value={numGuests}
+                  onChange={(e) => setNumGuests(e.target.value)}
+                  className="w-full min-h-[44px] px-3 bg-white border border-surface-300 rounded-md text-sm text-surface-900 tabular-nums focus:outline-none focus:border-primary-600"
+                  required
+                />
+              </div>
+            </div>
+
+            <div className="space-y-1.5">
+              <label
+                htmlFor="hotel-special-requests"
+                className="text-xs font-medium text-surface-700 block"
+              >
+                Accessibility, Mobility, or Dietary Notes (Optional)
+              </label>
+              <textarea
+                id="hotel-special-requests"
+                rows={3}
+                value={specialRequests}
+                onChange={(e) => setSpecialRequests(e.target.value)}
+                placeholder="Optional: e.g. ground-floor room, wheelchair ramp, low-sodium or halal meals..."
+                className="w-full p-3 bg-white border border-surface-300 rounded-md text-sm text-surface-900 placeholder:text-surface-400 focus:outline-none focus:border-primary-600"
+              />
+            </div>
+
+            <div className="px-4 py-3 bg-surface-50 rounded-md border border-surface-200 flex items-center justify-between gap-3 flex-wrap">
+              <div>
+                <span className="text-xs text-surface-500 block tabular-nums">
+                  Estimated stay ({stayPreview.numNights}{' '}
+                  {stayPreview.numNights === 1 ? 'night' : 'nights'})
+                </span>
+                <span className="text-lg font-semibold text-surface-900 tabular-nums">
+                  ${stayPreview.totalUsd.toFixed(2)} USD
+                </span>
+              </div>
+
+              <span className="text-xs font-medium text-surface-700 bg-white px-2.5 py-1 rounded border border-surface-200">
+                Pay at check-in • Instant voucher
+              </span>
+            </div>
+
+            <div className="flex items-center justify-end gap-2.5 pt-3 border-t border-surface-100">
+              <Button
+                type="button"
+                variant="secondary"
+                size="sm"
+                onClick={() => setIsBookingModalOpen(false)}
+                disabled={isSubmitting}
+              >
+                Cancel
+              </Button>
+              <Button
+                type="submit"
+                size="sm"
+                isLoading={isSubmitting}
+                disabled={isSubmitting || !stayPreview.valid}
+              >
+                {isSubmitting ? 'Reserving…' : 'Confirm Reservation'}
+              </Button>
+            </div>
+          </form>
+        )}
       </Modal>
+
+      <ConfirmDialog
+        open={Boolean(cancelTargetBooking)}
+        title="Cancel hotel reservation?"
+        message={
+          cancelTargetBooking
+            ? `This will cancel voucher ${cancelTargetBooking.bookingNo} at ${cancelTargetBooking.hotel?.name}. You can book another partner stay at any time.`
+            : ''
+        }
+        cancelLabel="Keep Reservation"
+        confirmLabel="Cancel Reservation"
+        variant="danger"
+        loading={isCancelling}
+        onCancel={() => setCancelTargetBooking(null)}
+        onConfirm={() => void handleConfirmCancelBooking()}
+      />
     </div>
   );
 }

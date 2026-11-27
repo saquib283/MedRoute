@@ -1,9 +1,17 @@
 /**
- * MediRoute India — Zod Validation Schemas
+ * Afzal Healthcare — Zod Validation Schemas
  * Input validation for all API endpoints per PRD Section 6.4.
  */
 
 import { z } from 'zod';
+import {
+  APPOINTMENT_MODES,
+  CASE_STATUS_ORDER,
+  DOCUMENT_CATEGORIES,
+  FOLLOW_UP_MILESTONES,
+  SSR_ASSISTANCE_CODES,
+} from '@/lib/constants';
+import { isSafeHttpUrl } from '@/lib/validation/booking-helpers';
 
 // ─── Auth Schemas ───────────────────────────────────────────────────
 
@@ -27,10 +35,23 @@ export const registerSchema = z.object({
   // Patient-specific fields for self-registration
   nationality: z.string().min(2, 'Nationality is required'),
   passportNo: z.string().min(5, 'Passport number is required'),
+  passportExpiry: z
+    .string()
+    .nullable()
+    .optional()
+    .transform((val) => {
+      if (val === undefined || val === null) return undefined;
+      const trimmed = val.trim();
+      return trimmed.length > 0 ? trimmed : undefined;
+    })
+    .refine((val) => !val || !Number.isNaN(Date.parse(val)), {
+      message: 'Invalid passport expiry date',
+    }),
   dob: z.string().refine((val) => !isNaN(Date.parse(val)), {
     message: 'Invalid date of birth',
   }),
   primaryLanguage: z.string().optional(),
+  medicalCondition: z.string().max(2000).optional(),
 });
 
 export const loginSchema = z.object({
@@ -68,6 +89,19 @@ export const resetPasswordSchema = z.object({
 export const patientProfileSchema = z.object({
   nationality: z.string().min(2).optional(),
   passportNo: z.string().min(5).optional(),
+  passportExpiry: z
+    .string()
+    .nullable()
+    .optional()
+    .transform((val) => {
+      if (val === undefined) return undefined;
+      if (val === null) return null;
+      const trimmed = val.trim();
+      return trimmed.length > 0 ? trimmed : null;
+    })
+    .refine((val) => !val || !Number.isNaN(Date.parse(val)), {
+      message: 'Invalid passport expiry date',
+    }),
   dob: z
     .string()
     .refine((val) => !isNaN(Date.parse(val)), {
@@ -82,9 +116,10 @@ export const patientProfileSchema = z.object({
   primaryLanguage: z.string().optional(),
   emergencyContact: z
     .object({
-      name: z.string().min(2),
-      phone: z.string().regex(/^\+?[1-9]\d{7,14}$/),
-      relation: z.string().min(2),
+      name: z.string().trim().min(2),
+      countryCode: z.string().regex(/^\+\d{1,4}$/).optional(),
+      phone: z.string().trim().regex(/^\+?[0-9\s-]{6,16}$/),
+      relation: z.string().trim().min(2),
     })
     .optional(),
 });
@@ -121,18 +156,25 @@ export const createCaseSchema = z.object({
 });
 
 export const updateCaseStatusSchema = z.object({
-  status: z.enum([
-    'INQUIRY_RECEIVED',
-    'UNDER_REVIEW',
-    'PLAN_CONFIRMED',
-    'IN_TREATMENT',
-    'POST_TREATMENT',
-    'CLOSED',
-  ]),
+  status: z.enum(CASE_STATUS_ORDER),
   notes: z.string().max(5000).optional(),
+  overrideReason: z.string().max(2000).nullable().optional(),
 });
 
 // ─── Appointment Schemas ────────────────────────────────────────────
+
+export const appointmentModeSchema = z.enum([
+  APPOINTMENT_MODES.TELECONSULTATION,
+  APPOINTMENT_MODES.IN_PERSON,
+]);
+
+export const documentCategorySchema = z.enum(
+  Object.values(DOCUMENT_CATEGORIES) as [string, ...string[]]
+);
+
+export const ssrAssistanceCodeSchema = z.enum(SSR_ASSISTANCE_CODES);
+
+export const followUpMilestoneCodeSchema = z.enum(FOLLOW_UP_MILESTONES);
 
 export const bookAppointmentSchema = z.object({
   caseId: z.string().min(1),
@@ -145,6 +187,20 @@ export const bookAppointmentSchema = z.object({
     'SURGERY',
     'POST_OP_REVIEW',
   ]),
+  mode: appointmentModeSchema.optional(),
+  meetingUrl: z
+    .union([
+      z
+        .string()
+        .trim()
+        .url('Invalid meeting URL')
+        .max(500)
+        .refine((val) => isSafeHttpUrl(val), 'Meeting URL must use http:// or https://'),
+      z.literal(''),
+    ])
+    .nullable()
+    .optional(),
+  interpreterLanguage: z.string().max(100).nullable().optional(),
   scheduledAt: z.string().refine((val) => {
     const date = new Date(val);
     return !isNaN(date.getTime()) && date > new Date();
@@ -198,28 +254,6 @@ export const doctorSchema = z.object({
     .optional(),
 });
 
-// ─── Hostel Schemas ─────────────────────────────────────────────────
-
-export const hostelSchema = z.object({
-  name: z.string().min(2).max(200),
-  city: z.string().min(2).max(100),
-  address: z.string().min(5).max(500),
-  capacity: z.number().int().min(1),
-  pricingPerNight: z.number().min(0),
-  roomTypes: z
-    .array(z.enum(['SINGLE', 'DOUBLE', 'SUITE', 'DORMITORY']))
-    .optional(),
-});
-
-// ─── Accommodation Booking Schemas ──────────────────────────────────
-
-export const accommodationBookingSchema = z.object({
-  caseId: z.string().min(1),
-  hostelId: z.string().min(1),
-  checkIn: z.string().refine((val) => !isNaN(Date.parse(val))),
-  checkOut: z.string().refine((val) => !isNaN(Date.parse(val))),
-  roomType: z.enum(['SINGLE', 'DOUBLE', 'SUITE', 'DORMITORY']),
-});
 
 // ─── Pagination Schemas ─────────────────────────────────────────────
 

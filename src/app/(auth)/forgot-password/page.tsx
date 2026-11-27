@@ -1,7 +1,7 @@
 'use client';
 
 /**
- * MediRoute India — Forgot Password Page
+ * Afzal Healthcare — Forgot Password Page
  * OTP-based password reset flow.
  */
 
@@ -9,6 +9,7 @@ import { useState } from 'react';
 import Link from 'next/link';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
+import { ArrowLeft, CheckCircle2 } from 'lucide-react';
 
 export default function ForgotPasswordPage() {
   const [step, setStep] = useState<'email' | 'otp' | 'success'>('email');
@@ -71,19 +72,19 @@ export default function ForgotPasswordPage() {
   };
 
   return (
-    <div>
+    <div className="space-y-5">
       {step === 'email' && (
         <>
-          <div className="mb-6 text-center">
-            <h2 className="text-xl font-bold text-surface-900">Reset your password</h2>
-            <p className="text-sm text-surface-500 mt-1.5">
-              Enter your email and we&apos;ll send you a verification code
+          <div className="space-y-1">
+            <h2 className="text-xl font-semibold text-surface-900 tracking-tight">Reset password</h2>
+            <p className="text-sm text-surface-500">
+              Enter your account email and we&apos;ll send a 6-digit verification code.
             </p>
           </div>
 
-          <form onSubmit={handleRequestOTP} className="space-y-5">
+          <form onSubmit={handleRequestOTP} className="space-y-4">
             <Input
-              label="Email Address"
+              label="Email address"
               type="email"
               placeholder="you@example.com"
               value={email}
@@ -93,7 +94,7 @@ export default function ForgotPasswordPage() {
             />
 
             {error && (
-              <div className="bg-danger-50 border border-danger-200 rounded-lg px-4 py-3 text-sm text-danger-700 animate-slide-down">
+              <div className="bg-danger-50 border border-danger-200 rounded-md px-3.5 py-3 text-xs text-danger-800 animate-slide-down">
                 {error}
               </div>
             )}
@@ -107,27 +108,27 @@ export default function ForgotPasswordPage() {
 
       {step === 'otp' && (
         <>
-          <div className="mb-6 text-center">
-            <h2 className="text-xl font-bold text-surface-900">Enter code & new password</h2>
-            <p className="text-sm text-surface-500 mt-1.5">
-              We sent a 6-digit code to <span className="text-surface-700 font-medium">{email}</span>
+          <div className="space-y-1">
+            <h2 className="text-xl font-semibold text-surface-900 tracking-tight">Enter verification code</h2>
+            <p className="text-sm text-surface-500">
+              We sent a 6-digit code to <span className="text-surface-800 font-medium">{email}</span>.
             </p>
           </div>
 
-          <form onSubmit={handleResetPassword} className="space-y-5">
+          <form onSubmit={handleResetPassword} className="space-y-4">
             <Input
-              label="Verification Code"
+              label="Verification code"
               type="text"
               placeholder="000000"
               value={otp}
               onChange={(e) => setOtp(e.target.value.replace(/\D/g, '').slice(0, 6))}
               required
               maxLength={6}
-              className="text-center text-xl tracking-[0.4em] font-mono"
+              className="text-center text-lg tracking-[0.4em] font-mono tabular-nums"
             />
 
             <Input
-              label="New Password"
+              label="New password"
               type="password"
               placeholder="At least 8 characters"
               value={newPassword}
@@ -138,7 +139,7 @@ export default function ForgotPasswordPage() {
             />
 
             {error && (
-              <div className="bg-danger-50 border border-danger-200 rounded-lg px-4 py-3 text-sm text-danger-700 animate-slide-down">
+              <div className="bg-danger-50 border border-danger-200 rounded-md px-3.5 py-3 text-xs text-danger-800 animate-slide-down">
                 {error}
               </div>
             )}
@@ -151,17 +152,17 @@ export default function ForgotPasswordPage() {
       )}
 
       {step === 'success' && (
-        <div className="text-center">
-          <div className="w-11 h-11 bg-success-50 border border-success-200 rounded-lg flex items-center justify-center mx-auto mb-4 text-success-600">
-            <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-              <path strokeLinecap="round" strokeLinejoin="round" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-            </svg>
+        <div className="space-y-4">
+          <div className="w-10 h-10 bg-success-50 border border-success-200 rounded-lg flex items-center justify-center text-success-700">
+            <CheckCircle2 className="w-5 h-5" />
           </div>
-          <h2 className="text-xl font-bold text-surface-900 mb-1">Password updated</h2>
-          <p className="text-sm text-surface-500 mb-6">
-            You can now sign in with your new password.
-          </p>
-          <Link href="/login">
+          <div className="space-y-1">
+            <h2 className="text-xl font-semibold text-surface-900 tracking-tight">Password updated</h2>
+            <p className="text-sm text-surface-500">
+              Your account password has been reset. You may now sign in with your new credentials.
+            </p>
+          </div>
+          <Link href="/login" className="block pt-1">
             <Button fullWidth size="lg">
               Sign In
             </Button>
@@ -169,12 +170,12 @@ export default function ForgotPasswordPage() {
         </div>
       )}
 
-      <div className="mt-6 text-center">
+      <div className="pt-1 border-t border-surface-100">
         <Link
           href="/login"
-          className="text-sm text-surface-500 hover:text-surface-700 transition-colors"
+          className="min-h-9 inline-flex items-center gap-1.5 text-xs font-medium text-surface-600 hover:text-surface-900 transition-colors"
         >
-          Back to sign in
+          <ArrowLeft className="w-3.5 h-3.5" /> Back to sign in
         </Link>
       </div>
     </div>

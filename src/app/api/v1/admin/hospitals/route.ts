@@ -1,5 +1,5 @@
 /**
- * MediRoute India — /api/v1/admin/hospitals
+ * Afzal Healthcare — /api/v1/admin/hospitals
  * CRUD for hospital partner management with audit logging.
  */
 
@@ -9,6 +9,7 @@ import { requireAuth, getClientIP } from '@/lib/api/auth-helper';
 import { apiSuccess, apiError } from '@/lib/api/response';
 import { ERROR_CODES } from '@/lib/api/errors';
 import { createAuditLog, AUDIT_ACTIONS } from '@/lib/api/audit-logger';
+import { getSystemSettings } from '@/lib/services/system-settings.service';
 import { z } from 'zod';
 
 const hospitalSchema = z.object({
@@ -65,11 +66,14 @@ export async function POST(request: NextRequest) {
       return apiError(ERROR_CODES.BAD_REQUEST, result.error.issues[0].message, 400);
     }
 
+    const commissionRate =
+      result.data.commissionRate ?? (await getSystemSettings()).defaultCommissionRate;
+
     const hospital = await prisma.hospital.create({
       data: {
         name: result.data.name, city: result.data.city, address: result.data.address,
         accreditation: result.data.accreditation, contactPerson: result.data.contactPerson,
-        commissionRate: result.data.commissionRate, departments: result.data.departments || [],
+        commissionRate, departments: result.data.departments || [],
       },
     });
 

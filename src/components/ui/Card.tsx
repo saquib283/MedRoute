@@ -1,6 +1,6 @@
 /**
- * MediRoute India — Card Component
- * Clinical design system card — white background, subtle border, clean elevation.
+ * Afzal Healthcare — Card Component
+ * Architectural clinical container — crisp 8px radius, hairline border, and flat surface hierarchy.
  */
 
 import React from 'react';
@@ -15,8 +15,8 @@ interface CardProps {
 const paddingStyles: Record<string, string> = {
   none: '',
   sm: 'p-4',
-  md: 'p-6',
-  lg: 'p-8',
+  md: 'p-5',
+  lg: 'p-6',
 };
 
 export function Card({
@@ -28,12 +28,9 @@ export function Card({
   return (
     <div
       className={`
-        bg-white border border-surface-200 rounded-xl shadow-xs
+        bg-white border border-surface-200 rounded-lg shadow-2xs
         ${paddingStyles[padding]}
-        ${hover
-          ? 'transition-colors transition-shadow duration-150 hover:shadow-sm hover:border-surface-300'
-          : ''
-        }
+        ${hover ? 'transition-colors duration-150 hover:border-surface-300' : ''}
         ${className}
       `}
     >
@@ -42,9 +39,6 @@ export function Card({
   );
 }
 
-/**
- * Card Header sub-component
- */
 export function CardHeader({
   title,
   subtitle,
@@ -57,14 +51,14 @@ export function CardHeader({
   className?: string;
 }) {
   return (
-    <div className={`flex items-start justify-between mb-4 ${className}`}>
+    <div className={`flex items-start justify-between gap-4 mb-4 ${className}`}>
       <div>
-        <h3 className="text-lg font-semibold text-surface-900">{title}</h3>
+        <h3 className="text-base font-semibold text-surface-900">{title}</h3>
         {subtitle && (
-          <p className="text-sm text-surface-600 mt-0.5">{subtitle}</p>
+          <p className="text-xs text-surface-500 mt-0.5">{subtitle}</p>
         )}
       </div>
-      {action && <div>{action}</div>}
+      {action && <div className="shrink-0">{action}</div>}
     </div>
   );
 }

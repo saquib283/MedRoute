@@ -1,5 +1,5 @@
 /**
- * MediRoute India — RBAC (Role-Based Access Control)
+ * Afzal Healthcare — RBAC (Role-Based Access Control)
  * Implements the permission matrix from PRD FR-AUTH-02.
  */
 
@@ -9,8 +9,8 @@ import type { UserRole } from '@prisma/client';
 
 export const PERMISSIONS = {
   // Profile
-  'view:own-profile': ['PATIENT', 'MANAGER', 'ADMIN'],
-  'edit:own-profile': ['PATIENT', 'MANAGER', 'ADMIN'],
+  'view:own-profile': ['PATIENT', 'MANAGER', 'ADMIN', 'DOCTOR'],
+  'edit:own-profile': ['PATIENT', 'MANAGER', 'ADMIN', 'DOCTOR'],
 
   // Patient Management
   'view:all-patients': ['ADMIN'],
@@ -20,17 +20,19 @@ export const PERMISSIONS = {
   // Case Management
   'create:case': ['MANAGER', 'ADMIN'],
   'edit:case': ['MANAGER', 'ADMIN'],
-  'view:case': ['PATIENT', 'MANAGER', 'ADMIN'],
+  'view:case': ['PATIENT', 'MANAGER', 'ADMIN', 'DOCTOR'],
+  'sign:clinical-pathway': ['DOCTOR', 'MANAGER', 'ADMIN'],
+  'sign:fit-to-fly': ['DOCTOR', 'ADMIN'],
 
   // Appointments
   'book:appointment': ['MANAGER', 'ADMIN'],
   'request:appointment': ['PATIENT'],
   'cancel:appointment': ['MANAGER', 'ADMIN'],
-  'view:appointments': ['PATIENT', 'MANAGER', 'ADMIN'],
+  'view:appointments': ['PATIENT', 'MANAGER', 'ADMIN', 'DOCTOR'],
+  'update:clinical-appointments': ['DOCTOR', 'MANAGER', 'ADMIN'],
 
   // Partners
   'manage:hospitals': ['ADMIN'],
-  'manage:hostels': ['ADMIN'],
   'manage:doctors': ['ADMIN'],
   'view:partners': ['MANAGER', 'ADMIN'],
 
@@ -51,10 +53,12 @@ export const PERMISSIONS = {
 
   // Documents
   'upload:documents': ['PATIENT', 'MANAGER', 'ADMIN'],
-  'view:documents': ['PATIENT', 'MANAGER', 'ADMIN'],
+  'view:documents': ['PATIENT', 'MANAGER', 'ADMIN', 'DOCTOR'],
+  'verify:documents': ['MANAGER', 'ADMIN'],
+  'issue:documents': ['MANAGER', 'DOCTOR', 'ADMIN'],
 
   // Messaging
-  'send:messages': ['MANAGER', 'ADMIN'],
+  'send:messages': ['PATIENT', 'MANAGER', 'ADMIN'],
   'view:messages': ['PATIENT', 'MANAGER', 'ADMIN'],
 
   // Escalation
@@ -68,6 +72,10 @@ export const PERMISSIONS = {
   'manage:email-campaigns': ['ADMIN'],
   'manage:email-templates': ['ADMIN'],
   'view:advanced-analytics': ['ADMIN'],
+
+  // Advanced Leads CRM & B2B Referral Partners
+  'manage:leads': ['MANAGER', 'ADMIN'],
+  'manage:referral-partners': ['ADMIN'],
 } as const;
 
 export type Permission = keyof typeof PERMISSIONS;
@@ -118,12 +126,41 @@ export function getRolePermissions(role: UserRole): Permission[] {
  * Maps route group prefixes to the minimum required role(s).
  * Used by Next.js middleware for route protection.
  */
+export const PUBLIC_ROUTES = [
+  '/login',
+  '/register',
+  '/forgot-password',
+  '/inquiry',
+  '/inquire',
+  '/terms',
+  '/privacy',
+  '/verify',
+  '/api/v1/public',
+  '/api/v1/currency',
+  '/api/v1/legal/verify',
+  '/api/v1/auth/login',
+  '/api/v1/auth/login/otp/request',
+  '/api/v1/auth/login/otp/verify',
+  '/api/v1/auth/register',
+  '/api/v1/auth/2fa/setup',
+  '/api/v1/auth/2fa/validate',
+  '/api/v1/auth/forgot-password',
+  '/api/v1/auth/reset-password',
+  '/api/v1/auth/refresh',
+  '/api/v1/auth/logout',
+] as const;
+
+export const SKIP_ROUTES = ['/_next', '/favicon.ico', '/icon.png', '/assets', '/api/docs'] as const;
+
 export const ROUTE_ROLES: Record<string, UserRole[]> = {
   '/patient': ['PATIENT'],
+  '/doctor': ['DOCTOR'],
+  '/hospital': ['HOSPITAL', 'ADMIN'],
   '/manager': ['MANAGER', 'ADMIN'],
   '/admin': ['ADMIN'],
-  '/doctor': ['DOCTOR', 'ADMIN'],
-  '/hospital': ['HOSPITAL', 'ADMIN'],
+  '/leads': ['MANAGER', 'ADMIN'],
+  '/referral-partners': ['MANAGER', 'ADMIN'],
+  '/notifications': ['PATIENT', 'MANAGER', 'DOCTOR', 'ADMIN'],
 };
 
 /**
@@ -146,12 +183,12 @@ export function getDefaultRoute(role: UserRole): string {
   switch (role) {
     case 'PATIENT':
       return '/patient/dashboard';
-    case 'MANAGER':
-      return '/manager/dashboard';
     case 'HOSPITAL':
       return '/hospital/dashboard';
     case 'DOCTOR':
       return '/doctor/dashboard';
+    case 'MANAGER':
+      return '/manager/dashboard';
     case 'ADMIN':
       return '/admin/dashboard';
     default:

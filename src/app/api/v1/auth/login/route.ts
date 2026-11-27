@@ -1,5 +1,5 @@
 /**
- * MediRoute India — POST /api/v1/auth/login
+ * Afzal Healthcare — POST /api/v1/auth/login
  * Email + password login with 2FA enforcement for Manager/Admin (FR-AUTH-01).
  */
 
@@ -66,13 +66,13 @@ export async function POST(request: NextRequest) {
     }
 
     // Check System Maintenance Mode
-    const { checkMaintenanceActive } = await import('@/lib/api/settings-helper');
+    const { checkMaintenanceActive } = await import('@/lib/services/system-settings.service');
     const isMaintenance = await checkMaintenanceActive(user.role);
     if (isMaintenance) {
       return apiError(
-        ERROR_CODES.FORBIDDEN,
+        ERROR_CODES.MAINTENANCE_MODE,
         'System is currently undergoing scheduled maintenance. Please try again later.',
-        403
+        503
       );
     }
 

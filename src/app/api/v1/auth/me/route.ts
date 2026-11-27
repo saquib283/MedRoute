@@ -1,5 +1,5 @@
 /**
- * MediRoute India — GET /api/v1/auth/me
+ * Afzal Healthcare — GET /api/v1/auth/me
  * Returns the authenticated user's profile information.
  */
 
@@ -8,6 +8,7 @@ import prisma from '@/lib/prisma';
 import { requireAuth } from '@/lib/api/auth-helper';
 import { apiSuccess, apiError } from '@/lib/api/response';
 import { ERROR_CODES } from '@/lib/api/errors';
+import { decryptMedicalProfile } from '@/lib/api/phi-encryption';
 
 export async function GET(request: NextRequest) {
   try {
@@ -15,13 +16,15 @@ export async function GET(request: NextRequest) {
     if (error) return error;
 
     // Check System Maintenance Mode
-    const { checkMaintenanceActive, readSettings } = await import('@/lib/api/settings-helper');
+    const { checkMaintenanceActive, getSystemSettings } = await import(
+      '@/lib/services/system-settings.service'
+    );
     const isMaintenance = await checkMaintenanceActive(authUser!.role);
     if (isMaintenance) {
       return apiError(
-        ERROR_CODES.FORBIDDEN,
+        ERROR_CODES.MAINTENANCE_MODE,
         'System is currently undergoing scheduled maintenance. Please try again later.',
-        403
+        503
       );
     }
 
@@ -63,11 +66,24 @@ export async function GET(request: NextRequest) {
       return apiError(ERROR_CODES.USER_NOT_FOUND, 'User not found', 404);
     }
 
-    // Load global settings for alert banner text
-    const settings = await readSettings();
-    const alertBannerText = settings?.alertBannerText || '';
+    // Load global settings for alert banner text and session timeout
+    const settings = await getSystemSettings();
+    const alertBannerText = settings.alertBannerText || '';
+    const sessionTimeoutMinutes = settings.sessionTimeoutMinutes || 15;
 
-    return apiSuccess({ user, alertBannerText });
+    const formattedUser = user.patient?.medicalProfile
+      ? {
+          ...user,
+          patient: {
+            ...user.patient,
+            medicalProfile: decryptMedicalProfile(
+              user.patient.medicalProfile as Record<string, unknown>
+            ),
+          },
+        }
+      : user;
+
+    return apiSuccess({ user: formattedUser, alertBannerText, sessionTimeoutMinutes });
   } catch (error) {
     console.error('[Get Me Error]', error);
     return apiError(ERROR_CODES.INTERNAL_ERROR, 'Failed to fetch profile', 500);

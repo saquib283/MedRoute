@@ -1,5 +1,5 @@
 /**
- * MediRoute India — /api/v1/admin/appointments
+ * Afzal Healthcare — /api/v1/admin/appointments
  * Platform-wide appointment listing with enhanced filters and cancel/reschedule.
  */
 
@@ -16,6 +16,7 @@ const updateApptSchema = z.object({
   status: z.enum(['SCHEDULED', 'CONFIRMED', 'IN_PROGRESS', 'COMPLETED', 'CANCELLED', 'RESCHEDULED']).optional(),
   cancellationReason: z.string().optional(),
   scheduledAt: z.string().optional(), // ISO date string for reschedule
+  clinicalNotes: z.string().max(10000).optional(),
 });
 
 export async function GET(request: NextRequest) {
@@ -108,7 +109,14 @@ export async function PUT(request: NextRequest) {
     const data: Record<string, unknown> = {};
     if (updateData.status) data.status = updateData.status;
     if (updateData.cancellationReason) data.cancellationReason = updateData.cancellationReason;
-    if (updateData.scheduledAt) data.scheduledAt = new Date(updateData.scheduledAt);
+    if (updateData.scheduledAt) {
+      const scheduledDate = new Date(updateData.scheduledAt);
+      if (isNaN(scheduledDate.getTime())) {
+        return apiError(ERROR_CODES.BAD_REQUEST, 'Invalid scheduled date', 400);
+      }
+      data.scheduledAt = scheduledDate;
+    }
+    if (updateData.clinicalNotes !== undefined) data.clinicalNotes = updateData.clinicalNotes;
 
     const appointment = await prisma.appointment.update({
       where: { id },

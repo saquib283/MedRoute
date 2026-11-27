@@ -1,10 +1,9 @@
 /**
- * MediRoute India — Audit Logger
+ * Afzal Healthcare — Audit Logger
  * Server-side utility for creating audit log entries on admin mutations.
  */
 
-import prisma from '@/lib/prisma';
-import { createChainedAuditLog, ChainedAuditLogParams } from '@/lib/legal/audit-chain';
+import { createChainedAuditLog } from '@/lib/legal/audit-chain';
 
 export interface AuditLogParams {
   actorId: string;
@@ -57,5 +56,23 @@ export const AUDIT_ACTIONS = {
   EXPORT_PATIENTS: 'EXPORT_PATIENTS',
   EXPORT_CASES: 'EXPORT_CASES',
   EXPORT_APPOINTMENTS: 'EXPORT_APPOINTMENTS',
+
+  // Sub-Project 2: Clinical Pathway & Clearances
+  CONFIGURE_PATHWAY: 'CONFIGURE_PATHWAY',
+  UPDATE_PATHWAY_STEP: 'UPDATE_PATHWAY_STEP',
+  VERIFY_DOCUMENT: 'VERIFY_DOCUMENT',
+  ISSUE_DOCUMENT: 'ISSUE_DOCUMENT',
+  SIGN_FIT_TO_FLY: 'SIGN_FIT_TO_FLY',
+
+  // Sub-Project 3: Billing Settlement & Accommodations Lifecycle
+  SETTLE_BILL: 'SETTLE_BILL',
+  UPDATE_BILL: 'UPDATE_BILL',
+  UPDATE_BOOKING: 'UPDATE_BOOKING',
+
+  // Sub-Project 4: Advanced Leads CRM & B2B Referral Partners
+  CREATE_LEAD: 'CREATE_LEAD',
+  UPDATE_LEAD: 'UPDATE_LEAD',
+  CONVERT_LEAD: 'CONVERT_LEAD',
+  EXPORT_LEADS: 'EXPORT_LEADS',
 } as const;
 

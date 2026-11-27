@@ -1,28 +1,40 @@
 'use client';
 
 /**
- * MediRoute India — Toast Notification System
- * Global toast with Zustand store. Supports success, error, warning, info.
+ * Afzal Healthcare — Modern Toast Notification System
+ * Global toast with Zustand store. Supports success, error, warning, info, and secure API error abstraction.
  */
 
-import { useEffect } from 'react';
+import React, { useEffect } from 'react';
 import { create } from 'zustand';
-import { AlertTriangle, CheckCircle2, Info, X, XCircle } from 'lucide-react';
+import {
+  CheckCircle2,
+  AlertTriangle,
+  XCircle,
+  Info,
+  X,
+} from 'lucide-react';
 
 // ─── Types ──────────────────────────────────────────────────────────
 
 export type ToastVariant = 'success' | 'error' | 'warning' | 'info';
 
-interface Toast {
+export interface ToastOptions {
+  title?: string;
+  duration?: number;
+}
+
+export interface ToastItemData {
   id: string;
+  title?: string;
   message: string;
   variant: ToastVariant;
   duration: number;
 }
 
 interface ToastStore {
-  toasts: Toast[];
-  addToast: (message: string, variant?: ToastVariant, duration?: number) => void;
+  toasts: ToastItemData[];
+  addToast: (message: string, variant?: ToastVariant, options?: ToastOptions) => void;
   removeToast: (id: string) => void;
 }
 
@@ -32,10 +44,14 @@ let counter = 0;
 
 export const useToastStore = create<ToastStore>((set) => ({
   toasts: [],
-  addToast: (message, variant = 'success', duration = 4000) => {
+  addToast: (message, variant = 'success', options = {}) => {
     const id = `toast-${++counter}-${Date.now()}`;
+    const duration = options.duration ?? 4500;
+    const title = options.title;
+
     set((state) => ({
-      toasts: [...state.toasts, { id, message, variant, duration }],
+      // Limit visible toasts to 4 max
+      toasts: [...state.toasts.slice(-3), { id, title, message, variant, duration }],
     }));
   },
   removeToast: (id) => {
@@ -45,81 +61,216 @@ export const useToastStore = create<ToastStore>((set) => ({
   },
 }));
 
+// ─── Security Error Sanitizer ────────────────────────────────────────
+
+const INTERNAL_ERROR_PATTERNS = [
+  /prisma/i,
+  /mysql/i,
+  /mariadb/i,
+  /postgres/i,
+  /syntax\s+error/i,
+  /econnrefused/i,
+  /fatal/i,
+  /uncaught/i,
+  /stack\s+trace/i,
+  /at\s+[a-z0-9_$./]+\:[0-9]+/i,
+  /select\s+.*from/i,
+  /insert\s+into/i,
+  /update\s+.*set/i,
+  /delete\s+from/i,
+  /table\s+.*doesn't\s+exist/i,
+  /column\s+.*not\s+found/i,
+];
+
+/**
+ * Sanitizes an error message to prevent leaking internal database schemas,
+ * query syntax, or server tracebacks to end users.
+ */
+export function sanitizeErrorMessage(rawMessage: string, fallback = 'An unexpected error occurred. Please try again.'): string {
+  if (!rawMessage || typeof rawMessage !== 'string') {
+    return fallback;
+  }
+
+  const isSensitive = INTERNAL_ERROR_PATTERNS.some((pattern) => pattern.test(rawMessage));
+  if (isSensitive) {
+    return 'A secure processing issue occurred. Please try again or contact support.';
+  }
+
+  // Truncate overly long error strings for UI safety
+  if (rawMessage.length > 250) {
+    return rawMessage.slice(0, 247) + '...';
+  }
+
+  return rawMessage;
+}
+
 // ─── Convenience Helpers ────────────────────────────────────────────
 
 export const toast = {
-  success: (msg: string, duration?: number) =>
-    useToastStore.getState().addToast(msg, 'success', duration),
-  error: (msg: string, duration?: number) =>
-    useToastStore.getState().addToast(msg, 'error', duration),
-  warning: (msg: string, duration?: number) =>
-    useToastStore.getState().addToast(msg, 'warning', duration),
-  info: (msg: string, duration?: number) =>
-    useToastStore.getState().addToast(msg, 'info', duration),
+  success: (msg: string, titleOrOpts?: string | ToastOptions, duration?: number) => {
+    const opts: ToastOptions = typeof titleOrOpts === 'string' ? { title: titleOrOpts, duration } : (titleOrOpts || {});
+    useToastStore.getState().addToast(msg, 'success', opts);
+  },
+  error: (msg: string, titleOrOpts?: string | ToastOptions, duration?: number) => {
+    const opts: ToastOptions = typeof titleOrOpts === 'string' ? { title: titleOrOpts, duration } : (titleOrOpts || {});
+    const cleanMsg = sanitizeErrorMessage(msg, 'An error occurred while processing your request.');
+    useToastStore.getState().addToast(cleanMsg, 'error', opts);
+  },
+  warning: (msg: string, titleOrOpts?: string | ToastOptions, duration?: number) => {
+    const opts: ToastOptions = typeof titleOrOpts === 'string' ? { title: titleOrOpts, duration } : (titleOrOpts || {});
+    useToastStore.getState().addToast(msg, 'warning', opts);
+  },
+  info: (msg: string, titleOrOpts?: string | ToastOptions, duration?: number) => {
+    const opts: ToastOptions = typeof titleOrOpts === 'string' ? { title: titleOrOpts, duration } : (titleOrOpts || {});
+    useToastStore.getState().addToast(msg, 'info', opts);
+  },
+  /**
+   * Helper to handle API response error objects or catches cleanly with security abstraction
+   */
+  apiError: (errorObj: unknown, fallback = 'Action failed. Please try again.', title = 'Request Error') => {
+    let msg = fallback;
+    if (typeof errorObj === 'string') {
+      msg = errorObj;
+    } else if (errorObj && typeof errorObj === 'object') {
+      const err = errorObj as { error?: string | { message?: unknown }; message?: unknown };
+      if (err.error && typeof err.error === 'object' && typeof err.error.message === 'string') {
+        msg = err.error.message;
+      } else if (typeof err.error === 'string') {
+        msg = err.error;
+      } else if (typeof err.message === 'string') {
+        msg = err.message;
+      }
+    }
+
+    const safeMessage = sanitizeErrorMessage(msg, fallback);
+    useToastStore.getState().addToast(safeMessage, 'error', { title, duration: 5500 });
+  },
 };
 
-// ─── Variant Styles ─────────────────────────────────────────────────
+// ─── Variant Design Metadata ────────────────────────────────────────
 
-const VARIANT_STYLES: Record<ToastVariant, { bg: string; border: string; text: string; icon: React.ReactNode }> = {
+const VARIANT_CONFIG: Record<
+  ToastVariant,
+  {
+    bg: string;
+    border: string;
+    text: string;
+    titleColor: string;
+    iconBg: string;
+    progressColor: string;
+    IconComponent: React.ComponentType<{ className?: string }>;
+    defaultTitle: string;
+  }
+> = {
   success: {
-    bg: 'bg-success-50',
-    border: 'border-success-500',
-    text: 'text-success-700',
-    icon: <CheckCircle2 className="w-4 h-4 shrink-0" />,
+    bg: 'bg-white',
+    border: 'border-surface-200 shadow-md',
+    text: 'text-surface-600',
+    titleColor: 'text-surface-900 font-semibold',
+    iconBg: 'bg-success-50 text-success-600 border border-success-200',
+    progressColor: 'bg-success-600',
+    IconComponent: CheckCircle2,
+    defaultTitle: 'Success',
   },
   error: {
-    bg: 'bg-danger-50',
-    border: 'border-danger-500',
-    text: 'text-danger-700',
-    icon: <XCircle className="w-4 h-4 shrink-0" />,
+    bg: 'bg-white',
+    border: 'border-surface-200 shadow-md',
+    text: 'text-surface-600',
+    titleColor: 'text-surface-900 font-semibold',
+    iconBg: 'bg-danger-50 text-danger-600 border border-danger-200',
+    progressColor: 'bg-danger-600',
+    IconComponent: XCircle,
+    defaultTitle: 'Error',
   },
   warning: {
-    bg: 'bg-warning-50',
-    border: 'border-warning-500',
-    text: 'text-warning-700',
-    icon: <AlertTriangle className="w-4 h-4 shrink-0" />,
+    bg: 'bg-white',
+    border: 'border-surface-200 shadow-md',
+    text: 'text-surface-600',
+    titleColor: 'text-surface-900 font-semibold',
+    iconBg: 'bg-warning-50 text-warning-600 border border-warning-200',
+    progressColor: 'bg-warning-500',
+    IconComponent: AlertTriangle,
+    defaultTitle: 'Warning',
   },
   info: {
-    bg: 'bg-info-50',
-    border: 'border-info-500',
-    text: 'text-info-700',
-    icon: <Info className="w-4 h-4 shrink-0" />,
+    bg: 'bg-white',
+    border: 'border-surface-200 shadow-md',
+    text: 'text-surface-600',
+    titleColor: 'text-surface-900 font-semibold',
+    iconBg: 'bg-info-50 text-info-600 border border-info-200',
+    progressColor: 'bg-info-600',
+    IconComponent: Info,
+    defaultTitle: 'Notice',
   },
 };
 
 // ─── Single Toast Item ──────────────────────────────────────────────
 
-function ToastItem({ t }: { t: Toast }) {
+function ToastCard({ t }: { t: ToastItemData }) {
   const removeToast = useToastStore((s) => s.removeToast);
-  const style = VARIANT_STYLES[t.variant];
+  const config = VARIANT_CONFIG[t.variant];
+  const Icon = config.IconComponent;
 
   useEffect(() => {
-    const timer = setTimeout(() => removeToast(t.id), t.duration);
-    return () => clearTimeout(timer);
+    const timer = setTimeout(() => {
+      removeToast(t.id);
+    }, t.duration);
+
+    return () => {
+      clearTimeout(timer);
+    };
   }, [t.id, t.duration, removeToast]);
 
   return (
     <div
-      className={`flex items-center gap-3 px-4 py-3 rounded-lg border ${style.bg} ${style.border} ${style.text} shadow-md animate-slide-up min-w-[300px] max-w-[420px]`}
+      className={`
+        relative overflow-hidden group
+        flex items-start gap-3 p-3.5 rounded-lg border
+        transition-opacity duration-200
+        w-[340px] sm:w-[380px] max-w-full select-none
+        ${config.bg} ${config.border}
+      `}
       role="alert"
     >
-      <span className="shrink-0 flex items-center justify-center">
-        {style.icon}
-      </span>
-      <p className="text-sm font-medium flex-1">{t.message}</p>
+      {/* Accent Icon Badge */}
+      <div className={`p-1.5 rounded-md shrink-0 mt-0.5 ${config.iconBg}`}>
+        <Icon className="w-4 h-4" />
+      </div>
+
+      {/* Message Content */}
+      <div className="flex-1 pr-2 min-w-0">
+        <h4 className={`text-xs ${config.titleColor}`}>
+          {t.title || config.defaultTitle}
+        </h4>
+        <p className={`text-xs leading-relaxed mt-0.5 break-words ${config.text}`}>
+          {t.message}
+        </p>
+      </div>
+
+      {/* Dismiss Button */}
       <button
         type="button"
         onClick={() => removeToast(t.id)}
-        className="shrink-0 p-0.5 rounded opacity-60 hover:opacity-100 transition-opacity"
-        aria-label="Dismiss notification"
+        className="shrink-0 p-1 text-surface-400 hover:text-surface-700 hover:bg-surface-100 rounded-md transition-colors"
+        aria-label="Dismiss toast notification"
       >
         <X className="w-4 h-4" />
       </button>
+
+      {/* Auto-dismiss Animated Progress Bar */}
+      <div className="absolute bottom-0 left-0 right-0 h-1 bg-surface-100/60 overflow-hidden">
+        <div
+          className={`h-full ${config.progressColor}`}
+          style={{
+            animation: `shrink-progress ${t.duration}ms linear forwards`,
+          }}
+        />
+      </div>
     </div>
   );
 }
 
-// ─── Toast Container (mount once in root layout) ────────────────────
+// ─── Toast Container Component ──────────────────────────────────────
 
 export function ToastContainer() {
   const toasts = useToastStore((s) => s.toasts);
@@ -127,9 +278,12 @@ export function ToastContainer() {
   if (toasts.length === 0) return null;
 
   return (
-    <div className="fixed top-4 right-4 z-[9999] flex flex-col gap-2 pointer-events-auto">
+    <div
+      aria-live="polite"
+      className="fixed top-5 right-5 z-[99999] flex flex-col gap-3 pointer-events-auto max-w-[calc(100vw-2.5rem)]"
+    >
       {toasts.map((t) => (
-        <ToastItem key={t.id} t={t} />
+        <ToastCard key={t.id} t={t} />
       ))}
     </div>
   );

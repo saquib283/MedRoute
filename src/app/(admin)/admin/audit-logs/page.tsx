@@ -1,7 +1,7 @@
 'use client';
 
 /**
- * MediRoute India — Admin Audit Logs
+ * Afzal Healthcare — Admin Audit Logs
  * Enhanced with date range, action filter, actor search, and CSV export.
  */
 
@@ -26,11 +26,11 @@ interface AuditLog {
 }
 
 const ACTION_OPTIONS = ['CREATE', 'UPDATE', 'DELETE', 'DEACTIVATE', 'ACTIVATE', 'RESET_PASSWORD', 'STATUS_CHANGE', 'REASSIGN', 'RESOLVE_ESCALATION'];
-const ENTITY_OPTIONS = ['User', 'Patient', 'Case', 'Appointment', 'Hospital', 'Doctor', 'Hostel', 'Specialisation'];
+const ENTITY_OPTIONS = ['User', 'Patient', 'Case', 'Appointment', 'Hospital', 'Doctor', 'Specialisation'];
 
 function AuditLogDiff({ oldVal, newVal }: { oldVal: unknown; newVal: unknown }) {
   const isObject = (val: unknown): val is Record<string, unknown> =>
-    Boolean(val && typeof val === 'object' && !Array.isArray(val));
+    Boolean(val) && typeof val === 'object' && !Array.isArray(val);
 
   if (!oldVal && !newVal) return <span className="text-surface-400 text-xs">—</span>;
 
@@ -39,12 +39,12 @@ function AuditLogDiff({ oldVal, newVal }: { oldVal: unknown; newVal: unknown }) 
     return (
       <div className="text-xs space-y-1">
         {oldVal !== undefined && oldVal !== null && (
-          <div className="text-danger-700 bg-danger-50 px-2.5 py-1 rounded border border-danger-100 line-through">
+          <div className="text-danger-700 bg-danger-50 px-2.5 py-1 rounded-md border border-danger-200 line-through">
             - {String(oldVal)}
           </div>
         )}
         {newVal !== undefined && newVal !== null && (
-          <div className="text-success-700 bg-success-50 px-2.5 py-1 rounded border border-success-100 font-semibold">
+          <div className="text-success-700 bg-success-50 px-2.5 py-1 rounded-md border border-success-200 font-medium">
             + {String(newVal)}
           </div>
         )}
@@ -52,13 +52,13 @@ function AuditLogDiff({ oldVal, newVal }: { oldVal: unknown; newVal: unknown }) 
     );
   }
 
+  const oldObj = isObject(oldVal) ? oldVal : {};
+  const newObj = isObject(newVal) ? newVal : {};
   // Handle object keys diff
-  const oldObj = oldVal as Record<string, unknown>;
-  const newObj = newVal as Record<string, unknown>;
-  const allKeys = Array.from(new Set([...Object.keys(oldObj || {}), ...Object.keys(newObj || {})]));
+  const allKeys = Array.from(new Set([...Object.keys(oldObj), ...Object.keys(newObj)]));
   const changes = allKeys.map((key) => {
-    const o = oldObj?.[key];
-    const n = newObj?.[key];
+    const o = oldObj[key];
+    const n = newObj[key];
 
     if (JSON.stringify(o) === JSON.stringify(n)) {
       return { key, type: 'unchanged', oldValue: o, newValue: n };
@@ -73,20 +73,20 @@ function AuditLogDiff({ oldVal, newVal }: { oldVal: unknown; newVal: unknown }) 
   });
 
   return (
-    <div className="border border-surface-200 rounded-lg overflow-hidden text-xs bg-surface-50 divide-y divide-surface-200 w-full">
-      <div className="px-3 py-1.5 bg-surface-100 font-bold text-surface-500 uppercase tracking-wider text-[10px] grid grid-cols-3 gap-4">
+    <div className="border border-surface-200 rounded-md overflow-hidden text-xs bg-white divide-y divide-surface-200 w-full">
+      <div className="px-3 py-2 bg-surface-100 font-medium text-surface-500 uppercase tracking-wide text-[11px] grid grid-cols-3 gap-4">
         <span>Field</span>
         <span>Before</span>
         <span>After</span>
       </div>
       {changes.map((c) => {
-        if (c.type === 'unchanged') return null; // hide unchanged to avoid clutter
+        if (c.type === 'unchanged') return null;
         return (
           <div key={c.key} className="px-3 py-2 grid grid-cols-3 gap-4 items-center">
-            <span className="font-mono font-bold text-surface-700">{c.key}</span>
+            <span className="font-mono font-medium text-surface-700">{c.key}</span>
             <div className="min-w-0 break-all">
               {c.oldValue !== undefined ? (
-                <span className="px-1.5 py-0.5 rounded bg-danger-50 text-danger-700 border border-danger-100 line-through font-mono">
+                <span className="px-1.5 py-0.5 rounded bg-danger-50 text-danger-700 border border-danger-200 line-through font-mono">
                   {typeof c.oldValue === 'object' ? JSON.stringify(c.oldValue) : String(c.oldValue)}
                 </span>
               ) : (
@@ -95,7 +95,7 @@ function AuditLogDiff({ oldVal, newVal }: { oldVal: unknown; newVal: unknown }) 
             </div>
             <div className="min-w-0 break-all">
               {c.newValue !== undefined ? (
-                <span className="px-1.5 py-0.5 rounded bg-success-50 text-success-700 border border-success-100 font-bold font-mono">
+                <span className="px-1.5 py-0.5 rounded bg-success-50 text-success-700 border border-success-200 font-medium font-mono">
                   {typeof c.newValue === 'object' ? JSON.stringify(c.newValue) : String(c.newValue)}
                 </span>
               ) : (
@@ -106,7 +106,7 @@ function AuditLogDiff({ oldVal, newVal }: { oldVal: unknown; newVal: unknown }) 
         );
       })}
       {changes.every(c => c.type === 'unchanged') && (
-        <div className="p-3 text-center text-surface-400">No changes detected.</div>
+        <div className="p-3 text-center text-surface-500">No changes detected.</div>
       )}
     </div>
   );
@@ -131,7 +131,6 @@ export default function AdminAuditLogsPage() {
   }, []);
 
   const fetchLogs = useCallback(async (page = 1) => {
-    await Promise.resolve();
     setLoading(true);
     try {
       const params = new URLSearchParams({ page: String(page), limit: '20' });
@@ -146,7 +145,12 @@ export default function AdminAuditLogsPage() {
     } catch (err) { console.error(err); } finally { setLoading(false); }
   }, [entityFilter, actionFilter, actorSearch, dateFrom, dateTo]);
 
-  useEffect(() => { queueMicrotask(() => fetchLogs()); }, [fetchLogs]);
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      void fetchLogs();
+    }, 0);
+    return () => clearTimeout(timer);
+  }, [fetchLogs]);
 
   const handleExport = () => {
     const params = new URLSearchParams();
@@ -167,25 +171,25 @@ export default function AdminAuditLogsPage() {
   const hasFilters = entityFilter || actionFilter || actorSearch || dateFrom || dateTo;
 
   return (
-    <div className="max-w-7xl mx-auto space-y-6 animate-fade-in">
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+    <div className="space-y-6 animate-fade-in">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-5 border-b border-surface-200">
         <div>
-          <h1 className="text-2xl font-bold text-surface-900 tracking-tight">Audit Logs</h1>
-          <p className="text-sm text-surface-500 mt-1">Chronological record of all administrative actions on the platform.</p>
+          <h1 className="text-xl font-semibold tracking-tight text-surface-900">Audit Logs</h1>
+          <p className="text-xs sm:text-sm text-surface-500 mt-1">Chronological record of all administrative actions on the platform.</p>
         </div>
         {isSuperAdmin && (
           <Button variant="secondary" onClick={handleExport}>↓ Export CSV</Button>
         )}
       </div>
 
-      <Card className="p-4 bg-white border border-surface-200 flex flex-col gap-3">
+      <Card padding="sm" className="flex flex-col gap-3">
         <div className="flex flex-col sm:flex-row gap-3">
           <input
             type="text"
             placeholder="Search by actor name..."
             value={actorSearch}
             onChange={(e) => setActorSearch(e.target.value)}
-            className="flex-1 px-3 py-2 border border-surface-300 rounded-lg text-sm focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500"
+            className="flex-1 px-3 py-2 border border-surface-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-600"
           />
           <Select
             value={entityFilter}
@@ -216,16 +220,16 @@ export default function AdminAuditLogsPage() {
             <DatePicker label="To Date" value={dateTo} onChange={setDateTo} placeholder="End date" />
           </div>
           {hasFilters && (
-            <Button variant="ghost" size="sm" onClick={clearFilters} className="text-surface-500 mt-5">Clear Filters</Button>
+            <Button variant="ghost" size="sm" onClick={clearFilters} className="text-surface-500 sm:mt-5">Clear Filters</Button>
           )}
         </div>
       </Card>
 
-      <Card className="bg-white border border-surface-200 overflow-hidden">
+      <Card className="p-0! overflow-hidden">
         {loading ? (
-          <div className="flex items-center justify-center py-16"><div className="w-8 h-8 border-4 border-primary-600 border-t-transparent rounded-full animate-spin" /></div>
+          <div className="flex items-center justify-center py-16"><div className="w-7 h-7 border-2 border-primary-600 border-t-transparent rounded-full animate-spin" /></div>
         ) : (
-          <div className="divide-y divide-surface-100">
+          <div className="divide-y divide-surface-200">
             {logs.length === 0 ? (
               <div className="px-6 py-12 text-center text-sm text-surface-500">
                 No audit log entries found. {hasFilters ? 'Try adjusting your filters.' : 'Actions will be recorded here as users interact with the platform.'}
@@ -234,29 +238,30 @@ export default function AdminAuditLogsPage() {
               logs.map((log) => (
                 <div key={log.id}>
                   <button
-                    className="w-full px-6 py-4 flex items-center gap-4 hover:bg-surface-50 transition-colors text-left"
+                    type="button"
+                    className="w-full px-5 py-4 flex items-center gap-3.5 hover:bg-surface-100/60 transition-colors text-left"
                     onClick={() => setExpandedId(expandedId === log.id ? null : log.id)}
                   >
-                    <div className="w-8 h-8 rounded-full bg-surface-100 flex items-center justify-center text-surface-600 font-bold text-xs shrink-0">
+                    <div className="w-8 h-8 rounded-full bg-surface-100 border border-surface-200 flex items-center justify-center text-surface-600 font-semibold text-xs shrink-0">
                       {log.actor.fullName.charAt(0)}
                     </div>
                     <div className="flex-1 min-w-0">
                       <p className="text-sm text-surface-800">
-                        <span className="font-semibold">{log.actor.fullName}</span>{' '}
-                        <Badge variant="default" className="text-[9px] mx-1">{log.action}</Badge>{' '}
-                        <span className="font-medium">{log.entityType}</span>{' '}
-                        <span className="text-surface-400 text-xs">({log.entityId.substring(0, 8)}…)</span>
+                        <span className="font-medium text-surface-900">{log.actor.fullName}</span>{' '}
+                        <Badge variant="default" size="sm" className="mx-1">{log.action}</Badge>{' '}
+                        <span className="font-medium text-surface-700">{log.entityType}</span>{' '}
+                        <span className="text-surface-500 text-xs tabular-nums">({log.entityId.substring(0, 8)}…)</span>
                       </p>
-                      <p className="text-[11px] text-surface-400 mt-0.5">
+                      <p className="text-xs text-surface-500 tabular-nums mt-0.5">
                         {new Date(log.createdAt).toLocaleString()} {log.ipAddress && `• IP: ${log.ipAddress}`}
                       </p>
                     </div>
-                    <Badge variant="default" className="text-[10px]">{log.actor.role}</Badge>
+                    <Badge variant="default" size="sm">{log.actor.role}</Badge>
                     <svg className={`w-4 h-4 text-surface-400 transition-transform ${expandedId === log.id ? 'rotate-180' : ''}`} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" /></svg>
                   </button>
                   {expandedId === log.id && (
-                    <div className="px-6 pb-5">
-                      <p className="text-[10px] font-bold text-surface-400 uppercase mb-2">Change Details</p>
+                    <div className="px-5 pb-5">
+                      <p className="text-xs font-medium text-surface-500 mb-2">Change details</p>
                       <AuditLogDiff oldVal={log.oldValue} newVal={log.newValue} />
                     </div>
                   )}
@@ -266,8 +271,8 @@ export default function AdminAuditLogsPage() {
           </div>
         )}
         {pagination.totalPages > 1 && (
-          <div className="px-5 py-3 border-t border-surface-100 flex items-center justify-between text-sm">
-            <span className="text-surface-500">Page {pagination.page} of {pagination.totalPages} ({pagination.total} total)</span>
+          <div className="px-5 py-3 border-t border-surface-200 flex items-center justify-between text-sm">
+            <span className="text-surface-500 tabular-nums">Page {pagination.page} of {pagination.totalPages} ({pagination.total} total)</span>
             <div className="flex gap-2">
               <Button variant="secondary" size="sm" disabled={pagination.page <= 1} onClick={() => fetchLogs(pagination.page - 1)}>Previous</Button>
               <Button variant="secondary" size="sm" disabled={pagination.page >= pagination.totalPages} onClick={() => fetchLogs(pagination.page + 1)}>Next</Button>

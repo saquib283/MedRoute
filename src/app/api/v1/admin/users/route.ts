@@ -1,5 +1,5 @@
-/**
- * MediRoute India — /api/v1/admin/users
+﻿/**
+ * Afzal Healthcare — /api/v1/admin/users
  * Full CRUD for user management with audit logging and Admin guards.
  */
 
@@ -9,7 +9,9 @@ import { requireAuth, getClientIP } from '@/lib/api/auth-helper';
 import { apiSuccess, apiError } from '@/lib/api/response';
 import { ERROR_CODES } from '@/lib/api/errors';
 import { createAuditLog, AUDIT_ACTIONS } from '@/lib/api/audit-logger';
-import bcrypt from 'bcryptjs';
+import { hashPassword } from '@/lib/auth/password';
+import { onboardPatient } from '@/lib/services/onboarding.service';
+import { formatPatientForViewer } from '@/lib/services/phi.service';
 import { z } from 'zod';
 
 const createUserSchema = z.object({
@@ -18,6 +20,13 @@ const createUserSchema = z.object({
   fullName: z.string().min(1),
   role: z.enum(['PATIENT', 'MANAGER', 'ADMIN', 'DOCTOR']),
   phone: z.string().optional(),
+  nationality: z.string().optional(),
+  passportNo: z.string().optional(),
+  dob: z.string().optional(),
+  primaryLanguage: z.string().optional(),
+  medicalCondition: z.string().optional(),
+  urgencyLevel: z.enum(['ROUTINE', 'SEMI_URGENT', 'URGENT']).optional(),
+  assignedManagerId: z.string().nullable().optional(),
 });
 
 const updateUserSchema = z.object({
@@ -98,19 +107,68 @@ export async function POST(request: NextRequest) {
       return apiError(ERROR_CODES.BAD_REQUEST, result.error.issues[0].message, 400);
     }
 
-    const existing = await prisma.user.findUnique({ where: { email: result.data.email } });
+    if (result.data.role === 'PATIENT') {
+      const nationality = result.data.nationality?.trim() || '';
+      const passportNo = result.data.passportNo?.trim() || '';
+      const dob = result.data.dob?.trim() || '';
+
+      if (nationality.length < 2 || passportNo.length < 5 || !dob || isNaN(Date.parse(dob))) {
+        return apiError(
+          ERROR_CODES.BAD_REQUEST,
+          'Nationality, passport number (min 5 chars), and valid date of birth are required for patient accounts',
+          400
+        );
+      }
+
+      const onboardRes = await onboardPatient(
+        {
+          email: result.data.email,
+          password: result.data.password,
+          fullName: result.data.fullName,
+          phone: result.data.phone,
+          nationality,
+          passportNo,
+          dob,
+          primaryLanguage: result.data.primaryLanguage,
+          medicalCondition: result.data.medicalCondition,
+          urgencyLevel: result.data.urgencyLevel,
+          assignedManagerId: result.data.assignedManagerId,
+        },
+        {
+          actorId: authUser!.userId,
+          ipAddress: getClientIP(request),
+        }
+      );
+
+      if (!onboardRes.ok) {
+        return apiError(onboardRes.code, onboardRes.message, onboardRes.status);
+      }
+
+      return apiSuccess(
+        {
+          user: onboardRes.user,
+          patient: formatPatientForViewer(onboardRes.patient, { maskPassport: true }),
+          initialCase: onboardRes.initialCase,
+        },
+        undefined,
+        201
+      );
+    }
+
+    const normalizedEmail = result.data.email.trim().toLowerCase();
+    const existing = await prisma.user.findUnique({ where: { email: normalizedEmail } });
     if (existing) {
       return apiError(ERROR_CODES.USER_ALREADY_EXISTS, 'Email already exists', 409);
     }
 
-    const passwordHash = await bcrypt.hash(result.data.password, 12);
+    const passwordHash = await hashPassword(result.data.password);
     const user = await prisma.user.create({
       data: {
-        email: result.data.email,
+        email: normalizedEmail,
         passwordHash,
-        fullName: result.data.fullName,
+        fullName: result.data.fullName.trim(),
         role: result.data.role,
-        phone: result.data.phone,
+        phone: result.data.phone?.trim() || null,
       },
       select: { id: true, email: true, fullName: true, role: true, isActive: true },
     });
@@ -146,6 +204,17 @@ export async function PUT(request: NextRequest) {
     }
 
     const { id, ...updateData } = result.data;
+
+    if (
+      id === authUser!.userId &&
+      (updateData.isActive === false || (updateData.role && updateData.role !== 'ADMIN'))
+    ) {
+      return apiError(
+        ERROR_CODES.BAD_REQUEST,
+        'Cannot deactivate or demote your own admin account',
+        400
+      );
+    }
 
     // Fetch existing user
     const existingUser = await prisma.user.findUnique({ where: { id } });
@@ -198,10 +267,21 @@ export async function DELETE(request: NextRequest) {
       return apiError(ERROR_CODES.BAD_REQUEST, 'User ID required', 400);
     }
 
+    if (userId === authUser!.userId) {
+      return apiError(
+        ERROR_CODES.BAD_REQUEST,
+        'Cannot deactivate or demote your own admin account',
+        400
+      );
+    }
+
     const existingUser = await prisma.user.findUnique({
       where: { id: userId },
       select: { email: true, role: true, fullName: true },
     });
+    if (!existingUser) {
+      return apiError(ERROR_CODES.USER_NOT_FOUND, 'User not found', 404);
+    }
 
     // Soft delete
     await prisma.user.update({

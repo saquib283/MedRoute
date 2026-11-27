@@ -1,7 +1,7 @@
 'use client';
 
 /**
- * MediRoute India — Admin Email Campaigns
+ * Afzal Healthcare — Admin Email Campaigns
  * Create & send campaigns using templates, target specific audiences,
  * view campaign history with status tracking.
  */
@@ -13,9 +13,9 @@ import { Badge } from '@/components/ui/Badge';
 import { DatePicker } from '@/components/ui/DatePicker';
 import { Select } from '@/components/ui/Select';
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
-import { Modal } from '@/components/ui/Modal';
 import { toast } from '@/components/ui/Toast';
-import { AlertTriangle } from 'lucide-react';
+import { sanitizeEmailHtml } from '@/lib/validation/email-sanitizer';
+import { AlertTriangle, X } from 'lucide-react';
 
 interface EmailTemplate {
   id: string;
@@ -52,7 +52,17 @@ const AUDIENCE_OPTIONS = [
   { value: 'MANAGER', label: 'All Managers' },
   { value: 'DOCTOR', label: 'All Doctors' },
   { value: 'ADMIN', label: 'All Admins' },
+  { value: 'LEADS_ACTIVE', label: 'Active Pre-Conversion Leads (LEADS_ACTIVE)' },
 ];
+
+const AUDIENCE_LABELS: Record<string, string> = {
+  ALL: 'All Users',
+  PATIENT: 'All Patients',
+  MANAGER: 'All Managers',
+  DOCTOR: 'All Doctors',
+  ADMIN: 'All Admins',
+  LEADS_ACTIVE: 'Active Leads',
+};
 
 export default function EmailCampaignsPage() {
   const [campaigns, setCampaigns] = useState<Campaign[]>([]);
@@ -65,6 +75,7 @@ export default function EmailCampaignsPage() {
   const [showModal, setShowModal] = useState(false);
   const [form, setForm] = useState({ name: '', templateId: '', targetRole: 'ALL', scheduledAt: '' });
   const [sending, setSending] = useState(false);
+  const [processingQueued, setProcessingQueued] = useState(false);
   const [selectedTemplate, setSelectedTemplate] = useState<EmailTemplate | null>(null);
 
   // Detail view
@@ -77,7 +88,6 @@ export default function EmailCampaignsPage() {
   const [cancelling, setCancelling] = useState(false);
 
   const fetchCampaigns = useCallback(async (page = 1) => {
-    await Promise.resolve();
     setLoading(true);
     try {
       const params = new URLSearchParams({ page: String(page), limit: '15' });
@@ -167,13 +177,11 @@ export default function EmailCampaignsPage() {
     setCancelConfirm({ open: true, id, name });
   };
 
-  const confirmCancelCampaign = async () => {
+  const executeCancel = async () => {
     if (!cancelConfirm.id) return;
     setCancelling(true);
     try {
-      const res = await fetch(`/api/v1/admin/email-campaigns?id=${cancelConfirm.id}`, {
-        method: 'DELETE',
-      });
+      const res = await fetch(`/api/v1/admin/email-campaigns?id=${cancelConfirm.id}`, { method: 'DELETE' });
       const data = await res.json();
       if (data.success) {
         toast.success('Campaign cancelled successfully');
@@ -189,20 +197,49 @@ export default function EmailCampaignsPage() {
     }
   };
 
+  const handleProcessQueued = async () => {
+    setProcessingQueued(true);
+    try {
+      const res = await fetch('/api/v1/admin/email-campaigns', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'PROCESS_QUEUED' }),
+      });
+      const data = await res.json();
+      if (!data.success) {
+        toast.error(data.error?.message || 'Failed to process queued campaigns');
+        return;
+      }
+      const { processedCampaigns, notificationsCreated } = data.data;
+      if (processedCampaigns > 0) {
+        toast.success(
+          `Processed ${processedCampaigns} due campaign(s) (${notificationsCreated} notifications sent)`
+        );
+      } else {
+        toast.info('No due queued campaigns to process');
+      }
+      fetchCampaigns(pagination.page);
+    } catch {
+      toast.error('Failed to process queued campaigns');
+    } finally {
+      setProcessingQueued(false);
+    }
+  };
+
+  const hasQueuedCampaigns = campaigns.some((c) => c.status === 'QUEUED');
+
   return (
-    <div className="max-w-7xl mx-auto space-y-6 animate-fade-in">
+    <div className="space-y-6 animate-fade-in">
       {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-5 border-b border-surface-200">
         <div>
-          <div className="mb-1">
-            <h1 className="text-2xl font-bold text-surface-900 tracking-tight">Email Campaigns</h1>
-          </div>
-          <p className="text-sm text-surface-500">Send targeted email campaigns to platform users using templates.</p>
+          <h1 className="text-xl font-semibold tracking-tight text-surface-900">Email Campaigns</h1>
+          <p className="text-xs sm:text-sm text-surface-500 mt-1">Send targeted email campaigns to platform users using reusable templates.</p>
         </div>
         <Button onClick={openNewCampaign}>+ New Campaign</Button>
       </div>
 
-      <Card className="p-4 bg-white border border-surface-200 flex flex-col sm:flex-row gap-3">
+      <Card padding="sm" className="flex flex-col sm:flex-row gap-3">
         <Select
           value={statusFilter}
           onChange={setStatusFilter}
@@ -217,40 +254,50 @@ export default function EmailCampaignsPage() {
           className="w-full sm:w-48"
         />
         <Button variant="secondary" size="sm" onClick={() => fetchCampaigns()}>Refresh</Button>
+        {hasQueuedCampaigns && (
+          <Button
+            variant="secondary"
+            size="sm"
+            isLoading={processingQueued}
+            onClick={handleProcessQueued}
+          >
+            Process Due Queued
+          </Button>
+        )}
       </Card>
 
       {/* Table */}
-      <Card className="bg-white border border-surface-200 overflow-hidden">
+      <Card className="p-0! overflow-hidden">
         {loading ? (
           <div className="flex items-center justify-center py-16">
-            <div className="w-8 h-8 border-4 border-primary-600 border-t-transparent rounded-full animate-spin" />
+            <div className="w-7 h-7 border-2 border-primary-600 border-t-transparent rounded-full animate-spin" />
           </div>
         ) : (
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
               <thead>
-                <tr className="border-b border-surface-100 bg-surface-50">
-                  <th className="px-5 py-3 text-left text-xs font-bold text-surface-500 uppercase tracking-wider">Campaign</th>
-                  <th className="px-5 py-3 text-left text-xs font-bold text-surface-500 uppercase tracking-wider">Template</th>
-                  <th className="px-5 py-3 text-left text-xs font-bold text-surface-500 uppercase tracking-wider">Audience</th>
-                  <th className="px-5 py-3 text-left text-xs font-bold text-surface-500 uppercase tracking-wider">Status</th>
-                  <th className="px-5 py-3 text-left text-xs font-bold text-surface-500 uppercase tracking-wider">Sent</th>
-                  <th className="px-5 py-3 text-left text-xs font-bold text-surface-500 uppercase tracking-wider">Date</th>
-                  <th className="px-5 py-3 text-right text-xs font-bold text-surface-500 uppercase tracking-wider">Actions</th>
+                <tr className="border-b border-surface-200 bg-surface-100">
+                  <th className="px-5 py-3 text-left text-[11px] font-medium uppercase tracking-wide text-surface-500">Campaign</th>
+                  <th className="px-5 py-3 text-left text-[11px] font-medium uppercase tracking-wide text-surface-500">Template</th>
+                  <th className="px-5 py-3 text-left text-[11px] font-medium uppercase tracking-wide text-surface-500">Audience</th>
+                  <th className="px-5 py-3 text-left text-[11px] font-medium uppercase tracking-wide text-surface-500">Status</th>
+                  <th className="px-5 py-3 text-left text-[11px] font-medium uppercase tracking-wide text-surface-500">Sent</th>
+                  <th className="px-5 py-3 text-left text-[11px] font-medium uppercase tracking-wide text-surface-500">Date</th>
+                  <th className="px-5 py-3 text-right text-[11px] font-medium uppercase tracking-wide text-surface-500">Actions</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-surface-100">
+              <tbody className="divide-y divide-surface-200">
                 {campaigns.length === 0 ? (
                   <tr><td colSpan={7} className="px-5 py-12 text-center text-surface-500">No campaigns yet. Create your first campaign to get started.</td></tr>
                 ) : (
                   campaigns.map((c) => (
-                    <tr key={c.id} className="hover:bg-surface-50 transition-colors">
-                      <td className="px-5 py-3.5 font-semibold text-surface-900">{c.name}</td>
+                    <tr key={c.id} className="hover:bg-surface-100/60 transition-colors">
+                      <td className="px-5 py-3.5 font-medium text-surface-900">{c.name}</td>
                       <td className="px-5 py-3.5 text-surface-600">{c.template.name}</td>
-                      <td className="px-5 py-3.5"><Badge variant="default">{c.targetRole}</Badge></td>
+                      <td className="px-5 py-3.5"><Badge variant={c.targetRole === 'LEADS_ACTIVE' ? 'primary' : 'default'}>{AUDIENCE_LABELS[c.targetRole] || c.targetRole}</Badge></td>
                       <td className="px-5 py-3.5"><Badge variant={STATUS_VARIANTS[c.status] || 'default'} dot>{c.status}</Badge></td>
-                      <td className="px-5 py-3.5 text-surface-600 font-medium">{c.sentCount}</td>
-                      <td className="px-5 py-3.5 text-surface-500 text-xs">
+                      <td className="px-5 py-3.5 text-surface-600 font-medium tabular-nums">{c.sentCount}</td>
+                      <td className="px-5 py-3.5 text-surface-500 text-xs tabular-nums">
                         {c.sentAt ? new Date(c.sentAt).toLocaleString() : c.scheduledAt ? `Scheduled: ${new Date(c.scheduledAt).toLocaleString()}` : new Date(c.createdAt).toLocaleDateString()}
                       </td>
                       <td className="px-5 py-3.5 text-right">
@@ -276,8 +323,8 @@ export default function EmailCampaignsPage() {
           </div>
         )}
         {pagination.totalPages > 1 && (
-          <div className="px-5 py-3 border-t border-surface-100 flex items-center justify-between text-sm">
-            <span className="text-surface-500">Page {pagination.page} of {pagination.totalPages} ({pagination.total} total)</span>
+          <div className="px-5 py-3 border-t border-surface-200 flex items-center justify-between text-sm">
+            <span className="text-surface-500 tabular-nums">Page {pagination.page} of {pagination.totalPages} ({pagination.total} total)</span>
             <div className="flex gap-2">
               <Button variant="secondary" size="sm" disabled={pagination.page <= 1} onClick={() => fetchCampaigns(pagination.page - 1)}>Previous</Button>
               <Button variant="secondary" size="sm" disabled={pagination.page >= pagination.totalPages} onClick={() => fetchCampaigns(pagination.page + 1)}>Next</Button>
@@ -287,155 +334,170 @@ export default function EmailCampaignsPage() {
       </Card>
 
       {/* New Campaign Modal */}
-      <Modal
-        open={showModal}
-        onClose={() => setShowModal(false)}
-        title="New Email Campaign"
-        maxWidth="2xl"
-      >
-        <form onSubmit={handleSend} className="space-y-5">
-          <div className="space-y-1.5">
-            <label className="block text-xs font-semibold text-surface-700">Campaign Name *</label>
-            <input
-              type="text"
-              required
-              value={form.name}
-              onChange={(e) => setForm({ ...form, name: e.target.value })}
-              className="w-full p-2.5 border border-surface-300 rounded text-sm focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500"
-              placeholder="e.g., Patient Onboarding Follow-up"
-            />
-          </div>
-
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <Select
-              label="Template *"
-              value={form.templateId}
-              onChange={handleTemplateSelect}
-              options={[
-                { value: '', label: 'Select a template...' },
-                ...templates.map((t) => ({ value: t.id, label: `${t.name} (${t.category})` }))
-              ]}
-              required
-              helperText={templates.length === 0 ? "No templates available. Create one first." : undefined}
-            />
-
-            <Select
-              label="Target Audience *"
-              value={form.targetRole}
-              onChange={(val) => setForm({ ...form, targetRole: val })}
-              options={AUDIENCE_OPTIONS}
-              required
-            />
-          </div>
-
-          <DatePicker
-            label="Scheduled Send Time (Optional)"
-            value={form.scheduledAt}
-            onChange={(scheduledAt) => setForm({ ...form, scheduledAt })}
-            showTimePicker={true}
-            placeholder="Leave blank to send immediately"
-            helperText="Leave blank to send this campaign immediately."
-          />
-
-          {/* Template Preview */}
-          {selectedTemplate && (
-            <div className="border border-surface-200 rounded-lg overflow-hidden">
-              <div className="px-4 py-2.5 bg-surface-50 border-b border-surface-200 flex items-center justify-between">
-                <span className="text-xs font-bold text-surface-700">Template Preview</span>
-                <Badge variant="primary" size="sm">{selectedTemplate.category}</Badge>
-              </div>
-              <div className="px-4 py-2 border-b border-surface-100 bg-white">
-                <p className="text-xs text-surface-500">Subject: <span className="font-semibold text-surface-800">{selectedTemplate.subject}</span></p>
-              </div>
-              <div className="p-4 bg-white max-h-[200px] overflow-y-auto text-sm">
-                <div dangerouslySetInnerHTML={{ __html: selectedTemplate.body }} />
-              </div>
+      {showModal && (
+        <div className="fixed inset-0 z-50 flex items-start justify-center p-4 pt-[5vh] bg-surface-900/40 overflow-y-auto">
+          <div className="bg-white rounded-lg shadow-md border border-surface-200 w-full max-w-2xl animate-scale-in my-8">
+            <div className="px-6 py-4 border-b border-surface-200 flex items-center justify-between">
+              <h3 className="text-sm sm:text-base font-semibold text-surface-900">New email campaign</h3>
+              <button
+                onClick={() => setShowModal(false)}
+                aria-label="Close"
+                className="text-surface-400 hover:text-surface-600 p-1 rounded-md hover:bg-surface-100 transition-colors"
+              >
+                <X className="w-5 h-5" aria-hidden="true" />
+              </button>
             </div>
-          )}
+            <form onSubmit={handleSend} className="p-6 space-y-5">
+              <div className="space-y-1.5">
+                <label className="block text-xs font-medium text-surface-700">Campaign Name *</label>
+                <input
+                  type="text"
+                  required
+                  value={form.name}
+                  onChange={(e) => setForm({ ...form, name: e.target.value })}
+                  className="w-full p-2.5 border border-surface-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-600"
+                  placeholder="e.g., July Welcome Campaign"
+                />
+              </div>
 
-          <div className="bg-warning-50 border border-warning-200 rounded-lg px-4 py-3 flex items-start gap-2.5">
-            <AlertTriangle className="w-4 h-4 text-warning-600 shrink-0 mt-0.5" />
-            <div>
-              <p className="text-xs font-bold text-warning-800">
-                {form.scheduledAt ? 'Campaign will be scheduled' : 'Campaign will be sent immediately'}
-              </p>
-              <p className="text-[11px] text-warning-600 mt-0.5">
-                {form.scheduledAt
-                  ? `This will queue the campaign to process automatically at ${new Date(form.scheduledAt).toLocaleString()}.`
-                  : 'This will create email notifications for all active users matching the target audience. The campaign cannot be undone.'}
-              </p>
-            </div>
-          </div>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <Select
+                  label="Template *"
+                  value={form.templateId}
+                  onChange={handleTemplateSelect}
+                  options={[
+                    { value: '', label: 'Select a template...' },
+                    ...templates.map((t) => ({ value: t.id, label: `${t.name} (${t.category})` }))
+                  ]}
+                  required
+                  helperText={templates.length === 0 ? "No templates available. Create one first." : undefined}
+                />
 
-          <div className="flex gap-3 pt-2">
-            <Button type="button" variant="secondary" className="flex-1" onClick={() => setShowModal(false)}>Cancel</Button>
-            <Button type="submit" className="flex-1" isLoading={sending}>
-              {form.scheduledAt ? 'Schedule Campaign' : 'Send Campaign'}
-            </Button>
+                <Select
+                  label="Target Audience *"
+                  value={form.targetRole}
+                  onChange={(val) => setForm({ ...form, targetRole: val })}
+                  options={AUDIENCE_OPTIONS}
+                  required
+                />
+              </div>
+
+              <DatePicker
+                label="Scheduled Send Time (Optional)"
+                value={form.scheduledAt}
+                onChange={(scheduledAt) => setForm({ ...form, scheduledAt })}
+                showTimePicker={true}
+                placeholder="Leave blank to send immediately"
+                helperText="Leave blank to send this campaign immediately."
+              />
+
+              {/* Template Preview */}
+              {selectedTemplate && (
+                <div className="border border-surface-200 rounded-md overflow-hidden">
+                  <div className="px-4 py-2.5 bg-surface-100 border-b border-surface-200 flex items-center justify-between">
+                    <span className="text-xs font-medium text-surface-700">Template preview</span>
+                    <Badge variant="primary" size="sm">{selectedTemplate.category}</Badge>
+                  </div>
+                  <div className="px-4 py-2 border-b border-surface-200 bg-white">
+                    <p className="text-xs text-surface-500">Subject: <span className="font-medium text-surface-800">{selectedTemplate.subject}</span></p>
+                  </div>
+                  <div className="p-4 bg-white max-h-[200px] overflow-y-auto text-sm">
+                    <div dangerouslySetInnerHTML={{ __html: sanitizeEmailHtml(selectedTemplate.body) }} />
+                  </div>
+                </div>
+              )}
+
+              <div className="bg-warning-50 border border-warning-200 rounded-md px-4 py-3 flex items-start gap-2.5">
+                <AlertTriangle className="w-4 h-4 text-warning-600 shrink-0 mt-0.5" aria-hidden="true" />
+                <div>
+                  <p className="text-xs font-semibold text-warning-800">
+                    {form.scheduledAt ? 'Campaign will be scheduled' : 'Campaign will be sent immediately'}
+                  </p>
+                  <p className="text-xs text-warning-700 mt-0.5">
+                    {form.scheduledAt
+                      ? `This will queue the campaign to process automatically at ${new Date(form.scheduledAt).toLocaleString()}.`
+                      : form.targetRole === 'LEADS_ACTIVE'
+                        ? 'This will dispatch campaign emails to all active pre-conversion leads with a valid email address. The campaign cannot be undone.'
+                        : 'This will create email notifications for all active users matching the target audience. The campaign cannot be undone.'}
+                  </p>
+                </div>
+              </div>
+
+              <div className="flex gap-3 pt-2">
+                <Button type="button" variant="secondary" className="flex-1" onClick={() => setShowModal(false)}>Cancel</Button>
+                <Button type="submit" className="flex-1" isLoading={sending}>
+                  {form.scheduledAt ? 'Schedule Campaign' : 'Send Campaign'}
+                </Button>
+              </div>
+            </form>
           </div>
-        </form>
-      </Modal>
+        </div>
+      )}
 
       {/* Campaign Detail View */}
-      <Modal
-        open={!!viewingCampaign}
-        onClose={() => setViewingCampaign(null)}
-        title="Campaign Details"
-        maxWidth="md"
-        footer={
-          <Button variant="secondary" fullWidth onClick={() => setViewingCampaign(null)}>
-            Close
-          </Button>
-        }
-      >
-        {viewingCampaign && (
-          <div className="space-y-4">
-            <div className="space-y-3">
-              <div>
-                <p className="text-[10px] font-bold text-surface-500 uppercase tracking-wider">Campaign Name</p>
-                <p className="text-sm font-semibold text-surface-900 mt-0.5">{viewingCampaign.name}</p>
-              </div>
-              <div className="grid grid-cols-2 gap-3">
+      {viewingCampaign && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-surface-900/40">
+          <div className="bg-white rounded-lg shadow-md border border-surface-200 w-full max-w-md animate-scale-in">
+            <div className="px-6 py-4 border-b border-surface-200 flex items-center justify-between">
+              <h3 className="text-sm sm:text-base font-semibold text-surface-900">Campaign details</h3>
+              <button
+                onClick={() => setViewingCampaign(null)}
+                aria-label="Close"
+                className="text-surface-400 hover:text-surface-600 p-1 rounded-md hover:bg-surface-100 transition-colors"
+              >
+                <X className="w-5 h-5" aria-hidden="true" />
+              </button>
+            </div>
+            <div className="p-6 space-y-4">
+              <div className="space-y-3">
                 <div>
-                  <p className="text-[10px] font-bold text-surface-500 uppercase tracking-wider">Template</p>
-                  <p className="text-sm text-surface-700 mt-0.5">{viewingCampaign.template.name}</p>
+                  <p className="text-xs font-medium text-surface-500">Campaign name</p>
+                  <p className="text-sm font-medium text-surface-900 mt-0.5">{viewingCampaign.name}</p>
+                </div>
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <p className="text-xs font-medium text-surface-500">Template</p>
+                    <p className="text-sm text-surface-700 mt-0.5">{viewingCampaign.template.name}</p>
+                  </div>
+                  <div>
+                    <p className="text-xs font-medium text-surface-500">Audience</p>
+                    <p className="text-sm text-surface-700 mt-0.5">{AUDIENCE_LABELS[viewingCampaign.targetRole] || viewingCampaign.targetRole}</p>
+                  </div>
+                </div>
+                <div className="grid grid-cols-3 gap-3">
+                  <div className="p-3 bg-surface-100 border border-surface-200 rounded-md text-center">
+                    <p className="text-lg font-semibold tabular-nums text-surface-900">{viewingCampaign.sentCount}</p>
+                    <p className="text-xs text-surface-500 font-medium">Sent</p>
+                  </div>
+                  <div className="p-3 bg-surface-100 border border-surface-200 rounded-md text-center">
+                    <p className="text-lg font-semibold tabular-nums text-surface-900">{viewingCampaign.failedCount}</p>
+                    <p className="text-xs text-surface-500 font-medium">Failed</p>
+                  </div>
+                  <div className="p-3 bg-surface-100 border border-surface-200 rounded-md flex items-center justify-center">
+                    <Badge variant={STATUS_VARIANTS[viewingCampaign.status] || 'default'} dot>{viewingCampaign.status}</Badge>
+                  </div>
                 </div>
                 <div>
-                  <p className="text-[10px] font-bold text-surface-500 uppercase tracking-wider">Audience</p>
-                  <p className="text-sm text-surface-700 mt-0.5">{viewingCampaign.targetRole}</p>
+                  <p className="text-xs font-medium text-surface-500">Sent at</p>
+                  <p className="text-sm text-surface-700 tabular-nums mt-0.5">
+                    {viewingCampaign.sentAt ? new Date(viewingCampaign.sentAt).toLocaleString() : 'Not yet sent'}
+                  </p>
                 </div>
               </div>
-              <div className="grid grid-cols-3 gap-3">
-                <div className="p-3 bg-surface-50 rounded-lg text-center">
-                  <p className="text-lg font-bold text-surface-900">{viewingCampaign.sentCount}</p>
-                  <p className="text-[10px] text-surface-500 font-semibold">Sent</p>
-                </div>
-                <div className="p-3 bg-surface-50 rounded-lg text-center">
-                  <p className="text-lg font-bold text-surface-900">{viewingCampaign.failedCount}</p>
-                  <p className="text-[10px] text-surface-500 font-semibold">Failed</p>
-                </div>
-                <div className="p-3 bg-surface-50 rounded-lg text-center flex items-center justify-center">
-                  <Badge variant={STATUS_VARIANTS[viewingCampaign.status] || 'default'} dot>{viewingCampaign.status}</Badge>
-                </div>
-              </div>
-              <div>
-                <p className="text-[10px] font-bold text-surface-500 uppercase tracking-wider">Sent At</p>
-                <p className="text-sm text-surface-700 mt-0.5">
-                  {viewingCampaign.sentAt ? new Date(viewingCampaign.sentAt).toLocaleString() : 'Not yet sent'}
-                </p>
-              </div>
+              <Button variant="secondary" fullWidth onClick={() => setViewingCampaign(null)}>Close</Button>
             </div>
           </div>
-        )}
-      </Modal>
+        </div>
+      )}
+
       <ConfirmDialog
         open={cancelConfirm.open}
         title="Cancel Scheduled Campaign"
-        message={`Are you sure you want to cancel and delete "${cancelConfirm.name}"?`}
+        message={`Are you sure you want to cancel and delete the scheduled campaign "${cancelConfirm.name}"?`}
         confirmLabel="Cancel Campaign"
         variant="danger"
         loading={cancelling}
-        onConfirm={confirmCancelCampaign}
+        onConfirm={executeCancel}
         onCancel={() => setCancelConfirm({ open: false, id: '', name: '' })}
       />
     </div>

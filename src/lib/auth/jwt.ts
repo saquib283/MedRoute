@@ -1,5 +1,5 @@
-/**
- * MediRoute India — JWT Utilities
+﻿/**
+ * Afzal Healthcare — JWT Utilities
  * Uses `jose` for Edge-compatible JWT operations.
  * Access tokens: 15 min, Refresh tokens: 7 days per PRD Section 5.3.
  */
@@ -57,7 +57,7 @@ export async function signAccessToken(payload: {
     .setProtectedHeader({ alg: 'HS256' })
     .setIssuedAt()
     .setExpirationTime(process.env.JWT_ACCESS_EXPIRY || '15m')
-    .setIssuer('mediroute')
+    .setIssuer('Afzal Healthcare')
     .sign(getAccessSecret());
 }
 
@@ -65,7 +65,7 @@ export async function verifyAccessToken(
   token: string
 ): Promise<AccessTokenPayload> {
   const { payload } = await jwtVerify(token, getAccessSecret(), {
-    issuer: 'mediroute',
+    issuer: 'Afzal Healthcare',
   });
   return payload as AccessTokenPayload;
 }
@@ -85,7 +85,7 @@ export async function signRefreshToken(payload: {
     .setExpirationTime(
       `${process.env.JWT_REFRESH_EXPIRY_DAYS || '7'}d`
     )
-    .setIssuer('mediroute')
+    .setIssuer('Afzal Healthcare')
     .sign(getRefreshSecret());
 }
 
@@ -93,7 +93,7 @@ export async function verifyRefreshToken(
   token: string
 ): Promise<RefreshTokenPayload> {
   const { payload } = await jwtVerify(token, getRefreshSecret(), {
-    issuer: 'mediroute',
+    issuer: 'Afzal Healthcare',
   });
   return payload as RefreshTokenPayload;
 }

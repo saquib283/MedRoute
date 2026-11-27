@@ -1,6 +1,11 @@
 'use client';
 
-import React, { useEffect, useId } from 'react';
+/**
+ * MediRoute India — Accessible Native Modal Dialog
+ * Crisp 8px radius, hairline border, and restrained clinical header.
+ */
+
+import React, { useEffect, useId, useRef } from 'react';
 import { X } from 'lucide-react';
 
 interface ModalProps {
@@ -8,12 +13,16 @@ interface ModalProps {
   onClose: () => void;
   title: string;
   subtitle?: string;
+  icon?: React.ReactNode;
   maxWidth?: 'sm' | 'md' | 'lg' | 'xl' | '2xl' | '3xl';
-  children: React.ReactNode;
+  maxWidthClass?: string;
   footer?: React.ReactNode;
+  preventClose?: boolean;
+  lightDismiss?: boolean;
+  children: React.ReactNode;
 }
 
-const maxWidthStyles = {
+const MAX_WIDTH_MAP: Record<NonNullable<ModalProps['maxWidth']>, string> = {
   sm: 'max-w-sm',
   md: 'max-w-md',
   lg: 'max-w-lg',
@@ -27,74 +36,147 @@ export function Modal({
   onClose,
   title,
   subtitle,
-  maxWidth = 'lg',
-  children,
+  icon,
+  maxWidth,
+  maxWidthClass,
   footer,
+  preventClose = false,
+  lightDismiss = true,
+  children,
 }: ModalProps) {
+  const dialogRef = useRef<HTMLDialogElement>(null);
   const titleId = useId();
+  const descId = useId();
+  const resolvedMaxWidth = maxWidthClass ?? (maxWidth ? MAX_WIDTH_MAP[maxWidth] : 'max-w-lg');
 
   useEffect(() => {
-    if (!open) return;
+    const dialog = dialogRef.current;
+    if (!dialog) return;
 
-    const handleKeyDown = (event: KeyboardEvent) => {
-      if (event.key === 'Escape') {
-        onClose();
+    if (open) {
+      if (!dialog.open) {
+        if (typeof dialog.showModal === 'function') {
+          dialog.showModal();
+        } else {
+          dialog.setAttribute('open', '');
+        }
       }
+    } else if (dialog.open) {
+      if (typeof dialog.close === 'function') {
+        dialog.close();
+      } else {
+        dialog.removeAttribute('open');
+      }
+    }
+  }, [open]);
+
+  useEffect(() => {
+    const dialog = dialogRef.current;
+    if (!dialog || !open || !lightDismiss) return;
+    if (typeof HTMLDialogElement !== 'undefined' && 'closedBy' in HTMLDialogElement.prototype) {
+      return;
+    }
+
+    const isOutside = (e: PointerEvent) => {
+      const rect = dialog.getBoundingClientRect();
+      return (
+        e.clientX < rect.left ||
+        e.clientX > rect.right ||
+        e.clientY < rect.top ||
+        e.clientY > rect.bottom
+      );
     };
 
-    const previousOverflow = document.body.style.overflow;
-    document.body.style.overflow = 'hidden';
-    document.addEventListener('keydown', handleKeyDown);
+    let pressedOutside = false;
+    const handlePointerDown = (e: PointerEvent) => {
+      pressedOutside = isOutside(e);
+    };
+    const handlePointerUp = (e: PointerEvent) => {
+      if (!preventClose && pressedOutside && isOutside(e)) {
+        dialog.close();
+      }
+      pressedOutside = false;
+    };
 
+    dialog.addEventListener('pointerdown', handlePointerDown);
+    dialog.addEventListener('pointerup', handlePointerUp);
     return () => {
-      document.body.style.overflow = previousOverflow;
-      document.removeEventListener('keydown', handleKeyDown);
+      dialog.removeEventListener('pointerdown', handlePointerDown);
+      dialog.removeEventListener('pointerup', handlePointerUp);
     };
-  }, [open, onClose]);
+  }, [open, lightDismiss, preventClose]);
 
-  if (!open) return null;
+  const handleCancel = (e: React.SyntheticEvent<HTMLDialogElement, Event>) => {
+    if (preventClose) {
+      e.preventDefault();
+      return;
+    }
+    onClose();
+  };
+
+  const handleNativeClose = () => {
+    const dialog = dialogRef.current;
+    if (dialog) {
+      dialog.returnValue = '';
+    }
+    if (open && !preventClose) {
+      onClose();
+    }
+  };
+
+  const closedByMode = preventClose ? 'none' : lightDismiss ? 'any' : 'closerequest';
 
   return (
-    <div
-      className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-surface-950/40 backdrop-blur-[2px]"
-      onClick={onClose}
-      role="dialog"
-      aria-modal="true"
+    <dialog
+      ref={dialogRef}
       aria-labelledby={titleId}
+      aria-describedby={subtitle ? descId : undefined}
+      onCancel={handleCancel}
+      onClose={handleNativeClose}
+      {...({ closedby: closedByMode } as Record<string, unknown>)}
+      className={`
+        m-auto w-[calc(100%-2rem)] ${resolvedMaxWidth}
+        rounded-lg border border-surface-200 bg-white p-0 text-surface-900 shadow-md
+        max-h-[min(90dvh,48rem)] overflow-y-auto
+        open:animate-scale-in
+      `}
     >
-      <div
-        className={`bg-white border border-surface-200 rounded-xl shadow-md w-full ${maxWidthStyles[maxWidth]} max-h-[90vh] flex flex-col overflow-hidden animate-scale-in`}
-        onClick={(e) => e.stopPropagation()}
-      >
-        <div className="px-6 py-4 border-b border-surface-200 flex items-start justify-between gap-4 shrink-0">
-          <div className="min-w-0">
-            <h2 id={titleId} className="text-lg font-bold text-surface-900 truncate">
-              {title}
-            </h2>
-            {subtitle && (
-              <p className="text-xs text-surface-500 mt-0.5">{subtitle}</p>
-            )}
-          </div>
-          <button
-            type="button"
-            onClick={onClose}
-            aria-label="Close modal"
-            className="p-1.5 rounded-lg text-surface-400 hover:text-surface-700 hover:bg-surface-100 transition-colors shrink-0"
+      <div className="flex items-start justify-between gap-4 border-b border-surface-200 px-5 py-4 bg-white">
+        <div className="min-w-0">
+          <h2
+            id={titleId}
+            className="text-base font-semibold text-surface-900 flex items-center gap-2"
           >
-            <X className="w-5 h-5" />
-          </button>
+            {icon && <span className="text-primary-600 shrink-0" aria-hidden="true">{icon}</span>}
+            <span>{title}</span>
+          </h2>
+          {subtitle && (
+            <p id={descId} className="text-xs text-surface-500 mt-1">
+              {subtitle}
+            </p>
+          )}
         </div>
 
-        <div className="px-6 py-5 overflow-y-auto flex-1">
-          {children}
-        </div>
-
-        {footer && (
-          <div className="px-6 py-4 border-t border-surface-200 bg-surface-50 flex items-center justify-end gap-3 shrink-0">
-            {footer}
-          </div>
-        )}
+        <button
+          type="button"
+          onClick={() => {
+            if (!preventClose) onClose();
+          }}
+          disabled={preventClose}
+          aria-label="Close dialog"
+          className="inline-flex items-center justify-center w-11 h-11 -mr-2 -mt-1.5 rounded-md text-surface-400 hover:text-surface-700 hover:bg-surface-100 transition-colors disabled:opacity-50"
+        >
+          <X className="w-4 h-4" aria-hidden="true" />
+        </button>
       </div>
-    </div>
+
+      <div className="p-5">{children}</div>
+
+      {footer && (
+        <div className="px-5 py-4 border-t border-surface-200 bg-surface-50 flex items-center justify-end gap-3">
+          {footer}
+        </div>
+      )}
+    </dialog>
   );
 }
