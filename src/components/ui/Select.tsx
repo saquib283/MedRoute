@@ -78,7 +78,7 @@ export function Select({
   return (
     <div className={`space-y-1.5 ${className}`} ref={containerRef}>
       {label && (
-        <label className="block text-xs font-bold text-surface-700">
+        <label className="block text-xs font-bold text-surface-800">
           {label} {required && <span className="text-danger-500">*</span>}
         </label>
       )}
@@ -171,7 +171,7 @@ export function Select({
                         <div className="min-w-0">
                           <p className="truncate">{opt.label}</p>
                           {opt.description && (
-                            <p className="text-[10px] text-surface-400 font-normal truncate mt-0.5">
+                            <p className="text-[10px] text-surface-500 font-normal truncate mt-0.5">
                               {opt.description}
                             </p>
                           )}
@@ -191,7 +191,7 @@ export function Select({
       </div>
 
       {error && <p className="text-[11px] text-danger-600 font-semibold mt-1">{error}</p>}
-      {!error && helperText && <p className="text-[11px] text-surface-400 font-medium mt-1">{helperText}</p>}
+      {!error && helperText && <p className="text-[11px] text-surface-500 font-medium mt-1">{helperText}</p>}
     </div>
   );
 }

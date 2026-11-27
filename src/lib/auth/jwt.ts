@@ -13,6 +13,8 @@ export interface AccessTokenPayload extends JWTPayload {
   userId: string;
   role: UserRole;
   email: string;
+  hospitalId?: string | null;
+  fullName?: string | null;
 }
 
 export interface RefreshTokenPayload extends JWTPayload {
@@ -40,12 +42,18 @@ export async function signAccessToken(payload: {
   userId: string;
   role: UserRole;
   email: string;
+  hospitalId?: string | null;
+  fullName?: string | null;
 }): Promise<string> {
-  return new SignJWT({
+  const tokenPayload: AccessTokenPayload = {
     userId: payload.userId,
     role: payload.role,
     email: payload.email,
-  } as AccessTokenPayload)
+  };
+  if (payload.hospitalId) tokenPayload.hospitalId = payload.hospitalId;
+  if (payload.fullName) tokenPayload.fullName = payload.fullName;
+
+  return new SignJWT(tokenPayload)
     .setProtectedHeader({ alg: 'HS256' })
     .setIssuedAt()
     .setExpirationTime(process.env.JWT_ACCESS_EXPIRY || '15m')

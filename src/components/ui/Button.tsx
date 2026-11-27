@@ -19,7 +19,7 @@ const variantStyles: Record<string, string> = {
   secondary:
     'bg-white hover:bg-surface-100 text-surface-700 border border-surface-300 hover:border-surface-400',
   ghost:
-    'bg-transparent hover:bg-surface-200 text-surface-600 hover:text-surface-800',
+    'bg-transparent hover:bg-surface-200 text-surface-700 hover:text-surface-900',
   danger:
     'bg-danger-600 hover:bg-danger-700 text-white',
 };

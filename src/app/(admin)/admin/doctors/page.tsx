@@ -71,6 +71,7 @@ export default function AdminDoctorsPage() {
   const [deactivating, setDeactivating] = useState(false);
 
   const fetchDoctors = useCallback(async () => {
+    await Promise.resolve();
     setLoading(true);
     try {
       const res = await fetch('/api/v1/admin/doctors');
@@ -108,8 +109,10 @@ export default function AdminDoctorsPage() {
   };
 
   useEffect(() => {
-    fetchDoctors();
-    fetchMeta();
+    queueMicrotask(() => {
+      fetchDoctors();
+      fetchMeta();
+    });
   }, [fetchDoctors]);
 
   const openCreate = () => {

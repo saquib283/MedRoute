@@ -1,5 +1,6 @@
 import type { Metadata } from 'next';
 import Image from 'next/image';
+import Link from 'next/link';
 import logoImg from '../../../public/assets/logo.png';
 
 export const metadata: Metadata = {
@@ -60,7 +61,7 @@ export default function AuthLayout({
               </div>
               <div>
                 <h4 className="text-sm font-semibold text-white">Direct Clinical Channels</h4>
-                <p className="text-xs text-primary-200/60 mt-0.5">Direct communication lines to top accredited medical teams.</p>
+                <p className="text-xs text-primary-200/80 mt-0.5">Direct communication lines to top accredited medical teams.</p>
               </div>
             </div>
 
@@ -92,8 +93,8 @@ export default function AuthLayout({
 
         {/* Footer */}
         <div className="z-10 flex items-center justify-between border-t border-white/10 pt-6">
-          <span className="text-xs text-primary-200/50">JCI Accredited • NABH Certified Networks</span>
-          <span className="text-xs text-primary-200/50">v1.2.0</span>
+          <span className="text-xs text-primary-200/70">JCI Accredited • NABH Certified Networks</span>
+          <span className="text-xs text-primary-200/70">v1.2.0</span>
         </div>
       </div>
 
@@ -137,10 +138,19 @@ export default function AuthLayout({
           </div>
         </div>
 
-        {/* Mobile-only/Secondary tiny footer */}
-        <p className="text-xs text-center text-surface-400 mt-8 z-10">
-          © 2026 MediRoute India. All rights reserved.
-        </p>
+        {/* Auth footer */}
+        <div className="text-xs text-center text-surface-500 mt-8 z-10 space-y-1">
+          <p>© 2026 MediRoute India Pvt. Ltd. All rights reserved.</p>
+          <div className="flex items-center justify-center gap-3 text-surface-400 text-[11px]">
+            <Link href="/terms" className="hover:text-primary-600 transition-colors underline">
+              Terms & Conditions
+            </Link>
+            <span>•</span>
+            <Link href="/privacy" className="hover:text-primary-600 transition-colors underline">
+              Privacy Policy
+            </Link>
+          </div>
+        </div>
       </div>
     </div>
   );

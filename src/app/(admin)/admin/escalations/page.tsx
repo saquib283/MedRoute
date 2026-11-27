@@ -32,6 +32,7 @@ export default function AdminEscalationsPage() {
   const [resolving, setResolving] = useState(false);
 
   const fetchEscalations = useCallback(async (page = 1) => {
+    await Promise.resolve();
     setLoading(true);
     try {
       const res = await fetch(`/api/v1/admin/escalations?page=${page}&limit=15`);
@@ -40,7 +41,7 @@ export default function AdminEscalationsPage() {
     } catch (err) { console.error(err); } finally { setLoading(false); }
   }, []);
 
-  useEffect(() => { fetchEscalations(); }, [fetchEscalations]);
+  useEffect(() => { queueMicrotask(() => fetchEscalations()); }, [fetchEscalations]);
 
   const handleResolve = async () => {
     setResolving(true);

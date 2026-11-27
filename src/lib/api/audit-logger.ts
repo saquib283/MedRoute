@@ -4,46 +4,28 @@
  */
 
 import prisma from '@/lib/prisma';
+import { createChainedAuditLog, ChainedAuditLogParams } from '@/lib/legal/audit-chain';
 
-interface AuditLogParams {
+export interface AuditLogParams {
   actorId: string;
   action: string;
   entityType: string;
   entityId: string;
   oldValue?: unknown;
   newValue?: unknown;
-  ipAddress?: string;
+  ipAddress?: string | null;
+  userAgent?: string | null;
+  requestMethod?: string | null;
+  route?: string | null;
+  status?: string;
 }
 
 /**
- * Create an audit log entry.
+ * Create an audit log entry with cryptographic hash chaining.
  * Fire-and-forget — errors are logged but don't break the caller.
  */
-export async function createAuditLog({
-  actorId,
-  action,
-  entityType,
-  entityId,
-  oldValue,
-  newValue,
-  ipAddress,
-}: AuditLogParams): Promise<void> {
-  try {
-    await prisma.auditLog.create({
-      data: {
-        actorId,
-        action,
-        entityType,
-        entityId,
-        oldValue: oldValue ?? undefined,
-        newValue: newValue ?? undefined,
-        ipAddress: ipAddress ?? null,
-      },
-    });
-  } catch (err) {
-    // Never let audit logging break the main operation
-    console.error('[AuditLog] Failed to create audit entry:', err);
-  }
+export async function createAuditLog(params: AuditLogParams): Promise<void> {
+  await createChainedAuditLog(params);
 }
 
 /**

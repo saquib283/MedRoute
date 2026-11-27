@@ -15,12 +15,12 @@ import {
   FolderLock,
   UserCheck,
   CheckCircle2,
-  Clock,
   MessageSquare,
   FileText,
   ShieldCheck,
   Stethoscope,
   ArrowRight,
+  Home,
 } from 'lucide-react';
 
 interface Coordinator {
@@ -65,7 +65,7 @@ export default function PatientDashboard() {
         const appData = await appRes.json();
         if (appData.success && appData.data?.appointments) {
           const upcoming = appData.data.appointments.filter(
-            (a: any) => new Date(a.scheduledAt) > new Date() && a.status !== 'CANCELLED'
+            (a: { scheduledAt: string; status: string }) => new Date(a.scheduledAt) > new Date() && a.status !== 'CANCELLED'
           );
           setAppointmentsCount(upcoming.length);
         }
@@ -98,7 +98,7 @@ export default function PatientDashboard() {
     return (
       <div className="flex flex-col items-center justify-center min-h-[400px] gap-4">
         <div className="w-10 h-10 border-4 border-primary-600 border-t-transparent rounded-full animate-spin" />
-        <p className="text-sm font-medium text-surface-600">Loading your medical care workspace...</p>
+        <p className="text-sm font-medium text-surface-700">Loading your medical care workspace...</p>
       </div>
     );
   }
@@ -117,7 +117,7 @@ export default function PatientDashboard() {
           <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight flex items-center gap-2">
             Welcome to MediRoute India
           </h1>
-          <p className="text-xs sm:text-sm text-primary-200 leading-relaxed">
+          <p className="text-sm text-primary-200 leading-relaxed">
             Track your treatment roadmap, communicate directly with your case coordinator, and manage medical records securely.
           </p>
         </div>
@@ -147,7 +147,7 @@ export default function PatientDashboard() {
         {/* KPI 1 */}
         <Card className="p-5 rounded-2xl border border-surface-200 shadow-xs hover:shadow-md transition-all flex items-center justify-between">
           <div>
-            <p className="text-xs font-bold uppercase tracking-wider text-surface-500">Upcoming Consults</p>
+            <p className="text-xs font-bold uppercase tracking-wider text-surface-600">Upcoming Consults</p>
             <h3 className="text-2xl font-extrabold text-surface-900 mt-1">{appointmentsCount}</h3>
             <Link href="/patient/appointments" className="text-[11px] font-semibold text-primary-600 hover:text-primary-700 mt-1 inline-flex items-center gap-1">
               View Schedule <ArrowRight className="w-3 h-3" />
@@ -191,7 +191,7 @@ export default function PatientDashboard() {
         {/* KPI 4 */}
         <Card className="p-5 rounded-2xl border border-surface-200 shadow-xs hover:shadow-md transition-all flex flex-col justify-between">
           <div className="flex items-center justify-between text-xs">
-            <span className="font-bold uppercase tracking-wider text-surface-500">Journey Progress</span>
+            <span className="font-bold uppercase tracking-wider text-surface-600">Journey Progress</span>
             <span className="font-bold text-primary-700">{progressPercentage}%</span>
           </div>
           <div className="w-full bg-surface-100 h-3 rounded-full overflow-hidden my-2">
@@ -200,7 +200,7 @@ export default function PatientDashboard() {
               style={{ width: `${progressPercentage}%` }}
             />
           </div>
-          <span className="text-[10px] text-surface-400">
+          <span className="text-xs text-surface-500">
             Phase {activeIndex + 1} of {STATUS_STEPS.length}: {STATUS_STEPS[activeIndex]?.label}
           </span>
         </Card>
@@ -211,12 +211,12 @@ export default function PatientDashboard() {
         <div className="border-b border-surface-100 pb-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
           <div>
             <h2 className="text-base font-bold text-surface-900 tracking-tight">Treatment Journey Roadmap</h2>
-            <p className="text-xs text-surface-500 mt-0.5">Track your clinical milestones from inquiry to post-treatment recovery.</p>
+            <p className="text-xs text-surface-600 mt-0.5">Track your clinical milestones from inquiry to post-treatment recovery.</p>
           </div>
 
           {activeCase && (
             <div className="flex items-center gap-2">
-              <span className="text-xs font-semibold text-surface-500">Current Phase:</span>
+              <span className="text-xs font-semibold text-surface-600">Current Phase:</span>
               <Badge variant={activeCase.status === 'CLOSED' ? 'default' : 'primary'} dot>
                 {STATUS_STEPS[activeIndex]?.label || activeCase.status}
               </Badge>
@@ -257,12 +257,12 @@ export default function PatientDashboard() {
                     <div>
                       <p
                         className={`text-xs font-bold ${
-                          isActive ? 'text-primary-700' : isPassed ? 'text-surface-900' : 'text-surface-500'
+                          isActive ? 'text-primary-700' : isPassed ? 'text-surface-900' : 'text-surface-600'
                         }`}
                       >
                         {step.label}
                       </p>
-                      <p className="text-[11px] text-surface-400 mt-0.5 leading-tight max-w-[130px] sm:mx-auto">
+                      <p className="text-[11px] text-surface-500 mt-0.5 leading-tight max-w-[130px] sm:mx-auto">
                         {step.desc}
                       </p>
                     </div>
@@ -277,16 +277,16 @@ export default function PatientDashboard() {
                   <MessageSquare className="w-4 h-4" />
                 </div>
                 <div>
-                  <span className="text-[10px] uppercase font-bold text-surface-500 tracking-wider">Coordinator Note</span>
-                  <p className="text-xs font-medium text-surface-800 mt-1 leading-relaxed">{activeCase.notes}</p>
+                  <span className="text-xs uppercase font-bold text-surface-600 tracking-wider">Coordinator Note</span>
+                  <p className="text-sm font-medium text-surface-800 mt-1 leading-relaxed">{activeCase.notes}</p>
                 </div>
               </div>
             )}
           </div>
         ) : (
           <div className="text-center py-10 space-y-2">
-            <p className="text-sm font-bold text-surface-700">No active medical care case found.</p>
-            <p className="text-xs text-surface-500 max-w-sm mx-auto">
+            <p className="text-sm font-bold text-surface-800">No active medical care case found.</p>
+            <p className="text-sm text-surface-600 max-w-sm mx-auto">
               Register your profile details or submit a treatment inquiry to get assigned a case coordinator.
             </p>
           </div>
@@ -298,7 +298,7 @@ export default function PatientDashboard() {
         {/* Coordinator Contact Card */}
         <Card className="lg:col-span-1 p-6 rounded-2xl shadow-xs border border-surface-200 space-y-5">
           <div className="border-b border-surface-100 pb-3">
-            <h3 className="text-xs font-bold text-surface-800 uppercase tracking-wider">Assigned Coordinator</h3>
+            <h3 className="text-xs font-bold text-surface-900 uppercase tracking-wider">Assigned Coordinator</h3>
           </div>
 
           {activeCase?.manager ? (
@@ -309,7 +309,7 @@ export default function PatientDashboard() {
                 </div>
                 <div className="min-w-0">
                   <h4 className="text-sm font-bold text-surface-900 truncate">{activeCase.manager.fullName}</h4>
-                  <p className="text-xs text-surface-500">Clinical Case Manager</p>
+                  <p className="text-sm text-surface-600">Clinical Case Manager</p>
                 </div>
               </div>
 
@@ -320,7 +320,7 @@ export default function PatientDashboard() {
               </Link>
             </div>
           ) : (
-            <div className="text-center py-8 text-xs text-surface-500 space-y-2">
+            <div className="text-center py-8 text-sm text-surface-600 space-y-2">
               <p>Your account is currently waiting for a coordinator assignment.</p>
             </div>
           )}
@@ -329,7 +329,7 @@ export default function PatientDashboard() {
         {/* Action Required Checklist */}
         <Card className="lg:col-span-2 p-6 rounded-2xl shadow-xs border border-surface-200 space-y-4">
           <div className="border-b border-surface-100 pb-3 flex items-center justify-between">
-            <h3 className="text-xs font-bold text-surface-800 uppercase tracking-wider">Action Items & Shortcuts</h3>
+            <h3 className="text-xs font-bold text-surface-900 uppercase tracking-wider">Action Items & Shortcuts</h3>
             <span className="text-[10px] font-bold text-primary-600 bg-primary-50 px-2 py-0.5 rounded-md border border-primary-100">
               High Priority
             </span>
@@ -343,7 +343,7 @@ export default function PatientDashboard() {
                 </div>
                 <div>
                   <p className="font-bold text-surface-900">Upload Recent Lab Reports & ECG</p>
-                  <p className="text-[11px] text-surface-500 mt-0.5">Required by Indian hospital specialists prior to confirmed scheduling.</p>
+                  <p className="text-xs text-surface-600 mt-0.5">Required by Indian hospital specialists prior to confirmed scheduling.</p>
                 </div>
               </div>
               <Link href="/patient/documents">
@@ -360,12 +360,29 @@ export default function PatientDashboard() {
                 </div>
                 <div>
                   <p className="font-bold text-surface-900">Review Care Specialties</p>
-                  <p className="text-[11px] text-surface-500 mt-0.5">Select the medical specialties required for your treatment itinerary.</p>
+                  <p className="text-xs text-surface-600 mt-0.5">Select the medical specialties required for your treatment itinerary.</p>
                 </div>
               </div>
               <Link href="/patient/profile">
                 <Button variant="secondary" size="sm" className="self-start sm:self-auto">
                   Edit Profile
+                </Button>
+              </Link>
+            </div>
+
+            <div className="p-4 border border-surface-200 rounded-xl bg-surface-50/60 hover:bg-surface-50 transition-colors flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs">
+              <div className="flex items-start gap-3">
+                <div className="w-8 h-8 rounded-xl bg-teal-100 text-teal-800 flex items-center justify-center shrink-0">
+                  <Home className="w-4 h-4" />
+                </div>
+                <div>
+                  <p className="font-bold text-surface-900">Reserve Recuperation Hostel</p>
+                  <p className="text-xs text-surface-600 mt-0.5">Book verified local hostel lodging for your treatment and recovery timeline.</p>
+                </div>
+              </div>
+              <Link href="/patient/accommodations">
+                <Button variant="secondary" size="sm" className="self-start sm:self-auto">
+                  Book Lodging
                 </Button>
               </Link>
             </div>

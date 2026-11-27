@@ -27,6 +27,14 @@ interface Hospital {
   _count: { doctors: number; appointments: number };
 }
 
+interface CommissionOverride {
+  id: string;
+  rate: number;
+  startDate: string;
+  endDate: string;
+  notes?: string | null;
+}
+
 export default function AdminHospitalsPage() {
   const [hospitals, setHospitals] = useState<Hospital[]>([]);
   const [loading, setLoading] = useState(true);
@@ -38,7 +46,7 @@ export default function AdminHospitalsPage() {
   const [activeTab, setActiveTab] = useState<'hospitals' | 'overrides'>('hospitals');
 
   // Overrides State
-  const [overrides, setOverrides] = useState<any[]>([]);
+  const [overrides, setOverrides] = useState<CommissionOverride[]>([]);
   const [selectedHospitalId, setSelectedHospitalId] = useState('');
   const [loadingOverrides, setLoadingOverrides] = useState(false);
   const [savingOverride, setSavingOverride] = useState(false);
@@ -87,6 +95,7 @@ export default function AdminHospitalsPage() {
       setOverrides([]);
       return;
     }
+    await Promise.resolve();
     setLoadingOverrides(true);
     try {
       const res = await fetch(`/api/v1/admin/hospitals/overrides?hospitalId=${hospitalId}`);
@@ -103,7 +112,7 @@ export default function AdminHospitalsPage() {
 
   useEffect(() => {
     if (selectedHospitalId) {
-      fetchOverrides(selectedHospitalId);
+      queueMicrotask(() => fetchOverrides(selectedHospitalId));
     }
   }, [selectedHospitalId, fetchOverrides]);
 
@@ -162,6 +171,7 @@ export default function AdminHospitalsPage() {
   };
 
   const fetchHospitals = useCallback(async () => {
+    await Promise.resolve();
     setLoading(true);
     try {
       const params = new URLSearchParams();
@@ -182,7 +192,7 @@ export default function AdminHospitalsPage() {
   }, [search, cityFilter]);
 
   useEffect(() => {
-    fetchHospitals();
+    queueMicrotask(() => fetchHospitals());
   }, [fetchHospitals]);
 
   const openCreate = () => {
@@ -492,7 +502,7 @@ export default function AdminHospitalsPage() {
                           <td className="px-4 py-3 font-mono font-bold text-primary-700">{Number(o.rate)}%</td>
                           <td className="px-4 py-3 text-surface-600">{new Date(o.startDate).toLocaleDateString()}</td>
                           <td className="px-4 py-3 text-surface-600">{new Date(o.endDate).toLocaleDateString()}</td>
-                          <td className="px-4 py-3 text-surface-500 italic max-w-[150px] truncate" title={o.notes}>{o.notes || '—'}</td>
+                          <td className="px-4 py-3 text-surface-500 italic max-w-[150px] truncate" title={o.notes || undefined}>{o.notes || '—'}</td>
                           <td className="px-4 py-3 text-right">
                             <button
                               type="button"

@@ -53,14 +53,14 @@ export default function ManagerDashboard() {
     <div className="space-y-8 animate-fade-in">
       <div>
         <h1 className="text-2xl font-bold text-surface-900">Operations Overview</h1>
-        <p className="text-sm text-surface-500 mt-1">Real-time status of your assigned medical travelers and treatment pipelines.</p>
+        <p className="text-sm text-surface-600 mt-1">Real-time status of your assigned medical travelers and treatment pipelines.</p>
       </div>
 
       {/* KPI Cards Grid */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
         <Card className="p-5 flex items-center justify-between border-l-4 border-l-primary-600 bg-white">
           <div>
-            <p className="text-xs font-bold text-surface-400 uppercase tracking-wider">Assigned Cohort</p>
+            <p className="text-xs font-bold text-surface-600 uppercase tracking-wider">Assigned Cohort</p>
             <p className="text-3xl font-bold text-surface-900 mt-2">{metrics?.totalPatients ?? 0}</p>
           </div>
           <div className="p-3 bg-primary-50 rounded-lg text-primary-600 shrink-0">
@@ -72,7 +72,7 @@ export default function ManagerDashboard() {
 
         <Card className="p-5 flex items-center justify-between border-l-4 border-l-teal-600 bg-white">
           <div>
-            <p className="text-xs font-bold text-surface-400 uppercase tracking-wider">Active Inquiries</p>
+            <p className="text-xs font-bold text-surface-600 uppercase tracking-wider">Active Inquiries</p>
             <p className="text-3xl font-bold text-surface-900 mt-2">{metrics?.activeCases ?? 0}</p>
           </div>
           <div className="p-3 bg-teal-50 rounded-lg text-teal-600 shrink-0">
@@ -84,7 +84,7 @@ export default function ManagerDashboard() {
 
         <Card className="p-5 flex items-center justify-between border-l-4 border-l-amber-500 bg-white">
           <div>
-            <p className="text-xs font-bold text-surface-400 uppercase tracking-wider">Pending Hostel Bookings</p>
+            <p className="text-xs font-bold text-surface-600 uppercase tracking-wider">Pending Hostel Bookings</p>
             <p className="text-3xl font-bold text-surface-900 mt-2">{metrics?.pendingAccommodations ?? 0}</p>
           </div>
           <div className="p-3 bg-amber-50 rounded-lg text-amber-600 shrink-0">
@@ -96,7 +96,7 @@ export default function ManagerDashboard() {
 
         <Card className="p-5 flex items-center justify-between border-l-4 border-l-blue-600 bg-white">
           <div>
-            <p className="text-xs font-bold text-surface-400 uppercase tracking-wider">Upcoming Appointments</p>
+            <p className="text-xs font-bold text-surface-600 uppercase tracking-wider">Upcoming Appointments</p>
             <p className="text-3xl font-bold text-surface-900 mt-2">{metrics?.upcomingAppointments ?? 0}</p>
           </div>
           <div className="p-3 bg-blue-50 rounded-lg text-blue-600 shrink-0">
@@ -150,7 +150,7 @@ export default function ManagerDashboard() {
               As a <strong>MediRoute Case Manager</strong>, you are responsible for overseeing the logistics of international patient care journeys in India.
             </p>
             <ul className="list-disc pl-5 space-y-2 text-surface-500">
-              <li>Review incoming medical records and update the patient's case pipeline status.</li>
+              <li>Review incoming medical records and update the patient&apos;s case pipeline status.</li>
               <li>Schedule JCI accredited hospital consultations, assessments, and surgeries.</li>
               <li>Coordinate verified local hostel accommodations based on recovery duration.</li>
               <li>Use the secure coordination chat to maintain continuous messaging with patients.</li>

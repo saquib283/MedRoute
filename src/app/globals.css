@@ -136,6 +136,11 @@ body {
   background-color: var(--color-surface-100);
   color: var(--color-surface-900);
   min-height: 100vh;
+  font-size: 15px;
+  line-height: 1.6;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
 }
 
 /* ─── Custom Scrollbar ──────────────────────────────────────────── */

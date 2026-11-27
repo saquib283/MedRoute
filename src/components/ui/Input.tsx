@@ -21,7 +21,7 @@ export const Input = React.forwardRef<HTMLInputElement, InputProps>(
       <div className="space-y-1.5">
         <label
           htmlFor={inputId}
-          className="block text-sm font-medium text-surface-700"
+          className="block text-sm font-medium text-surface-800"
         >
           {label}
           {props.required && (
@@ -43,7 +43,7 @@ export const Input = React.forwardRef<HTMLInputElement, InputProps>(
               w-full min-h-[44px] px-4 py-2.5
               ${icon ? 'pl-11' : ''}
               bg-white border rounded-lg
-              text-surface-900 placeholder:text-surface-400
+              text-surface-900 placeholder:text-surface-500
               transition-colors duration-150
               focus:outline-none focus:border-primary-600
               ${error
@@ -88,7 +88,7 @@ export const Input = React.forwardRef<HTMLInputElement, InputProps>(
         {helperText && !error && (
           <p
             id={`${inputId}-helper`}
-            className="text-xs text-surface-500"
+            className="text-xs text-surface-600"
           >
             {helperText}
           </p>

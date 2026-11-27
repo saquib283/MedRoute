@@ -87,6 +87,10 @@ export const DOCUMENT_CATEGORIES = {
   INSURANCE: 'INSURANCE',
   VISA: 'VISA',
   PRESCRIPTION: 'PRESCRIPTION',
+  DISCHARGE_SUMMARY: 'DISCHARGE_SUMMARY',
+  TREATMENT_PLAN: 'TREATMENT_PLAN',
+  INVOICE: 'INVOICE',
+  VISA_LETTER: 'VISA_LETTER',
 } as const;
 
 export const DOCUMENT_CATEGORY_LABELS: Record<string, string> = {
@@ -95,6 +99,10 @@ export const DOCUMENT_CATEGORY_LABELS: Record<string, string> = {
   INSURANCE: 'Insurance',
   VISA: 'Visa',
   PRESCRIPTION: 'Prescription',
+  DISCHARGE_SUMMARY: 'Discharge Summary',
+  TREATMENT_PLAN: 'Treatment Plan',
+  INVOICE: 'Invoice',
+  VISA_LETTER: 'Visa Letter',
 };
 
 // ─── Urgency Levels ─────────────────────────────────────────────────
@@ -160,3 +168,217 @@ export const DAYS_OF_WEEK = [
   'SAT',
   'SUN',
 ] as const;
+
+// ─── Treatment Plan Statuses ────────────────────────────────────────
+
+export const TREATMENT_PLAN_STATUSES = {
+  DRAFT: 'DRAFT',
+  SENT_TO_PATIENT: 'SENT_TO_PATIENT',
+  ACCEPTED: 'ACCEPTED',
+  REJECTED: 'REJECTED',
+  REVISED: 'REVISED',
+} as const;
+
+export const TREATMENT_PLAN_STATUS_LABELS: Record<string, string> = {
+  DRAFT: 'Draft',
+  SENT_TO_PATIENT: 'Sent to Patient',
+  ACCEPTED: 'Accepted',
+  REJECTED: 'Rejected',
+  REVISED: 'Revised',
+};
+
+export const TREATMENT_PLAN_ITEM_TYPES = {
+  PROCEDURE: 'PROCEDURE',
+  CONSULTATION: 'CONSULTATION',
+  TEST: 'TEST',
+  MEDICATION: 'MEDICATION',
+  ROOM_CHARGE: 'ROOM_CHARGE',
+  OTHER: 'OTHER',
+} as const;
+
+export const TREATMENT_PLAN_ITEM_TYPE_LABELS: Record<string, string> = {
+  PROCEDURE: 'Procedure',
+  CONSULTATION: 'Consultation',
+  TEST: 'Test / Diagnostic',
+  MEDICATION: 'Medication',
+  ROOM_CHARGE: 'Room Charge',
+  OTHER: 'Other',
+};
+
+// ─── Invoice Statuses & Types ───────────────────────────────────────
+
+export const INVOICE_STATUSES = {
+  DRAFT: 'DRAFT',
+  SENT: 'SENT',
+  PARTIALLY_PAID: 'PARTIALLY_PAID',
+  PAID: 'PAID',
+  OVERDUE: 'OVERDUE',
+  CANCELLED: 'CANCELLED',
+  REFUNDED: 'REFUNDED',
+} as const;
+
+export const INVOICE_STATUS_LABELS: Record<string, string> = {
+  DRAFT: 'Draft',
+  SENT: 'Sent',
+  PARTIALLY_PAID: 'Partially Paid',
+  PAID: 'Paid',
+  OVERDUE: 'Overdue',
+  CANCELLED: 'Cancelled',
+  REFUNDED: 'Refunded',
+};
+
+export const INVOICE_TYPES = {
+  TREATMENT: 'TREATMENT',
+  ACCOMMODATION: 'ACCOMMODATION',
+  LOGISTICS: 'LOGISTICS',
+  FACILITATION_FEE: 'FACILITATION_FEE',
+} as const;
+
+export const INVOICE_TYPE_LABELS: Record<string, string> = {
+  TREATMENT: 'Treatment',
+  ACCOMMODATION: 'Accommodation',
+  LOGISTICS: 'Logistics & Transport',
+  FACILITATION_FEE: 'Facilitation Fee',
+};
+
+// ─── Payment Methods ────────────────────────────────────────────────
+
+export const PAYMENT_METHODS = {
+  CASH: 'CASH',
+  BANK_TRANSFER: 'BANK_TRANSFER',
+  CARD: 'CARD',
+  UPI: 'UPI',
+  INTERNATIONAL_WIRE: 'INTERNATIONAL_WIRE',
+} as const;
+
+export const PAYMENT_METHOD_LABELS: Record<string, string> = {
+  CASH: 'Cash',
+  BANK_TRANSFER: 'Bank Transfer (NEFT/RTGS)',
+  CARD: 'Credit / Debit Card',
+  UPI: 'UPI',
+  INTERNATIONAL_WIRE: 'International Wire Transfer',
+};
+
+// ─── Transfer Types & Statuses ──────────────────────────────────────
+
+export const TRANSFER_TYPES = {
+  AIRPORT_PICKUP: 'AIRPORT_PICKUP',
+  AIRPORT_DROP: 'AIRPORT_DROP',
+  HOSPITAL_TRANSFER: 'HOSPITAL_TRANSFER',
+  HOTEL_TRANSFER: 'HOTEL_TRANSFER',
+} as const;
+
+export const TRANSFER_TYPE_LABELS: Record<string, string> = {
+  AIRPORT_PICKUP: 'Airport Pickup',
+  AIRPORT_DROP: 'Airport Drop',
+  HOSPITAL_TRANSFER: 'Hospital Transfer',
+  HOTEL_TRANSFER: 'Hotel Transfer',
+};
+
+export const TRANSFER_STATUSES = {
+  SCHEDULED: 'SCHEDULED',
+  IN_PROGRESS: 'IN_PROGRESS',
+  COMPLETED: 'COMPLETED',
+  CANCELLED: 'CANCELLED',
+} as const;
+
+export const TRANSFER_STATUS_LABELS: Record<string, string> = {
+  SCHEDULED: 'Scheduled',
+  IN_PROGRESS: 'In Progress',
+  COMPLETED: 'Completed',
+  CANCELLED: 'Cancelled',
+};
+
+export const VEHICLE_TYPES = ['SEDAN', 'SUV', 'AMBULANCE', 'VAN', 'MINIBUS'] as const;
+
+// ─── Visa Letter Statuses ───────────────────────────────────────────
+
+export const VISA_LETTER_STATUSES = {
+  REQUESTED: 'REQUESTED',
+  GENERATED: 'GENERATED',
+  SENT: 'SENT',
+  EXPIRED: 'EXPIRED',
+} as const;
+
+export const VISA_LETTER_STATUS_LABELS: Record<string, string> = {
+  REQUESTED: 'Requested',
+  GENERATED: 'Generated',
+  SENT: 'Sent to Patient',
+  EXPIRED: 'Expired',
+};
+
+// ─── Follow-Up Types & Statuses ─────────────────────────────────────
+
+export const FOLLOW_UP_TYPES = {
+  IN_PERSON: 'IN_PERSON',
+  VIDEO_CALL: 'VIDEO_CALL',
+  PHONE_CALL: 'PHONE_CALL',
+} as const;
+
+export const FOLLOW_UP_TYPE_LABELS: Record<string, string> = {
+  IN_PERSON: 'In-Person Visit',
+  VIDEO_CALL: 'Video Consultation',
+  PHONE_CALL: 'Phone Call',
+};
+
+export const FOLLOW_UP_STATUSES = {
+  SCHEDULED: 'SCHEDULED',
+  COMPLETED: 'COMPLETED',
+  MISSED: 'MISSED',
+  CANCELLED: 'CANCELLED',
+} as const;
+
+export const FOLLOW_UP_STATUS_LABELS: Record<string, string> = {
+  SCHEDULED: 'Scheduled',
+  COMPLETED: 'Completed',
+  MISSED: 'Missed',
+  CANCELLED: 'Cancelled',
+};
+
+// ─── Discharge Condition ────────────────────────────────────────────
+
+export const DISCHARGE_CONDITIONS = ['STABLE', 'IMPROVED', 'CRITICAL', 'UNCHANGED'] as const;
+
+export const DISCHARGE_CONDITION_LABELS: Record<string, string> = {
+  STABLE: 'Stable',
+  IMPROVED: 'Improved',
+  CRITICAL: 'Critical',
+  UNCHANGED: 'Unchanged',
+};
+
+// ─── Accommodation Partner Types ────────────────────────────────────
+
+export const PARTNER_TYPES = {
+  HOTEL: 'HOTEL',
+  HOSTEL: 'HOSTEL',
+  GUEST_HOUSE: 'GUEST_HOUSE',
+  SERVICED_APARTMENT: 'SERVICED_APARTMENT',
+} as const;
+
+export const PARTNER_TYPE_LABELS: Record<string, string> = {
+  HOTEL: 'Hotel',
+  HOSTEL: 'Hostel',
+  GUEST_HOUSE: 'Guest House',
+  SERVICED_APARTMENT: 'Serviced Apartment',
+};
+
+// ─── Currency Formatting ────────────────────────────────────────────
+
+export function formatCurrency(amount: number | string, currency = 'INR'): string {
+  const num = typeof amount === 'string' ? parseFloat(amount) : amount;
+  if (isNaN(num)) return '—';
+  return new Intl.NumberFormat('en-IN', {
+    style: 'currency',
+    currency,
+    minimumFractionDigits: 0,
+    maximumFractionDigits: 2,
+  }).format(num);
+}
+
+// ─── Invoice Number Generator ───────────────────────────────────────
+
+export function generateInvoiceNumber(prefix: string, sequenceNum: number): string {
+  const year = new Date().getFullYear();
+  const padded = String(sequenceNum).padStart(5, '0');
+  return `${prefix}-${year}-${padded}`;
+}

@@ -18,10 +18,14 @@ export function SessionTimeoutProvider({ children }: { children: React.ReactNode
   const [showWarning, setShowWarning] = useState(false);
   const [remainingSeconds, setRemainingSeconds] = useState(120);
 
-  const lastActivityRef = useRef<number>(Date.now());
+  const lastActivityRef = useRef<number>(0);
   const warningTimerRef = useRef<NodeJS.Timeout | null>(null);
   const logoutTimerRef = useRef<NodeJS.Timeout | null>(null);
   const countdownIntervalRef = useRef<NodeJS.Timeout | null>(null);
+
+  useEffect(() => {
+    lastActivityRef.current = Date.now();
+  }, []);
 
   // Skip inactivity timeout on public auth routes
   const isPublicRoute =
@@ -88,7 +92,7 @@ export function SessionTimeoutProvider({ children }: { children: React.ReactNode
     };
 
     events.forEach((event) => window.addEventListener(event, handleUserActivity));
-    resetTimers();
+    queueMicrotask(() => resetTimers());
 
     return () => {
       events.forEach((event) => window.removeEventListener(event, handleUserActivity));

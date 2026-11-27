@@ -48,6 +48,7 @@ export default function AdminCasesPage() {
   const [updating, setUpdating] = useState(false);
 
   const fetchCases = useCallback(async (page = 1) => {
+    await Promise.resolve();
     setLoading(true);
     try {
       const params = new URLSearchParams({ page: String(page), limit: '15' });
@@ -61,7 +62,7 @@ export default function AdminCasesPage() {
     } catch (err) { console.error(err); } finally { setLoading(false); }
   }, [statusFilter, urgentOnly, search, managerFilter]);
 
-  useEffect(() => { fetchCases(); }, [fetchCases]);
+  useEffect(() => { queueMicrotask(() => fetchCases()); }, [fetchCases]);
 
   useEffect(() => {
     fetch('/api/v1/admin/users?role=MANAGER&limit=100')

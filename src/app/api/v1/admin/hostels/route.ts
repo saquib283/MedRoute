@@ -15,9 +15,16 @@ const hostelSchema = z.object({
   name: z.string().min(1),
   city: z.string().min(1),
   address: z.string().min(1),
+  description: z.string().optional(),
   capacity: z.number().int().min(1),
   pricingPerNight: z.number().min(0),
   roomTypes: z.array(z.string()).optional(),
+  amenities: z.array(z.string()).optional(),
+  images: z.array(z.string()).optional(),
+  distanceToHospital: z.string().optional(),
+  rating: z.number().optional(),
+  contactPhone: z.string().optional(),
+  rules: z.string().optional(),
   isActive: z.boolean().optional(),
 });
 
@@ -60,9 +67,16 @@ export async function POST(request: NextRequest) {
         name: result.data.name,
         city: result.data.city,
         address: result.data.address,
+        description: result.data.description || null,
         capacity: result.data.capacity,
         pricingPerNight: result.data.pricingPerNight,
         roomTypes: result.data.roomTypes || [],
+        amenities: result.data.amenities || [],
+        images: result.data.images || [],
+        distanceToHospital: result.data.distanceToHospital || null,
+        rating: result.data.rating || 4.8,
+        contactPhone: result.data.contactPhone || null,
+        rules: result.data.rules || null,
       },
     });
 

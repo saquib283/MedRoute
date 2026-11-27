@@ -59,7 +59,7 @@ export function ConfirmDialog({
           {/* Content */}
           <div className="text-center">
             <h3 className="text-lg font-bold text-surface-900">{title}</h3>
-            <p className="text-sm text-surface-600 mt-1.5">{message}</p>
+            <p className="text-sm text-surface-700 mt-1.5">{message}</p>
           </div>
 
           {/* Actions */}

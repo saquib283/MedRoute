@@ -28,10 +28,16 @@ interface Case {
 interface MedicalProfile {
   id: string;
   allergies: string[] | string | null;
-  medications: any[] | string | null;
-  surgeries: any[] | string | null;
+  medications: unknown[] | string | null;
+  surgeries: unknown[] | string | null;
   chronicConditions: string[] | string | null;
   specialisationsRequired: string[] | string | null;
+}
+
+interface EmergencyContact {
+  name?: string;
+  relation?: string;
+  phone?: string;
 }
 
 interface Patient {
@@ -43,7 +49,7 @@ interface Patient {
   medicalCondition: string | null;
   urgencyLevel: string;
   primaryLanguage: string | null;
-  emergencyContact: any;
+  emergencyContact: EmergencyContact | null;
   user: {
     fullName: string;
     email: string;
@@ -76,9 +82,9 @@ export default function PatientsRoster() {
     loadPatients();
   }, []);
 
-  const formatJSONList = (field: any): string[] => {
+  const formatJSONList = (field: unknown): string[] => {
     if (!field) return [];
-    if (Array.isArray(field)) return field;
+    if (Array.isArray(field)) return field as string[];
     try {
       if (typeof field === 'string') {
         const parsed = JSON.parse(field);
@@ -90,9 +96,12 @@ export default function PatientsRoster() {
     return [];
   };
 
-  const formatJSONMedications = (field: any): any[] => {
+  const formatJSONMedications = (
+    field: unknown
+  ): { name: string; dosage?: string; frequency?: string }[] => {
     if (!field) return [];
-    if (Array.isArray(field)) return field;
+    if (Array.isArray(field))
+      return field as { name: string; dosage?: string; frequency?: string }[];
     try {
       if (typeof field === 'string') {
         const parsed = JSON.parse(field);
@@ -231,13 +240,13 @@ export default function PatientsRoster() {
                 {selectedPatient.emergencyContact ? (
                   <div className="p-3 bg-surface-50 rounded border border-surface-200/40 text-xs space-y-1">
                     <p className="font-semibold text-surface-900">
-                      {selectedPatient.emergencyContact.name || (selectedPatient.emergencyContact as any).name || '—'}
+                      {selectedPatient.emergencyContact.name || '—'}
                     </p>
                     <p className="text-surface-600">
-                      Relation: {selectedPatient.emergencyContact.relation || (selectedPatient.emergencyContact as any).relation || '—'}
+                      Relation: {selectedPatient.emergencyContact.relation || '—'}
                     </p>
                     <p className="text-surface-600 font-mono">
-                      Phone: {selectedPatient.emergencyContact.phone || (selectedPatient.emergencyContact as any).phone || '—'}
+                      Phone: {selectedPatient.emergencyContact.phone || '—'}
                     </p>
                   </div>
                 ) : (

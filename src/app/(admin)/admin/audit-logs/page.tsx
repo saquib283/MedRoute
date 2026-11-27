@@ -28,8 +28,9 @@ interface AuditLog {
 const ACTION_OPTIONS = ['CREATE', 'UPDATE', 'DELETE', 'DEACTIVATE', 'ACTIVATE', 'RESET_PASSWORD', 'STATUS_CHANGE', 'REASSIGN', 'RESOLVE_ESCALATION'];
 const ENTITY_OPTIONS = ['User', 'Patient', 'Case', 'Appointment', 'Hospital', 'Doctor', 'Hostel', 'Specialisation'];
 
-function AuditLogDiff({ oldVal, newVal }: { oldVal: any; newVal: any }) {
-  const isObject = (val: any) => val && typeof val === 'object' && !Array.isArray(val);
+function AuditLogDiff({ oldVal, newVal }: { oldVal: unknown; newVal: unknown }) {
+  const isObject = (val: unknown): val is Record<string, unknown> =>
+    Boolean(val && typeof val === 'object' && !Array.isArray(val));
 
   if (!oldVal && !newVal) return <span className="text-surface-400 text-xs">—</span>;
 
@@ -52,10 +53,12 @@ function AuditLogDiff({ oldVal, newVal }: { oldVal: any; newVal: any }) {
   }
 
   // Handle object keys diff
-  const allKeys = Array.from(new Set([...Object.keys(oldVal || {}), ...Object.keys(newVal || {})]));
+  const oldObj = oldVal as Record<string, unknown>;
+  const newObj = newVal as Record<string, unknown>;
+  const allKeys = Array.from(new Set([...Object.keys(oldObj || {}), ...Object.keys(newObj || {})]));
   const changes = allKeys.map((key) => {
-    const o = oldVal?.[key];
-    const n = newVal?.[key];
+    const o = oldObj?.[key];
+    const n = newObj?.[key];
 
     if (JSON.stringify(o) === JSON.stringify(n)) {
       return { key, type: 'unchanged', oldValue: o, newValue: n };
@@ -128,6 +131,7 @@ export default function AdminAuditLogsPage() {
   }, []);
 
   const fetchLogs = useCallback(async (page = 1) => {
+    await Promise.resolve();
     setLoading(true);
     try {
       const params = new URLSearchParams({ page: String(page), limit: '20' });
@@ -142,7 +146,7 @@ export default function AdminAuditLogsPage() {
     } catch (err) { console.error(err); } finally { setLoading(false); }
   }, [entityFilter, actionFilter, actorSearch, dateFrom, dateTo]);
 
-  useEffect(() => { fetchLogs(); }, [fetchLogs]);
+  useEffect(() => { queueMicrotask(() => fetchLogs()); }, [fetchLogs]);
 
   const handleExport = () => {
     const params = new URLSearchParams();

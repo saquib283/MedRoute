@@ -339,7 +339,7 @@ export default function PatientProfilePage() {
               />
             </div>
           </div>
-          <p className="text-[11px] text-surface-400">
+          <p className="text-xs text-surface-500">
             Completing your medical profile ensures accurate doctor consultations.
           </p>
         </div>
@@ -431,7 +431,7 @@ export default function PatientProfilePage() {
         <Card className="p-6 rounded-2xl shadow-xs border border-surface-200 space-y-4 animate-fade-in">
           <div className="border-b border-surface-100 pb-3">
             <h2 className="text-xs font-bold text-surface-800 uppercase tracking-wider">Primary Emergency Contact</h2>
-            <p className="text-[11px] text-surface-400 mt-0.5">Contact details for your designated next of kin during treatment in India.</p>
+            <p className="text-xs text-surface-500 mt-0.5">Contact details for your designated next of kin during treatment in India.</p>
           </div>
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
             <Input
@@ -501,7 +501,7 @@ export default function PatientProfilePage() {
                   </span>
                 ))}
                 {allergies.length === 0 && (
-                  <p className="text-xs text-surface-400 italic">No allergies recorded.</p>
+                  <p className="text-xs text-surface-500 italic">No allergies recorded.</p>
                 )}
               </div>
             </div>
@@ -545,7 +545,7 @@ export default function PatientProfilePage() {
                   </span>
                 ))}
                 {conditions.length === 0 && (
-                  <p className="text-xs text-surface-400 italic">No chronic conditions recorded.</p>
+                  <p className="text-xs text-surface-500 italic">No chronic conditions recorded.</p>
                 )}
               </div>
             </div>
@@ -599,7 +599,7 @@ export default function PatientProfilePage() {
                   ))}
                   {medications.length === 0 && (
                     <tr>
-                      <td colSpan={4} className="p-6 text-center text-surface-400">No active medications logged.</td>
+                      <td colSpan={4} className="p-6 text-center text-surface-500">No active medications logged.</td>
                     </tr>
                   )}
                 </tbody>
@@ -650,7 +650,7 @@ export default function PatientProfilePage() {
                   ))}
                   {surgeries.length === 0 && (
                     <tr>
-                      <td colSpan={4} className="p-6 text-center text-surface-400">No surgical history logged.</td>
+                      <td colSpan={4} className="p-6 text-center text-surface-500">No surgical history logged.</td>
                     </tr>
                   )}
                 </tbody>
@@ -665,7 +665,7 @@ export default function PatientProfilePage() {
         <Card className="p-6 rounded-2xl shadow-xs border border-surface-200 space-y-4 animate-fade-in">
           <div className="border-b border-surface-100 pb-3">
             <h2 className="text-xs font-bold text-surface-800 uppercase tracking-wider">Required Medical Specialties</h2>
-            <p className="text-[11px] text-surface-400 mt-0.5">Select the medical specialties required for your treatment itinerary in India.</p>
+            <p className="text-xs text-surface-500 mt-0.5">Select the medical specialties required for your treatment itinerary in India.</p>
           </div>
 
           <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">

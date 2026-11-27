@@ -12,6 +12,7 @@ import Image from 'next/image';
 import logoImg from '../../../../public/assets/logo.png';
 import { usePathname, useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/Button';
+import { CurrencySelector } from '@/components/ui/CurrencySelector';
 
 export default function AdminLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
@@ -78,6 +79,8 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
       label: 'Operations',
       items: [
         { href: '/admin/dashboard', icon: DashboardIcon, label: 'Dashboard' },
+        { href: '/admin/billing', icon: AnalyticsIcon, label: 'Billing & Commissions' },
+        { href: '/admin/revenue', icon: AnalyticsIcon, label: 'Revenue Analytics' },
         { href: '/admin/cases', icon: CasesIcon, label: 'All Cases' },
         { href: '/admin/appointments', icon: CalendarIcon, label: 'All Appointments' },
         { href: '/admin/escalations', icon: EscalationIcon, label: 'Escalations', badge: escalationCount > 0 ? escalationCount : undefined },
@@ -86,6 +89,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
     {
       label: 'People',
       items: [
+        { href: '/admin/leads', icon: LeadIcon, label: 'Lead Queries' },
         { href: '/admin/users', icon: UsersIcon, label: 'User Management' },
         { href: '/admin/patients', icon: PatientIcon, label: 'Patients' },
       ],
@@ -112,6 +116,8 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
             label: 'Admin',
             items: [
               { href: '/admin/analytics', icon: AnalyticsIcon, label: 'Advanced Analytics' },
+              { href: '/admin/compliance', icon: AuditIcon, label: 'Legal & Compliance' },
+              { href: '/admin/settings/currency', icon: AnalyticsIcon, label: 'Forex & Currencies' },
               { href: '/admin/email-campaigns', icon: CampaignIcon, label: 'Email Campaigns' },
               { href: '/admin/email-templates', icon: TemplateIcon, label: 'Email Templates' },
               { href: '/admin/settings', icon: SettingsIcon, label: 'Settings' },
@@ -158,7 +164,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
         <nav className="flex-1 px-4 py-6 overflow-y-auto space-y-7">
           {menuSections.map((section) => (
             <div key={section.label}>
-              <h3 className="px-3 text-[11px] font-bold uppercase tracking-wider text-surface-400 mb-2.5">
+              <h3 className="px-3 text-[11px] font-bold uppercase tracking-wider text-surface-500 mb-2.5">
                 {section.label}
               </h3>
               <ul className="space-y-1">
@@ -166,7 +172,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
                   const isActive = pathname === item.href || (item.href !== '/admin/dashboard' && pathname.startsWith(item.href));
                   const Icon = item.icon;
                   return (
-                    <li key={item.href}>
+                    <li key={item.label}>
                       <Link
                         href={item.href}
                         onClick={() => setIsSidebarOpen(false)}
@@ -192,15 +198,19 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
           ))}
         </nav>
 
-        {/* User Card */}
-        <div className="p-4 border-t border-surface-200">
+        {/* Currency & User Card */}
+        <div className="p-4 border-t border-surface-200 space-y-3">
+          <div className="flex items-center justify-between px-1">
+            <span className="text-[11px] font-bold uppercase tracking-wider text-surface-400">Viewing Currency</span>
+            <CurrencySelector variant="header" />
+          </div>
           <div className="flex items-center gap-3 p-3 rounded-lg bg-surface-50 border border-surface-200/50">
             <div className="w-10 h-10 rounded-full bg-primary-100 flex items-center justify-center text-primary-700 font-bold text-sm shrink-0">
               {userName.charAt(0)}
             </div>
             <div className="flex-1 min-w-0 overflow-hidden">
               <p className="text-sm font-bold text-surface-900 truncate" title={userName}>{userName}</p>
-              <p className="text-[11px] text-surface-500 truncate" title={userEmail}>{userEmail}</p>
+              <p className="text-[11px] text-surface-600 truncate" title={userEmail}>{userEmail}</p>
             </div>
           </div>
           <Button variant="ghost" className="w-full mt-3 justify-center text-danger-600 hover:bg-danger-50 hover:text-danger-700 font-bold text-sm" onClick={handleLogout}>
@@ -253,4 +263,5 @@ function NotificationsIcon(p: React.SVGProps<SVGSVGElement>) { return <svg fill=
 function AnalyticsIcon(p: React.SVGProps<SVGSVGElement>) { return <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2} {...p}><path strokeLinecap="round" strokeLinejoin="round" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" /></svg>; }
 function CampaignIcon(p: React.SVGProps<SVGSVGElement>) { return <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2} {...p}><path strokeLinecap="round" strokeLinejoin="round" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" /></svg>; }
 function TemplateIcon(p: React.SVGProps<SVGSVGElement>) { return <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2} {...p}><path strokeLinecap="round" strokeLinejoin="round" d="M4 5a1 1 0 011-1h14a1 1 0 011 1v2a1 1 0 01-1 1H5a1 1 0 01-1-1V5zM4 13a1 1 0 011-1h6a1 1 0 011 1v6a1 1 0 01-1 1H5a1 1 0 01-1-1v-6zM16 13a1 1 0 011-1h2a1 1 0 011 1v6a1 1 0 01-1 1h-2a1 1 0 01-1-1v-6z" /></svg>; }
+function LeadIcon(p: React.SVGProps<SVGSVGElement>) { return <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2} {...p}><path strokeLinecap="round" strokeLinejoin="round" d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4" /></svg>; }
 

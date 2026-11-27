@@ -11,12 +11,17 @@ import Image from 'next/image';
 import logoImg from '../../../../public/assets/logo.png';
 import { usePathname, useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/Button';
+import { CurrencySelector } from '@/components/ui/CurrencySelector';
 import {
   LayoutDashboard,
   User,
   Calendar,
   FolderLock,
   MessageSquare,
+  Home,
+  Scale,
+  ShieldCheck,
+  Receipt,
 } from 'lucide-react';
 
 interface NavItem {
@@ -83,6 +88,15 @@ export default function PatientLayout({
           ),
         },
         {
+          label: 'My Journey',
+          href: '/patient/journey',
+          icon: (
+            <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 4m0 13V4m0 0L9 7" />
+            </svg>
+          ),
+        },
+        {
           label: 'Medical Profile',
           href: '/patient/profile',
           icon: (
@@ -99,6 +113,11 @@ export default function PatientLayout({
               <path strokeLinecap="round" strokeLinejoin="round" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
             </svg>
           ),
+        },
+        {
+          label: 'Accommodations',
+          href: '/patient/accommodations',
+          icon: <Home className="w-5 h-5" />,
         },
       ],
     },
@@ -122,6 +141,21 @@ export default function PatientLayout({
               <path strokeLinecap="round" strokeLinejoin="round" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
             </svg>
           ),
+        },
+        {
+          label: 'Billing & Invoices',
+          href: '/patient/billing',
+          icon: <Receipt className="w-5 h-5" />,
+        },
+        {
+          label: 'Grievance Desk',
+          href: '/patient/grievance',
+          icon: <Scale className="w-5 h-5" />,
+        },
+        {
+          label: 'Privacy & DSAR Hub',
+          href: '/patient/privacy',
+          icon: <ShieldCheck className="w-5 h-5" />,
         },
       ],
     },
@@ -147,7 +181,7 @@ export default function PatientLayout({
           <nav className="p-4 space-y-6">
             {navSections.map((section) => (
               <div key={section.title} className="space-y-2">
-                <span className="px-3 text-[11px] font-bold text-surface-400 uppercase tracking-widest block mb-2">
+                <span className="px-3 text-[11px] font-bold text-surface-500 uppercase tracking-widest block mb-2">
                   {section.title}
                 </span>
                 <div className="space-y-1">
@@ -155,7 +189,7 @@ export default function PatientLayout({
                     const isActive = pathname === item.href;
                     return (
                       <Link
-                        key={item.href}
+                        key={item.label}
                         href={item.href}
                         className={`
                           flex items-center gap-3 px-3 py-2.5 text-sm font-semibold rounded-md transition-colors duration-150
@@ -188,7 +222,7 @@ export default function PatientLayout({
             </div>
             <div className="min-w-0 flex-1">
               <p className="text-sm font-semibold text-surface-900 truncate">{userName}</p>
-              <p className="text-xs text-surface-500 truncate">{userEmail}</p>
+              <p className="text-xs text-surface-600 truncate">{userEmail}</p>
             </div>
           </div>
 
@@ -287,9 +321,22 @@ export default function PatientLayout({
                 </div>
               </div>
             )}
+
+            {pathname === '/patient/accommodations' && (
+              <div className="flex items-center gap-2.5">
+                <div className="w-8 h-8 rounded-xl bg-primary-50 text-primary-600 border border-primary-100 flex items-center justify-center font-bold">
+                  <Home className="w-4 h-4" />
+                </div>
+                <div>
+                  <span className="text-[10px] font-bold text-primary-600 uppercase tracking-widest block mb-0.5">Recovery Stay</span>
+                  <h2 className="text-base font-bold text-surface-900 tracking-tight">Hostel Accommodations</h2>
+                </div>
+              </div>
+            )}
           </div>
 
-          <div className="flex items-center gap-4">
+          <div className="flex items-center gap-3">
+            <CurrencySelector variant="header" />
             {/* Quick action button for dashboard */}
             <Link href="/patient/appointments">
               <Button size="sm">

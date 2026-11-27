@@ -5,7 +5,7 @@
  * Appointments timeline, status filters, and booking wizard modal using custom Select & DatePicker components.
  */
 
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useCallback } from 'react';
 import { Card } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { Badge } from '@/components/ui/Badge';
@@ -19,7 +19,6 @@ import {
   Plus,
   LayoutGrid,
   Table,
-  CheckCircle2,
   Clock,
   AlertCircle,
   Stethoscope,
@@ -88,11 +87,7 @@ export default function AppointmentsPage() {
   const [selectedType, setSelectedType] = useState('CONSULTATION');
   const [scheduledAt, setScheduledAt] = useState('');
 
-  useEffect(() => {
-    fetchAppointments();
-  }, []);
-
-  const fetchAppointments = async () => {
+  const fetchAppointments = useCallback(async () => {
     try {
       const res = await fetch('/api/v1/patient/appointments?meta=true');
       const data = await res.json();
@@ -110,7 +105,13 @@ export default function AppointmentsPage() {
     } finally {
       setIsLoading(false);
     }
-  };
+  }, []);
+
+  useEffect(() => {
+    queueMicrotask(() => {
+      fetchAppointments();
+    });
+  }, [fetchAppointments]);
 
   const handleBook = async (e: React.FormEvent) => {
     e.preventDefault();

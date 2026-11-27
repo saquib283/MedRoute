@@ -49,8 +49,8 @@ export async function GET(request: NextRequest) {
     });
 
     // 2. Fetch metadata if requested (to populate dropdowns for new bookings)
-    let hospitals: any[] = [];
-    let doctors: any[] = [];
+    let hospitals: unknown[] = [];
+    let doctors: unknown[] = [];
     let activeCaseId: string | null = null;
 
     if (fetchMeta) {

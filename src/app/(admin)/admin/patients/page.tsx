@@ -46,6 +46,7 @@ export default function AdminPatientsPage() {
   const [reassigning, setReassigning] = useState(false);
 
   const fetchPatients = useCallback(async (page = 1) => {
+    await Promise.resolve();
     setLoading(true);
     try {
       const params = new URLSearchParams({ page: String(page), limit: '15' });
@@ -61,7 +62,7 @@ export default function AdminPatientsPage() {
     } catch (err) { console.error(err); } finally { setLoading(false); }
   }, [search, urgencyFilter, managerFilter]);
 
-  useEffect(() => { fetchPatients(); }, [fetchPatients]);
+  useEffect(() => { queueMicrotask(() => fetchPatients()); }, [fetchPatients]);
 
   useEffect(() => {
     // Fetch managers for filter + reassignment

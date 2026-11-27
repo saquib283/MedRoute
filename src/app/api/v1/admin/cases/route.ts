@@ -39,6 +39,72 @@ export async function GET(request: NextRequest) {
     const page = parseInt(searchParams.get('page') || '1', 10);
     const limit = parseInt(searchParams.get('limit') || '20', 10);
 
+    const id = searchParams.get('id') || '';
+
+    // ─── Single case detail fetch ──────────────────────────────
+    if (id) {
+      const caseDetail = await prisma.case.findUnique({
+        where: { id },
+        include: {
+          patient: {
+            include: {
+              user: { select: { fullName: true, email: true, phone: true } },
+              medicalProfile: true,
+            },
+          },
+          manager: { select: { id: true, fullName: true, email: true, phone: true } },
+          appointments: {
+            include: {
+              hospital: { select: { name: true, city: true } },
+              doctor: { select: { fullName: true, specialisation: { select: { name: true } } } },
+            },
+            orderBy: { scheduledAt: 'asc' },
+          },
+          accommodationBookings: {
+            include: { hostel: { select: { name: true, city: true, address: true } } },
+            orderBy: { checkIn: 'asc' },
+          },
+          treatmentPlans: {
+            include: {
+              items: {
+                include: {
+                  hospital: { select: { id: true, name: true } },
+                  doctor: { select: { id: true, fullName: true } },
+                },
+                orderBy: { sortOrder: 'asc' },
+              },
+            },
+            orderBy: { updatedAt: 'desc' },
+          },
+          invoices: {
+            include: {
+              lineItems: { orderBy: { sortOrder: 'asc' } },
+              payments: { orderBy: { paidAt: 'desc' } },
+              hospital: { select: { name: true } },
+            },
+            orderBy: { createdAt: 'desc' },
+          },
+          visaAssistances: {
+            include: { hospital: { select: { name: true } } },
+            orderBy: { createdAt: 'desc' },
+          },
+          transferBookings: { orderBy: { scheduledAt: 'asc' } },
+          dischargeSummaries: {
+            include: { doctor: { select: { fullName: true } } },
+            orderBy: { dischargeDate: 'desc' },
+          },
+          followUps: {
+            include: { doctor: { select: { fullName: true } } },
+            orderBy: { scheduledAt: 'asc' },
+          },
+        },
+      });
+
+      if (!caseDetail) return apiError('NOT_FOUND', 'Case not found', 404);
+      return apiSuccess({ case: caseDetail });
+    }
+
+    // ─── List all cases ────────────────────────────────────────
     const where: Record<string, unknown> = {};
     if (status) where.status = status;
     if (urgent === 'true') where.isUrgent = true;
@@ -59,7 +125,7 @@ export async function GET(request: NextRequest) {
         include: {
           patient: { include: { user: { select: { fullName: true, email: true } } } },
           manager: { select: { id: true, fullName: true } },
-          _count: { select: { appointments: true } },
+          _count: { select: { appointments: true, invoices: true, treatmentPlans: true } },
         },
         orderBy: { createdAt: 'desc' },
         skip: (page - 1) * limit,

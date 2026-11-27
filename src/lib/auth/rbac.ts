@@ -123,6 +123,7 @@ export const ROUTE_ROLES: Record<string, UserRole[]> = {
   '/manager': ['MANAGER', 'ADMIN'],
   '/admin': ['ADMIN'],
   '/doctor': ['DOCTOR', 'ADMIN'],
+  '/hospital': ['HOSPITAL', 'ADMIN'],
 };
 
 /**
@@ -147,6 +148,8 @@ export function getDefaultRoute(role: UserRole): string {
       return '/patient/dashboard';
     case 'MANAGER':
       return '/manager/dashboard';
+    case 'HOSPITAL':
+      return '/hospital/dashboard';
     case 'DOCTOR':
       return '/doctor/dashboard';
     case 'ADMIN':

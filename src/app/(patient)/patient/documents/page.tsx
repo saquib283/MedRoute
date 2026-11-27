@@ -5,7 +5,7 @@
  * HIPAA-compliant document management with category filtering, drag-and-drop dropzone, and Lucide icons.
  */
 
-import { useState, useEffect, useMemo, useRef } from 'react';
+import { useState, useEffect, useMemo, useRef, useCallback } from 'react';
 import { Card } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { Badge } from '@/components/ui/Badge';
@@ -25,7 +25,6 @@ import {
   ShieldCheck,
   CheckCircle2,
   AlertCircle,
-  FileCode,
   Image as ImageIcon,
 } from 'lucide-react';
 
@@ -78,11 +77,7 @@ export default function DocumentVaultPage() {
 
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  useEffect(() => {
-    fetchDocuments();
-  }, []);
-
-  const fetchDocuments = async () => {
+  const fetchDocuments = useCallback(async () => {
     try {
       const res = await fetch('/api/v1/patient/documents');
       const data = await res.json();
@@ -95,7 +90,13 @@ export default function DocumentVaultPage() {
     } finally {
       setIsLoading(false);
     }
-  };
+  }, []);
+
+  useEffect(() => {
+    queueMicrotask(() => {
+      fetchDocuments();
+    });
+  }, [fetchDocuments]);
 
   const handleDrag = (e: React.DragEvent) => {
     e.preventDefault();

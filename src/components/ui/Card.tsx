@@ -60,7 +60,7 @@ export function CardHeader({
       <div>
         <h3 className="text-lg font-semibold text-surface-900">{title}</h3>
         {subtitle && (
-          <p className="text-sm text-surface-500 mt-0.5">{subtitle}</p>
+          <p className="text-sm text-surface-600 mt-0.5">{subtitle}</p>
         )}
       </div>
       {action && <div>{action}</div>}

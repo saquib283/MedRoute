@@ -11,6 +11,7 @@ import Image from 'next/image';
 import logoImg from '../../../../public/assets/logo.png';
 import { usePathname, useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/Button';
+import { CurrencySelector } from '@/components/ui/CurrencySelector';
 import {
   LayoutDashboard,
   Users,
@@ -183,7 +184,7 @@ export default function ManagerLayout({
           <nav className="p-4 space-y-6">
             {navSections.map((section) => (
               <div key={section.title} className="space-y-2">
-                <span className="px-3 text-[11px] font-bold text-surface-400 uppercase tracking-widest block mb-2">
+                <span className="px-3 text-[11px] font-bold text-surface-500 uppercase tracking-widest block mb-2">
                   {section.title}
                 </span>
                 <div className="space-y-1">
@@ -191,7 +192,7 @@ export default function ManagerLayout({
                     const isActive = pathname === item.href;
                     return (
                       <Link
-                        key={item.href}
+                        key={item.label}
                         href={item.href}
                         className={`
                           flex items-center gap-3 px-3 py-2.5 text-sm font-semibold rounded-md transition-colors duration-150
@@ -224,7 +225,7 @@ export default function ManagerLayout({
             </div>
             <div className="min-w-0 flex-1">
               <p className="text-sm font-semibold text-surface-900 truncate">{userName}</p>
-              <p className="text-xs text-surface-500 truncate">{userEmail}</p>
+              <p className="text-xs text-surface-600 truncate">{userEmail}</p>
             </div>
           </div>
 
@@ -337,7 +338,8 @@ export default function ManagerLayout({
             )}
           </div>
 
-          <div className="flex items-center gap-4">
+          <div className="flex items-center gap-3">
+            <CurrencySelector variant="header" />
             <Link href="/manager/appointments">
               <Button size="sm">
                 Book Appointment

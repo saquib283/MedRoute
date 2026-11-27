@@ -5,7 +5,7 @@
  * Lists appointments assigned to the doctor and allows updating status & notes.
  */
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { Card } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { Badge } from '@/components/ui/Badge';
@@ -38,12 +38,8 @@ export default function DoctorAppointmentsPage() {
   const [notes, setNotes] = useState('');
   const [isUpdating, setIsUpdating] = useState(false);
 
-  useEffect(() => {
-    fetchAppointments();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [filter]);
-
-  const fetchAppointments = async () => {
+  const fetchAppointments = useCallback(async () => {
+    await Promise.resolve();
     setLoading(true);
     try {
       const res = await fetch(`/api/v1/doctor/appointments?filter=${filter}`);
@@ -56,7 +52,13 @@ export default function DoctorAppointmentsPage() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [filter]);
+
+  useEffect(() => {
+    queueMicrotask(() => {
+      fetchAppointments();
+    });
+  }, [fetchAppointments]);
 
   const handleUpdate = async (e: React.FormEvent) => {
     e.preventDefault();

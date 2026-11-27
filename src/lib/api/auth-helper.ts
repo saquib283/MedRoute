@@ -12,6 +12,8 @@ export interface AuthUser {
   userId: string;
   role: UserRole;
   email: string;
+  hospitalId?: string | null;
+  fullName?: string | null;
 }
 
 /**
@@ -21,10 +23,12 @@ export function getAuthUser(request: NextRequest): AuthUser | null {
   const userId = request.headers.get('x-user-id');
   const role = request.headers.get('x-user-role') as UserRole | null;
   const email = request.headers.get('x-user-email');
+  const hospitalId = request.headers.get('x-user-hospital-id') || null;
+  const fullName = request.headers.get('x-user-full-name') || null;
 
   if (!userId || !role || !email) return null;
 
-  return { userId, role, email };
+  return { userId, role, email, hospitalId, fullName };
 }
 
 /**

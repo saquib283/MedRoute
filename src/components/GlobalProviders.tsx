@@ -7,13 +7,16 @@
 
 import { ToastContainer } from '@/components/ui/Toast';
 import { SessionTimeoutProvider } from '@/components/SessionTimeoutProvider';
+import { CurrencyProvider } from '@/lib/currency/CurrencyContext';
 
 export function GlobalProviders({ children }: { children?: React.ReactNode }) {
   return (
-    <SessionTimeoutProvider>
-      <ToastContainer />
-      {children}
-    </SessionTimeoutProvider>
+    <CurrencyProvider>
+      <SessionTimeoutProvider>
+        <ToastContainer />
+        {children}
+      </SessionTimeoutProvider>
+    </CurrencyProvider>
   );
 }
 

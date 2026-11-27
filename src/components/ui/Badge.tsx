@@ -22,7 +22,7 @@ interface BadgeProps {
 }
 
 const variantStyles: Record<BadgeVariant, string> = {
-  default: 'bg-surface-200 text-surface-600 border-surface-300',
+  default: 'bg-surface-200 text-surface-700 border-surface-300',
   primary: 'bg-primary-50 text-primary-700 border-primary-200',
   success: 'bg-success-50 text-success-700 border-success-200',
   warning: 'bg-warning-50 text-warning-700 border-warning-200',

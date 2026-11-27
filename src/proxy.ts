@@ -15,6 +15,13 @@ const PUBLIC_ROUTES = [
   '/login',
   '/register',
   '/forgot-password',
+  '/inquire',
+  '/terms',
+  '/privacy',
+  '/verify',
+  '/api/v1/public',
+  '/api/v1/currency',
+  '/api/v1/legal/verify',
   '/api/v1/auth/login',
   '/api/v1/auth/register',
   '/api/v1/auth/login/otp/request',
@@ -111,6 +118,12 @@ export default async function proxy(request: NextRequest) {
     requestHeaders.set('x-user-id', payload.userId);
     requestHeaders.set('x-user-role', payload.role);
     requestHeaders.set('x-user-email', payload.email);
+    if (payload.hospitalId) {
+      requestHeaders.set('x-user-hospital-id', payload.hospitalId as string);
+    }
+    if (payload.fullName) {
+      requestHeaders.set('x-user-full-name', payload.fullName as string);
+    }
 
     return NextResponse.next({
       request: {

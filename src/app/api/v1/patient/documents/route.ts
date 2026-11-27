@@ -13,6 +13,7 @@ import { ERROR_CODES } from '@/lib/api/errors';
 import { promises as fs } from 'fs';
 import path from 'path';
 import type { DocumentCategory } from '@prisma/client';
+import { computeSha256 } from '@/lib/legal/crypto-proof';
 
 export async function GET(request: NextRequest) {
   try {
@@ -85,7 +86,10 @@ export async function POST(request: NextRequest) {
     const filePath = path.join(uploadDir, filename);
     await fs.writeFile(filePath, buffer);
 
-    // Create database document record (temporary placeholder for fileUrl)
+    // Compute cryptographic SHA-256 hash for document integrity proof
+    const sha256Hash = computeSha256(buffer);
+
+    // Create database document record with file hash
     const document = await prisma.document.create({
       data: {
         patientId: patient.id,
@@ -95,6 +99,7 @@ export async function POST(request: NextRequest) {
         fileName: file.name,
         fileSize: file.size,
         mimeType: file.type || 'application/octet-stream',
+        sha256Hash,
       },
     });
 

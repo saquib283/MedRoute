@@ -62,6 +62,7 @@ export default function AdminAppointmentsPage() {
   const [rescheduleModal, setRescheduleModal] = useState({ open: false, id: '', dateStr: '' });
 
   const fetchAppointments = useCallback(async (page = 1) => {
+    await Promise.resolve();
     setLoading(true);
     try {
       const params = new URLSearchParams({ page: String(page), limit: '15' });
@@ -84,7 +85,9 @@ export default function AdminAppointmentsPage() {
   }, [search, statusFilter, typeFilter, hospitalFilter]);
 
   useEffect(() => {
-    fetchAppointments();
+    queueMicrotask(() => {
+      fetchAppointments();
+    });
   }, [fetchAppointments]);
 
   useEffect(() => {

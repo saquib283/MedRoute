@@ -5,7 +5,7 @@
  * Global system configurations, restricted to Admin only.
  */
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { Card } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { DatePicker } from '@/components/ui/DatePicker';
@@ -27,6 +27,21 @@ export default function AdminSettingsPage() {
   const [saving, setSaving] = useState(false);
   const [userRole, setUserRole] = useState('');
 
+  const fetchSettings = useCallback(async () => {
+    setLoading(true);
+    try {
+      const res = await fetch('/api/v1/admin/settings');
+      const data = await res.json();
+      if (data.success) {
+        setSettings(data.data.settings);
+      }
+    } catch {
+      toast.error('Failed to load settings.');
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
   useEffect(() => {
     // Check permission
     fetch('/api/v1/auth/me')
@@ -43,22 +58,7 @@ export default function AdminSettingsPage() {
         }
       })
       .catch(() => setLoading(false));
-  }, []);
-
-  const fetchSettings = async () => {
-    setLoading(true);
-    try {
-      const res = await fetch('/api/v1/admin/settings');
-      const data = await res.json();
-      if (data.success) {
-        setSettings(data.data.settings);
-      }
-    } catch {
-      toast.error('Failed to load settings.');
-    } finally {
-      setLoading(false);
-    }
-  };
+  }, [fetchSettings]);
 
   const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();

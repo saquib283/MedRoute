@@ -40,6 +40,7 @@ export default function AdminSpecialisationsPage() {
   const [deactivating, setDeactivating] = useState(false);
 
   const fetchSpecs = useCallback(async () => {
+    await Promise.resolve();
     setLoading(true);
     try {
       const res = await fetch('/api/v1/admin/specialisations');
@@ -60,7 +61,7 @@ export default function AdminSpecialisationsPage() {
   }, [search]);
 
   useEffect(() => {
-    fetchSpecs();
+    queueMicrotask(() => fetchSpecs());
   }, [fetchSpecs]);
 
   const openCreate = () => {

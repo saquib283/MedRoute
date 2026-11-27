@@ -102,7 +102,7 @@ export default function DoctorLayout({ children }: { children: React.ReactNode }
         <nav className="flex-1 px-4 py-6 overflow-y-auto space-y-8">
           {menuItems.map((section) => (
             <div key={section.label}>
-              <h3 className="px-3 text-xs font-bold uppercase tracking-wider text-surface-400 mb-3">
+              <h3 className="px-3 text-xs font-bold uppercase tracking-wider text-surface-500 mb-3">
                 {section.label}
               </h3>
               <ul className="space-y-1">
@@ -110,7 +110,7 @@ export default function DoctorLayout({ children }: { children: React.ReactNode }
                   const isActive = pathname.startsWith(item.href);
                   const Icon = item.icon;
                   return (
-                    <li key={item.href}>
+                    <li key={item.label}>
                       <Link
                         href={item.href}
                         onClick={() => setIsSidebarOpen(false)}
@@ -139,7 +139,7 @@ export default function DoctorLayout({ children }: { children: React.ReactNode }
             </div>
             <div className="flex-1 min-w-0 overflow-hidden">
               <p className="text-sm font-bold text-surface-900 truncate" title={userName}>{userName}</p>
-              <p className="text-[11px] text-surface-500 truncate" title={userEmail}>{userEmail}</p>
+              <p className="text-[11px] text-surface-600 truncate" title={userEmail}>{userEmail}</p>
             </div>
           </div>
           <Button variant="ghost" className="w-full mt-3 justify-center text-danger-600 hover:bg-danger-50 hover:text-danger-700 font-bold text-sm" onClick={handleLogout}>

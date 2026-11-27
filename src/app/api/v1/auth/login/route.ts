@@ -46,6 +46,15 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // Disable Doctor login
+    if (user.role === 'DOCTOR') {
+      return apiError(
+        ERROR_CODES.FORBIDDEN,
+        'Doctor portal login has been disabled.',
+        403
+      );
+    }
+
     // Verify password
     const isValid = await verifyPassword(password, user.passwordHash);
     if (!isValid) {

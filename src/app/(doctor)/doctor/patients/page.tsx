@@ -22,8 +22,8 @@ interface Patient {
   };
   medicalProfile: {
     allergies: string[];
-    medications: any[];
-    surgeries: any[];
+    medications: { name: string; dosage?: string; frequency?: string }[];
+    surgeries: { name: string; date?: string; notes?: string }[];
     chronicConditions: string[];
   } | null;
 }
@@ -165,7 +165,7 @@ export default function DoctorPatientsPage() {
                     <h3 className="text-xs font-bold text-surface-400 uppercase tracking-wider mb-3">Current Medications</h3>
                     {selectedPatient.medicalProfile.medications && selectedPatient.medicalProfile.medications.length > 0 ? (
                       <div className="space-y-2">
-                        {selectedPatient.medicalProfile.medications.map((m: any, i: number) => (
+                        {selectedPatient.medicalProfile.medications.map((m, i) => (
                           <div key={i} className="bg-surface-50 p-2.5 rounded border border-surface-200">
                             <p className="text-sm font-bold text-surface-900">{m.name}</p>
                             <p className="text-xs text-surface-500">{m.dosage} • {m.frequency}</p>
@@ -179,7 +179,7 @@ export default function DoctorPatientsPage() {
                     <h3 className="text-xs font-bold text-surface-400 uppercase tracking-wider mb-3">Past Surgeries</h3>
                     {selectedPatient.medicalProfile.surgeries && selectedPatient.medicalProfile.surgeries.length > 0 ? (
                       <div className="space-y-3">
-                        {selectedPatient.medicalProfile.surgeries.map((s: any, i: number) => (
+                        {selectedPatient.medicalProfile.surgeries.map((s, i) => (
                           <div key={i} className="relative pl-4 border-l-2 border-surface-300">
                             <p className="text-sm font-bold text-surface-900">{s.name}</p>
                             <p className="text-xs text-surface-500">{s.date}</p>

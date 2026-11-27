@@ -61,7 +61,7 @@ export default function DoctorDashboardPage() {
               <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
             </div>
             <div>
-              <p className="text-sm font-semibold text-surface-500">Today's Appointments</p>
+              <p className="text-sm font-semibold text-surface-500">Today&apos;s Appointments</p>
               <p className="text-3xl font-bold text-surface-900 mt-1">{metrics?.todayAppointments || 0}</p>
             </div>
           </div>

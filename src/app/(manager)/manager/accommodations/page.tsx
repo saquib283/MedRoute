@@ -73,7 +73,6 @@ export default function AccommodationsManager() {
   
   // Modals state
   const [isBookModalOpen, setIsBookModalOpen] = useState(false);
-  const [selectedBooking, setSelectedBooking] = useState<Booking | null>(null);
 
   // Form fields
   const [targetPatientId, setTargetPatientId] = useState('');
@@ -140,7 +139,7 @@ export default function AccommodationsManager() {
       });
 
       if (res.ok) {
-        const data = await res.json();
+        await res.json();
         // Reload list
         const reloadRes = await fetch('/api/v1/manager/accommodations');
         if (reloadRes.ok) {
@@ -181,7 +180,6 @@ export default function AccommodationsManager() {
         setBookings((prev) =>
           prev.map((b) => (b.id === bookingId ? { ...b, status } : b))
         );
-        setSelectedBooking(null);
       }
     } catch (err) {
       console.error('Failed to update booking status:', err);
@@ -266,19 +264,26 @@ export default function AccommodationsManager() {
                     </td>
                     <td className="px-6 py-4">
                       <span
-                        className={`px-2 py-0.5 text-xs font-bold rounded-full ${
+                        className={`px-2.5 py-1 text-xs font-bold rounded-full border ${
                           booking.status === 'CHECKED_OUT' || booking.status === 'CANCELLED'
-                            ? 'bg-surface-100 text-surface-600 border border-surface-200'
+                            ? 'bg-surface-100 text-surface-600 border-surface-200'
                             : booking.status === 'CHECKED_IN'
-                            ? 'bg-teal-50 text-teal-700 border border-teal-200'
-                            : 'bg-primary-50 text-primary-700 border border-primary-200'
+                            ? 'bg-teal-50 text-teal-700 border-teal-200'
+                            : booking.status === 'PENDING'
+                            ? 'bg-amber-50 text-amber-800 border-amber-300'
+                            : 'bg-primary-50 text-primary-700 border-primary-200'
                         }`}
                       >
-                        {booking.status}
+                        {booking.status === 'PENDING' ? 'Pending Review' : booking.status}
                       </span>
                     </td>
                     <td className="px-6 py-4 text-center">
                       <div className="flex justify-center gap-1.5">
+                        {booking.status === 'PENDING' && (
+                          <Button size="sm" onClick={() => handleUpdateStatus(booking.id, AccommodationStatus.CONFIRMED)}>
+                            Approve Stay
+                          </Button>
+                        )}
                         {booking.status === 'CONFIRMED' && (
                           <Button size="sm" onClick={() => handleUpdateStatus(booking.id, AccommodationStatus.CHECKED_IN)}>
                             Check In

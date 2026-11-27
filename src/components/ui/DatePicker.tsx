@@ -51,8 +51,10 @@ export function DatePicker({
     if (value) {
       const d = new Date(value);
       if (!isNaN(d.getTime())) {
-        setViewYear(d.getFullYear());
-        setViewMonth(d.getMonth());
+        queueMicrotask(() => {
+          setViewYear(d.getFullYear());
+          setViewMonth(d.getMonth());
+        });
       }
     }
   }, [value]);

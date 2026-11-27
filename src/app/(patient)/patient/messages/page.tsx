@@ -5,7 +5,7 @@
  * Real-time encrypted messaging interface with Lucide SVG icons and prompt chips.
  */
 
-import { useState, useEffect, useRef, useMemo } from 'react';
+import { useState, useEffect, useRef, useMemo, useCallback } from 'react';
 import { Card } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import {
@@ -70,19 +70,7 @@ export default function SecureMessagesPage() {
     fetchMe();
   }, []);
 
-  useEffect(() => {
-    fetchMessages();
-    const interval = setInterval(fetchMessages, 15000);
-    return () => clearInterval(interval);
-  }, []);
-
-  useEffect(() => {
-    if (feedRef.current) {
-      feedRef.current.scrollTop = feedRef.current.scrollHeight;
-    }
-  }, [messages]);
-
-  const fetchMessages = async () => {
+  const fetchMessages = useCallback(async () => {
     try {
       const res = await fetch('/api/v1/patient/messages');
       const data = await res.json();
@@ -96,7 +84,15 @@ export default function SecureMessagesPage() {
       setIsLoading(false);
       setIsRefreshing(false);
     }
-  };
+  }, []);
+
+  useEffect(() => {
+    queueMicrotask(() => {
+      fetchMessages();
+    });
+    const interval = setInterval(fetchMessages, 15000);
+    return () => clearInterval(interval);
+  }, [fetchMessages]);
 
   const handleManualRefresh = () => {
     setIsRefreshing(true);

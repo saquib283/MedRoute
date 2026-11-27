@@ -58,11 +58,17 @@ export async function GET(request: Request) {
     }
 
     const bookings = await prisma.accommodationBooking.findMany({
-      where: {
-        case: {
-          managerId: userId,
-        },
-      },
+      where:
+        userRole === 'ADMIN'
+          ? {}
+          : {
+              case: {
+                OR: [
+                  { managerId: userId },
+                  { patient: { assignedManagerId: userId } },
+                ],
+              },
+            },
       include: {
         hostel: true,
         case: {
@@ -163,8 +169,18 @@ export async function PUT(request: Request) {
       },
     });
 
-    if (!bookingRecord || bookingRecord.case.managerId !== userId) {
-      return NextResponse.json({ error: 'Booking not found or unauthorized' }, { status: 404 });
+    if (
+      !bookingRecord ||
+      (userRole !== 'ADMIN' &&
+        bookingRecord.case.managerId !== userId &&
+        bookingRecord.case.patientId)
+    ) {
+      const patientCheck = await prisma.patient.findUnique({
+        where: { id: bookingRecord?.case.patientId },
+      });
+      if (userRole !== 'ADMIN' && patientCheck?.assignedManagerId !== userId && bookingRecord?.case.managerId !== userId) {
+        return NextResponse.json({ error: 'Booking not found or unauthorized' }, { status: 404 });
+      }
     }
 
     const updatedBooking = await prisma.accommodationBooking.update({

@@ -209,7 +209,7 @@ export default function AppointmentsManager() {
       });
 
       if (res.ok) {
-        const data = await res.json();
+        await res.json();
         setAppointments((prev) =>
           prev.map((a) => (a.id === reschedulingAppt.id ? { ...a, scheduledAt: rescheduleDateStr, status: AppointmentStatus.RESCHEDULED } : a))
         );
@@ -451,7 +451,7 @@ export default function AppointmentsManager() {
                 options={[
                   { value: '', label: '-- Choose doctor --' },
                   ...doctors
-                    .filter((d) => !targetHospitalId || (d as any).hospitalId === targetHospitalId)
+                    .filter((d) => !targetHospitalId || (d as { hospitalId?: string }).hospitalId === targetHospitalId)
                     .map((d) => ({
                       value: d.id,
                       label: `Dr. ${d.fullName} (${d.specialisation.name})`

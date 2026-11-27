@@ -50,6 +50,7 @@ export default function AdminNotificationsPage() {
   const [sending, setSending] = useState(false);
 
   const fetchLogs = useCallback(async (page = 1) => {
+    await Promise.resolve();
     setLoadingLogs(true);
     try {
       const res = await fetch(`/api/v1/admin/notifications?page=${page}&limit=15`);
@@ -66,7 +67,7 @@ export default function AdminNotificationsPage() {
   }, []);
 
   useEffect(() => {
-    fetchLogs();
+    queueMicrotask(() => fetchLogs());
   }, [fetchLogs]);
 
   const handleBroadcast = async (e: React.FormEvent) => {
